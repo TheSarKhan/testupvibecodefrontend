@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { HiOutlineTrash, HiOutlinePlus } from 'react-icons/hi';
+import { HiOutlineTrash, HiOutlinePlus, HiOutlineX } from 'react-icons/hi';
 import PdfCropperModal from './PdfCropperModal';
 import MathFormulaModal from './MathFormulaModal';
 import MathTextEditor from './MathTextEditor';
@@ -15,6 +15,8 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
     const [mathModalField, setMathModalField] = useState(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [pdfFile, setPdfFile] = useState(null);
+    const [pdfTarget, setPdfTarget] = useState(null); // { type: 'main' } or { type: 'option', id: optId }
+    const [zoomedImage, setZoomedImage] = useState(null);
     const editorsRefs = useRef({});
 
     // Register a ref dynamically
@@ -91,23 +93,76 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                             className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                             title="Düzgün cavabı işarələ"
                         />
-                        <div className="flex-1 flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
-                            <MathTextEditor
-                                ref={setEditorRef(`option-${opt.id}`)}
-                                value={opt.text}
-                                onChange={(val) => updateOption(opt.id, 'text', val)}
-                                placeholder={`Variant ${i + 1}`}
-                                className={`flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[40px] ${opt.isCorrect ? 'bg-indigo-50/30' : 'bg-transparent'}`}
-                            />
-                            <button
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => setMathModalField({ type: 'option', id: opt.id })}
-                                className="px-3 border-l text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
-                                title="Riyaziyyat formulu əlavə et"
-                            >
-                                fx
-                            </button>
+                        <div className="flex-1 flex flex-col gap-2">
+                            <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+                                <MathTextEditor
+                                    ref={setEditorRef(`option-${opt.id}`)}
+                                    value={opt.text}
+                                    onChange={(val) => updateOption(opt.id, 'text', val)}
+                                    placeholder={`Variant ${i + 1}`}
+                                    className={`flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[40px] ${opt.isCorrect ? 'bg-indigo-50/30' : 'bg-transparent'}`}
+                                />
+                                {/* Image / PDF Button */}
+                                <div className="relative border-l border-gray-100 flex items-center">
+                                    <input
+                                        type="file"
+                                        accept="image/*,application/pdf"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                if (file.type === 'application/pdf') {
+                                                    setPdfFile(file);
+                                                    setPdfTarget({ type: 'option', id: opt.id });
+                                                    setIsPdfModalOpen(true);
+                                                } else if (file.type.startsWith('image/')) {
+                                                    const reader = new FileReader();
+                                                    reader.onload = (event) => {
+                                                        updateOption(opt.id, 'attachedImage', event.target.result);
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }
+                                            e.target.value = null;
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="px-2 text-gray-400 hover:text-indigo-600 transition-colors"
+                                        title="Variant üçün şəkil və ya PDF kəsimi əlavə et"
+                                    >
+                                        <HiOutlinePlus className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => setMathModalField({ type: 'option', id: opt.id })}
+                                    className="px-3 border-l text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
+                                    title="Riyaziyyat formulu əlavə et"
+                                >
+                                    fx
+                                </button>
+                            </div>
+
+                            {/* Option Image Preview */}
+                            {opt.attachedImage && (
+                                <div className="relative inline-block w-fit">
+                                    <img
+                                        src={opt.attachedImage}
+                                        alt="Variant şəkli"
+                                        className="max-h-32 rounded border border-gray-200 cursor-zoom-in hover:opacity-90 transition-opacity"
+                                        onClick={() => setZoomedImage(opt.attachedImage)}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => updateOption(opt.id, 'attachedImage', null)}
+                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm hover:bg-red-600"
+                                    >
+                                        <HiOutlineTrash className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         <button
                             type="button"
@@ -292,6 +347,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                                     if (file) {
                                         if (file.type === 'application/pdf') {
                                             setPdfFile(file);
+                                            setPdfTarget({ type: 'main' });
                                             setIsPdfModalOpen(true);
                                         } else if (file.type.startsWith('image/')) {
                                             const reader = new FileReader();
@@ -340,7 +396,8 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                         <img
                             src={question.attachedImage}
                             alt="Sual mütaliəsi"
-                            className="max-w-full max-h-64 object-contain rounded-lg border border-gray-200 shadow-sm"
+                            className="max-w-full max-h-[500px] object-contain rounded-lg border border-gray-200 shadow-sm cursor-zoom-in hover:opacity-95 transition-opacity"
+                            onClick={() => setZoomedImage(question.attachedImage)}
                         />
                         <button
                             onClick={() => handleChange('attachedImage', null)}
@@ -361,12 +418,26 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
             {/* PDF Cropper Modal */}
             <PdfCropperModal
                 isOpen={isPdfModalOpen}
+                isBatchMode={false}
                 onClose={() => {
                     setIsPdfModalOpen(false);
                     setPdfFile(null);
                 }}
                 file={pdfFile}
-                onCropComplete={(base64Img) => handleChange('attachedImage', base64Img)}
+                onCropComplete={(base64Img) => {
+                    if (pdfTarget?.type === 'option') {
+                        // We need a way to call updateOption from here. 
+                        // Since renderMultipleChoice is a closure, we can't call it directly if it's not in scope?
+                        // Actually, QuestionEditor has handleChange. 
+                        const options = question.options || [];
+                        const newOptions = options.map(opt =>
+                            opt.id === pdfTarget.id ? { ...opt, attachedImage: base64Img } : opt
+                        );
+                        handleChange('options', newOptions);
+                    } else {
+                        handleChange('attachedImage', base64Img);
+                    }
+                }}
             />
 
             {/* Math Formula Modal */}
@@ -375,6 +446,28 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                 onClose={() => setMathModalField(null)}
                 onInsert={handleMathInsert}
             />
+
+            {/* Image Zoom Overlay */}
+            {zoomedImage && (
+                <div
+                    className="fixed inset-0 z-[999] bg-black/80 flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
+                    onClick={() => setZoomedImage(null)}
+                >
+                    <div className="relative max-w-5xl max-h-full">
+                        <img
+                            src={zoomedImage}
+                            alt="Böyüdülmüş baxış"
+                            className="max-w-full max-h-[90vh] rounded-lg shadow-2xl border-4 border-white/10"
+                        />
+                        <button
+                            className="absolute -top-4 -right-4 bg-white text-gray-900 rounded-full p-2 shadow-xl hover:bg-gray-100"
+                            onClick={() => setZoomedImage(null)}
+                        >
+                            <HiOutlineX className="w-6 h-6" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

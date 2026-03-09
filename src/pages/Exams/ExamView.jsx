@@ -5,6 +5,29 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 
+const reverseSubjectMapping = {
+    'RIYAZIYYAT': 'Riyaziyyat',
+    'FIZIKA': 'Fizika',
+    'KIMYA': 'Kimya',
+    'BIOLOGIYA': 'Biologiya',
+    'AZERBAYCAN_DILI': 'Azərbaycan dili',
+    'INGILIS_DILI': 'İngilis dili',
+    'TARIX': 'Tarix',
+    'COGRAFIYA': 'Coğrafiya',
+    'INFORMATIKA': 'Informatika',
+    'MANTIQ': 'Məntiq',
+    'EDEBIYYAT': 'Ədəbiyyat',
+    'XARICI_DILL': 'Xarici dil',
+    'RUS_DILI': 'Rus dili',
+    'ALMAN_DILI': 'Alman dili',
+    'FRANSIZ_DILI': 'Fransız dili',
+    'HAYAT_BILGISI': 'Həyat bilgisi',
+    'INCASANAT': 'İncəsənət',
+    'MUSIQI': 'Musiqi',
+    'FIZIKI_TERBIYE': 'Fiziki tərbiyə',
+    'TEXNOLOGIYA': 'Texnologiya'
+};
+
 const ExamView = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -52,7 +75,7 @@ const ExamView = () => {
                         </button>
                         <div>
                             <h1 className="text-xl font-bold text-gray-900 line-clamp-1">{exam.title}</h1>
-                            <p className="text-xs text-gray-500">ID: {exam.id} | {exam.subject}</p>
+                            <p className="text-xs text-gray-500">ID: {exam.id} | {reverseSubjectMapping[exam.subject] || exam.subject}</p>
                         </div>
                     </div>
                     <button
@@ -119,7 +142,13 @@ const ExamView = () => {
 
                                 {q.attachedImage && (
                                     <div className="mb-6 rounded-lg overflow-hidden border border-gray-200 inline-block">
-                                        <img src={q.attachedImage} alt="Sual şəkli" className="max-w-full h-auto max-h-[400px]" />
+                                        <img
+                                            src={q.attachedImage}
+                                            alt="Sual şəkli"
+                                            className="max-w-full h-auto max-h-[600px] cursor-zoom-in transition-transform hover:scale-[1.01]"
+                                            onClick={() => window.open(q.attachedImage, '_blank')}
+                                            title="Şəkli tam ölçüdə açmaq üçün klikləyin"
+                                        />
                                     </div>
                                 )}
 
@@ -136,7 +165,14 @@ const ExamView = () => {
                                                     {String.fromCharCode(65 + oIdx)}
                                                 </span>
                                                 <div className="flex-1">
-                                                    <LatexPreview content={opt.content} />
+                                                    <div className="flex flex-col gap-2">
+                                                        <LatexPreview content={opt.content} />
+                                                        {opt.attachedImage && (
+                                                            <div className="mt-1 rounded-lg overflow-hidden border border-gray-100 inline-block w-fit">
+                                                                <img src={opt.attachedImage} alt="Variant şəkli" className="max-h-48 object-contain" />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 {opt.isCorrect && <HiOutlineCheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />}
                                             </div>

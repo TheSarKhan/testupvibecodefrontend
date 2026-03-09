@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus } from 'react-icons/hi';
-import { ExamSettingsModal, QuestionEditor } from '../../components/ui';
+import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
@@ -10,24 +10,7 @@ const ExamEditor = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const isEditMode = !!id;
-
-    // Initial state from location (for new exams)
     const initialLocationState = location.state || { subject: 'Seçilməyib', type: 'free' };
-    const [subject, setSubject] = useState(initialLocationState.subject);
-    const [type, setType] = useState(initialLocationState.type);
-
-    // Global State for the Exam
-    const [examConfig, setExamConfig] = useState({
-        title: '',
-        duration: 60,
-        visibility: 'PUBLIC',
-        password: '',
-        tags: [],
-        description: ''
-    });
-    const [questions, setQuestions] = useState([]);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [loading, setLoading] = useState(isEditMode);
 
     const subjectMapping = {
         'Riyaziyyat': 'RIYAZIYYAT',
@@ -39,7 +22,17 @@ const ExamEditor = () => {
         'Tarix': 'TARIX',
         'Coğrafiya': 'COGRAFIYA',
         'Informatika': 'INFORMATIKA',
-        'Məntiq': 'MANTIQ'
+        'Məntiq': 'MANTIQ',
+        'Ədəbiyyat': 'EDEBIYYAT',
+        'Xarici dil': 'XARICI_DILL',
+        'Rus dili': 'RUS_DILI',
+        'Alman dili': 'ALMAN_DILI',
+        'Fransız dili': 'FRANSIZ_DILI',
+        'Həyat bilgisi': 'HAYAT_BILGISI',
+        'İncəsənət': 'INCASANAT',
+        'Musiqi': 'MUSIQI',
+        'Fiziki tərbiyə': 'FIZIKI_TERBIYE',
+        'Texnologiya': 'TEXNOLOGIYA'
     };
 
     const reverseSubjectMapping = {
@@ -52,8 +45,38 @@ const ExamEditor = () => {
         'TARIX': 'Tarix',
         'COGRAFIYA': 'Coğrafiya',
         'INFORMATIKA': 'Informatika',
-        'MANTIQ': 'Məntiq'
+        'MANTIQ': 'Məntiq',
+        'EDEBIYYAT': 'Ədəbiyyat',
+        'XARICI_DILL': 'Xarici dil',
+        'RUS_DILI': 'Rus dili',
+        'ALMAN_DILI': 'Alman dili',
+        'FRANSIZ_DILI': 'Fransız dili',
+        'HAYAT_BILGISI': 'Həyat bilgisi',
+        'INCASANAT': 'İncəsənət',
+        'MUSIQI': 'Musiqi',
+        'FIZIKI_TERBIYE': 'Fiziki tərbiyə',
+        'TEXNOLOGIYA': 'Texnologiya'
     };
+
+    const [type, setType] = useState(initialLocationState.type);
+
+    // Global State for the Exam
+    const [examConfig, setExamConfig] = useState({
+        title: '',
+        subject: initialLocationState.subject === 'Seçilməyib' ? 'RIYAZIYYAT' : (subjectMapping[initialLocationState.subject] || 'RIYAZIYYAT'),
+        duration: 60,
+        visibility: 'PUBLIC',
+        password: '',
+        tags: [],
+        description: ''
+    });
+    const [questions, setQuestions] = useState([]);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isBatchPdfOpen, setIsBatchPdfOpen] = useState(false);
+    const [batchPdfFile, setBatchPdfFile] = useState(null);
+    const [loading, setLoading] = useState(isEditMode);
+
+
 
     useEffect(() => {
         if (isEditMode) {
@@ -66,12 +89,12 @@ const ExamEditor = () => {
             const { data } = await api.get(`/exams/${id}/details`);
             setExamConfig({
                 title: data.title,
+                subject: data.subject,
                 duration: data.durationMinutes,
                 visibility: data.visibility,
                 tags: data.tags || [],
                 description: data.description || ''
             });
-            setSubject(reverseSubjectMapping[data.subject] || data.subject);
             setType(data.examType.toLowerCase());
 
             // Map questions from backend format to frontend editor format
@@ -134,6 +157,25 @@ const ExamEditor = () => {
         setQuestions(questions.filter(q => q.id !== id));
     };
 
+    const handleBatchPdfComplete = (base64Images) => {
+        const newQuestions = base64Images.map((img, idx) => ({
+            id: `batch-${Date.now()}-${idx}`,
+            type: 'MULTIPLE_CHOICE',
+            text: 'Şəkilə əsasən cavabı qeyd edin',
+            points: 1,
+            attachedImage: img,
+            options: [
+                { id: `opt-a-${Date.now()}-${idx}`, text: 'A', isCorrect: false },
+                { id: `opt-b-${Date.now()}-${idx}`, text: 'B', isCorrect: false },
+                { id: `opt-c-${Date.now()}-${idx}`, text: 'C', isCorrect: false },
+                { id: `opt-d-${Date.now()}-${idx}`, text: 'D', isCorrect: false },
+                { id: `opt-e-${Date.now()}-${idx}`, text: 'E', isCorrect: false },
+            ]
+        }));
+        setQuestions([...questions, ...newQuestions]);
+        toast.success(`${base64Images.length} yeni sual əlavə edildi`);
+    };
+
     const handleSaveExam = async () => {
         if (!examConfig.title) {
             toast.error('Zəhmət olmasa imtahanın adını qeyd edin (Parametrlər bölməsindən)');
@@ -155,7 +197,7 @@ const ExamEditor = () => {
         const payload = {
             title: examConfig.title,
             description: examConfig.description || '',
-            subject: subjectMapping[subject] || 'RIYAZIYYAT',
+            subject: examConfig.subject || 'RIYAZIYYAT',
             visibility: examConfig.visibility || 'PUBLIC',
             examType: type === 'free' ? 'FREE' : 'TEMPLATE',
             status: 'PUBLISHED',
@@ -230,7 +272,7 @@ const ExamEditor = () => {
                                     {type}
                                 </span>
                                 <span>•</span>
-                                <span>{subject}</span>
+                                <span>{reverseSubjectMapping[examConfig.subject] || examConfig.subject}</span>
                                 {examConfig.duration && (
                                     <>
                                         <span>•</span>
@@ -269,13 +311,36 @@ const ExamEditor = () => {
                             </div>
                             <h2 className="text-xl font-bold text-gray-900 mb-2">Hələ heç bir sual əlavə edilməyib</h2>
                             <p className="text-gray-500 mb-6">İmtahanınına ilk sualını əlavə etmək üçün aşağıdakı düymədən istifadə edin.</p>
-                            <button
-                                onClick={handleAddQuestion}
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
-                            >
-                                <HiOutlinePlus className="w-6 h-6" />
-                                İlk Sualı Əlavə Et
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                <button
+                                    onClick={handleAddQuestion}
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
+                                >
+                                    <HiOutlinePlus className="w-6 h-6" />
+                                    Tək Sual Əlavə Et
+                                </button>
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        accept="application/pdf"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                setBatchPdfFile(file);
+                                                setIsBatchPdfOpen(true);
+                                            }
+                                            e.target.value = null;
+                                        }}
+                                    />
+                                    <button
+                                        className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-semibold rounded-xl transition-colors shadow-sm"
+                                    >
+                                        <HiOutlinePlus className="w-6 h-6" />
+                                        PDF-dən Çoxlu Sual
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         questions.map((question, index) => (
@@ -291,17 +356,50 @@ const ExamEditor = () => {
                 </div>
 
                 {questions.length > 0 && (
-                    <div className="flex justify-center">
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
                         <button
                             onClick={handleAddQuestion}
-                            className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors shadow-sm"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors shadow-sm"
                         >
                             <HiOutlinePlus className="w-6 h-6" />
                             Yeni Sual Əlavə Et
                         </button>
+                        <div className="relative">
+                            <input
+                                type="file"
+                                accept="application/pdf"
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        setBatchPdfFile(file);
+                                        setIsBatchPdfOpen(true);
+                                    }
+                                    e.target.value = null;
+                                }}
+                            />
+                            <button
+                                className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors shadow-sm"
+                            >
+                                <HiOutlinePlus className="w-6 h-6" />
+                                PDF-dən Çoxlu Sual
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
+
+            {/* Batch PDF Cropper */}
+            <PdfCropperModal
+                isOpen={isBatchPdfOpen}
+                isBatchMode={true}
+                file={batchPdfFile}
+                onClose={() => {
+                    setIsBatchPdfOpen(false);
+                    setBatchPdfFile(null);
+                }}
+                onCropComplete={handleBatchPdfComplete}
+            />
 
             <ExamSettingsModal
                 isOpen={isSettingsOpen}

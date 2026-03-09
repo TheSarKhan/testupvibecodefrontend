@@ -17,27 +17,70 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-            try {
-                const decoded = jwtDecode(token);
-                if (decoded.exp * 1000 > Date.now()) {
+        const initializeAuth = async () => {
+            const accessToken = localStorage.getItem('accessToken');
+            const refreshToken = localStorage.getItem('refreshToken');
+
+            if (accessToken) {
+                try {
+                    const decoded = jwtDecode(accessToken);
+                    if (decoded.exp * 1000 > Date.now()) {
+                        // Access token is still valid — use it directly
+                        setUser({
+                            id: decoded.sub,
+                            email: decoded.email,
+                            role: decoded.role,
+                            fullName: decoded.fullName,
+                        });
+                    } else if (refreshToken) {
+                        // Access token expired — try to silently refresh
+                        try {
+                            // Use plain axios to avoid interceptor loops
+                            const { default: axios } = await import('axios');
+                            const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+                            localStorage.setItem('accessToken', data.accessToken);
+                            localStorage.setItem('refreshToken', data.refreshToken);
+                            const newDecoded = jwtDecode(data.accessToken);
+                            setUser({
+                                id: newDecoded.sub,
+                                email: newDecoded.email,
+                                role: newDecoded.role,
+                                fullName: newDecoded.fullName,
+                            });
+                        } catch {
+                            // Refresh also failed — clear storage
+                            localStorage.removeItem('accessToken');
+                            localStorage.removeItem('refreshToken');
+                        }
+                    } else {
+                        localStorage.removeItem('accessToken');
+                    }
+                } catch {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                }
+            } else if (refreshToken) {
+                // No access token but refresh token exists — attempt refresh
+                try {
+                    const { default: axios } = await import('axios');
+                    const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+                    localStorage.setItem('accessToken', data.accessToken);
+                    localStorage.setItem('refreshToken', data.refreshToken);
+                    const decoded = jwtDecode(data.accessToken);
                     setUser({
                         id: decoded.sub,
                         email: decoded.email,
                         role: decoded.role,
                         fullName: decoded.fullName,
                     });
-                } else {
-                    localStorage.removeItem('accessToken');
+                } catch {
                     localStorage.removeItem('refreshToken');
                 }
-            } catch {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
             }
-        }
-        setLoading(false);
+            setLoading(false);
+        };
+
+        initializeAuth();
     }, []);
 
     const login = async (email, password) => {

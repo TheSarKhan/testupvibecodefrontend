@@ -18,6 +18,7 @@ import NotFound from '../pages/NotFound';
 import ExamEntry from '../pages/Student/ExamEntry';
 import ExamSession from '../pages/Student/ExamSession';
 import ExamResultSummary from '../pages/Student/ExamResultSummary';
+import ExamReview from '../pages/Student/ExamReview';
 import ExamResults from '../pages/Teacher/ExamResults';
 
 // Protected
@@ -50,6 +51,10 @@ const router = createBrowserRouter([
             {
                 path: 'test/result/:sessionId',
                 element: <ExamResultSummary />
+            },
+            {
+                path: 'test/review/:sessionId',
+                element: <ExamReview />
             },
             {
                 path: 'profil',

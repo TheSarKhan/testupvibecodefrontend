@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -74,8 +76,19 @@ const Profile = () => {
                                     </div>
                                 </div>
                             </div>
-                            <div className="mt-6 text-xs text-gray-400">
-                                {new Date(result.submittedAt).toLocaleString('az-AZ')}
+                            <div className="mt-4 flex items-center justify-between">
+                                <span className="text-xs text-gray-400">
+                                    {new Date(result.submittedAt).toLocaleDateString('az-AZ')}
+                                </span>
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        navigate(`/test/review/${result.id}`);
+                                    }}
+                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors border border-indigo-100"
+                                >
+                                    Nəticəyə Bax
+                                </button>
                             </div>
                         </div>
                     ))}

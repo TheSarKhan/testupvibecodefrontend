@@ -211,8 +211,137 @@ const ExamReview = () => {
 
                                 {/* Matching Questions - Simplification for now, showing awarded score */}
                                 {q.questionType === 'MATCHING' && (
-                                    <div className="p-5 bg-gray-50 rounded-full text-center text-gray-500 font-medium">
-                                        Uyğunlaşdırma sualı üçün detallı baxış hazırlanır. Toplanan bal: {q.awardedScore}
+                                    <div className="space-y-4">
+                                        <p className="text-xs font-bold text-gray-400 uppercase mb-2">Uyğunluq Nəticələri:</p>
+                                        
+                                        <div className="relative flex justify-between gap-40 py-8">
+                                            <div className="flex-1 space-y-12 z-10">
+                                                {(() => {
+                                                    const leftNodes = [];
+                                                    q.matchingPairs.forEach(p => {
+                                                        if (p.leftItem !== null && (!p.leftVisualId || !leftNodes.some(n => n.leftVisualId === p.leftVisualId))) {
+                                                            leftNodes.push(p);
+                                                        }
+                                                    });
+                                                    
+                                                    return leftNodes.map((pair) => {
+                                                        let studentMatches = [];
+                                                        try { if (q.studentMatchingAnswerJson) studentMatches = JSON.parse(q.studentMatchingAnswerJson); } catch(e) {}
+                                                        
+                                                        // A node is "active" if it has any student matches
+                                                        const selection = studentMatches.some(m => m.leftItemId === pair.id || (pair.leftVisualId && studentMatches.some(sm => {
+                                                            const pDetail = q.matchingPairs.find(pp => pp.id === sm.leftItemId);
+                                                            return pDetail && pDetail.leftVisualId === pair.leftVisualId;
+                                                        })));
+
+                                                        return (
+                                                            <div
+                                                                key={`review-left-${pair.id}`}
+                                                                id={`review-left-${pair.leftVisualId || pair.id}`}
+                                                                className={`p-3 rounded-xl border-2 text-sm font-medium border-gray-100 bg-gray-50`}
+                                                            >
+                                                                <LatexPreview content={pair.leftItem} />
+                                                                {pair.attachedImageLeft && (
+                                                                    <div className="mt-2">
+                                                                        <img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
+                                            </div>
+
+                                            {/* Right Column */}
+                                            <div className="flex-1 space-y-12 z-10">
+                                                {(() => {
+                                                    const rightNodes = [];
+                                                    [...q.matchingPairs]
+                                                        .filter(p => p.rightItem !== null)
+                                                        .sort((a, b) => (a.rightItem || '').localeCompare(b.rightItem || ''))
+                                                        .forEach(p => {
+                                                            if (!p.rightVisualId || !rightNodes.some(n => n.rightVisualId === p.rightVisualId)) {
+                                                                rightNodes.push(p);
+                                                            }
+                                                        });
+                                                    
+                                                    return rightNodes.map((pair) => {
+                                                        return (
+                                                            <div
+                                                                key={`review-right-${pair.id}`}
+                                                                id={`review-right-${pair.rightVisualId || pair.id}`}
+                                                                className={`p-3 rounded-xl border-2 text-sm font-medium border-gray-100 bg-gray-50`}
+                                                            >
+                                                                <LatexPreview content={pair.rightItem} />
+                                                                {pair.attachedImageRight && (
+                                                                    <div className="mt-2">
+                                                                        <img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
+                                            </div>
+
+                                            {/* SVG Arrows Layer for Review */}
+                                            <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible" style={{ zIndex: 5 }}>
+                                                <defs>
+                                                    <marker id="arrowhead-correct" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                                        <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
+                                                    </marker>
+                                                    <marker id="arrowhead-incorrect" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                                        <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
+                                                    </marker>
+                                                </defs>
+                                                {(() => {
+                                                    let studentMatches = [];
+                                                    try { if (q.studentMatchingAnswerJson) studentMatches = JSON.parse(q.studentMatchingAnswerJson); } catch(e) {}
+                                                    
+                                                    return studentMatches.map((m, idx) => {
+                                                        const pairL = q.matchingPairs.find(pp => pp.id === m.leftItemId);
+                                                        const pairR = q.matchingPairs.find(pp => pp.id === m.rightItemId);
+                                                        
+                                                        if (!pairL || !pairR) return null;
+
+                                                        const leftEl = document.getElementById(`review-left-${pairL.leftVisualId || pairL.id}`);
+                                                        const rightEl = document.getElementById(`review-right-${pairR.rightVisualId || pairR.id}`);
+                                                        const container = leftEl?.closest('.relative');
+                                                        
+                                                        if (!leftEl || !rightEl || !container) return null;
+                                                        
+                                                        const rect = container.getBoundingClientRect();
+                                                        const lRect = leftEl.getBoundingClientRect();
+                                                        const rRect = rightEl.getBoundingClientRect();
+                                                        
+                                                        const x1 = lRect.right - rect.left;
+                                                        const y1 = lRect.top + lRect.height / 2 - rect.top;
+                                                        const x2 = rRect.left - rect.left;
+                                                        const y2 = rRect.top + rRect.height / 2 - rect.top;
+                                                        
+                                                        // Correctness check: Does this exact link (by content/visual identity) exist in q.matchingPairs?
+                                                        const isCorrectLink = q.matchingPairs.some(pp => 
+                                                            pp.leftItem === pairL.leftItem && 
+                                                            pp.rightItem === pairR.rightItem &&
+                                                            (pp.attachedImageLeft === pairL.attachedImageLeft) &&
+                                                            (pp.attachedImageRight === pairR.attachedImageRight)
+                                                        );
+
+                                                        return (
+                                                            <path
+                                                                key={`review-path-${idx}`}
+                                                                d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
+                                                                stroke={isCorrectLink ? '#10b981' : '#ef4444'}
+                                                                strokeWidth="3"
+                                                                fill="none"
+                                                                markerEnd={isCorrectLink ? 'url(#arrowhead-correct)' : 'url(#arrowhead-incorrect)'}
+                                                                className="opacity-70"
+                                                            />
+                                                        );
+                                                    });
+                                                })()}
+                                            </svg>
+                                        </div>
                                     </div>
                                 )}
                             </div>

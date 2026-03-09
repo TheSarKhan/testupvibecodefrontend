@@ -17,6 +17,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
     const [pdfFile, setPdfFile] = useState(null);
     const [pdfTarget, setPdfTarget] = useState(null); // { type: 'main' } or { type: 'option', id: optId }
     const [zoomedImage, setZoomedImage] = useState(null);
+    const [activeTeacherLeftId, setActiveTeacherLeftId] = useState(null);
     const editorsRefs = useRef({});
 
     // Register a ref dynamically
@@ -210,83 +211,338 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
     const renderMatching = () => {
         const pairs = question.matchingPairs || [];
 
-        const addPair = () => {
-            handleChange('matchingPairs', [...pairs, createEmptyPair()]);
+        const addLeftItem = () => {
+            const vId = 'lv-' + Date.now();
+            const newPair = { id: Date.now(), leftItem: '', rightItem: null, attachedImageLeft: null, attachedImageRight: null, leftVisualId: vId };
+            handleChange('matchingPairs', [...pairs, newPair]);
         };
 
-        const updatePair = (pairId, side, value) => {
-            const newPairs = pairs.map(p => p.id === pairId ? { ...p, [side]: value } : p);
+        const addRightItem = () => {
+            const vId = 'rv-' + Date.now();
+            const newPair = { id: Date.now(), leftItem: null, rightItem: '', attachedImageLeft: null, attachedImageRight: null, rightVisualId: vId };
+            handleChange('matchingPairs', [...pairs, newPair]);
+        };
+
+        const updateItemContents = (visualId, side, field, value) => {
+            const newPairs = pairs.map(p => {
+                if (side === 'left' && p.leftVisualId === visualId) return { ...p, [field]: value };
+                if (side === 'right' && p.rightVisualId === visualId) return { ...p, [field]: value };
+                return p;
+            });
             handleChange('matchingPairs', newPairs);
         };
 
-        const removePair = (pairId) => {
-            handleChange('matchingPairs', pairs.filter(p => p.id !== pairId));
+        const removeItem = (visualId, side) => {
+            // Remove all pairs that feature this visual node
+            const newPairs = pairs.filter(p => {
+                if (side === 'left' && p.leftVisualId === visualId) return false;
+                if (side === 'right' && p.rightVisualId === visualId) return false;
+                return true;
+            });
+            handleChange('matchingPairs', newPairs);
         };
 
+        const handleLink = (leftVisualId, rightVisualId) => {
+            const leftRecord = pairs.find(p => p.leftVisualId === leftVisualId);
+            const rightRecord = pairs.find(p => p.rightVisualId === rightVisualId);
+            
+            if (!leftRecord || !rightRecord) return;
+
+            // Check if this link already exists
+            const alreadyLinked = pairs.some(p => p.leftVisualId === leftVisualId && p.rightVisualId === rightVisualId);
+            if (alreadyLinked) {
+                toast.error('Bu bəndlər artıq birləşdirilib');
+                setActiveTeacherLeftId(null);
+                return;
+            }
+
+            // MAPPING LOGIC:
+            // 1. If leftRecord is independent AND rightRecord is independent -> Merge them.
+            // 2. Otherwise -> Create a NEW record for the link.
+            
+            let newPairs;
+            if (leftRecord.rightItem === null && rightRecord.leftItem === null) {
+                newPairs = pairs.map(p => {
+                    if (p.leftVisualId === leftVisualId) {
+                        return { 
+                            ...p, 
+                            rightItem: rightRecord.rightItem, 
+                            attachedImageRight: rightRecord.attachedImageRight,
+                            rightVisualId: rightRecord.rightVisualId
+                        };
+                    }
+                    return p;
+                }).filter(p => p.rightVisualId !== rightVisualId || p.leftItem !== null);
+            } else {
+                const newLink = {
+                    id: Date.now(),
+                    leftItem: leftRecord.leftItem,
+                    attachedImageLeft: leftRecord.attachedImageLeft,
+                    leftVisualId: leftRecord.leftVisualId,
+                    rightItem: rightRecord.rightItem,
+                    attachedImageRight: rightRecord.attachedImageRight,
+                    rightVisualId: rightRecord.rightVisualId
+                };
+                
+                // If the records we are linking were "ghosts" (independent nodes), we might need to remove the empty shells
+                newPairs = pairs.filter(p => {
+                    if (p.leftVisualId === leftVisualId && p.rightItem === null) return false;
+                    if (p.rightVisualId === rightVisualId && p.leftItem === null) return false;
+                    return true;
+                });
+                newPairs.push(newLink);
+            }
+
+            handleChange('matchingPairs', newPairs);
+            setActiveTeacherLeftId(null);
+            toast.success('Bəndlər birləşdirildi');
+        };
+
+        const removeLink = (pairId) => {
+            const pair = pairs.find(p => p.id === pairId);
+            if (!pair || pair.leftItem === null || pair.rightItem === null) return;
+
+            // When removing a link, we need to ensure the nodes themselves remain as independent items if they have no other links
+            const otherLeftLinks = pairs.some(p => p.id !== pairId && p.leftVisualId === pair.leftVisualId);
+            const otherRightLinks = pairs.some(p => p.id !== pairId && p.rightVisualId === pair.rightVisualId);
+
+            let newPairs = pairs.filter(p => p.id !== pairId);
+            
+            if (!otherLeftLinks) {
+                newPairs.push({
+                    id: Date.now(),
+                    leftItem: pair.leftItem,
+                    attachedImageLeft: pair.attachedImageLeft,
+                    leftVisualId: pair.leftVisualId,
+                    rightItem: null,
+                    rightVisualId: null
+                });
+            }
+            
+            if (!otherRightLinks) {
+                newPairs.push({
+                    id: Date.now() + 1,
+                    leftItem: null,
+                    rightItem: pair.rightItem,
+                    attachedImageRight: pair.attachedImageRight,
+                    rightVisualId: pair.rightVisualId,
+                    leftVisualId: null
+                });
+            }
+
+            handleChange('matchingPairs', newPairs);
+            toast.success('Əlaqə silindi');
+        };
+
+        const handlePairFileSelect = (visualId, side, file) => {
+            if (!file) return;
+            if (file.type === 'application/pdf') {
+                setPdfFile(file);
+                // For PDF crop, we use the first pair ID that matches this visual node
+                const targetPair = pairs.find(p => side === 'left' ? p.leftVisualId === visualId : p.rightVisualId === visualId);
+                setPdfTarget({ type: 'matching', id: targetPair.id, visualId, side });
+                setIsPdfModalOpen(true);
+            } else if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    updateItemContents(visualId, side, side === 'left' ? 'attachedImageLeft' : 'attachedImageRight', event.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        // GENERATE VISUAL LISTS
+        const leftNodes = [];
+        pairs.forEach(p => {
+            if (p.leftItem !== null && !leftNodes.some(n => n.visualId === p.leftVisualId)) {
+                leftNodes.push({ visualId: p.leftVisualId, content: p.leftItem, image: p.attachedImageLeft });
+            }
+        });
+
+        const rightNodes = [];
+        pairs.forEach(p => {
+            if (p.rightItem !== null && !rightNodes.some(n => n.visualId === p.rightVisualId)) {
+                rightNodes.push({ visualId: p.rightVisualId, content: p.rightItem, image: p.attachedImageRight });
+            }
+        });
+
+        // Ensure every record has visual IDs during initialization if missing (for legacy data)
+        const initializedPairs = pairs.map(p => {
+            if (p.leftItem !== null && !p.leftVisualId) p.leftVisualId = 'lv-' + p.id;
+            if (p.rightItem !== null && !p.rightVisualId) p.rightVisualId = 'rv-' + p.id;
+            return p;
+        });
+        if (JSON.stringify(initializedPairs) !== JSON.stringify(pairs)) {
+            // Avoid infinite loop by only triggering if changed
+            setTimeout(() => handleChange('matchingPairs', initializedPairs), 0);
+        }
+
         return (
-            <div className="space-y-4 mt-4">
-                <p className="text-sm font-medium text-gray-700">Uyğunlaşdırma cütləri (Sol tərəf ↔ Sağ tərəf):</p>
-                {pairs.map((pair, i) => (
-                    <div key={pair.id} className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                        <span className="font-bold text-gray-400 w-6 text-center">{i + 1}.</span>
+            <div className="space-y-6 mt-8">
+                <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl mb-4">
+                    <p className="text-xs text-indigo-700 font-medium">
+                        <span className="font-bold">Təlimat:</span> Maddələri əlavə edin və klikləyərək birləşdirin. Bir maddəni bir neçə maddə ilə birləşdirə bilərsiniz. Oxun üzərinə klikləyərək əlaqəni silə bilərsiniz.
+                    </p>
+                </div>
 
-                        <div className="flex-1 w-full flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
-                            <MathTextEditor
-                                ref={setEditorRef(`matching-left-${pair.id}`)}
-                                value={pair.left}
-                                onChange={(val) => updatePair(pair.id, 'left', val)}
-                                placeholder="Sol tərəf ifadəsi"
-                                className="flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm bg-transparent min-h-[40px]"
-                            />
-                            <button
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => setMathModalField({ type: 'matching-left', id: pair.id })}
-                                className="px-3 border-l text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
-                                title="Riyaziyyat formulu əlavə et"
-                            >
-                                fx
-                            </button>
+                <div className="relative flex justify-between gap-32 py-4">
+                    <div className="flex-1 space-y-10 z-10">
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sol Sütun</h4>
+                            <button type="button" onClick={addLeftItem} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
                         </div>
-
-                        <div className="text-gray-400 mx-2 hidden sm:block">↔</div>
-
-                        <div className="flex-1 w-full flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
-                            <MathTextEditor
-                                ref={setEditorRef(`matching-right-${pair.id}`)}
-                                value={pair.right}
-                                onChange={(val) => updatePair(pair.id, 'right', val)}
-                                placeholder="Sağ tərəf (Düzgün cavab)"
-                                className="flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm bg-transparent min-h-[40px]"
-                            />
-                            <button
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => setMathModalField({ type: 'matching-right', id: pair.id })}
-                                className="px-3 border-l text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
-                                title="Riyaziyyat formulu əlavə et"
+                        {leftNodes.map((node) => (
+                            <div
+                                key={`edit-left-${node.visualId}`}
+                                id={`edit-left-${node.visualId}`}
+                                className={`p-4 rounded-2xl border-2 transition-all group/item bg-white ${
+                                    activeTeacherLeftId === node.visualId ? 'border-yellow-400 ring-4 ring-yellow-100' : 'border-gray-100'
+                                }`}
                             >
-                                fx
-                            </button>
-                        </div>
+                                <div className="flex items-start gap-2">
+                                    <MathTextEditor
+                                        ref={setEditorRef(`matching-left-${node.visualId}`)}
+                                        value={node.content || ''}
+                                        onChange={(val) => updateItemContents(node.visualId, 'left', 'leftItem', val)}
+                                        placeholder="Sol maddə..."
+                                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm min-h-[40px]"
+                                    />
+                                    <button type="button" onClick={() => removeItem(node.visualId, 'left')} className="p-1 text-gray-300 hover:text-red-500"><HiOutlineTrash className="w-4 h-4" /></button>
+                                </div>
+                                
+                                {node.image && (
+                                    <div className="mt-2 relative inline-block">
+                                        <img src={node.image} className="max-h-24 rounded border border-gray-100 cursor-zoom-in" onClick={() => setZoomedImage(node.image)} alt="" />
+                                        <button onClick={() => updateItemContents(node.visualId, 'left', 'attachedImageLeft', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm"><HiOutlineTrash className="w-3 h-3" /></button>
+                                    </div>
+                                )}
 
-                        <button
-                            type="button"
-                            onClick={() => removePair(pair.id)}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                            <HiOutlineTrash className="w-5 h-5" />
-                        </button>
+                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
+                                    <div className="relative">
+                                        <input type="file" accept="image/*,application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handlePairFileSelect(node.visualId, 'left', e.target.files[0])} />
+                                        <button type="button" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Şəkil / PDF"><HiOutlinePlus className="w-4 h-4" /></button>
+                                    </div>
+                                    <button type="button" onClick={() => setMathModalField({ type: 'matching-left', id: node.visualId })} className="p-1.5 text-indigo-600 font-bold hover:bg-indigo-50 rounded-lg text-xs" title="Riyaziyyat">fx</button>
+                                    <div className="flex-1"></div>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            if (activeTeacherLeftId === node.visualId) {
+                                                setActiveTeacherLeftId(null);
+                                            } else {
+                                                setActiveTeacherLeftId(node.visualId);
+                                                toast.success('İndi sağdan uyğun olanı seçin');
+                                            }
+                                        }}
+                                        className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${
+                                            activeTeacherLeftId === node.visualId ? 'bg-yellow-400 text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600'
+                                        }`}
+                                    >
+                                        {activeTeacherLeftId === node.visualId ? 'Seçilib' : 'Birləşdir'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                ))}
-                <button
-                    type="button"
-                    onClick={addPair}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium border border-transparent hover:border-indigo-100"
-                >
-                    <HiOutlinePlus className="w-4 h-4" />
-                    Yeni cüt əlavə et
-                </button>
+
+                    {/* Right Column */}
+                    <div className="flex-1 space-y-10 z-10">
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sağ Sütun</h4>
+                            <button type="button" onClick={addRightItem} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
+                        </div>
+                        {rightNodes.map((node) => (
+                            <div
+                                key={`edit-right-${node.visualId}`}
+                                id={`edit-right-${node.visualId}`}
+                                className={`p-4 rounded-2xl border-2 border-gray-100 bg-white transition-all group/item`}
+                            >
+                                <div className="flex items-start gap-2">
+                                    <MathTextEditor
+                                        ref={setEditorRef(`matching-right-${node.visualId}`)}
+                                        value={node.content || ''}
+                                        onChange={(val) => updateItemContents(node.visualId, 'right', 'rightItem', val)}
+                                        placeholder="Sağ maddə..."
+                                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm min-h-[40px]"
+                                    />
+                                    <button type="button" onClick={() => removeItem(node.visualId, 'right')} className="p-1 text-gray-300 hover:text-red-500"><HiOutlineTrash className="w-4 h-4" /></button>
+                                </div>
+
+                                {node.image && (
+                                    <div className="mt-2 relative inline-block">
+                                        <img src={node.image} className="max-h-24 rounded border border-gray-100 cursor-zoom-in" onClick={() => setZoomedImage(node.image)} alt="" />
+                                        <button onClick={() => updateItemContents(node.visualId, 'right', 'attachedImageRight', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm"><HiOutlineTrash className="w-3 h-3" /></button>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
+                                    <div className="relative">
+                                        <input type="file" accept="image/*,application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handlePairFileSelect(node.visualId, 'right', e.target.files[0])} />
+                                        <button type="button" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Şəkil / PDF"><HiOutlinePlus className="w-4 h-4" /></button>
+                                    </div>
+                                    <button type="button" onClick={() => setMathModalField({ type: 'matching-right', id: node.visualId })} className="p-1.5 text-indigo-600 font-bold hover:bg-indigo-50 rounded-lg text-xs" title="Riyaziyyat">fx</button>
+                                    <div className="flex-1"></div>
+                                    {activeTeacherLeftId && (
+                                        <button 
+                                            type="button" 
+                                            onClick={() => handleLink(activeTeacherLeftId, node.visualId)}
+                                            className="px-3 py-1 bg-indigo-600 text-white text-[10px] font-bold uppercase rounded-md shadow-sm hover:bg-indigo-700"
+                                        >
+                                            Buraya Birləşdir
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* SVG Arrows to show correct connections */}
+                    <div className="absolute inset-0 pointer-events-none overflow-visible" style={{ zIndex: 0 }}>
+                        <svg className="w-full h-full overflow-visible">
+                            <defs>
+                                <marker id={`teacher-arrowhead`} markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                    <polygon points="0 0, 8 3, 0 6" fill="#indigo-300" className="fill-indigo-300" />
+                                </marker>
+                            </defs>
+                            {pairs.filter(p => p.leftItem !== null && p.rightItem !== null).map(pair => {
+                                const leftEl = document.getElementById(`edit-left-${pair.leftVisualId}`);
+                                const rightEl = document.getElementById(`edit-right-${pair.rightVisualId}`);
+                                if (leftEl && rightEl) {
+                                    const lRect = leftEl.getBoundingClientRect();
+                                    const rRect = rightEl.getBoundingClientRect();
+                                    const containerRect = leftEl.parentElement.parentElement.parentElement.getBoundingClientRect();
+                                    
+                                    const x1 = lRect.right - containerRect.left;
+                                    const y1 = lRect.top + lRect.height / 2 - containerRect.top;
+                                    const x2 = rRect.left - containerRect.left;
+                                    const y2 = rRect.top + rRect.height / 2 - containerRect.top;
+
+                                    return (
+                                        <g key={`arrow-group-${pair.id}`} className="group/arrow pointer-events-auto cursor-pointer" onClick={() => removeLink(pair.id)}>
+                                            <path
+                                                d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
+                                                stroke="transparent"
+                                                strokeWidth="15"
+                                                fill="none"
+                                            />
+                                            <path
+                                                d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
+                                                stroke="#e0e7ff"
+                                                strokeWidth="3"
+                                                fill="none"
+                                                markerEnd="url(#teacher-arrowhead)"
+                                                className="stroke-indigo-100 group-hover/arrow:stroke-red-300 transition-colors"
+                                            />
+                                            <circle cx={(x1+x2)/2} cy={(y1+y2)/2} r="10" className="fill-white stroke-red-100 opacity-0 group-hover/arrow:opacity-100 transition-opacity" />
+                                            <text x={(x1+x2)/2} y={(y1+y2)/2 + 4} textAnchor="middle" className="fill-red-500 text-[12px] font-bold opacity-0 group-hover/arrow:opacity-100 transition-opacity">×</text>
+                                        </g>
+                                    );
+                                }
+                                return null;
+                            })}
+                        </svg>
+                    </div>
+                </div>
             </div>
         );
     };
@@ -434,6 +690,10 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                             opt.id === pdfTarget.id ? { ...opt, attachedImage: base64Img } : opt
                         );
                         handleChange('options', newOptions);
+                    } else if (pdfTarget?.type === 'matching') {
+                        const pairs = question.matchingPairs || [];
+                        const field = pdfTarget.side === 'left' ? 'attachedImageLeft' : 'attachedImageRight';
+                        updateItem(pdfTarget.id, field, base64Img);
                     } else {
                         handleChange('attachedImage', base64Img);
                     }

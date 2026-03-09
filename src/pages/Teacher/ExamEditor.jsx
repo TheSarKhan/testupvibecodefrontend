@@ -114,7 +114,9 @@ const ExamEditor = () => {
                 matchingPairs: q.matchingPairs?.map(pair => ({
                     id: pair.id,
                     left: pair.leftItem,
-                    right: pair.rightItem
+                    attachedImageLeft: pair.attachedImageLeft,
+                    right: pair.rightItem,
+                    attachedImageRight: pair.attachedImageRight
                 }))
             }));
             setQuestions(mappedQuestions);
@@ -219,7 +221,9 @@ const ExamEditor = () => {
                 })) : [],
                 matchingPairs: q.matchingPairs ? q.matchingPairs.map((pair, pIdx) => ({
                     leftItem: pair.left,
+                    attachedImageLeft: pair.attachedImageLeft || null,
                     rightItem: pair.right,
+                    attachedImageRight: pair.attachedImageRight || null,
                     orderIndex: pIdx
                 })) : []
             }))

@@ -47,12 +47,15 @@ const ExamSession = () => {
             setSessionData(data);
             
             // Initialize answers array
-            const initialAnswers = data.questions.map(q => ({
-                questionId: q.id,
-                optionIds: [],
-                textAnswer: '',
-                matchingPairs: []
-            }));
+            const initialAnswers = data.questions.map(q => {
+                const saved = data.savedAnswers?.find(s => s.questionId === q.id);
+                return {
+                    questionId: q.id,
+                    optionIds: saved?.optionIds || [],
+                    textAnswer: saved?.textAnswer || '',
+                    matchingPairs: saved?.matchingPairs || []
+                };
+            });
             setAnswers(initialAnswers);
 
             if (data.durationMinutes) {
@@ -79,11 +82,49 @@ const ExamSession = () => {
         }
     };
 
-    const handleAnswerChange = (questionId, newAnswerData) => {
-        setAnswers(prev => prev.map(ans => 
-            ans.questionId === questionId ? { ...ans, ...newAnswerData } : ans
-        ));
+    const syncAnswer = async (questionId, answerData) => {
+        try {
+            await api.post(`/submissions/${sessionId}/save-answer`, {
+                questionId,
+                ...answerData
+            });
+        } catch (error) {
+            console.error("Failed to sync answer:", error);
+        }
     };
+
+    const handleAnswerChange = (questionId, newAnswerData) => {
+        setAnswers(prev => prev.map(ans => {
+            if (ans.questionId === questionId) {
+                const updated = { ...ans, ...newAnswerData };
+                // Sync to backend
+                // For textAnswer, we'll handle debouncing elsewhere or just call it here 
+                // but usually MCQ/Matching are discrete actions.
+                if (!newAnswerData.hasOwnProperty('textAnswer')) {
+                    syncAnswer(questionId, updated);
+                }
+                return updated;
+            }
+            return ans;
+        }));
+    };
+
+    // Debounced sync for text answers
+    useEffect(() => {
+        const textAnswers = answers.filter(a => a.textAnswer !== undefined);
+        const timers = textAnswers.map(ans => {
+            const timer = setTimeout(() => {
+                // Find if the question type is actually text-based to avoid unnecessary syncs
+                const q = sessionData?.questions.find(q => q.id === ans.questionId);
+                if (q && (q.questionType === 'OPEN_AUTO' || q.questionType === 'OPEN_MANUAL')) {
+                    syncAnswer(ans.questionId, ans);
+                }
+            }, 1000);
+            return { id: ans.questionId, timer };
+        });
+
+        return () => timers.forEach(t => clearTimeout(t.timer));
+    }, [answers.map(a => a.textAnswer).join('|')]);
 
     const handleAutoSubmit = () => {
         toast.error("Vaxt bitdi! İmtahan avtomatik təhvil verilir.");

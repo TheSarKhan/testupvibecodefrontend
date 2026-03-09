@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* ========== Global Styles ========== */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ========== Custom Utilities ========== */
+@layer utilities {
+  .container-main {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* ========== KaTeX & Math Alignment ========== */
+
+/* Center math globally with text */
+.katex,
+.math-node {
+  vertical-align: middle !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* Ensure any Katex display wrapper also behaves inline if it appears */
+.katex-display {
+  display: inline-flex !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Fix inner KaTeX alignment */
+.katex-html {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+/* Ensure the baseline is respected for smaller symbols */
+.katex .base {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+/* Prose (Tailwind Typography) overrides */
+/* Aggressively force inline-flex and middle alignment for all math parts in prose */
+.prose :where(.katex),
+.prose :where(.katex-html),
+.prose :where(.math-node),
+.prose p :where(.katex),
+.prose p :where(.math-node) {
+  vertical-align: middle !important;
+  display: inline-flex !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Special fix for ExamView question text */
+.text-lg .katex {
+  font-size: 1.15em !important;
+}
+
+/* Ensure mathlive keyboard is above everything */
+.ML__keyboard {
+  z-index: 9999 !important;
+}
+
+math-field {
+  --caret-color: #4f46e5;
+  --selection-background-color: #e0e7ff;
+}
+
+/* Editor specific tweaks */
+[contenteditable].math-content,
+[contenteditable] .math-node {
+  line-height: inherit;
+}

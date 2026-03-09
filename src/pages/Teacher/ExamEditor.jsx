@@ -1,0 +1,316 @@
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus } from 'react-icons/hi';
+import { ExamSettingsModal, QuestionEditor } from '../../components/ui';
+import api from '../../api/axios';
+import toast from 'react-hot-toast';
+
+const ExamEditor = () => {
+    const { id } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const isEditMode = !!id;
+
+    // Initial state from location (for new exams)
+    const initialLocationState = location.state || { subject: 'Seçilməyib', type: 'free' };
+    const [subject, setSubject] = useState(initialLocationState.subject);
+    const [type, setType] = useState(initialLocationState.type);
+
+    // Global State for the Exam
+    const [examConfig, setExamConfig] = useState({
+        title: '',
+        duration: 60,
+        visibility: 'PUBLIC',
+        password: '',
+        tags: [],
+        description: ''
+    });
+    const [questions, setQuestions] = useState([]);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [loading, setLoading] = useState(isEditMode);
+
+    const subjectMapping = {
+        'Riyaziyyat': 'RIYAZIYYAT',
+        'Fizika': 'FIZIKA',
+        'Kimya': 'KIMYA',
+        'Biologiya': 'BIOLOGIYA',
+        'Azərbaycan dili': 'AZERBAYCAN_DILI',
+        'İngilis dili': 'INGILIS_DILI',
+        'Tarix': 'TARIX',
+        'Coğrafiya': 'COGRAFIYA',
+        'Informatika': 'INFORMATIKA',
+        'Məntiq': 'MANTIQ'
+    };
+
+    const reverseSubjectMapping = {
+        'RIYAZIYYAT': 'Riyaziyyat',
+        'FIZIKA': 'Fizika',
+        'KIMYA': 'Kimya',
+        'BIOLOGIYA': 'Biologiya',
+        'AZERBAYCAN_DILI': 'Azərbaycan dili',
+        'INGILIS_DILI': 'İngilis dili',
+        'TARIX': 'Tarix',
+        'COGRAFIYA': 'Coğrafiya',
+        'INFORMATIKA': 'Informatika',
+        'MANTIQ': 'Məntiq'
+    };
+
+    useEffect(() => {
+        if (isEditMode) {
+            fetchExamData();
+        }
+    }, [id]);
+
+    const fetchExamData = async () => {
+        try {
+            const { data } = await api.get(`/exams/${id}/details`);
+            setExamConfig({
+                title: data.title,
+                duration: data.durationMinutes,
+                visibility: data.visibility,
+                tags: data.tags || [],
+                description: data.description || ''
+            });
+            setSubject(reverseSubjectMapping[data.subject] || data.subject);
+            setType(data.examType.toLowerCase());
+
+            // Map questions from backend format to frontend editor format
+            const mappedQuestions = data.questions.map(q => ({
+                id: q.id.toString(),
+                type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
+                    q.questionType === 'MATCHING' ? 'MATCHING' : 'OPEN_ENDED',
+                text: q.content,
+                points: q.points,
+                attachedImage: q.attachedImage,
+                sampleAnswer: q.correctAnswer,
+                options: q.options?.map(opt => ({
+                    id: opt.id,
+                    text: opt.content,
+                    isCorrect: opt.isCorrect
+                })),
+                matchingPairs: q.matchingPairs?.map(pair => ({
+                    id: pair.id,
+                    left: pair.leftItem,
+                    right: pair.rightItem
+                }))
+            }));
+            setQuestions(mappedQuestions);
+        } catch (error) {
+            console.error("Error fetching exam:", error);
+            toast.error("İmtahan məlumatlarını yükləmək mümkün olmadı");
+            navigate('/imtahanlar');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSaveSettings = (newConfig) => {
+        setExamConfig(newConfig);
+    };
+
+    const handleAddQuestion = () => {
+        const newQuestion = {
+            id: Date.now().toString(),
+            type: 'MULTIPLE_CHOICE',
+            text: '',
+            points: 1,
+            options: [
+                { id: Date.now() + 1, text: '', isCorrect: false },
+                { id: Date.now() + 2, text: '', isCorrect: false },
+                { id: Date.now() + 3, text: '', isCorrect: false },
+                { id: Date.now() + 4, text: '', isCorrect: false }
+            ],
+            matchingPairs: [],
+            sampleAnswer: ''
+        };
+        setQuestions([...questions, newQuestion]);
+    };
+
+    const handleUpdateQuestion = (id, updatedData) => {
+        setQuestions(questions.map(q => q.id === id ? updatedData : q));
+    };
+
+    const handleDeleteQuestion = (id) => {
+        setQuestions(questions.filter(q => q.id !== id));
+    };
+
+    const handleSaveExam = async () => {
+        if (!examConfig.title) {
+            toast.error('Zəhmət olmasa imtahanın adını qeyd edin (Parametrlər bölməsindən)');
+            setIsSettingsOpen(true);
+            return;
+        }
+
+        if (questions.length === 0) {
+            toast.error('İmtahana ən azı bir sual əlavə edilməlidir');
+            return;
+        }
+
+        const questionTypeMapping = {
+            'MULTIPLE_CHOICE': 'MCQ',
+            'MATCHING': 'MATCHING',
+            'OPEN_ENDED': questions.some(q => q.sampleAnswer) ? 'OPEN_AUTO' : 'OPEN_MANUAL'
+        };
+
+        const payload = {
+            title: examConfig.title,
+            description: examConfig.description || '',
+            subject: subjectMapping[subject] || 'RIYAZIYYAT',
+            visibility: examConfig.visibility || 'PUBLIC',
+            examType: type === 'free' ? 'FREE' : 'TEMPLATE',
+            status: 'PUBLISHED',
+            durationMinutes: parseInt(examConfig.duration) || 60,
+            tags: examConfig.tags || [],
+            questions: questions.map((q, idx) => ({
+                content: q.text,
+                attachedImage: q.attachedImage || null,
+                questionType: q.type === 'MULTIPLE_CHOICE' ? 'MCQ' :
+                    q.type === 'MATCHING' ? 'MATCHING' :
+                        (q.sampleAnswer ? 'OPEN_AUTO' : 'OPEN_MANUAL'),
+                points: parseFloat(q.points) || 1,
+                orderIndex: idx,
+                correctAnswer: q.sampleAnswer || '',
+                options: q.options ? q.options.map((opt, oIdx) => ({
+                    content: opt.text,
+                    isCorrect: opt.isCorrect,
+                    orderIndex: oIdx
+                })) : [],
+                matchingPairs: q.matchingPairs ? q.matchingPairs.map((pair, pIdx) => ({
+                    leftItem: pair.left,
+                    rightItem: pair.right,
+                    orderIndex: pIdx
+                })) : []
+            }))
+        };
+
+        const loadId = toast.loading(isEditMode ? 'Dəyişikliklər yadda saxlanılır...' : 'İmtahan yaradılır...');
+
+        try {
+            if (isEditMode) {
+                await api.put(`/exams/${id}`, payload);
+                toast.success('Dəyişikliklər uğurla yadda saxlanıldı!', { id: loadId });
+            } else {
+                await api.post('/exams', payload);
+                toast.success('İmtahan uğurla yaradıldı!', { id: loadId });
+            }
+            navigate('/imtahanlar');
+        } catch (error) {
+            console.error("Save error:", error);
+            const errorMsg = error.response?.data?.message || 'Sistem xətası baş verdi';
+            toast.error(errorMsg, { id: loadId });
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-gray-50 min-h-screen pb-24">
+            {/* Top Toolbar */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+                <div className="container-main py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate('/imtahanlar')}
+                            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <HiOutlineArrowLeft className="w-6 h-6" />
+                        </button>
+                        <div>
+                            <h1 className="text-xl font-bold text-gray-900 max-w-xl truncate">
+                                {examConfig.title || (isEditMode ? 'İmtahan Redaktə Edilir' : 'Yeni İmtahan Yaradılır')}
+                            </h1>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-semibold uppercase">
+                                    {type}
+                                </span>
+                                <span>•</span>
+                                <span>{subject}</span>
+                                {examConfig.duration && (
+                                    <>
+                                        <span>•</span>
+                                        <span>{examConfig.duration} dəq</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors"
+                        >
+                            <HiOutlineCog className="w-5 h-5" />
+                            <span className="hidden sm:inline">Parametrlər</span>
+                        </button>
+                        <button
+                            onClick={handleSaveExam}
+                            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm transition-colors"
+                        >
+                            {isEditMode ? 'Yenilə' : 'Yadda Saxla'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Editor Area */}
+            <div className="container-main mt-8 max-w-4xl">
+                <div className="space-y-6 mb-8">
+                    {questions.length === 0 ? (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center py-20">
+                            <div className="w-16 h-16 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-gray-300">
+                                <span className="text-2xl font-bold">?</span>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-900 mb-2">Hələ heç bir sual əlavə edilməyib</h2>
+                            <p className="text-gray-500 mb-6">İmtahanınına ilk sualını əlavə etmək üçün aşağıdakı düymədən istifadə edin.</p>
+                            <button
+                                onClick={handleAddQuestion}
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
+                            >
+                                <HiOutlinePlus className="w-6 h-6" />
+                                İlk Sualı Əlavə Et
+                            </button>
+                        </div>
+                    ) : (
+                        questions.map((question, index) => (
+                            <QuestionEditor
+                                key={question.id}
+                                index={index}
+                                question={question}
+                                onChange={handleUpdateQuestion}
+                                onDelete={handleDeleteQuestion}
+                            />
+                        ))
+                    )}
+                </div>
+
+                {questions.length > 0 && (
+                    <div className="flex justify-center">
+                        <button
+                            onClick={handleAddQuestion}
+                            className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors shadow-sm"
+                        >
+                            <HiOutlinePlus className="w-6 h-6" />
+                            Yeni Sual Əlavə Et
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            <ExamSettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                examConfig={examConfig}
+                onSave={handleSaveSettings}
+            />
+        </div>
+    );
+};
+
+export default ExamEditor;

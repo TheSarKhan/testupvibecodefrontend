@@ -15,6 +15,11 @@ import ExamEditor from '../pages/Teacher/ExamEditor';
 import Profile from '../pages/Profile/Profile';
 import NotFound from '../pages/NotFound';
 
+import ExamEntry from '../pages/Student/ExamEntry';
+import ExamSession from '../pages/Student/ExamSession';
+import ExamResultSummary from '../pages/Student/ExamResultSummary';
+import ExamResults from '../pages/Teacher/ExamResults';
+
 // Protected
 import ProtectedRoute from './ProtectedRoute';
 
@@ -29,9 +34,23 @@ const router = createBrowserRouter([
             { path: 'login', element: <Login /> },
             { path: 'register', element: <Register /> },
             { path: 'imtahanlar', element: <ExamList /> },
+            { path: 'imtahanlar/:examId/neticeler', element: <ExamResults /> },
+            { path: 'imtahanlar/:examId/statistika', element: <ExamResults /> },
             { path: 'imtahanlar/:id', element: <ExamView /> },
             { path: 'imtahanlar/yarat', element: <ExamEditor /> },
             { path: 'imtahanlar/edit/:id', element: <ExamEditor /> },
+            { 
+                path: 'imtahan/:shareLink', 
+                element: <ExamEntry /> 
+            },
+            { 
+                path: 'test/take/:sessionId', 
+                element: <ExamSession /> 
+            },
+            {
+                path: 'test/result/:sessionId',
+                element: <ExamResultSummary />
+            },
             {
                 path: 'profil',
                 element: (

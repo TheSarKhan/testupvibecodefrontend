@@ -78,13 +78,21 @@ const ExamView = () => {
                             <p className="text-xs text-gray-500">ID: {exam.id} | {reverseSubjectMapping[exam.subject] || exam.subject}</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => navigate(`/imtahanlar/edit/${exam.id}`)}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
-                    >
-                        <HiOutlinePencilAlt className="w-5 h-5" />
-                        Düzəliş et
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate(`/imtahanlar/${exam.id}/statistika`)}
+                            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
+                        >
+                            Statistika
+                        </button>
+                        <button
+                            onClick={() => navigate(`/imtahanlar/edit/${exam.id}`)}
+                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
+                        >
+                            <HiOutlinePencilAlt className="w-5 h-5" />
+                            Düzəliş et
+                        </button>
+                    </div>
                 </div>
             </div>
 

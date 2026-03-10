@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="url(#studentGrad)"/>
+  <defs>
+    <linearGradient id="studentGrad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <!-- Body / hoodie -->
+  <rect x="35" y="82" width="50" height="28" rx="10" fill="#4f46e5"/>
+  <!-- Hoodie strings -->
+  <line x1="58" y1="85" x2="55" y2="98" stroke="#a5b4fc" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="62" y1="85" x2="65" y2="98" stroke="#a5b4fc" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Head -->
+  <circle cx="60" cy="54" r="22" fill="#fed7aa"/>
+  <!-- Eyes -->
+  <ellipse cx="52" cy="52" rx="3" ry="3.5" fill="#1e1b4b"/>
+  <ellipse cx="68" cy="52" rx="3" ry="3.5" fill="#1e1b4b"/>
+  <!-- Eye shine -->
+  <circle cx="53.5" cy="50.5" r="1" fill="white"/>
+  <circle cx="69.5" cy="50.5" r="1" fill="white"/>
+  <!-- Nose -->
+  <ellipse cx="60" cy="57" rx="2" ry="1.5" fill="#fb923c" opacity="0.5"/>
+  <!-- Smile -->
+  <path d="M53 63 Q60 70 67 63" stroke="#c2410c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Hair -->
+  <path d="M38 50 Q40 30 60 30 Q80 30 82 50 Q78 38 60 38 Q42 38 38 50Z" fill="#1e1b4b"/>
+  <!-- Graduation cap -->
+  <rect x="44" y="30" width="32" height="5" rx="2" fill="#312e81"/>
+  <polygon points="60,20 44,30 76,30" fill="#312e81"/>
+  <line x1="76" y1="30" x2="80" y2="42" stroke="#fbbf24" stroke-width="2"/>
+  <circle cx="80" cy="43" r="2.5" fill="#fbbf24"/>
+  <!-- Backpack strap hint -->
+  <path d="M38 90 Q32 80 36 70" stroke="#6366f1" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <path d="M82 90 Q88 80 84 70" stroke="#6366f1" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+</svg>

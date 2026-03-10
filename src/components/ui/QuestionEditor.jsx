@@ -10,7 +10,8 @@ const QUESTION_TYPES = {
     MULTI_SELECT: 'Çox seçimli',
     OPEN_AUTO: 'Açıq (Avtomatik)',
     OPEN_MANUAL: 'Açıq (Müəllim Yoxlayır)',
-    MATCHING: 'Uyğunlaşdırma'
+    MATCHING: 'Uyğunlaşdırma',
+    FILL_IN_THE_BLANK: 'Boşluq Doldurma'
 };
 
 const QuestionEditor = ({ question, index, onChange, onDelete }) => {
@@ -245,6 +246,131 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
             </div>
         </div>
     );
+
+    // FILL IN THE BLANK
+    const renderFillInTheBlank = () => {
+        const text = question.text || '';
+        const blankCount = text.split('___').length - 1;
+
+        let correctAnswers = [];
+        try { correctAnswers = JSON.parse(question.sampleAnswer || '[]'); } catch (e) {}
+        const answers = Array.from({ length: blankCount }, (_, i) => correctAnswers[i] || '');
+
+        const distractors = (question.options || []).filter(o => !o.isCorrect);
+
+        // Rebuild options: auto-correct chips + manual distractors
+        const rebuildAndSave = (newAnswers, newDistractors) => {
+            const correctOpts = newAnswers
+                .map((a, i) => ({ id: `blank-${i}`, text: a.trim(), isCorrect: true }))
+                .filter(o => o.text);
+            onChange(question.id, {
+                ...question,
+                sampleAnswer: JSON.stringify(newAnswers),
+                options: [...correctOpts, ...newDistractors]
+            });
+        };
+
+        const updateAnswer = (idx, val) => {
+            const next = [...answers];
+            next[idx] = val;
+            rebuildAndSave(next, distractors);
+        };
+
+        const addDistractor = () => {
+            rebuildAndSave(answers, [...distractors, { id: Date.now(), text: '', isCorrect: false }]);
+        };
+
+        const updateDistractor = (id, val) => {
+            rebuildAndSave(answers, distractors.map(d => d.id === id ? { ...d, text: val } : d));
+        };
+
+        const removeDistractor = (id) => {
+            rebuildAndSave(answers, distractors.filter(d => d.id !== id));
+        };
+
+        // Preview chip pool (what student will see)
+        const allChips = [
+            ...answers.filter(a => a.trim()).map((a, i) => ({ key: `c-${i}`, text: a, correct: true })),
+            ...distractors.filter(d => d.text.trim()).map(d => ({ key: `d-${d.id}`, text: d.text, correct: false }))
+        ];
+
+        return (
+            <div className="mt-4 space-y-5">
+                {/* Info */}
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">ℹ️</span>
+                    <p className="text-sm text-blue-700">
+                        Yuxarıdakı <strong>___ Boşluq</strong> düyməsi ilə mətnə boşluq əlavə edin. Hər boşluğun düzgün cavabını yazın — onlar avtomatik olaraq şagidə göstəriləcək çiplər siyahısına əlavə olunur. İstəsəniz yanlış seçimlər (distraktorlar) da əlavə edə bilərsiniz.
+                    </p>
+                </div>
+
+                {/* Correct answers per blank */}
+                <div className="space-y-3">
+                    <p className="text-sm font-semibold text-gray-700">
+                        Düzgün Cavablar
+                        <span className="ml-2 text-xs font-normal text-gray-400">({blankCount} boşluq aşkarlandı)</span>
+                    </p>
+                    {blankCount === 0 ? (
+                        <p className="text-sm text-gray-400 italic px-1">Sual mətnindəki boşluqları <strong>___ Boşluq</strong> düyməsi ilə əlavə edin.</p>
+                    ) : answers.map((val, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold text-xs shrink-0">{i + 1}</span>
+                            <input
+                                type="text"
+                                value={val}
+                                onChange={e => updateAnswer(i, e.target.value)}
+                                placeholder={`Boşluq ${i + 1} üçün düzgün cavab`}
+                                className="flex-1 px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Distractors */}
+                <div className="space-y-3">
+                    <p className="text-sm font-semibold text-gray-700">
+                        Yanlış Seçimlər
+                        <span className="ml-2 text-xs font-normal text-gray-400">(şagidi çaşdırmaq üçün)</span>
+                    </p>
+                    {distractors.map((d, i) => (
+                        <div key={d.id} className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={d.text}
+                                onChange={e => updateDistractor(d.id, e.target.value)}
+                                placeholder={`Yanlış seçim ${i + 1}`}
+                                className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                            />
+                            <button type="button" onClick={() => removeDistractor(d.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                                <HiOutlineTrash className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ))}
+                    <button
+                        type="button"
+                        onClick={addDistractor}
+                        className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-colors"
+                    >
+                        <HiOutlinePlus className="w-4 h-4" /> Yanlış seçim əlavə et
+                    </button>
+                </div>
+
+                {/* Chip preview */}
+                {allChips.length > 0 && (
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Şagid Görəcəyi Çiplər (qarışıq):</p>
+                        <div className="flex flex-wrap gap-2">
+                            {allChips.map(chip => (
+                                <span key={chip.key} className={`px-3 py-1.5 rounded-xl border-2 text-sm font-medium ${chip.correct ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>
+                                    {chip.text}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     // MATCHING
     const renderMatching = () => {
@@ -664,6 +790,22 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                             </button>
                         </div>
 
+                        {/* Insert blank button (FILL_IN_THE_BLANK only) */}
+                        {question.type === 'FILL_IN_THE_BLANK' && (
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    const editor = editorsRefs.current['main'];
+                                    if (editor) editor.insertText(' ___ ');
+                                }}
+                                className="text-xs font-bold px-2.5 py-1 rounded-md transition-colors bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center gap-1"
+                                title="Kursora boşluq əlavə et"
+                            >
+                                ___  Boşluq
+                            </button>
+                        )}
+
                         {/* Mathlive Modal Trigger */}
                         <button
                             type="button"
@@ -709,6 +851,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
             {(question.type === 'MULTIPLE_CHOICE' || question.type === 'MULTI_SELECT') && renderMultipleChoice()}
             {question.type === 'OPEN_AUTO' && renderOpenAuto()}
             {question.type === 'OPEN_MANUAL' && renderOpenManual()}
+            {question.type === 'FILL_IN_THE_BLANK' && renderFillInTheBlank()}
             {question.type === 'MATCHING' && renderMatching()}
 
             {/* PDF Cropper Modal */}

@@ -121,7 +121,7 @@ const ExamSession = () => {
                     ...(sessionData?.passages || []).flatMap(p => p.questions || [])
                 ];
                 const q = allQuestions.find(q => q.id === ans.questionId);
-                if (q && (q.questionType === 'OPEN_AUTO' || q.questionType === 'OPEN_MANUAL')) {
+                if (q && (q.questionType === 'OPEN_AUTO' || q.questionType === 'OPEN_MANUAL' || q.questionType === 'FILL_IN_THE_BLANK')) {
                     syncAnswer(ans.questionId, ans);
                 }
             }, 1000);
@@ -400,9 +400,11 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                     <span className="text-sm text-gray-400 font-mono">{question.questionType}</span>
                 </div>
 
-                <div className="prose max-w-none text-xl text-gray-800 mb-8">
-                    <LatexPreview content={question.content} />
-                </div>
+                {question.questionType !== 'FILL_IN_THE_BLANK' && (
+                    <div className="prose max-w-none text-xl text-gray-800 mb-8">
+                        <LatexPreview content={question.content} />
+                    </div>
+                )}
 
                 {question.attachedImage && (
                     <div className="mb-8 rounded-lg overflow-hidden border border-gray-200 inline-block">
@@ -456,6 +458,14 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                         />
                     )}
 
+                    {question.questionType === 'FILL_IN_THE_BLANK' && (
+                        <FillInTheBlankInput
+                            question={question}
+                            answer={answer}
+                            onAnswerChange={onAnswerChange}
+                        />
+                    )}
+
                     {question.questionType === 'MATCHING' && (
                         <MatchingQuestion
                             question={question}
@@ -467,6 +477,113 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                     )}
                 </div>
             </div>
+        </div>
+    );
+};
+
+// ---- FillInTheBlankInput ----
+const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
+    const parts = (question.content || '').split('___');
+    const blankCount = parts.length - 1;
+
+    const [chipPool] = useState(() => {
+        const chips = (question.options || []).map(o => ({ id: String(o.id), text: o.content }));
+        for (let i = chips.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [chips[i], chips[j]] = [chips[j], chips[i]];
+        }
+        return chips;
+    });
+
+    const [dragOver, setDragOver] = useState(null);
+
+    let blanks = [];
+    try { blanks = JSON.parse(answer.textAnswer || '[]'); } catch (e) {}
+    blanks = Array.from({ length: blankCount }, (_, i) => blanks[i] || null);
+
+    const usedTexts = new Set(blanks.filter(Boolean));
+
+    const placeChip = (blankIdx, chipText) => {
+        const next = [...blanks];
+        for (let i = 0; i < next.length; i++) if (next[i] === chipText) next[i] = null;
+        next[blankIdx] = chipText;
+        onAnswerChange(question.id, { textAnswer: JSON.stringify(next) });
+    };
+
+    const removeFromBlank = (blankIdx) => {
+        const next = [...blanks];
+        next[blankIdx] = null;
+        onAnswerChange(question.id, { textAnswer: JSON.stringify(next) });
+    };
+
+    const handleChipClick = (chipText) => {
+        if (usedTexts.has(chipText)) return;
+        const firstEmpty = blanks.findIndex(b => !b);
+        if (firstEmpty !== -1) placeChip(firstEmpty, chipText);
+    };
+
+    return (
+        <div className="space-y-8">
+            {/* Question text with inline drop zones */}
+            <div className="text-xl text-gray-800 leading-[3.5rem]">
+                {parts.map((part, i) => (
+                    <span key={i}>
+                        {part && <LatexPreview content={part} />}
+                        {i < blankCount && (
+                            <span
+                                onDragOver={e => { e.preventDefault(); setDragOver(i); }}
+                                onDragLeave={() => setDragOver(null)}
+                                onDrop={e => {
+                                    e.preventDefault();
+                                    setDragOver(null);
+                                    const chipText = e.dataTransfer.getData('chipText');
+                                    if (chipText) placeChip(i, chipText);
+                                }}
+                                onClick={() => blanks[i] && removeFromBlank(i)}
+                                className={`inline-flex items-center justify-center mx-2 min-w-[110px] h-9 px-3 rounded-xl border-2 align-middle transition-all cursor-pointer
+                                    ${blanks[i]
+                                        ? 'bg-indigo-100 border-indigo-400 text-indigo-800 font-semibold'
+                                        : dragOver === i
+                                            ? 'bg-blue-100 border-blue-400 border-solid scale-105'
+                                            : 'bg-gray-50 border-dashed border-gray-300 text-gray-400'
+                                    }`}
+                            >
+                                {blanks[i]
+                                    ? <span className="flex items-center gap-1.5 text-base">{blanks[i]} <span className="text-xs text-indigo-400">✕</span></span>
+                                    : <span className="text-sm">{i + 1}</span>
+                                }
+                            </span>
+                        )}
+                    </span>
+                ))}
+            </div>
+
+            {/* Chip pool */}
+            {chipPool.length > 0 && (
+                <div>
+                    <p className="text-sm text-gray-500 mb-3 font-medium">Seçimləri boşluqlara sürükləyin və ya üzərinə klikləyin:</p>
+                    <div className="flex flex-wrap gap-3">
+                        {chipPool.map(chip => {
+                            const isUsed = usedTexts.has(chip.text);
+                            return (
+                                <div
+                                    key={chip.id}
+                                    draggable={!isUsed}
+                                    onDragStart={e => e.dataTransfer.setData('chipText', chip.text)}
+                                    onClick={() => handleChipClick(chip.text)}
+                                    className={`px-4 py-2.5 rounded-xl border-2 font-medium text-base select-none transition-all
+                                        ${isUsed
+                                            ? 'opacity-30 cursor-default border-gray-200 bg-gray-100 text-gray-400'
+                                            : 'cursor-grab border-indigo-200 bg-white text-indigo-700 hover:border-indigo-500 hover:bg-indigo-50 hover:shadow-md active:scale-95'
+                                        }`}
+                                >
+                                    {chip.text}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

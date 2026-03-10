@@ -110,6 +110,27 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className }, 
     };
 
     useImperativeHandle(ref, () => ({
+        insertText: (text) => {
+            if (!editorRef.current) return;
+            editorRef.current.focus();
+            const sel = window.getSelection();
+            let targetRange = savedSelection.current;
+            if (!targetRange) {
+                targetRange = document.createRange();
+                targetRange.selectNodeContents(editorRef.current);
+                targetRange.collapse(false);
+            }
+            const textNode = document.createTextNode(text);
+            targetRange.deleteContents();
+            targetRange.insertNode(textNode);
+            targetRange.setStartAfter(textNode);
+            targetRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(targetRange);
+            savedSelection.current = targetRange.cloneRange();
+            isEditing.current = true;
+            handleChange();
+        },
         insertMath: (latexString) => {
             if (!editorRef.current) return;
 

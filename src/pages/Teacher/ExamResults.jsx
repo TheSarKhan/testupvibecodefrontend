@@ -62,7 +62,7 @@ const ExamResults = () => {
             <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <div className="container-main py-4 flex items-center gap-4">
                     <button
-                        onClick={() => navigate(`/imtahanlar/${examId}`)}
+                        onClick={() => navigate(-1)}
                         className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                         <HiOutlineArrowLeft className="w-6 h-6" />

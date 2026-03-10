@@ -391,6 +391,44 @@ const ExamReview = () => {
                                             </div>
                                         )}
 
+                                        {/* Fill In The Blank */}
+                                        {q.questionType === 'FILL_IN_THE_BLANK' && (() => {
+                                            let correctAnswers = [];
+                                            let studentAnswers = [];
+                                            try { correctAnswers = JSON.parse(q.correctAnswer || '[]'); } catch (e) {}
+                                            try { studentAnswers = JSON.parse(q.studentAnswerText || '[]'); } catch (e) {}
+                                            return (
+                                                <div className="space-y-3">
+                                                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">Boşluq Nəticələri:</p>
+                                                    {correctAnswers.map((correct, i) => {
+                                                        const student = studentAnswers[i] || '';
+                                                        const isCorrect = correct.trim().toLowerCase() === student.trim().toLowerCase();
+                                                        return (
+                                                            <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                                                <span className="text-sm font-bold text-gray-500 w-24 shrink-0">Boşluq {i + 1}</span>
+                                                                <div className="flex-1 grid grid-cols-2 gap-3">
+                                                                    <div>
+                                                                        <p className="text-xs text-gray-400 mb-1">Şagird:</p>
+                                                                        <p className={`font-semibold ${student ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                                                                            {student || '[boş]'}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-xs text-gray-400 mb-1">Düzgün:</p>
+                                                                        <p className="font-semibold text-green-700">{correct}</p>
+                                                                    </div>
+                                                                </div>
+                                                                {isCorrect
+                                                                    ? <HiOutlineCheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+                                                                    : <HiOutlineXCircle className="w-5 h-5 text-red-500 shrink-0" />
+                                                                }
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })()}
+
                                         {/* Matching */}
                                         {q.questionType === 'MATCHING' && (
                                             <div className="space-y-4">

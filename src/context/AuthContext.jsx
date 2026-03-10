@@ -15,6 +15,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [profilePicture, setProfilePicture] = useState('');
 
     useEffect(() => {
         const initializeAuth = async () => {
@@ -83,6 +84,17 @@ export const AuthProvider = ({ children }) => {
         initializeAuth();
     }, []);
 
+    // Fetch profile picture once user is loaded
+    useEffect(() => {
+        if (user) {
+            api.get('/users/me').then(res => {
+                setProfilePicture(res.data?.profilePicture || '');
+            }).catch(() => {});
+        } else {
+            setProfilePicture('');
+        }
+    }, [user?.id]);
+
     const login = async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password });
         localStorage.setItem('accessToken', data.accessToken);
@@ -125,6 +137,8 @@ export const AuthProvider = ({ children }) => {
                 isAdmin,
                 isTeacher,
                 isStudent,
+                profilePicture,
+                setProfilePicture,
             }}
         >
             {children}

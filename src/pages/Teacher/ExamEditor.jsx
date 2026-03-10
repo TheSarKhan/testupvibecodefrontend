@@ -69,7 +69,8 @@ const ExamEditor = () => {
                 type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
                     q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
                     q.questionType === 'MATCHING' ? 'MATCHING' :
-                    q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' : 'OPEN_MANUAL',
+                    q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
+                    q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'OPEN_MANUAL',
                 text: q.content, points: q.points, attachedImage: q.attachedImage,
                 sampleAnswer: q.correctAnswer,
                 options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
@@ -94,7 +95,8 @@ const ExamEditor = () => {
                     type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
                         q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
                         q.questionType === 'MATCHING' ? 'MATCHING' :
-                        q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' : 'OPEN_MANUAL',
+                        q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
+                        q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'OPEN_MANUAL',
                     text: q.content, points: q.points, attachedImage: q.attachedImage,
                     sampleAnswer: q.correctAnswer,
                     options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
@@ -212,8 +214,14 @@ const ExamEditor = () => {
     };
 
     // ---------- Save ----------
-    const isNewId = (id) =>
-        (typeof id === 'string' && (id.startsWith('batch') || id.length > 10)) || id > 1000000000000;
+    const isNewId = (id) => {
+        if (id === null || id === undefined) return true;
+        if (typeof id === 'string') {
+            if (id.startsWith('batch') || id.length > 10) return true;
+            if (isNaN(Number(id))) return true; // e.g. "blank-0", "opt-a-..."
+        }
+        return id > 1000000000000;
+    };
 
     const mapQuestion = (q, idx) => ({
         id: isNewId(q.id) ? null : q.id,
@@ -222,7 +230,8 @@ const ExamEditor = () => {
         questionType: q.type === 'MULTIPLE_CHOICE' ? 'MCQ' :
             q.type === 'MULTI_SELECT' ? 'MULTI_SELECT' :
             q.type === 'MATCHING' ? 'MATCHING' :
-            q.type === 'OPEN_AUTO' ? 'OPEN_AUTO' : 'OPEN_MANUAL',
+            q.type === 'OPEN_AUTO' ? 'OPEN_AUTO' :
+            q.type === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'OPEN_MANUAL',
         points: parseFloat(q.points) || 1,
         orderIndex: q.orderIndex ?? idx,
         correctAnswer: q.sampleAnswer || '',

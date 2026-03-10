@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="60" fill="url(#teacherGrad)"/>
+  <defs>
+    <linearGradient id="teacherGrad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <!-- Body / shirt -->
+  <ellipse cx="60" cy="100" rx="30" ry="20" fill="#4f46e5" opacity="0.6"/>
+  <rect x="38" y="82" width="44" height="28" rx="8" fill="#4338ca"/>
+  <!-- Tie -->
+  <polygon points="60,82 56,90 60,88 64,90" fill="#a5b4fc"/>
+  <polygon points="60,88 57,100 60,98 63,100" fill="#a5b4fc"/>
+  <!-- Head -->
+  <circle cx="60" cy="52" r="22" fill="#fde68a"/>
+  <!-- Eyes -->
+  <ellipse cx="52" cy="50" rx="3" ry="3.5" fill="#1e1b4b"/>
+  <ellipse cx="68" cy="50" rx="3" ry="3.5" fill="#1e1b4b"/>
+  <!-- Glasses -->
+  <rect x="46" y="45" width="14" height="10" rx="4" fill="none" stroke="#92400e" stroke-width="1.5"/>
+  <rect x="60" y="45" width="14" height="10" rx="4" fill="none" stroke="#92400e" stroke-width="1.5"/>
+  <line x1="60" y1="50" x2="60" y2="50" stroke="#92400e" stroke-width="1.5"/>
+  <!-- Nose -->
+  <path d="M60 54 Q58 58 60 59 Q62 58 60 54" fill="#f59e0b" opacity="0.6"/>
+  <!-- Smile -->
+  <path d="M53 62 Q60 68 67 62" stroke="#92400e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Hair -->
+  <path d="M38 48 Q40 28 60 28 Q80 28 82 48 Q76 36 60 36 Q44 36 38 48Z" fill="#92400e"/>
+  <!-- Graduation cap -->
+  <rect x="42" y="28" width="36" height="6" rx="2" fill="#1e1b4b"/>
+  <polygon points="60,16 42,28 78,28" fill="#1e1b4b"/>
+  <line x1="78" y1="28" x2="82" y2="40" stroke="#fbbf24" stroke-width="2"/>
+  <circle cx="82" cy="41" r="3" fill="#fbbf24"/>
+</svg>

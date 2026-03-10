@@ -62,7 +62,16 @@ const AccessCodeCard = ({ exam, onCodeGenerated }) => {
 
     const copyCode = () => {
         if (!exam.accessCode) return;
-        navigator.clipboard.writeText(exam.accessCode);
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(exam.accessCode);
+        } else {
+            const el = document.createElement('textarea');
+            el.value = exam.accessCode;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+        }
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };

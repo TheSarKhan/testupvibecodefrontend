@@ -168,29 +168,14 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
                             >
                                 <option value="PUBLIC">Açıq (Hər kəs)</option>
                                 <option value="PRIVATE">Gizli (Kodla giriş)</option>
-                                <option value="STUDENTS_ONLY">Yalnız Şagirdlərim</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                {/* Password (if Private) */}
                 {formData.visibility === 'PRIVATE' && (
-                    <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-xl">
-                        <label className="block text-sm font-medium text-orange-900 mb-1">
-                            Giriş Kodu (İstəyə bağlı)
-                        </label>
-                        <p className="text-xs text-orange-700 mb-2">
-                            Maksimum təhlükəsizlik üçün fərdi pin kodu təyin edə bilərsiniz. Boş qoysanız, sistem avtomatik link-specifik şifrə yaradacaq.
-                        </p>
-                        <input
-                            type="text"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            className="block w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                            placeholder="Məs: 123456"
-                        />
+                    <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-700">
+                        Giriş kodu imtahan yaradıldıqdan sonra imtahan səhifəsindən yaradıla bilər.
                     </div>
                 )}
 

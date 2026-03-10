@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HiOutlineClock, HiOutlineChevronRight, HiOutlineChevronLeft, HiOutlineVolumeUp, HiOutlineDocumentText } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineChevronRight, HiOutlineChevronLeft, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineX, HiOutlinePlus } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
+import MathTextEditor from '../../components/ui/MathTextEditor';
+import MathFormulaModal from '../../components/ui/MathFormulaModal';
 
 const ExamSession = () => {
     const { sessionId } = useParams();
@@ -50,6 +52,7 @@ const ExamSession = () => {
                     questionId: q.id,
                     optionIds: saved?.optionIds || [],
                     textAnswer: saved?.textAnswer || '',
+                    answerImage: saved?.answerImage || null,
                     matchingPairs: saved?.matchingPairs || []
                 };
             });
@@ -154,26 +157,22 @@ const ExamSession = () => {
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
+    const answerHasContent = (ans) =>
+        ans && (ans.optionIds?.length > 0 || ans.textAnswer?.trim() || ans.answerImage || ans.matchingPairs?.length > 0);
+
     const sectionHasAnswer = (section) => {
         if (section.kind === 'question') {
-            const ans = answers.find(a => a.questionId === section.data.id);
-            return ans && (ans.optionIds?.length > 0 || ans.textAnswer?.trim() || ans.matchingPairs?.length > 0);
+            return answerHasContent(answers.find(a => a.questionId === section.data.id));
         }
         const passageQs = section.data.questions || [];
         if (passageQs.length === 0) return false;
-        return passageQs.every(q => {
-            const ans = answers.find(a => a.questionId === q.id);
-            return ans && (ans.optionIds?.length > 0 || ans.textAnswer?.trim() || ans.matchingPairs?.length > 0);
-        });
+        return passageQs.every(q => answerHasContent(answers.find(a => a.questionId === q.id)));
     };
 
     const sectionPartialAnswer = (section) => {
         if (section.kind === 'question') return false;
         const passageQs = section.data.questions || [];
-        return passageQs.some(q => {
-            const ans = answers.find(a => a.questionId === q.id);
-            return ans && (ans.optionIds?.length > 0 || ans.textAnswer?.trim() || ans.matchingPairs?.length > 0);
-        });
+        return passageQs.some(q => answerHasContent(answers.find(a => a.questionId === q.id)));
     };
 
     if (loading) {
@@ -450,16 +449,11 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                     )}
 
                     {(question.questionType === 'OPEN_AUTO' || question.questionType === 'OPEN_MANUAL') && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Cavabınızı daxil edin:</label>
-                            <textarea
-                                rows={4}
-                                value={answer.textAnswer || ''}
-                                onChange={(e) => onAnswerChange(question.id, { textAnswer: e.target.value })}
-                                className="w-full border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-lg"
-                                placeholder="Bura yazın..."
-                            />
-                        </div>
+                        <OpenAnswerInput
+                            answer={answer}
+                            questionType={question.questionType}
+                            onAnswerChange={(data) => onAnswerChange(question.id, data)}
+                        />
                     )}
 
                     {question.questionType === 'MATCHING' && (
@@ -586,5 +580,86 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
         </div>
     </div>
 );
+
+// ---- OpenAnswerInput ----
+const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {
+    const [mathOpen, setMathOpen] = useState(false);
+    const editorRef = useRef(null);
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => onAnswerChange({ answerImage: ev.target.result });
+        reader.readAsDataURL(file);
+        e.target.value = null;
+    };
+
+    const handleMathInsert = (latex) => {
+        editorRef.current?.insertMath(latex);
+        setMathOpen(false);
+    };
+
+    return (
+        <div className="space-y-3">
+            {questionType === 'OPEN_MANUAL' && (
+                <p className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2">
+                    Bu sual müəllim tərəfindən yoxlanılacaq. Cavabınızı mətn və/və ya şəkil ilə göndərə bilərsiniz.
+                </p>
+            )}
+            <div>
+                <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">Cavabınızı daxil edin:</label>
+                    <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setMathOpen(true)}
+                        className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                        title="Riyaziyyat formulu əlavə et"
+                    >
+                        fx Riyaziyyat
+                    </button>
+                </div>
+                <div className="border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 bg-white">
+                    <MathTextEditor
+                        ref={editorRef}
+                        value={answer.textAnswer || ''}
+                        onChange={(val) => onAnswerChange({ textAnswer: val })}
+                        placeholder="Cavabınızı bura yazın... Riyaziyyat üçün $$...$$ istifadə edin və ya fx düyməsini basın"
+                        className="w-full px-4 py-3 border-none focus:ring-0 text-base min-h-[120px] bg-transparent"
+                    />
+                </div>
+            </div>
+            {questionType === 'OPEN_MANUAL' && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Cavab şəkli (İstəyə bağlı):</label>
+                    {answer.answerImage ? (
+                        <div className="relative inline-block">
+                            <img src={answer.answerImage} alt="Cavab şəkli" className="max-h-48 rounded-xl border border-gray-200 shadow-sm" />
+                            <button
+                                type="button"
+                                onClick={() => onAnswerChange({ answerImage: null })}
+                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow"
+                            >
+                                <HiOutlineX className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <label className="flex items-center gap-2 cursor-pointer px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors w-fit">
+                            <HiOutlinePlus className="w-5 h-5 text-indigo-500" />
+                            <span className="text-sm font-medium text-gray-600">Şəkil yüklə</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                        </label>
+                    )}
+                </div>
+            )}
+            <MathFormulaModal
+                isOpen={mathOpen}
+                onClose={() => setMathOpen(false)}
+                onInsert={handleMathInsert}
+            />
+        </div>
+    );
+};
 
 export default ExamSession;

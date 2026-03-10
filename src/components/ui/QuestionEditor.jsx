@@ -8,7 +8,8 @@ import MathTextEditor from './MathTextEditor';
 const QUESTION_TYPES = {
     MULTIPLE_CHOICE: 'Qapalı',
     MULTI_SELECT: 'Çox seçimli',
-    OPEN_ENDED: 'Açıq',
+    OPEN_AUTO: 'Açıq (Avtomatik)',
+    OPEN_MANUAL: 'Açıq (Müəllim Yoxlayır)',
     MATCHING: 'Uyğunlaşdırma'
 };
 
@@ -31,6 +32,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
 
         let refKey = '';
         if (mathModalField.type === 'main') refKey = 'main';
+        else if (mathModalField.type === 'sampleAnswer') refKey = 'sampleAnswer';
         else refKey = `${mathModalField.type}-${mathModalField.id}`;
 
         const editor = editorsRefs.current[refKey];
@@ -188,25 +190,61 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
         );
     };
 
-    // OPEN ENDED
-    const renderOpenEnded = () => {
-        return (
-            <div className="mt-4 p-4 bg-gray-50 border border-gray-100 rounded-xl text-center border-dashed">
-                <p className="text-sm text-gray-500">Şagird bu suala açıq mətn formatında cavab verəcək. Sistem xüsusi açar sözlərə görə yoxlaya və ya tamamilə müəllim yoxlamasına buraxa bilər.</p>
-
-                <div className="mt-4 text-left">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Açar sözlər və ya Nümunə cavab (İstəyə bağlı)</label>
-                    <textarea
+    // OPEN AUTO
+    const renderOpenAuto = () => (
+        <div className="mt-4 p-4 bg-green-50 border border-green-100 rounded-xl">
+            <p className="text-sm text-green-700 font-medium mb-3">Şagird cavabı müəllimin qeyd etdiyi düzgün cavabla avtomatik müqayisə ediləcək.</p>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Düzgün cavab <span className="text-red-500">*</span></label>
+                <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+                    <MathTextEditor
+                        ref={setEditorRef('sampleAnswer')}
                         value={question.sampleAnswer || ''}
-                        onChange={(e) => handleChange('sampleAnswer', e.target.value)}
-                        placeholder="Avtomatik yoxlama üçün düzgün cavab variantlarını vergüllə yazın..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        rows="2"
+                        onChange={(val) => handleChange('sampleAnswer', val)}
+                        placeholder="Avtomatik yoxlama üçün düzgün cavabı daxil edin..."
+                        className="flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[60px] bg-transparent"
                     />
+                    <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setMathModalField({ type: 'sampleAnswer' })}
+                        className="px-3 border-l border-gray-200 text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
+                        title="Riyaziyyat formulu əlavə et"
+                    >
+                        fx
+                    </button>
                 </div>
             </div>
-        );
-    };
+        </div>
+    );
+
+    // OPEN MANUAL
+    const renderOpenManual = () => (
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-100 rounded-xl">
+            <p className="text-sm text-yellow-800 font-medium mb-3">Şagird cavabını mətndə (LaTeX dəstəyi ilə) və ya şəkil yükləyərək göndərəcək. Müəllim yoxlayacaq və 0 / 1/3 / 2/3 / tam bal verəcək.</p>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">İstinad cavab (İstəyə bağlı — yalnız müəllim görür)</label>
+                <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+                    <MathTextEditor
+                        ref={setEditorRef('sampleAnswer')}
+                        value={question.sampleAnswer || ''}
+                        onChange={(val) => handleChange('sampleAnswer', val)}
+                        placeholder="İstinad olaraq düzgün cavabı buraya yazın (şagirdə göstərilmir)..."
+                        className="flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[60px] bg-transparent"
+                    />
+                    <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setMathModalField({ type: 'sampleAnswer' })}
+                        className="px-3 border-l border-gray-200 text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
+                        title="Riyaziyyat formulu əlavə et"
+                    >
+                        fx
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 
     // MATCHING
     const renderMatching = () => {
@@ -669,7 +707,8 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
 
             {/* Dynamic Type Rendering */}
             {(question.type === 'MULTIPLE_CHOICE' || question.type === 'MULTI_SELECT') && renderMultipleChoice()}
-            {question.type === 'OPEN_ENDED' && renderOpenEnded()}
+            {question.type === 'OPEN_AUTO' && renderOpenAuto()}
+            {question.type === 'OPEN_MANUAL' && renderOpenManual()}
             {question.type === 'MATCHING' && renderMatching()}
 
             {/* PDF Cropper Modal */}

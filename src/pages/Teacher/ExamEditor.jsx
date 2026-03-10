@@ -68,7 +68,8 @@ const ExamEditor = () => {
                 orderIndex: q.orderIndex ?? 0,
                 type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
                     q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
-                    q.questionType === 'MATCHING' ? 'MATCHING' : 'OPEN_ENDED',
+                    q.questionType === 'MATCHING' ? 'MATCHING' :
+                    q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' : 'OPEN_MANUAL',
                 text: q.content, points: q.points, attachedImage: q.attachedImage,
                 sampleAnswer: q.correctAnswer,
                 options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
@@ -92,7 +93,8 @@ const ExamEditor = () => {
                     id: q.id.toString(),
                     type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
                         q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
-                        q.questionType === 'MATCHING' ? 'MATCHING' : 'OPEN_ENDED',
+                        q.questionType === 'MATCHING' ? 'MATCHING' :
+                        q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' : 'OPEN_MANUAL',
                     text: q.content, points: q.points, attachedImage: q.attachedImage,
                     sampleAnswer: q.correctAnswer,
                     options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
@@ -220,7 +222,7 @@ const ExamEditor = () => {
         questionType: q.type === 'MULTIPLE_CHOICE' ? 'MCQ' :
             q.type === 'MULTI_SELECT' ? 'MULTI_SELECT' :
             q.type === 'MATCHING' ? 'MATCHING' :
-                (q.sampleAnswer ? 'OPEN_AUTO' : 'OPEN_MANUAL'),
+            q.type === 'OPEN_AUTO' ? 'OPEN_AUTO' : 'OPEN_MANUAL',
         points: parseFloat(q.points) || 1,
         orderIndex: q.orderIndex ?? idx,
         correctAnswer: q.sampleAnswer || '',

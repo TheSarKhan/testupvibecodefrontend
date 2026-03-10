@@ -59,11 +59,19 @@ const ExamList = () => {
 
     const handleShare = (id) => {
         const exam = exams.find(e => e.id === id);
-        if (exam) {
-            const link = `${window.location.origin}/imtahan/${exam.shareLink}`;
+        if (!exam) return;
+        const link = `${window.location.origin}/imtahan/${exam.shareLink}`;
+        if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(link);
-            toast.success("Paylaşım linki kopyalandı");
+        } else {
+            const el = document.createElement('textarea');
+            el.value = link;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
         }
+        toast.success("Paylaşım linki kopyalandı");
     };
 
     const handleJoinExam = (exam) => {

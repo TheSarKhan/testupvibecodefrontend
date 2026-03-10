@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { HiOutlineMail, HiOutlineLocationMarker, HiOutlinePhone } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
@@ -14,6 +15,13 @@ const Contact = () => {
 
     return (
         <div className="bg-white min-h-screen">
+            <Helmet>
+                <title>Əlaqə — testup.az</title>
+                <meta name="description" content="testup.az ilə əlaqə saxlayın. Suallarınız, təklifləriniz və ya əməkdaşlıq üçün bizimlə əlaqə saxlaya bilərsiniz." />
+                <meta property="og:title" content="Əlaqə — testup.az" />
+                <meta property="og:type" content="website" />
+                <link rel="canonical" href="https://testup.az/elaqe" />
+            </Helmet>
             {/* Page Header */}
             <div className="bg-gray-50 py-16 border-b border-gray-100">
                 <div className="container-main text-center">

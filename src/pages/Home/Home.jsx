@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { HiOutlineDocumentText, HiOutlineChartBar, HiOutlineCheckCircle, HiOutlineUserGroup } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 
@@ -30,6 +31,14 @@ const Home = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-white">
+            <Helmet>
+                <title>testup.az — Onlayn İmtahan Platforması</title>
+                <meta name="description" content="Müəllimlərin onlayn imtahan yaradıb idarə etdiyi, şagirdlərin həmin imtahanlara iştirak etdiyi müasir veb platforması." />
+                <meta property="og:title" content="testup.az — Onlayn İmtahan Platforması" />
+                <meta property="og:description" content="Riyaziyyat klaviaturası, avtomatik qiymətləndirmə və daha çox xüsusiyyətlə zəngin imtahan platforması." />
+                <meta property="og:type" content="website" />
+                <link rel="canonical" href="https://testup.az/" />
+            </Helmet>
             {/* Hero Section */}
             <section className="relative overflow-hidden pt-16 md:pt-24 pb-32">
                 <div className="absolute inset-x-0 top-0 h-[500px] bg-gradient-to-b from-indigo-50/80 to-transparent"></div>

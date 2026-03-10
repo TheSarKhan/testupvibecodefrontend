@@ -1,9 +1,73 @@
 import { Link } from 'react-router-dom';
-import { HiOutlineLightBulb, HiOutlineAcademicCap, HiOutlineShieldCheck } from 'react-icons/hi';
+import { Helmet } from 'react-helmet-async';
+import {
+    HiOutlineLightBulb,
+    HiOutlineAcademicCap,
+    HiOutlineShieldCheck,
+    HiOutlineCalculator,
+    HiOutlineClipboardCheck,
+    HiOutlineChip,
+    HiOutlinePencilAlt,
+    HiOutlineEye,
+} from 'react-icons/hi';
+
+const innovations = [
+    {
+        icon: <HiOutlineCalculator className="w-6 h-6 text-indigo-600" />,
+        bg: 'bg-indigo-50',
+        iconBg: 'bg-indigo-100',
+        title: 'Riyaziyyat Klaviaturası',
+        desc: 'Şagirdlər kəsrlər, kvadrat köklər, inteqrallar və digər riyazi ifadələri xüsusi klaviatura vasitəsilə rahat şəkildə daxil edə bilir. LaTeX-bazalı göstərim sayəsində düsturlar tam düzgün formatda əks olunur.',
+    },
+    {
+        icon: <HiOutlineClipboardCheck className="w-6 h-6 text-purple-600" />,
+        bg: 'bg-purple-50',
+        iconBg: 'bg-purple-100',
+        title: 'Sonradan Yoxlanılan Suallar',
+        desc: 'Açıq uçlu, esse tipli və ya əllə yoxlanılması tələb edən suallar üçün müəllim cavabları sonradan nəzərdən keçirərək qiymətləndirir. Avtomatik sistem mümkün olmayan hallarda insan dəqiqliyi qorunur.',
+    },
+    {
+        icon: <HiOutlinePencilAlt className="w-6 h-6 text-green-600" />,
+        bg: 'bg-green-50',
+        iconBg: 'bg-green-100',
+        title: 'Çoxnövlü Sual Tipləri',
+        desc: 'Çoxseçimli, boşluqdoldurma, doğru/yanlış, açıq cavab və riyazi ifadə tipli suallar — hamısı bir imtahanda bir arada istifadə edilə bilər.',
+    },
+    {
+        icon: <HiOutlineEye className="w-6 h-6 text-orange-600" />,
+        bg: 'bg-orange-50',
+        iconBg: 'bg-orange-100',
+        title: 'Gizli Kod ilə Giriş',
+        desc: 'Hər imtahan üçün unikal giriş kodu təyin edilir. Müəllim imtahanı yalnız istədiyi şagird qrupuna açıq edir, icazəsiz girişin qarşısı alınır.',
+    },
+    {
+        icon: <HiOutlineChip className="w-6 h-6 text-blue-600" />,
+        bg: 'bg-blue-50',
+        iconBg: 'bg-blue-100',
+        title: 'Avtomatik Qiymətləndirmə',
+        desc: 'Obyektiv tipli suallar sistem tərəfindən anında yoxlanılır, nəticələr avtomatik hesablanır. Müəllim vaxtını sual hazırlığına yönəldə bilir.',
+    },
+    {
+        icon: <HiOutlineLightBulb className="w-6 h-6 text-yellow-600" />,
+        bg: 'bg-yellow-50',
+        iconBg: 'bg-yellow-100',
+        title: 'Sınaq və Rəsmi İmtahanlar',
+        desc: 'Açıq sınaq imtahanları ilə fərdi hazırlıq, gizli rəsmi imtahanlar ilə isə qiymətləndirmə — hər iki ssenari eyni platformada dəstəklənir.',
+    },
+];
 
 const About = () => {
     return (
         <div className="bg-white min-h-screen">
+            <Helmet>
+                <title>Haqqımızda — testup.az</title>
+                <meta name="description" content="testup.az haqqında: riyaziyyat klaviaturası, sonradan yoxlanılan suallar, çoxnövlü sual tipləri və avtomatik qiymətləndirmə ilə müasir onlayn imtahan platforması." />
+                <meta property="og:title" content="Haqqımızda — testup.az" />
+                <meta property="og:description" content="Müəllimlərin onlayn imtahan yaradıb idarə etdiyi, şagirdlərin həmin imtahanlara iştirak etdiyi innovativ platforma." />
+                <meta property="og:type" content="website" />
+                <link rel="canonical" href="https://testup.az/haqqimizda" />
+            </Helmet>
+
             {/* Page Header */}
             <div className="bg-gray-50 py-16 border-b border-gray-100">
                 <div className="container-main text-center">
@@ -65,6 +129,32 @@ const About = () => {
                                 <p className="text-gray-600">Məlumatların təhlükəsizliyi və nəticələrin obyektiv hesablanmasına tam zəmanət.</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Innovations Section */}
+            <div className="bg-gray-50 py-20 border-t border-gray-100">
+                <div className="container-main">
+                    <div className="text-center mb-14">
+                        <h2 className="text-3xl font-bold text-gray-900 mb-4">İnnovativ Yanaşmalarımız</h2>
+                        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                            Platformamızı fərqləndirən xüsusiyyətlər — riyaziyyatdan tutmuş insan yoxlamasına qədər.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {innovations.map((item, i) => (
+                            <div key={i} className={`${item.bg} p-6 rounded-2xl flex gap-4`}>
+                                <div className={`${item.iconBg} p-3 rounded-xl h-fit`}>
+                                    {item.icon}
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
+                                    <p className="text-gray-600 text-sm leading-relaxed">{item.desc}</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

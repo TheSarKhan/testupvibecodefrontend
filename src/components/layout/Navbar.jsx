@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { HiOutlineBell, HiOutlineMenu, HiOutlineX } from 'react-icons/hi';
+import logo from '../../assets/logo.png';
 
 const Navbar = () => {
     const { isAuthenticated, user, logout, isTeacher } = useAuth();
@@ -22,10 +23,8 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2">
-                        <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                            testup.az
-                        </span>
+                    <Link to="/" className="flex items-center">
+                        <img src={logo} alt="testup.az" className="h-12 w-auto" />
                     </Link>
 
                     {/* Desktop Nav */}

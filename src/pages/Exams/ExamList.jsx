@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { HiOutlinePlusCircle, HiOutlineSearch, HiOutlineDocumentText, HiOutlineLockClosed } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { ExamCard, CreateExamModal } from '../../components/ui';
@@ -83,6 +84,13 @@ const ExamList = () => {
 
     return (
         <div className="bg-white min-h-screen py-10">
+            <Helmet>
+                <title>İmtahanlar — testup.az</title>
+                <meta name="description" content="testup.az platformasındakı bütün imtahanları nəzərdən keçirin, yeni imtahan yaradın və ya mövcud imtahanlara qoşulun." />
+                <meta property="og:title" content="İmtahanlar — testup.az" />
+                <meta property="og:type" content="website" />
+                <link rel="canonical" href="https://testup.az/imtahanlar" />
+            </Helmet>
             <div className="container-main">
 
                 {/* Header */}

@@ -131,6 +131,29 @@ const Avatar = ({ name, picture, defaultAvatar, onUpload, onUploadGlobal }) => {
     );
 };
 
+// ---- PasswordField (defined outside modal to prevent remount on re-render) ----
+const PasswordField = ({ id, label, value, showKey, show, setShow, setForm }) => (
+    <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
+        <div className="relative">
+            <input
+                type={show[showKey] ? 'text' : 'password'}
+                value={value}
+                onChange={e => setForm(f => ({ ...f, [id]: e.target.value }))}
+                className="w-full pr-10 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                required
+            />
+            <button
+                type="button"
+                onClick={() => setShow(s => ({ ...s, [showKey]: !s[showKey] }))}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+                {show[showKey] ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+            </button>
+        </div>
+    </div>
+);
+
 // ---- ChangePasswordModal ----
 const ChangePasswordModal = ({ onClose }) => {
     const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -162,28 +185,6 @@ const ChangePasswordModal = ({ onClose }) => {
         }
     };
 
-    const Field = ({ id, label, value, showKey }) => (
-        <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
-            <div className="relative">
-                <input
-                    type={show[showKey] ? 'text' : 'password'}
-                    value={value}
-                    onChange={e => setForm(f => ({ ...f, [id]: e.target.value }))}
-                    className="w-full pr-10 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-                    required
-                />
-                <button
-                    type="button"
-                    onClick={() => setShow(s => ({ ...s, [showKey]: !s[showKey] }))}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                    {show[showKey] ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
-                </button>
-            </div>
-        </div>
-    );
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7" onClick={e => e.stopPropagation()}>
@@ -200,9 +201,9 @@ const ChangePasswordModal = ({ onClose }) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <Field id="currentPassword" label="Cari Şifrə" value={form.currentPassword} showKey="current" />
-                    <Field id="newPassword" label="Yeni Şifrə" value={form.newPassword} showKey="new" />
-                    <Field id="confirmPassword" label="Yeni Şifrəni Təsdiqlə" value={form.confirmPassword} showKey="confirm" />
+                    <PasswordField id="currentPassword" label="Cari Şifrə" value={form.currentPassword} showKey="current" show={show} setShow={setShow} setForm={setForm} />
+                    <PasswordField id="newPassword" label="Yeni Şifrə" value={form.newPassword} showKey="new" show={show} setShow={setShow} setForm={setForm} />
+                    <PasswordField id="confirmPassword" label="Yeni Şifrəni Təsdiqlə" value={form.confirmPassword} showKey="confirm" show={show} setShow={setShow} setForm={setForm} />
 
                     {/* Password strength hint */}
                     {form.newPassword && (
@@ -387,22 +388,28 @@ const StudentProfile = ({ user }) => {
                         {trendData.length > 1 && (
                             <div className="md:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
                                 <h2 className="text-base font-black text-gray-900 mb-5">Son Nəticələr</h2>
-                                <div className="flex items-end gap-2 h-32">
+                                {/* Bar chart — fixed px heights so % bars render correctly */}
+                                <div className="flex items-end gap-2" style={{ height: '90px' }}>
                                     {trendData.map((r, i) => {
                                         const p = pct(r.totalScore, r.maxScore);
+                                        const barPx = Math.max(6, Math.round(p * 0.82)); // max ~82px at 100%
                                         return (
-                                            <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group">
-                                                <span className="text-xs font-bold text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">{p}%</span>
+                                            <div key={i} className="flex-1 flex flex-col items-end group relative">
+                                                <span className="text-[10px] font-bold text-gray-500 absolute -top-5 left-0 right-0 text-center opacity-0 group-hover:opacity-100 transition-opacity">{p}%</span>
                                                 <div className="w-full rounded-t-lg transition-all" style={{
-                                                    height: `${Math.max(8, p)}%`,
+                                                    height: `${barPx}px`,
                                                     backgroundColor: p >= 80 ? '#22c55e' : p >= 50 ? '#f59e0b' : '#f87171'
                                                 }} />
-                                                <span className="text-[10px] text-gray-400 truncate w-full text-center">
-                                                    {new Date(r.submittedAt).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short' })}
-                                                </span>
                                             </div>
                                         );
                                     })}
+                                </div>
+                                <div className="flex gap-2 mt-1.5">
+                                    {trendData.map((r, i) => (
+                                        <div key={i} className="flex-1 text-center text-[10px] text-gray-400 truncate">
+                                            {new Date(r.submittedAt).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short' })}
+                                        </div>
+                                    ))}
                                 </div>
                                 <div className="flex items-center gap-4 mt-4 text-xs text-gray-400">
                                     <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-green-500 inline-block" /> 80%+</span>

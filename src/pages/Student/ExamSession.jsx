@@ -228,22 +228,36 @@ const ExamSession = () => {
                         {/* Options / Input based on question type */}
                         <div className="mt-8">
                             
-                            {(currentQuestion.questionType === 'MCQ' || currentQuestion.questionType === 'TRUE_FALSE') && (
+                            {(currentQuestion.questionType === 'MCQ' || currentQuestion.questionType === 'TRUE_FALSE' || currentQuestion.questionType === 'MULTI_SELECT') && (
                                 <div className="space-y-3">
                                     {currentQuestion.options?.map((opt, oIdx) => {
                                         const isSelected = currentAnswer.optionIds.includes(opt.id);
                                         return (
                                             <div
                                                 key={opt.id}
-                                                onClick={() => handleAnswerChange(currentQuestion.id, { optionIds: [opt.id] })}
+                                                onClick={() => {
+                                                    if (currentQuestion.questionType === 'MULTI_SELECT') {
+                                                        const currentIds = currentAnswer.optionIds || [];
+                                                        const newIds = currentIds.includes(opt.id)
+                                                            ? currentIds.filter(id => id !== opt.id)
+                                                            : [...currentIds, opt.id];
+                                                        handleAnswerChange(currentQuestion.id, { optionIds: newIds });
+                                                    } else {
+                                                        handleAnswerChange(currentQuestion.id, { optionIds: [opt.id] });
+                                                    }
+                                                }}
                                                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                                                     isSelected ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'
                                                 } flex items-center gap-4`}
                                             >
-                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                                    isSelected ? 'border-indigo-600' : 'border-gray-300'
+                                                <div className={`${currentQuestion.questionType === 'MULTI_SELECT' ? 'w-6 h-6 rounded-md' : 'w-6 h-6 rounded-full'} border-2 flex items-center justify-center flex-shrink-0 ${
+                                                    isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300'
                                                 }`}>
-                                                    {isSelected && <div className="w-3 h-3 rounded-full bg-indigo-600" />}
+                                                    {isSelected && (
+                                                        currentQuestion.questionType === 'MULTI_SELECT' 
+                                                            ? <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                                            : <div className="w-3 h-3 rounded-full bg-white" />
+                                                    )}
                                                 </div>
                                                 <div className="flex-1 text-lg">
                                                     <LatexPreview content={opt.content} />

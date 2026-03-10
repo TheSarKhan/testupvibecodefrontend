@@ -157,50 +157,61 @@ const ExamResults = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-gray-50 border-b border-gray-100 text-sm text-gray-600">
-                                        <th className="p-4 py-3 font-semibold">İştirakçı</th>
-                                        <th className="p-4 py-3 font-semibold">Başlayıb</th>
-                                        <th className="p-4 py-3 font-semibold">Xərclənən Vaxt</th>
-                                        <th className="p-4 py-3 font-semibold">Bal</th>
-                                        <th className="p-4 py-3 font-semibold">Reytinq</th>
-                                        <th className="p-4 py-3 font-semibold">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {submissions.map((r) => (
-                                        <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="p-4">
-                                                <p className="font-semibold text-gray-900">{r.studentName}</p>
-                                            </td>
-                                            <td className="p-4 text-sm text-gray-600">
-                                                {r.startedAt ? new Date(r.startedAt).toLocaleString('az-AZ') : '–'}
-                                            </td>
-                                            <td className="p-4 text-sm font-mono text-gray-700">
-                                                {formatDuration(r.startedAt, r.submittedAt)}
-                                            </td>
-                                            <td className="p-4 text-sm font-bold text-indigo-600">
-                                                {r.submittedAt ? `${r.totalScore} / ${r.maxScore}` : '–'}
-                                            </td>
-                                            <td className="p-4">
-                                                {r.rating ? (
-                                                    <StarDisplay value={r.rating} />
-                                                ) : (
-                                                    <span className="text-gray-300 text-sm">–</span>
-                                                )}
-                                            </td>
-                                            <td className="p-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                                                    r.submittedAt
-                                                        ? r.isFullyGraded
-                                                            ? 'bg-green-50 text-green-700'
-                                                            : 'bg-yellow-50 text-yellow-700'
-                                                        : 'bg-blue-50 text-blue-700'
-                                                }`}>
-                                                    {!r.submittedAt ? '⏳ Davam edir' : r.isFullyGraded ? <><HiOutlineCheckCircle className="w-3.5 h-3.5"/> Tam Yoxlanılıb</> : '⏳ Yoxlanılır...'}
-                                                </span>
-                                            </td>
+                                        <tr className="bg-gray-50 border-b border-gray-100 text-sm text-gray-600">
+                                            <th className="p-4 py-3 font-semibold">İştirakçı</th>
+                                            <th className="p-4 py-3 font-semibold">Başlayıb</th>
+                                            <th className="p-4 py-3 font-semibold">Xərclənən Vaxt</th>
+                                            <th className="p-4 py-3 font-semibold">Bal</th>
+                                            <th className="p-4 py-3 font-semibold">Reytinq</th>
+                                            <th className="p-4 py-3 font-semibold">Status</th>
+                                            <th className="p-4 py-3 font-semibold">Əməliyyat</th>
                                         </tr>
-                                    ))}
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {submissions.map((r) => (
+                                            <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="p-4">
+                                                    <p className="font-semibold text-gray-900">{r.studentName}</p>
+                                                </td>
+                                                <td className="p-4 text-sm text-gray-600">
+                                                    {r.startedAt ? new Date(r.startedAt).toLocaleString('az-AZ') : '–'}
+                                                </td>
+                                                <td className="p-4 text-sm font-mono text-gray-700">
+                                                    {formatDuration(r.startedAt, r.submittedAt)}
+                                                </td>
+                                                <td className="p-4 text-sm font-bold text-indigo-600">
+                                                    {r.submittedAt ? `${r.totalScore} / ${r.maxScore}` : '–'}
+                                                </td>
+                                                <td className="p-4">
+                                                    {r.rating ? (
+                                                        <StarDisplay value={r.rating} />
+                                                    ) : (
+                                                        <span className="text-gray-300 text-sm">–</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                                        r.submittedAt
+                                                            ? r.isFullyGraded
+                                                                ? 'bg-green-50 text-green-700'
+                                                                : 'bg-yellow-50 text-yellow-700'
+                                                            : 'bg-blue-50 text-blue-700'
+                                                    }`}>
+                                                        {!r.submittedAt ? '⏳ Davam edir' : r.isFullyGraded ? <><HiOutlineCheckCircle className="w-3.5 h-3.5"/> Tam Yoxlanılıb</> : '⏳ Yoxlanılır...'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4">
+                                                    {r.submittedAt && (
+                                                        <button
+                                                            onClick={() => navigate(`/test/review/${r.id}`)}
+                                                            className="text-indigo-600 hover:text-indigo-800 font-medium text-sm flex items-center gap-1 transition-colors"
+                                                        >
+                                                            Bax 👁️
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
                                 </tbody>
                             </table>
                         </div>

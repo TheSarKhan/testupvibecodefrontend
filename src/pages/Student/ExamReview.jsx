@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineClock, HiOutlineDocumentText } from 'react-icons/hi';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
@@ -8,6 +9,7 @@ import LatexPreview from '../../components/ui/LatexPreview';
 const ExamReview = () => {
     const { sessionId } = useParams();
     const navigate = useNavigate();
+    const { isTeacher } = useAuth();
     const [review, setReview] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -19,7 +21,7 @@ const ExamReview = () => {
             } catch (error) {
                 console.error("Error fetching review:", error);
                 toast.error("İmtahan nəticələrini yükləyərkən xəta baş verdi");
-                navigate('/profil');
+                navigate(isTeacher ? '/imtahanlar' : '/profil');
             } finally {
                 setLoading(false);
             }
@@ -46,10 +48,10 @@ const ExamReview = () => {
             <div className="bg-white border-b sticky top-0 z-30">
                 <div className="container-main py-4 flex items-center justify-between">
                     <button 
-                        onClick={() => navigate('/profil')}
+                        onClick={() => isTeacher ? navigate(`/imtahanlar/${review.examId}/statistika`) : navigate('/profil')}
                         className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 font-medium transition-colors"
                     >
-                        <HiOutlineArrowLeft /> Profilə Qayıt
+                        <HiOutlineArrowLeft /> {isTeacher ? 'Statistikaya Qayıt' : 'Profilə Qayıt'}
                     </button>
                     <div className="text-center">
                         <h1 className="text-xl font-bold text-gray-900">{review.examTitle}</h1>
@@ -144,11 +146,13 @@ const ExamReview = () => {
                                     </div>
                                 )}
 
-                                {/* Options (MCQ / True-False) */}
-                                {(q.questionType === 'MCQ' || q.questionType === 'TRUE_FALSE') && (
+                                {/* Options (MCQ / True-False / Multi-Select) */}
+                                {(q.questionType === 'MCQ' || q.questionType === 'TRUE_FALSE' || q.questionType === 'MULTI_SELECT') && (
                                     <div className="grid gap-3">
                                         {q.options.map(opt => {
-                                            const isSelected = q.studentSelectedOptionId === opt.id;
+                                            const isSelected = q.questionType === 'MULTI_SELECT' 
+                                                ? (q.studentSelectedOptionIds || []).includes(opt.id)
+                                                : q.studentSelectedOptionId === opt.id;
                                             const isCorrect = opt.isCorrect;
                                             
                                             let borderClass = "border-gray-100";
@@ -158,11 +162,11 @@ const ExamReview = () => {
                                             if (isCorrect) {
                                                 borderClass = "border-green-500 ring-1 ring-green-500";
                                                 bgClass = "bg-green-50";
-                                                icon = <HiOutlineCheckCircle className="text-green-500 w-5 h-5" />;
+                                                icon = <HiOutlineCheckCircle className="text-green-500 w-5 h-5 flex-shrink-0" />;
                                             } else if (isSelected && !isCorrect) {
                                                 borderClass = "border-red-500 ring-1 ring-red-500";
                                                 bgClass = "bg-red-50";
-                                                icon = <HiOutlineXCircle className="text-red-500 w-5 h-5" />;
+                                                icon = <HiOutlineXCircle className="text-red-500 w-5 h-5 flex-shrink-0" />;
                                             }
 
                                             return (
@@ -171,7 +175,9 @@ const ExamReview = () => {
                                                     className={`p-4 rounded-2xl border ${borderClass} ${bgClass} flex items-center justify-between gap-4 transition-all`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold ${
+                                                        <div className={`w-6 h-6 border flex items-center justify-center text-xs font-bold ${
+                                                            q.questionType === 'MULTI_SELECT' ? 'rounded-md' : 'rounded-full'
+                                                        } ${
                                                             isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 text-gray-400'
                                                         }`}>
                                                             {String.fromCharCode(65 + opt.orderIndex)}

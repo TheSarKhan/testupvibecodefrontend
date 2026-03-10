@@ -101,6 +101,7 @@ const ExamEditor = () => {
             const mappedQuestions = data.questions.map(q => ({
                 id: q.id.toString(),
                 type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
+                    q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
                     q.questionType === 'MATCHING' ? 'MATCHING' : 'OPEN_ENDED',
                 text: q.content,
                 points: q.points,
@@ -190,12 +191,6 @@ const ExamEditor = () => {
             return;
         }
 
-        const questionTypeMapping = {
-            'MULTIPLE_CHOICE': 'MCQ',
-            'MATCHING': 'MATCHING',
-            'OPEN_ENDED': questions.some(q => q.sampleAnswer) ? 'OPEN_AUTO' : 'OPEN_MANUAL'
-        };
-
         const payload = {
             title: examConfig.title,
             description: examConfig.description || '',
@@ -206,20 +201,24 @@ const ExamEditor = () => {
             durationMinutes: parseInt(examConfig.duration) || 60,
             tags: examConfig.tags || [],
             questions: questions.map((q, idx) => ({
+                id: (typeof q.id === 'string' && (q.id.startsWith('batch') || q.id.length > 10)) || q.id > 1000000000000 ? null : q.id,
                 content: q.text,
                 attachedImage: q.attachedImage || null,
                 questionType: q.type === 'MULTIPLE_CHOICE' ? 'MCQ' :
+                    q.type === 'MULTI_SELECT' ? 'MULTI_SELECT' :
                     q.type === 'MATCHING' ? 'MATCHING' :
                         (q.sampleAnswer ? 'OPEN_AUTO' : 'OPEN_MANUAL'),
                 points: parseFloat(q.points) || 1,
                 orderIndex: idx,
                 correctAnswer: q.sampleAnswer || '',
                 options: q.options ? q.options.map((opt, oIdx) => ({
+                    id: (typeof opt.id === 'string' && opt.id.length > 10) || opt.id > 1000000000000 ? null : opt.id,
                     content: opt.text,
                     isCorrect: opt.isCorrect,
                     orderIndex: oIdx
                 })) : [],
                 matchingPairs: q.matchingPairs ? q.matchingPairs.map((pair, pIdx) => ({
+                    id: (typeof pair.id === 'string' && pair.id.length > 10) || pair.id > 1000000000000 ? null : pair.id,
                     leftItem: pair.left,
                     attachedImageLeft: pair.attachedImageLeft || null,
                     rightItem: pair.right,

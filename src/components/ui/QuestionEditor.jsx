@@ -7,6 +7,7 @@ import MathTextEditor from './MathTextEditor';
 // Supported Question Types
 const QUESTION_TYPES = {
     MULTIPLE_CHOICE: 'Qapalı',
+    MULTI_SELECT: 'Çox seçimli',
     OPEN_ENDED: 'Açıq',
     MATCHING: 'Uyğunlaşdırma'
 };
@@ -69,7 +70,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                     return { ...opt, [field]: value };
                 }
                 // If this is a radio button selection for the correct answer:
-                if (field === 'isCorrect' && value === true) {
+                if (question.type === 'MULTIPLE_CHOICE' && field === 'isCorrect' && value === true) {
                     return { ...opt, isCorrect: false }; // uncheck others
                 }
                 return opt;
@@ -87,12 +88,12 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                 {options.map((opt, i) => (
                     <div key={opt.id} className="flex items-center gap-3">
                         <input
-                            type="radio"
+                            type={question.type === 'MULTI_SELECT' ? 'checkbox' : 'radio'}
                             name={`correct-${question.id}`}
                             checked={opt.isCorrect}
-                            onChange={() => updateOption(opt.id, 'isCorrect', true)}
-                            className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                            title="Düzgün cavabı işarələ"
+                            onChange={(e) => updateOption(opt.id, 'isCorrect', question.type === 'MULTI_SELECT' ? e.target.checked : true)}
+                            className={`w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 ${question.type === 'MULTI_SELECT' ? 'rounded' : ''}`}
+                            title={question.type === 'MULTI_SELECT' ? 'Düzgün cavab(lar)dan biri kimi işarələ' : 'Düzgün cavabı işarələ'}
                         />
                         <div className="flex-1 flex flex-col gap-2">
                             <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
@@ -667,7 +668,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
             </div>
 
             {/* Dynamic Type Rendering */}
-            {question.type === 'MULTIPLE_CHOICE' && renderMultipleChoice()}
+            {(question.type === 'MULTIPLE_CHOICE' || question.type === 'MULTI_SELECT') && renderMultipleChoice()}
             {question.type === 'OPEN_ENDED' && renderOpenEnded()}
             {question.type === 'MATCHING' && renderMatching()}
 

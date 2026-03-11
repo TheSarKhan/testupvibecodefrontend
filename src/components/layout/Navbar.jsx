@@ -28,47 +28,52 @@ const Navbar = () => {
         { to: '/elaqe', label: 'Əlaqə' },
     ];
 
-    // Fetch unread count periodically
-    const fetchUnreadCount = useCallback(async () => {
+    const loadNotifications = useCallback(async () => {
         if (!isAuthenticated) return;
         try {
-            const { data } = await api.get('/notifications/unread-count');
-            setUnreadCount(data.count || 0);
+            const { data } = await api.get('/notifications');
+            setNotifications(data);
+            const unread = data.filter(n => !n.isRead).length;
+            setUnreadCount(unread);
         } catch {}
     }, [isAuthenticated]);
 
     useEffect(() => {
-        fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 30000);
+        loadNotifications();
+        const interval = setInterval(loadNotifications, 30000);
         return () => clearInterval(interval);
-    }, [fetchUnreadCount]);
+    }, [loadNotifications]);
 
-    // Load notifications when panel opens
     const openNotifications = async () => {
-        setNotifOpen(v => !v);
+        const opening = !notifOpen;
+        setNotifOpen(opening);
         setDropdownOpen(false);
-        if (!notifOpen) {
-            try {
-                const { data } = await api.get('/notifications');
-                setNotifications(data);
-            } catch {}
+        if (opening) {
+            await loadNotifications();
         }
     };
 
     const markRead = async (id) => {
+        const notif = notifications.find(n => n.id === id);
+        if (!notif || notif.isRead) return;
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
         try {
             await api.post(`/notifications/${id}/read`);
-            setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-            setUnreadCount(prev => Math.max(0, prev - 1));
-        } catch {}
+        } catch {
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: false } : n));
+            setUnreadCount(prev => prev + 1);
+        }
     };
 
     const markAllRead = async () => {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
         try {
             await api.post('/notifications/read-all');
-            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-            setUnreadCount(0);
-        } catch {}
+        } catch {
+            await loadNotifications();
+        }
     };
 
     // Close dropdowns on outside click
@@ -184,7 +189,7 @@ const Navbar = () => {
                                                     notifications.map(n => (
                                                         <div
                                                             key={n.id}
-                                                            onClick={() => !n.isRead && markRead(n.id)}
+                                                            onClick={() => markRead(n.id)}
                                                             className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-indigo-50/40' : ''}`}
                                                         >
                                                             <div className="flex items-start gap-2.5">
@@ -308,8 +313,8 @@ const Navbar = () => {
                                             {notifications.length === 0 ? (
                                                 <div className="py-8 text-center text-gray-400 text-sm">Bildiriş yoxdur</div>
                                             ) : notifications.map(n => (
-                                                <div key={n.id} onClick={() => !n.isRead && markRead(n.id)}
-                                                    className={`px-4 py-3 border-b border-gray-50 ${!n.isRead ? 'bg-indigo-50/40' : ''}`}>
+                                                <div key={n.id} onClick={() => markRead(n.id)}
+                                                    className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-indigo-50/40' : ''}`}>
                                                     <div className="flex items-start gap-2">
                                                         <div className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${!n.isRead ? 'bg-indigo-500' : 'bg-transparent'}`} />
                                                         <div>

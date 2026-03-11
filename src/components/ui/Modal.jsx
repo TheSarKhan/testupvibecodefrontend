@@ -16,10 +16,10 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-md" }) => {
                 ></div>
 
                 {/* Modal Panel */}
-                <div className={`relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 w-full ${maxWidth}`}>
+                <div className={`relative flex flex-col transform rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 w-full max-h-[95vh] ${maxWidth}`}>
 
                     {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                         <h3 className="text-xl font-bold text-gray-900">
                             {title}
                         </h3>
@@ -34,7 +34,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-md" }) => {
                     </div>
 
                     {/* Content */}
-                    <div className="px-6 py-6">
+                    <div className="px-6 py-6 overflow-y-auto overflow-x-hidden">
                         {children}
                     </div>
                 </div>

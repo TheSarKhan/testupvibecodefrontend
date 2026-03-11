@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import LatexPreview from '../../components/ui/LatexPreview';
 import { useAuth } from '../../context/AuthContext';
@@ -16,35 +16,29 @@ const ExamEditor = () => {
     const backPath = isAdmin ? '/admin/oz-imtahanlar' : '/imtahanlar';
     const initialLocationState = location.state || { subject: 'Seçilməyib', type: 'free' };
 
-    const subjectMapping = {
-        'Riyaziyyat': 'RIYAZIYYAT', 'Fizika': 'FIZIKA', 'Kimya': 'KIMYA',
-        'Biologiya': 'BIOLOGIYA', 'Azərbaycan dili': 'AZERBAYCAN_DILI',
-        'İngilis dili': 'INGILIS_DILI', 'Tarix': 'TARIX', 'Coğrafiya': 'COGRAFIYA',
-        'Informatika': 'INFORMATIKA', 'Məntiq': 'MANTIQ', 'Ədəbiyyat': 'EDEBIYYAT',
-        'Xarici dil': 'XARICI_DILL', 'Rus dili': 'RUS_DILI', 'Alman dili': 'ALMAN_DILI',
-        'Fransız dili': 'FRANSIZ_DILI', 'Həyat bilgisi': 'HAYAT_BILGISI',
-        'İncəsənət': 'INCASANAT', 'Musiqi': 'MUSIQI', 'Fiziki tərbiyə': 'FIZIKI_TERBIYE',
-        'Texnologiya': 'TEXNOLOGIYA'
-    };
-
-    const reverseSubjectMapping = {
-        'RIYAZIYYAT': 'Riyaziyyat', 'FIZIKA': 'Fizika', 'KIMYA': 'Kimya',
-        'BIOLOGIYA': 'Biologiya', 'AZERBAYCAN_DILI': 'Azərbaycan dili',
-        'INGILIS_DILI': 'İngilis dili', 'TARIX': 'Tarix', 'COGRAFIYA': 'Coğrafiya',
-        'INFORMATIKA': 'Informatika', 'MANTIQ': 'Məntiq', 'EDEBIYYAT': 'Ədəbiyyat',
-        'XARICI_DILL': 'Xarici dil', 'RUS_DILI': 'Rus dili', 'ALMAN_DILI': 'Alman dili',
-        'FRANSIZ_DILI': 'Fransız dili', 'HAYAT_BILGISI': 'Həyat bilgisi',
-        'INCASANAT': 'İncəsənət', 'MUSIQI': 'Musiqi', 'FIZIKI_TERBIYE': 'Fiziki tərbiyə',
-        'TEXNOLOGIYA': 'Texnologiya'
-    };
-
     const [type, setType] = useState(initialLocationState.type);
     const [examConfig, setExamConfig] = useState({
         title: '',
-        subject: initialLocationState.subject === 'Seçilməyib' ? 'RIYAZIYYAT' : (subjectMapping[initialLocationState.subject] || 'RIYAZIYYAT'),
+        subject: initialLocationState.subject && initialLocationState.subject !== 'Seçilməyib'
+            ? initialLocationState.subject : 'Riyaziyyat',
+        extraSubjects: [],
         duration: 60, visibility: 'PUBLIC', password: '', tags: [], description: ''
     });
-    const [questions, setQuestions] = useState([]);
+    const [subjectsList, setSubjectsList] = useState([]);
+    const [showSectionPicker, setShowSectionPicker] = useState(false);
+    const [passageSectionTarget, setPassageSectionTarget] = useState(null);
+    const [batchPdfSection, setBatchPdfSection] = useState(null);
+    const [questions, setQuestions] = useState(() => isEditMode ? [] : [{
+        id: Date.now().toString(), type: 'MULTIPLE_CHOICE', text: '', points: 1,
+        orderIndex: 0, subjectGroup: null,
+        options: [
+            { id: Date.now() + 1, text: 'A', isCorrect: false },
+            { id: Date.now() + 2, text: 'B', isCorrect: false },
+            { id: Date.now() + 3, text: 'C', isCorrect: false },
+            { id: Date.now() + 4, text: 'D', isCorrect: false },
+        ],
+        matchingPairs: [], sampleAnswer: ''
+    }]);
     const [passages, setPassages] = useState([]);
     const [examStatus, setExamStatus] = useState('DRAFT');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -62,12 +56,16 @@ const ExamEditor = () => {
         if (isEditMode) fetchExamData();
     }, [id]);
 
+    useEffect(() => {
+        api.get('/subjects').then(res => setSubjectsList(res.data)).catch(() => {});
+    }, []);
+
     // Auto-save: debounce 2.5s after any content change
     useEffect(() => {
         if (loading) return;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(async () => {
-            const payload = buildPayload('DRAFT');
+            const payload = buildPayload(examStatus);
             setAutoSaveStatus('saving');
             try {
                 if (createdIdRef.current) {
@@ -90,7 +88,9 @@ const ExamEditor = () => {
         try {
             const { data } = await api.get(`/exams/${id}/details`);
             setExamConfig({
-                title: data.title, subject: data.subject,
+                title: data.title,
+                subject: data.subjects?.[0] || 'Riyaziyyat',
+                extraSubjects: data.subjects?.slice(1) || [],
                 duration: data.durationMinutes, visibility: data.visibility,
                 tags: data.tags || [], description: data.description || ''
             });
@@ -107,6 +107,7 @@ const ExamEditor = () => {
                     q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'OPEN_MANUAL',
                 text: q.content, points: q.points, attachedImage: q.attachedImage,
                 sampleAnswer: q.correctAnswer,
+                subjectGroup: q.subjectGroup || null,
                 options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
                 matchingPairs: q.matchingPairs?.map(pair => ({
                     id: pair.id, left: pair.leftItem, attachedImageLeft: pair.attachedImageLeft,
@@ -124,6 +125,7 @@ const ExamEditor = () => {
                 audioContent: p.audioContent || null,
                 listenLimit: p.listenLimit ?? null,
                 orderIndex: p.orderIndex ?? 0,
+                subjectGroup: p.subjectGroup || null,
                 questions: (p.questions || []).map(q => ({
                     id: q.id.toString(),
                     type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
@@ -157,11 +159,25 @@ const ExamEditor = () => {
         return allIndices.length > 0 ? Math.max(...allIndices) + 1 : 0;
     };
 
+    // ---------- Section handlers ----------
+    const handleAddSection = (subjectName) => {
+        if (!subjectName || (examConfig.extraSubjects || []).includes(subjectName) || subjectName === examConfig.subject) return;
+        setExamConfig(prev => ({ ...prev, extraSubjects: [...(prev.extraSubjects || []), subjectName] }));
+        setShowSectionPicker(false);
+    };
+
+    const handleRemoveSection = (subjectName) => {
+        setQuestions(prev => prev.map(q => q.subjectGroup === subjectName ? { ...q, subjectGroup: null } : q));
+        setExamConfig(prev => ({ ...prev, extraSubjects: (prev.extraSubjects || []).filter(s => s !== subjectName) }));
+    };
+
     // ---------- Standalone question handlers ----------
-    const handleAddQuestion = () => {
+    const handleAddQuestion = (sectionSubject) => {
+        const isMainSection = !sectionSubject || sectionSubject === examConfig.subject;
         const newQuestion = {
             id: Date.now().toString(), type: 'MULTIPLE_CHOICE', text: '', points: 1,
             orderIndex: nextOrderIndex(),
+            subjectGroup: isMainSection ? null : sectionSubject,
             options: [
                 { id: Date.now() + 1, text: '', isCorrect: false },
                 { id: Date.now() + 2, text: '', isCorrect: false },
@@ -183,10 +199,12 @@ const ExamEditor = () => {
 
     const handleBatchPdfComplete = (base64Images) => {
         const startIdx = nextOrderIndex();
+        const isMain = !batchPdfSection || batchPdfSection === examConfig.subject;
         const newQuestions = base64Images.map((img, idx) => ({
             id: `batch-${Date.now()}-${idx}`, type: 'MULTIPLE_CHOICE',
             text: 'Şəkilə əsasən cavabı qeyd edin', points: 1, attachedImage: img,
             orderIndex: startIdx + idx,
+            subjectGroup: isMain ? null : batchPdfSection,
             options: [
                 { id: `opt-a-${Date.now()}-${idx}`, text: 'A', isCorrect: false },
                 { id: `opt-b-${Date.now()}-${idx}`, text: 'B', isCorrect: false },
@@ -196,19 +214,23 @@ const ExamEditor = () => {
             ]
         }));
         setQuestions([...questions, ...newQuestions]);
+        setBatchPdfSection(null);
         toast.success(`${base64Images.length} yeni sual əlavə edildi`);
     };
 
     // ---------- Passage handlers ----------
     const handleAddPassage = (passageType) => {
+        const isMain = !passageSectionTarget || passageSectionTarget === examConfig.subject;
         const newPassage = {
             id: Date.now().toString(), passageType,
             title: '', textContent: '', attachedImage: null, audioContent: null,
             listenLimit: null, orderIndex: nextOrderIndex(),
+            subjectGroup: isMain ? null : passageSectionTarget,
             questions: []
         };
         setPassages([...passages, newPassage]);
         setShowPassageTypeModal(false);
+        setPassageSectionTarget(null);
     };
 
     const handleUpdatePassage = (pId, updatedData) => {
@@ -269,6 +291,7 @@ const ExamEditor = () => {
         points: parseFloat(q.points) || 1,
         orderIndex: q.orderIndex ?? idx,
         correctAnswer: q.sampleAnswer || '',
+        subjectGroup: q.subjectGroup || null,
         options: q.options ? q.options.map((opt, oIdx) => ({
             id: isNewId(opt.id) ? null : opt.id,
             content: opt.text, isCorrect: opt.isCorrect, orderIndex: oIdx
@@ -284,7 +307,7 @@ const ExamEditor = () => {
     const buildPayload = (status) => ({
         title: examConfig.title || 'Adsız İmtahan',
         description: examConfig.description || '',
-        subject: examConfig.subject || 'RIYAZIYYAT',
+        subjects: examConfig.subject ? [examConfig.subject, ...(examConfig.extraSubjects || [])] : [],
         visibility: examConfig.visibility || 'PUBLIC',
         examType: type === 'free' ? 'FREE' : 'TEMPLATE',
         status,
@@ -300,6 +323,7 @@ const ExamEditor = () => {
             audioContent: p.audioContent || null,
             listenLimit: p.listenLimit ?? null,
             orderIndex: p.orderIndex ?? 0,
+            subjectGroup: p.subjectGroup || null,
             questions: p.questions.map((q, qIdx) => mapQuestion(q, qIdx))
         }))
     });
@@ -310,9 +334,8 @@ const ExamEditor = () => {
         const loadId = toast.loading('Qaralama saxlanılır...');
         try {
             if (currentId) {
-                await api.put(`/exams/${currentId}`, buildPayload('DRAFT'));
-                setExamStatus('DRAFT');
-                toast.success('Qaralama yeniləndi', { id: loadId });
+                await api.put(`/exams/${currentId}`, buildPayload(examStatus));
+                toast.success(examStatus === 'PUBLISHED' ? 'Dəyişikliklər saxlanıldı' : 'Qaralama yeniləndi', { id: loadId });
             } else {
                 const { data } = await api.post('/exams', buildPayload('DRAFT'));
                 createdIdRef.current = data.id;
@@ -360,8 +383,6 @@ const ExamEditor = () => {
         );
     }
 
-    const totalItems = questions.length + passages.length;
-
     return (
         <div className="bg-gray-50 min-h-screen pb-24">
             {/* Top Toolbar */}
@@ -378,7 +399,7 @@ const ExamEditor = () => {
                             <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                                 <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-semibold uppercase">{type}</span>
                                 <span>•</span>
-                                <span>{reverseSubjectMapping[examConfig.subject] || examConfig.subject}</span>
+                                <span>{examConfig.subject}</span>
                                 {examConfig.duration && <><span>•</span><span>{examConfig.duration} dəq</span></>}
                             </div>
                         </div>
@@ -394,69 +415,126 @@ const ExamEditor = () => {
 
             {/* Main Editor Area */}
             <div className="container-main mt-8 max-w-4xl">
-                {totalItems === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center py-20">
-                        <div className="w-16 h-16 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-gray-300">
-                            <span className="text-2xl font-bold">?</span>
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Hələ heç bir element əlavə edilməyib</h2>
-                        <p className="text-gray-500 mb-6">Sual, mətn parçası və ya dinləmə tapşırığı əlavə edin.</p>
-                        <AddButtons
-                            onAddQuestion={handleAddQuestion}
-                            onAddPassage={() => setShowPassageTypeModal(true)}
-                            onBatchPdf={(file) => { setBatchPdfFile(file); setIsBatchPdfOpen(true); }}
-                        />
-                    </div>
-                ) : (
-                    <div className="space-y-6 mb-8">
-                        {/* Unified sorted list: standalone questions + passages interleaved by orderIndex */}
-                        {[
-                            ...questions.map(q => ({ kind: 'question', data: q, orderIndex: q.orderIndex ?? 0 })),
-                            ...passages.map(p => ({ kind: 'passage', data: p, orderIndex: p.orderIndex ?? 0 }))
-                        ]
-                        .sort((a, b) => a.orderIndex - b.orderIndex)
-                        .map((item, index) => item.kind === 'question' ? (
-                            <QuestionEditor
-                                key={item.data.id}
-                                index={index}
-                                question={item.data}
-                                onChange={handleUpdateQuestion}
-                                onDelete={handleDeleteQuestion}
-                            />
-                        ) : (
-                            <PassageEditor
-                                key={item.data.id}
-                                passage={item.data}
-                                onChange={handleUpdatePassage}
-                                onDelete={handleDeletePassage}
-                                onAddQuestion={handleAddPassageQuestion}
-                                onUpdateQuestion={handleUpdatePassageQuestion}
-                                onDeleteQuestion={handleDeletePassageQuestion}
-                            />
-                        ))}
-                    </div>
-                )}
+                {/* Subject Sections */}
+                {[examConfig.subject, ...(examConfig.extraSubjects || [])].map((sectionSubject, sectionIdx) => {
+                    const isMain = sectionIdx === 0;
+                    const sectionItems = [
+                        ...questions
+                            .filter(q => isMain
+                                ? (q.subjectGroup == null || q.subjectGroup === sectionSubject)
+                                : q.subjectGroup === sectionSubject)
+                            .map(q => ({ kind: 'question', data: q, orderIndex: q.orderIndex ?? 0 })),
+                        ...passages
+                            .filter(p => isMain
+                                ? (p.subjectGroup == null || p.subjectGroup === sectionSubject)
+                                : p.subjectGroup === sectionSubject)
+                            .map(p => ({ kind: 'passage', data: p, orderIndex: p.orderIndex ?? 0 }))
+                    ].sort((a, b) => a.orderIndex - b.orderIndex);
+                    return (
+                        <div key={sectionSubject} className="mb-10">
+                            {/* Section header */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-sm">
+                                    <HiOutlineBookOpen className="w-4 h-4" />
+                                    <span className="font-bold text-sm">{sectionSubject}</span>
+                                </div>
+                                <div className="flex-1 h-px bg-gray-200" />
+                                {!isMain && (
+                                    <button
+                                        onClick={() => handleRemoveSection(sectionSubject)}
+                                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Bu bölməni sil"
+                                    >
+                                        <HiOutlineX className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
 
-                {totalItems > 0 && (
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-                        <button onClick={handleAddQuestion} className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors">
-                            <HiOutlinePlus className="w-6 h-6" />
-                            Yeni Sual Əlavə Et
-                        </button>
-                        <button onClick={() => setShowPassageTypeModal(true)} className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700 font-semibold rounded-xl transition-colors">
-                            <HiOutlinePlus className="w-6 h-6" />
-                            Mətn / Dinləmə Əlavə Et
-                        </button>
-                        <div className="relative">
-                            <input type="file" accept="application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
-                            <button className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors">
-                                <HiOutlinePlus className="w-6 h-6" />
-                                PDF-dən Çoxlu Sual
-                            </button>
+                            {/* Questions and passages interleaved by orderIndex */}
+                            {sectionItems.length > 0 && (
+                                <div className="space-y-6 mb-4">
+                                    {sectionItems.map((item, idx) => item.kind === 'question' ? (
+                                        <QuestionEditor
+                                            key={item.data.id}
+                                            index={idx}
+                                            question={item.data}
+                                            onChange={handleUpdateQuestion}
+                                            onDelete={handleDeleteQuestion}
+                                        />
+                                    ) : (
+                                        <PassageEditor
+                                            key={item.data.id}
+                                            passage={item.data}
+                                            onChange={handleUpdatePassage}
+                                            onDelete={handleDeletePassage}
+                                            onAddQuestion={handleAddPassageQuestion}
+                                            onUpdateQuestion={handleUpdatePassageQuestion}
+                                            onDeleteQuestion={handleDeletePassageQuestion}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Add question / PDF / passage buttons for this section */}
+                            <div className="flex flex-wrap gap-3">
+                                <button
+                                    onClick={() => handleAddQuestion(sectionSubject)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm"
+                                >
+                                    <HiOutlinePlus className="w-4 h-4" />
+                                    Sual əlavə et
+                                </button>
+                                <button
+                                    onClick={() => { setPassageSectionTarget(sectionSubject); setShowPassageTypeModal(true); }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700 font-semibold rounded-xl transition-colors text-sm"
+                                >
+                                    <HiOutlinePlus className="w-4 h-4" />
+                                    Mətn / Dinləmə
+                                </button>
+                                <div className="relative">
+                                    <input type="file" accept="application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfSection(sectionSubject); setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
+                                    <button className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm">
+                                        <HiOutlinePlus className="w-4 h-4" />
+                                        PDF-dən
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })}
+
+
+                {/* Add new subject section */}
+                <div className="mt-4 mb-8">
+                    {showSectionPicker ? (
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                            <p className="text-sm font-medium text-gray-700 mb-3">Yeni fənn seçin:</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-3">
+                                {subjectsList
+                                    .filter(s => s !== examConfig.subject && !(examConfig.extraSubjects || []).includes(s))
+                                    .map(name => (
+                                        <button
+                                            key={name}
+                                            onClick={() => handleAddSection(name)}
+                                            className="text-left px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                                        >
+                                            {name}
+                                        </button>
+                                    ))}
+                            </div>
+                            <button onClick={() => setShowSectionPicker(false)} className="text-sm text-gray-400 hover:text-gray-600">Ləğv et</button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setShowSectionPicker(true)}
+                            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-2xl transition-colors"
+                        >
+                            <HiOutlinePlus className="w-5 h-5" />
+                            Yeni fənn əlavə et
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Passage Type Selection Modal */}
@@ -674,25 +752,5 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
     );
 };
 
-const AddButtons = ({ onAddQuestion, onAddPassage, onBatchPdf }) => (
-    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <button onClick={onAddQuestion} className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-sm">
-            <HiOutlinePlus className="w-6 h-6" />
-            Tək Sual Əlavə Et
-        </button>
-        <button onClick={onAddPassage} className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition-colors shadow-sm">
-            <HiOutlinePlus className="w-6 h-6" />
-            Mətn / Dinləmə Əlavə Et
-        </button>
-        <div className="relative">
-            <input type="file" accept="application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                onChange={(e) => { const file = e.target.files[0]; if (file) onBatchPdf(file); e.target.value = null; }} />
-            <button className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-semibold rounded-xl transition-colors shadow-sm">
-                <HiOutlinePlus className="w-6 h-6" />
-                PDF-dən Çoxlu Sual
-            </button>
-        </div>
-    </div>
-);
 
 export default ExamEditor;

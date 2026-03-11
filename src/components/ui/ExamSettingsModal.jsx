@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { HiOutlineDocumentText, HiOutlineClock, HiOutlineEye, HiOutlineBookOpen } from 'react-icons/hi';
 import Modal from './Modal';
+import api from '../../api/axios';
 
 const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
-    // Local state for the form so we don't update parent on every keystroke
     const [formData, setFormData] = useState(examConfig);
     const [tagInput, setTagInput] = useState('');
+    const [subjects, setSubjects] = useState([]);
+
+    // Fetch subjects once on mount
+    useEffect(() => {
+        api.get('/subjects').then(res => setSubjects(res.data)).catch(() => {});
+    }, []);
 
     // Sync when modal opens
     useEffect(() => {
@@ -25,20 +31,14 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
             e.preventDefault();
             const newTag = tagInput.trim().replace(/^#/, '');
             if (newTag && !formData.tags.includes(newTag) && formData.tags.length < 5) {
-                setFormData(prev => ({
-                    ...prev,
-                    tags: [...prev.tags, newTag]
-                }));
+                setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag] }));
                 setTagInput('');
             }
         }
     };
 
     const removeTag = (tagToRemove) => {
-        setFormData(prev => ({
-            ...prev,
-            tags: prev.tags.filter(t => t !== tagToRemove)
-        }));
+        setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
     };
 
     const handleSubmit = (e) => {
@@ -100,30 +100,17 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
                             <select
                                 name="subject"
                                 required
-                                value={formData.subject}
-                                onChange={handleChange}
+                                value={formData.subject || (formData.subjects?.[0] || '')}
+                                onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value, subjects: [e.target.value] }))}
                                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm appearance-none bg-white"
                             >
-                                <option value="RIYAZIYYAT">Riyaziyyat</option>
-                                <option value="FIZIKA">Fizika</option>
-                                <option value="KIMYA">Kimya</option>
-                                <option value="BIOLOGIYA">Biologiya</option>
-                                <option value="AZERBAYCAN_DILI">Azərbaycan dili</option>
-                                <option value="INGILIS_DILI">İngilis dili</option>
-                                <option value="TARIX">Tarix</option>
-                                <option value="COGRAFIYA">Coğrafiya</option>
-                                <option value="INFORMATIKA">Informatika</option>
-                                <option value="MANTIQ">Məntiq</option>
-                                <option value="EDEBIYYAT">Ədəbiyyat</option>
-                                <option value="XARICI_DILL">Xarici dil</option>
-                                <option value="RUS_DILI">Rus dili</option>
-                                <option value="ALMAN_DILI">Alman dili</option>
-                                <option value="FRANSIZ_DILI">Fransız dili</option>
-                                <option value="HAYAT_BILGISI">Həyat bilgisi</option>
-                                <option value="INCASANAT">İncəsənət</option>
-                                <option value="MUSIQI">Musiqi</option>
-                                <option value="FIZIKI_TERBIYE">Fiziki tərbiyə</option>
-                                <option value="TEXNOLOGIYA">Texnologiya</option>
+                                {subjects.length === 0 ? (
+                                    <option value={formData.subject || formData.subjects?.[0]}>{formData.subject || formData.subjects?.[0]}</option>
+                                ) : (
+                                    subjects.map(name => (
+                                        <option key={name} value={name}>{name}</option>
+                                    ))
+                                )}
                             </select>
                         </div>
                     </div>
@@ -187,16 +174,9 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
                     <p className="text-xs text-gray-500 mb-2">İmtahanı asan tapmaq üçün taglər əlavə edin (Vergül və ya Enter ilə fərqləndirin, maks 5 ədəd).</p>
                     <div className="flex flex-wrap gap-2 mb-2">
                         {formData.tags.map((tag) => (
-                            <span
-                                key={tag}
-                                className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-800"
-                            >
+                            <span key={tag} className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-800">
                                 #{tag}
-                                <button
-                                    type="button"
-                                    onClick={() => removeTag(tag)}
-                                    className="ml-1.5 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 focus:outline-none"
-                                >
+                                <button type="button" onClick={() => removeTag(tag)} className="ml-1.5 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 focus:outline-none">
                                     &times;
                                 </button>
                             </span>
@@ -214,17 +194,10 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
                 </div>
 
                 <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
+                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:outline-none">
                         Ləğv et
                     </button>
-                    <button
-                        type="submit"
-                        className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm shadow-indigo-200"
-                    >
+                    <button type="submit" className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-xl hover:bg-indigo-700 focus:outline-none shadow-sm shadow-indigo-200">
                         Yadda Saxla
                     </button>
                 </div>

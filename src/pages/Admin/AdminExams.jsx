@@ -180,7 +180,7 @@ const AdminExams = () => {
                                 <tr key={exam.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <p className="font-semibold text-gray-900 leading-tight">{exam.title}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">{exam.questionCount} sual · {exam.subject}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">{exam.questionCount} sual · {(exam.subjects || []).join(', ') || exam.subject}</p>
                                     </td>
                                     <td className="px-6 py-4 hidden lg:table-cell">
                                         <p className="text-gray-700 font-medium text-xs">{exam.teacherName}</p>

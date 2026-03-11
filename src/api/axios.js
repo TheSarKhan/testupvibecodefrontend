@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const api = axios.create({
     baseURL: '/api',
@@ -39,14 +40,37 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        const status = error.response?.status;
 
         // Extract backend message so callers can use error.message directly
         if (error.response?.data?.message) {
             error.message = error.response.data.message;
         }
 
-        // Only retry once, and only for 401 errors
-        if (error.response?.status !== 401 || originalRequest._retry) {
+        // Network error (no response at all)
+        if (!error.response) {
+            toast.error('Şəbəkə bağlantısı xətası. Zəhmət olmasa yenidən cəhd edin.');
+            return Promise.reject(error);
+        }
+
+        // 403 Forbidden — always show globally
+        if (status === 403) {
+            toast.error(error.message || 'Bu əməliyyat üçün icazəniz yoxdur');
+            return Promise.reject(error);
+        }
+
+        // 5xx Server errors — always show globally
+        if (status >= 500) {
+            toast.error(error.message || 'Server xətası baş verdi. Zəhmət olmasa bir az sonra yenidən cəhd edin.');
+            return Promise.reject(error);
+        }
+
+        // Only retry once, only for 401 errors, and never for auth endpoints
+        if (
+            status !== 401 ||
+            originalRequest._retry ||
+            originalRequest.url?.includes('/auth/')
+        ) {
             return Promise.reject(error);
         }
 

@@ -82,15 +82,37 @@ const ExamSession = () => {
     const buildSections = (data) => {
         if (!data) return [];
         const sectionList = [
-            ...(data.questions || []).map(q => ({ kind: 'question', data: q, orderIndex: q.orderIndex ?? 0 })),
-            ...(data.passages || []).map(p => ({ kind: 'passage', data: p, orderIndex: p.orderIndex ?? 0 }))
+            ...(data.questions || []).map(q => ({ kind: 'question', data: q, orderIndex: q.orderIndex ?? 0, subjectGroup: q.subjectGroup || null })),
+            ...(data.passages || []).map(p => ({ kind: 'passage', data: p, orderIndex: p.orderIndex ?? 0, subjectGroup: p.subjectGroup || null }))
         ];
         sectionList.sort((a, b) => a.orderIndex - b.orderIndex);
         return sectionList;
     };
 
+    // Resolve display label for a subjectGroup (null = main section = subjects[0])
+    const resolveSubjectLabel = (subjectGroup) => {
+        if (subjectGroup) return subjectGroup;
+        return sessionData?.subjects?.[0] || null;
+    };
+
+    // Group sections by subjectGroup for navigation
+    const buildNavGroups = (sectionList) => {
+        const groups = [];
+        let currentGroup = null;
+        sectionList.forEach((section, idx) => {
+            const sg = section.subjectGroup;
+            if (!currentGroup || currentGroup.subjectGroup !== sg) {
+                currentGroup = { subjectGroup: sg, label: resolveSubjectLabel(sg), items: [] };
+                groups.push(currentGroup);
+            }
+            currentGroup.items.push({ section, idx });
+        });
+        return groups;
+    };
+
     const sections = buildSections(sessionData);
     const currentSection = sections[currentSectionIndex];
+    const navGroups = buildNavGroups(sections);
 
     const syncAnswer = async (questionId, answerData) => {
         try {
@@ -192,7 +214,10 @@ const ExamSession = () => {
                 <div className="container-main py-4 flex items-center justify-between">
                     <div>
                         <h1 className="text-xl font-bold text-gray-900">{sessionData.examTitle}</h1>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 flex items-center gap-2">
+                            {resolveSubjectLabel(currentSection?.subjectGroup) && (
+                                <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">{resolveSubjectLabel(currentSection?.subjectGroup)}</span>
+                            )}
                             Bölmə {currentSectionIndex + 1} / {sections.length}
                         </p>
                     </div>
@@ -214,7 +239,17 @@ const ExamSession = () => {
                 </div>
             </div>
 
-            <div className="container-main flex-1 py-8 max-w-4xl mx-auto w-full">
+            <div className="container-main flex-1 py-8 pb-28 max-w-4xl mx-auto w-full">
+                {/* Subject section header */}
+                {resolveSubjectLabel(currentSection?.subjectGroup) && (
+                    <div className="mb-4 flex items-center gap-2">
+                        <span className="bg-indigo-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-sm">
+                            {resolveSubjectLabel(currentSection?.subjectGroup)}
+                        </span>
+                        <div className="h-px flex-1 bg-indigo-100" />
+                    </div>
+                )}
+
                 {/* Current Section */}
                 {currentSection?.kind === 'question' && (
                     <QuestionCard
@@ -238,53 +273,68 @@ const ExamSession = () => {
                     />
                 )}
 
-                {/* Navigation Footer */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mt-4 p-4 flex justify-between items-center">
+            </div>
+
+            {/* Navigation Footer - sticky bottom */}
+            <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+                <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center gap-2">
                     <button
                         onClick={() => setCurrentSectionIndex(prev => Math.max(0, prev - 1))}
                         disabled={currentSectionIndex === 0}
-                        className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors flex-shrink-0"
                     >
                         <HiOutlineChevronLeft className="w-5 h-5" />
                         Əvvəlki
                     </button>
 
-                    <div className="hidden sm:flex items-center gap-2 flex-wrap justify-center">
-                        {sections.map((section, idx) => {
-                            const hasAnswer = sectionHasAnswer(section);
-                            const partialAnswer = sectionPartialAnswer(section);
-                            const isPassage = section.kind === 'passage';
-                            return (
-                                <button
-                                    key={idx}
-                                    onClick={() => setCurrentSectionIndex(idx)}
-                                    title={isPassage ? (section.data.title || (section.data.passageType === 'TEXT' ? 'Mətn' : 'Dinləmə')) : `Sual ${idx + 1}`}
-                                    className={`flex items-center justify-center font-bold text-sm transition-colors rounded-lg ${
-                                        isPassage ? 'w-12 h-10 px-1' : 'w-10 h-10'
-                                    } ${
-                                        currentSectionIndex === idx
-                                            ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 ring-offset-1'
-                                            : hasAnswer
-                                                ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
-                                                : partialAnswer
-                                                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200'
-                                                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'
-                                    }`}
-                                >
-                                    {isPassage
-                                        ? (section.data.passageType === 'TEXT'
-                                            ? <HiOutlineDocumentText className="w-4 h-4" />
-                                            : <HiOutlineVolumeUp className="w-4 h-4" />)
-                                        : idx + 1}
-                                </button>
-                            );
-                        })}
+                    <div className="hidden sm:flex items-center gap-x-1 gap-y-1.5 flex-wrap justify-center overflow-y-auto max-h-20">
+                        {navGroups.map((group, gi) => (
+                            <div key={gi} className="flex items-center gap-1 flex-wrap">
+                                {group.label && (
+                                    <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 whitespace-nowrap">
+                                        {group.label}
+                                    </span>
+                                )}
+                                {group.items.map(({ section, idx }) => {
+                                    const hasAnswer = sectionHasAnswer(section);
+                                    const partialAnswer = sectionPartialAnswer(section);
+                                    const isPassage = section.kind === 'passage';
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setCurrentSectionIndex(idx)}
+                                            title={isPassage ? (section.data.title || (section.data.passageType === 'TEXT' ? 'Mətn' : 'Dinləmə')) : `Sual ${idx + 1}`}
+                                            className={`flex items-center justify-center font-bold text-sm transition-colors rounded-lg ${
+                                                isPassage ? 'w-12 h-9 px-1' : 'w-9 h-9'
+                                            } ${
+                                                currentSectionIndex === idx
+                                                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 ring-offset-1'
+                                                    : hasAnswer
+                                                        ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
+                                                        : partialAnswer
+                                                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200'
+                                                            : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'
+                                            }`}
+                                        >
+                                            {isPassage
+                                                ? (section.data.passageType === 'TEXT'
+                                                    ? <HiOutlineDocumentText className="w-4 h-4" />
+                                                    : <HiOutlineVolumeUp className="w-4 h-4" />)
+                                                : idx + 1}
+                                        </button>
+                                    );
+                                })}
+                                {gi < navGroups.length - 1 && (
+                                    <div className="w-px h-7 bg-gray-300 mx-1 self-center" />
+                                )}
+                            </div>
+                        ))}
                     </div>
 
                     <button
                         onClick={() => setCurrentSectionIndex(prev => Math.min(sections.length - 1, prev + 1))}
                         disabled={currentSectionIndex === sections.length - 1}
-                        className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors flex-shrink-0"
                     >
                         Növbəti
                         <HiOutlineChevronRight className="w-5 h-5" />

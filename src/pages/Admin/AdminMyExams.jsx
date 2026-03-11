@@ -8,6 +8,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import CreateExamModal from '../../components/ui/CreateExamModal';
 
 const STATUSES = [
     { value: '', label: 'Hamısı' },
@@ -38,6 +39,7 @@ const AdminMyExams = () => {
     const [page, setPage] = useState(0);
     const [searchInput, setSearchInput] = useState('');
     const [priceInputs, setPriceInputs] = useState({});
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [savingPrice, setSavingPrice] = useState({});
 
     const fetchExams = useCallback(async () => {
@@ -119,7 +121,7 @@ const AdminMyExams = () => {
         return exam.price != null ? String(exam.price) : '';
     };
 
-    return (
+    return (<>
         <div className="p-8">
             <div className="mb-6 flex items-center justify-between">
                 <div>
@@ -129,7 +131,7 @@ const AdminMyExams = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => navigate('/imtahanlar/yarat')}
+                    onClick={() => setIsCreateModalOpen(true)}
                     className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors"
                 >
                     <HiOutlinePlusCircle className="w-5 h-5" />
@@ -177,7 +179,7 @@ const AdminMyExams = () => {
                     <div className="text-center py-20">
                         <p className="text-gray-400 mb-3">Hələ imtahan yaratmamısınız</p>
                         <button
-                            onClick={() => navigate('/imtahanlar/yarat')}
+                            onClick={() => setIsCreateModalOpen(true)}
                             className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 text-sm font-semibold"
                         >
                             <HiOutlinePlusCircle className="w-4 h-4" />
@@ -200,7 +202,7 @@ const AdminMyExams = () => {
                                 <tr key={exam.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <p className="font-semibold text-gray-900 leading-tight">{exam.title}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">{exam.questionCount} sual · {exam.subject}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">{exam.questionCount} sual · {(exam.subjects || []).join(', ') || exam.subject}</p>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusBadgeClass[exam.status] || 'bg-gray-100 text-gray-600'}`}>
@@ -305,7 +307,9 @@ const AdminMyExams = () => {
                 </div>
             )}
         </div>
-    );
+
+        <CreateExamModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+    </>);
 };
 
 export default AdminMyExams;

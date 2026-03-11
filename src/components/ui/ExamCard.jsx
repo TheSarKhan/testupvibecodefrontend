@@ -1,18 +1,24 @@
-import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
+
+const EXAM_TYPE_LABELS = { FREE: 'Sərbəst', TEMPLATE: 'Şablon' };
 
 const ExamCard = ({ exam, onDelete, onShare, onToggleStatus }) => {
     const isDraft = exam.status === 'DRAFT';
     const isPublished = exam.status === 'PUBLISHED';
+    const typeLabel = EXAM_TYPE_LABELS[exam.examType] || exam.examType || '';
+    const subjects = exam.subjects || [];
 
     return (
         <div className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full ${isDraft ? 'border-dashed border-gray-300' : 'border-gray-100'}`}>
             {/* Header: Main Tag and Actions */}
             <div className="p-5 border-b border-gray-50 flex justify-between items-start gap-4 bg-gray-50/50">
                 <div className="flex items-center gap-2 flex-wrap">
-                    <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide">
-                        {exam.mainTag}
-                    </div>
+                    {typeLabel && (
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide">
+                            {typeLabel}
+                        </div>
+                    )}
                     {isDraft && (
                         <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-100 text-amber-700 text-xs font-semibold">
                             Qaralama
@@ -81,6 +87,12 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus }) => {
                 </div>
 
                 <div className="mt-auto space-y-3">
+                    {subjects.length > 0 && (
+                        <div className="flex items-start gap-2 text-gray-600 text-sm">
+                            <HiOutlineAcademicCap className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                            <span>Fənnlər: <strong>{subjects.join(', ')}</strong></span>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2 text-gray-600 text-sm">
                         <HiOutlineClock className="w-5 h-5 text-gray-400" />
                         <span>Müddət: <strong>{exam.duration ? `${exam.duration} dəqiqə` : 'Sərbəst'}</strong></span>

@@ -1,46 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight } from 'react-icons/hi';
 import Modal from './Modal';
-
-const SUBJECTS = [
-    "Azərbaycan Dili",
-    "Riyaziyyat",
-    "İngilis Dili",
-    "Tarix",
-    "Fizika",
-    "Kimya",
-    "Biologiya",
-    "Coğrafiya",
-    "İnformatika",
-    "Məntiq"
-];
+import api from '../../api/axios';
 
 const CreateExamModal = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
-    const [step, setStep] = useState(1); // 1: Type Selection, 2: Subject Selection
-    const [examType, setExamType] = useState(null); // 'free' or 'template'
+    const [step, setStep] = useState(1);
+    const [examType, setExamType] = useState(null);
     const [selectedSubject, setSelectedSubject] = useState('');
+    const [subjects, setSubjects] = useState([]);
+
+    useEffect(() => {
+        api.get('/subjects').then(res => setSubjects(res.data)).catch(() => {});
+    }, []);
 
     const handleTypeSelect = (type) => {
-        if (type === 'template') return; // Disabled for now
-
+        if (type === 'template') return;
         setExamType(type);
         setStep(2);
     };
 
     const handleContinue = () => {
         if (!selectedSubject) return;
-
-        // Close modal and navigate
         onClose();
-        // Reset state for next time
         setTimeout(() => {
             setStep(1);
             setExamType(null);
             setSelectedSubject('');
         }, 300);
-
         navigate('/imtahanlar/yarat', { state: { subject: selectedSubject, type: examType } });
     };
 
@@ -82,26 +70,24 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     const renderStep2 = () => (
         <div className="space-y-6">
             <div>
-                <button
-                    onClick={() => setStep(1)}
-                    className="text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-4 inline-block"
-                >
+                <button onClick={() => setStep(1)} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-4 inline-block">
                     ← Geriyə qayıt
                 </button>
                 <p className="text-gray-600">Sərbəst imtahan üçün fənn seçin:</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto p-1">
-                {SUBJECTS.map((subject) => (
+                {subjects.map((name) => (
                     <button
-                        key={subject}
-                        onClick={() => setSelectedSubject(subject)}
-                        className={`p-3 rounded-lg border text-sm font-medium transition-all text-left ${selectedSubject === subject
+                        key={name}
+                        onClick={() => setSelectedSubject(name)}
+                        className={`p-3 rounded-lg border text-sm font-medium transition-all text-left ${
+                            selectedSubject === name
                                 ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm'
                                 : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-gray-50'
-                            }`}
+                        }`}
                     >
-                        {subject}
+                        {name}
                     </button>
                 ))}
             </div>
@@ -120,12 +106,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     );
 
     return (
-        <Modal
-            isOpen={isOpen}
-            onClose={onClose}
-            title={step === 1 ? "Yeni İmtahan Növü" : "Fənn Seçimi"}
-            maxWidth="max-w-lg"
-        >
+        <Modal isOpen={isOpen} onClose={onClose} title={step === 1 ? "Yeni İmtahan Növü" : "Fənn Seçimi"} maxWidth="max-w-lg">
             {step === 1 ? renderStep1() : renderStep2()}
         </Modal>
     );

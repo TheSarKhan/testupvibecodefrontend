@@ -835,10 +835,10 @@ const TeacherProfile = ({ user }) => {
                                                     <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                                                 </div>
                                                 <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-500">
-                                                    {exam.subject && (
+                                                    {(exam.subjects?.length > 0 || exam.subject) && (
                                                         <span className="flex items-center gap-1">
                                                             <HiOutlineAcademicCap className="w-3.5 h-3.5" />
-                                                            {exam.subject.replace(/_/g, ' ')}
+                                                            {(exam.subjects || []).join(', ') || exam.subject}
                                                         </span>
                                                     )}
                                                     {qCount > 0 && (

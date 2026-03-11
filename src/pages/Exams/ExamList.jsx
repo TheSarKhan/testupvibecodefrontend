@@ -139,12 +139,6 @@ const ExamList = () => {
         (exam.tags && exam.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
     );
 
-    const subjectDisplayNames = {
-        'RIYAZIYYAT': 'Riyaziyyat', 'FIZIKA': 'Fizika', 'KIMYA': 'Kimya',
-        'BIOLOGIYA': 'Biologiya', 'AZERBAYCAN_DILI': 'Azərbaycan dili',
-        'INGILIS_DILI': 'İngilis dili', 'TARIX': 'Tarix', 'COGRAFIYA': 'Coğrafiya',
-        'INFORMATIKA': 'Informatika', 'MANTIQ': 'Məntiq'
-    };
 
     return (
         <div className="bg-white min-h-screen py-10">
@@ -208,7 +202,7 @@ const ExamList = () => {
                                     {filteredPublished.map(exam => {
                                         const isSaved = savedExamLinks.has(exam.shareLink);
                                         const isPaid = exam.price != null && Number(exam.price) > 0;
-                                        const subjectName = subjectDisplayNames[exam.subject] || exam.subject;
+                                        const subjectName = (exam.subjects || []).join(', ') || exam.subject || '';
                                         return (
                                             <div key={exam.id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden">
                                                 {/* Colored top accent */}
@@ -319,7 +313,7 @@ const ExamList = () => {
                                                     key={exam.id}
                                                     exam={{
                                                         ...exam,
-                                                        mainTag: subjectDisplayNames[exam.subject] || exam.subject,
+                                                        subjects: exam.subjects || [],
                                                         tags: exam.tags || [],
                                                         duration: exam.durationMinutes,
                                                         questionCount: exam.questions?.length || 0
@@ -347,7 +341,7 @@ const ExamList = () => {
                                                     key={exam.id}
                                                     exam={{
                                                         ...exam,
-                                                        mainTag: subjectDisplayNames[exam.subject] || exam.subject,
+                                                        subjects: exam.subjects || [],
                                                         tags: exam.tags || [],
                                                         duration: exam.durationMinutes,
                                                         questionCount: exam.questions?.length || 0

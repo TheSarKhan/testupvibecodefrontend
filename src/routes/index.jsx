@@ -25,6 +25,7 @@ import AdminDashboard from '../pages/Admin/AdminDashboard';
 import AdminUsers from '../pages/Admin/AdminUsers';
 import AdminMyExams from '../pages/Admin/AdminMyExams';
 import AdminExams from '../pages/Admin/AdminExams';
+import AdminSubjects from '../pages/Admin/AdminSubjects';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
@@ -70,6 +71,7 @@ const router = createBrowserRouter([
                     { path: 'users', element: <AdminUsers /> },
                     { path: 'oz-imtahanlar', element: <AdminMyExams /> },
                     { path: 'muellim-imtahanlar', element: <AdminExams /> },
+                    { path: 'fennler', element: <AdminSubjects /> },
                 ],
             },
             { path: '*', element: <NotFound /> },

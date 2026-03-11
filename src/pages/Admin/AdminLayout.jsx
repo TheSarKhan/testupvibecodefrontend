@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen } from 'react-icons/hi';
 
 const navItems = [
     { to: '/admin', label: 'Dashboard', icon: HiOutlineChartBar, end: true },
     { to: '/admin/users', label: 'İstifadəçilər', icon: HiOutlineUsers },
     { to: '/admin/oz-imtahanlar', label: 'Öz İmtahanlarım', icon: HiOutlineDocumentText },
     { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
+    { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
 ];
 
 const AdminLayout = () => {

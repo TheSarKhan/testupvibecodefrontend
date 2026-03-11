@@ -14,9 +14,15 @@ const Login = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await login(email, password);
+            const data = await login(email, password);
+            const { jwtDecode } = await import('jwt-decode');
+            const decoded = jwtDecode(data.accessToken);
             toast.success('Uğurla daxil oldunuz!');
-            navigate('/');
+            if (decoded.role === 'ADMIN') {
+                navigate('/admin');
+            } else {
+                navigate('/');
+            }
         } catch (error) {
             toast.error(error.response?.data?.message || 'Xəta baş verdi');
         } finally {

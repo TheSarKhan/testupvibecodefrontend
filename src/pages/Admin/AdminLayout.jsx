@@ -1,0 +1,59 @@
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap } from 'react-icons/hi';
+
+const navItems = [
+    { to: '/admin', label: 'Dashboard', icon: HiOutlineChartBar, end: true },
+    { to: '/admin/users', label: 'İstifadəçilər', icon: HiOutlineUsers },
+    { to: '/admin/oz-imtahanlar', label: 'Öz İmtahanlarım', icon: HiOutlineDocumentText },
+    { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
+];
+
+const AdminLayout = () => {
+    const navigate = useNavigate();
+    return (
+        <div className="flex min-h-screen bg-gray-50">
+            {/* Sidebar */}
+            <aside className="w-64 shrink-0 bg-white border-r border-gray-100 flex flex-col shadow-sm">
+                <div className="px-6 py-5 border-b border-gray-100">
+                    <span className="text-lg font-extrabold text-indigo-700 tracking-tight">testup.az</span>
+                    <p className="text-xs text-gray-400 mt-0.5">Admin Panel</p>
+                </div>
+                <nav className="flex-1 p-3 space-y-1">
+                    {navItems.map(({ to, label, icon: Icon, end }) => (
+                        <NavLink
+                            key={to}
+                            to={to}
+                            end={end}
+                            className={({ isActive }) =>
+                                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                                    isActive
+                                        ? 'bg-indigo-50 text-indigo-700'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                }`
+                            }
+                        >
+                            <Icon className="w-5 h-5" />
+                            {label}
+                        </NavLink>
+                    ))}
+                </nav>
+                <div className="p-3 border-t border-gray-100">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-2 px-3 py-2.5 w-full text-sm text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-xl transition-colors font-medium"
+                    >
+                        <HiOutlineArrowLeft className="w-4 h-4" />
+                        Sayta qayıt
+                    </button>
+                </div>
+            </aside>
+
+            {/* Main content */}
+            <main className="flex-1 min-w-0 overflow-y-auto">
+                <Outlet />
+            </main>
+        </div>
+    );
+};
+
+export default AdminLayout;

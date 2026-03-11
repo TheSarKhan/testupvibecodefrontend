@@ -16,6 +16,8 @@ const ExamEntry = () => {
     const [guestName, setGuestName] = useState('');
     const [accessCode, setAccessCode] = useState('');
     const [isJoining, setIsJoining] = useState(false);
+    const [hasPurchased, setHasPurchased] = useState(false);
+    const [isPurchasing, setIsPurchasing] = useState(false);
 
     useEffect(() => {
         fetchExamInfo();
@@ -25,11 +27,33 @@ const ExamEntry = () => {
         try {
             const { data } = await api.get(`/exams/${shareLink}`);
             setExam(data);
+            // If exam is free, mark as purchased automatically
+            if (data.price == null || data.price === 0 || data.price === '0') {
+                setHasPurchased(true);
+            }
         } catch (error) {
             toast.error("İmtahan tapılmadı və ya aktiv deyil");
             navigate('/');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePurchase = async () => {
+        if (!isAuthenticated) {
+            toast.error("Ödənişli imtahan üçün hesabınıza daxil olun");
+            navigate('/login', { state: { returnUrl: `/imtahan/${shareLink}` } });
+            return;
+        }
+        setIsPurchasing(true);
+        try {
+            await api.post(`/exams/${shareLink}/purchase`);
+            setHasPurchased(true);
+            toast.success('Ödəniş qeyd edildi. İmtahana başlaya bilərsiniz!');
+        } catch {
+            toast.error('Ödəniş zamanı xəta baş verdi');
+        } finally {
+            setIsPurchasing(false);
         }
     };
 
@@ -102,6 +126,17 @@ const ExamEntry = () => {
                         <p className="mt-2 text-sm text-gray-500">
                             {exam.questions?.length || 0} sual • {exam.durationMinutes ? `${exam.durationMinutes} dəqiqə` : 'Sərbəst vaxt'}
                         </p>
+                        {exam.price != null && exam.price > 0 && (
+                            <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold px-3 py-1.5 rounded-full">
+                                <span>💳</span>
+                                <span>Ödənişli · {Number(exam.price).toFixed(2)} ₼</span>
+                            </div>
+                        )}
+                        {(exam.price == null || exam.price === 0) && (
+                            <div className="mt-3 inline-flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                                Pulsuz
+                            </div>
+                        )}
                     </div>
 
                     <form onSubmit={handleStartExam} className="space-y-6">
@@ -165,13 +200,24 @@ const ExamEntry = () => {
                             </div>
                         )}
 
-                        <button
-                            type="submit"
-                            disabled={isJoining}
-                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-70"
-                        >
-                            {isJoining ? 'Yüklənir...' : 'İmtahana Başla'}
-                        </button>
+                        {exam.price != null && exam.price > 0 && !hasPurchased ? (
+                            <button
+                                type="button"
+                                onClick={handlePurchase}
+                                disabled={isPurchasing}
+                                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors disabled:opacity-70"
+                            >
+                                {isPurchasing ? 'Emal edilir...' : `💳 Satın Al · ${Number(exam.price).toFixed(2)} ₼`}
+                            </button>
+                        ) : (
+                            <button
+                                type="submit"
+                                disabled={isJoining}
+                                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-70"
+                            >
+                                {isJoining ? 'Yüklənir...' : 'İmtahana Başla'}
+                            </button>
+                        )}
                     </form>
                 </div>
             </div>

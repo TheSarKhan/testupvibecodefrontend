@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
@@ -270,25 +270,31 @@ const StatCard = ({ icon, label, value, sub, color = 'indigo' }) => {
 // ==== STUDENT PROFILE ====
 const StudentProfile = ({ user }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { setProfilePicture: setGlobalPicture } = useAuth();
     const [results, setResults] = useState([]);
     const [ongoing, setOngoing] = useState([]);
+    const [depot, setDepot] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [activeTab, setActiveTab] = useState(location.state?.tab || 'results');
     const [showPwModal, setShowPwModal] = useState(false);
     const [profilePicture, setProfilePicture] = useState('');
+    const [removingDepot, setRemovingDepot] = useState(null);
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [resData, onData, meData] = await Promise.all([
+                const [resData, onData, meData, depotData] = await Promise.all([
                     api.get('/submissions/my-results'),
                     api.get('/submissions/ongoing').catch(() => ({ data: [] })),
-                    api.get('/users/me').catch(() => ({ data: {} }))
+                    api.get('/users/me').catch(() => ({ data: {} })),
+                    api.get('/depot').catch(() => ({ data: [] })),
                 ]);
                 setResults(resData.data);
                 setOngoing(onData.data || []);
                 setProfilePicture(meData.data?.profilePicture || '');
+                setDepot(depotData.data || []);
             } catch {
                 toast.error('Nəticələri yükləyərkən xəta baş verdi');
             } finally {
@@ -297,6 +303,19 @@ const StudentProfile = ({ user }) => {
         };
         loadData();
     }, []);
+
+    const handleRemoveFromDepot = async (shareLink) => {
+        setRemovingDepot(shareLink);
+        try {
+            await api.delete(`/depot/${shareLink}`);
+            setDepot(prev => prev.filter(e => e.shareLink !== shareLink));
+            toast.success('Depodan silindi');
+        } catch {
+            toast.error('Xəta baş verdi');
+        } finally {
+            setRemovingDepot(null);
+        }
+    };
 
     const filtered = results.filter(r =>
         r.examTitle?.toLowerCase().includes(search.toLowerCase())
@@ -461,20 +480,89 @@ const StudentProfile = ({ user }) => {
                     </div>
                 )}
 
-                {/* Results */}
+                {/* Tabs */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <h2 className="text-lg font-black text-gray-900">İmtahan Nəticələrim</h2>
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="İmtahan axtar..."
-                            className="w-full sm:w-56 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        />
+                        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+                            <button
+                                onClick={() => setActiveTab('results')}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'results' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                Nəticələrim
+                                {results.length > 0 && <span className="ml-1.5 text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">{results.length}</span>}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('depot')}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'depot' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                Depom
+                                {depot.length > 0 && <span className="ml-1.5 text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">{depot.length}</span>}
+                            </button>
+                        </div>
+                        {activeTab === 'results' && (
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="İmtahan axtar..."
+                                className="w-full sm:w-56 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            />
+                        )}
                     </div>
 
-                    {loading ? (
+                    {activeTab === 'depot' ? (
+                        depot.length === 0 ? (
+                            <div className="py-16 text-center text-gray-400">
+                                <HiOutlineClipboardList className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                                <p className="font-medium">Depounuz boşdur</p>
+                                <p className="text-sm mt-1">İmtahanlar səhifəsindəki 🔖 düyməsi ilə imtahan əlavə edin</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-50">
+                                {depot.map(exam => (
+                                    <div key={exam.id} className="px-6 py-5 hover:bg-gray-50/60 transition-colors">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h3 className="font-bold text-gray-900 truncate">{exam.title}</h3>
+                                                    {exam.isPaid ? (
+                                                        <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                                            {Number(exam.price).toFixed(2)} ₼ · Ödənilib
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                                                            Pulsuz
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-400">
+                                                    <span>{exam.questionCount} sual</span>
+                                                    {exam.durationMinutes && <span>⏱ {exam.durationMinutes} dəq</span>}
+                                                    <span>Əlavə edilib: {new Date(exam.savedAt).toLocaleDateString('az-AZ')}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button
+                                                    onClick={() => navigate(`/imtahan/${exam.shareLink}`)}
+                                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors border border-indigo-100"
+                                                >
+                                                    Başla →
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRemoveFromDepot(exam.shareLink)}
+                                                    disabled={removingDepot === exam.shareLink}
+                                                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
+                                                    title="Depodan sil"
+                                                >
+                                                    <HiOutlineTrash className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    ) : loading ? (
                         <div className="flex justify-center py-16">
                             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
                         </div>

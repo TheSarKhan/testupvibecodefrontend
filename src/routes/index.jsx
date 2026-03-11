@@ -20,6 +20,11 @@ import ExamSession from '../pages/Student/ExamSession';
 import ExamResultSummary from '../pages/Student/ExamResultSummary';
 import ExamReview from '../pages/Student/ExamReview';
 import ExamResults from '../pages/Teacher/ExamResults';
+import AdminLayout from '../pages/Admin/AdminLayout';
+import AdminDashboard from '../pages/Admin/AdminDashboard';
+import AdminUsers from '../pages/Admin/AdminUsers';
+import AdminMyExams from '../pages/Admin/AdminMyExams';
+import AdminExams from '../pages/Admin/AdminExams';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
@@ -41,22 +46,10 @@ const router = createBrowserRouter([
             { path: 'imtahanlar/yarat', element: <ExamEditor /> },
             { path: 'imtahanlar/edit/:id', element: <ExamEditor /> },
             { path: 'imtahanlar/duzenle/:id', element: <ExamEditor /> },
-            { 
-                path: 'imtahan/:shareLink', 
-                element: <ExamEntry /> 
-            },
-            { 
-                path: 'test/take/:sessionId', 
-                element: <ExamSession /> 
-            },
-            {
-                path: 'test/result/:sessionId',
-                element: <ExamResultSummary />
-            },
-            {
-                path: 'test/review/:sessionId',
-                element: <ExamReview />
-            },
+            { path: 'imtahan/:shareLink', element: <ExamEntry /> },
+            { path: 'test/take/:sessionId', element: <ExamSession /> },
+            { path: 'test/result/:sessionId', element: <ExamResultSummary /> },
+            { path: 'test/review/:sessionId', element: <ExamReview /> },
             {
                 path: 'profil',
                 element: (
@@ -64,6 +57,20 @@ const router = createBrowserRouter([
                         <Profile />
                     </ProtectedRoute>
                 ),
+            },
+            {
+                path: 'admin',
+                element: (
+                    <ProtectedRoute roles={['ADMIN']}>
+                        <AdminLayout />
+                    </ProtectedRoute>
+                ),
+                children: [
+                    { index: true, element: <AdminDashboard /> },
+                    { path: 'users', element: <AdminUsers /> },
+                    { path: 'oz-imtahanlar', element: <AdminMyExams /> },
+                    { path: 'muellim-imtahanlar', element: <AdminExams /> },
+                ],
             },
             { path: '*', element: <NotFound /> },
         ],

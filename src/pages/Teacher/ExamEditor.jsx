@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import LatexPreview from '../../components/ui/LatexPreview';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
@@ -10,7 +11,9 @@ const ExamEditor = () => {
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const { isAdmin } = useAuth();
     const isEditMode = !!id;
+    const backPath = isAdmin ? '/admin/oz-imtahanlar' : '/imtahanlar';
     const initialLocationState = location.state || { subject: 'Seçilməyib', type: 'free' };
 
     const subjectMapping = {
@@ -139,7 +142,7 @@ const ExamEditor = () => {
             setPassages(mappedPassages);
         } catch (error) {
             toast.error("İmtahan məlumatlarını yükləmək mümkün olmadı");
-            navigate('/imtahanlar');
+            navigate(backPath);
         } finally {
             setLoading(false);
         }
@@ -343,7 +346,7 @@ const ExamEditor = () => {
                 await api.post('/exams', buildPayload('PUBLISHED'));
                 toast.success('İmtahan uğurla yayımlandı!', { id: loadId });
             }
-            navigate('/imtahanlar');
+            navigate(backPath);
         } catch (error) {
             toast.error(error.message || 'Xəta baş verdi', { id: loadId });
         }
@@ -365,7 +368,7 @@ const ExamEditor = () => {
             <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <div className="container-main py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => navigate('/imtahanlar')} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+                        <button onClick={() => navigate(backPath)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
                             <HiOutlineArrowLeft className="w-6 h-6" />
                         </button>
                         <div>

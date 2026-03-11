@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineClock, HiOutlineStar, HiOutlineUsers, HiOutlineTrendingUp, HiOutlineCheckCircle } from 'react-icons/hi';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
@@ -16,6 +17,7 @@ const StarDisplay = ({ value }) => {
 const ExamResults = () => {
     const { examId } = useParams();
     const navigate = useNavigate();
+    const { isAdmin } = useAuth();
 
     const [submissions, setSubmissions] = useState([]);
     const [statistics, setStatistics] = useState(null);
@@ -69,7 +71,20 @@ const ExamResults = () => {
                     </button>
                     <div>
                         <h1 className="text-xl font-bold text-gray-900">{statistics?.examTitle || 'İmtahan Nəticələri'}</h1>
-                        <p className="text-xs text-gray-500">İmtahan ID: {examId}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-gray-500">İmtahan ID: {examId}</p>
+                            {isAdmin && (
+                                statistics?.examPrice != null && statistics.examPrice > 0 ? (
+                                    <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                        Ödənişli · {Number(statistics.examPrice).toFixed(2)} ₼
+                                    </span>
+                                ) : (
+                                    <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                                        Pulsuz
+                                    </span>
+                                )
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,6 +178,9 @@ const ExamResults = () => {
                                             <th className="p-4 py-3 font-semibold">Xərclənən Vaxt</th>
                                             <th className="p-4 py-3 font-semibold">Bal</th>
                                             <th className="p-4 py-3 font-semibold">Reytinq</th>
+                                            {isAdmin && statistics?.examPrice != null && statistics.examPrice > 0 && (
+                                                <th className="p-4 py-3 font-semibold">Ödəniş</th>
+                                            )}
                                             <th className="p-4 py-3 font-semibold">Status</th>
                                             <th className="p-4 py-3 font-semibold">Əməliyyat</th>
                                         </tr>
@@ -189,6 +207,21 @@ const ExamResults = () => {
                                                         <span className="text-gray-300 text-sm">–</span>
                                                     )}
                                                 </td>
+                                                {isAdmin && statistics?.examPrice != null && statistics.examPrice > 0 && (
+                                                    <td className="p-4">
+                                                        {r.hasPaid === true ? (
+                                                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                                                                ✓ {r.amountPaid != null ? `${Number(r.amountPaid).toFixed(2)} ₼` : 'Ödənib'}
+                                                            </span>
+                                                        ) : r.hasPaid === false ? (
+                                                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
+                                                                ✗ Ödənilməyib
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-gray-300 text-xs">–</span>
+                                                        )}
+                                                    </td>
+                                                )}
                                                 <td className="p-4">
                                                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                                                         r.submittedAt

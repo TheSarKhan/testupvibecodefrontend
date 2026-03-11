@@ -11,7 +11,7 @@ import logo from '../../assets/logo.png';
 import api from '../../api/axios';
 
 const Navbar = () => {
-    const { isAuthenticated, user, logout, isTeacher, profilePicture } = useAuth();
+    const { isAuthenticated, user, logout, isTeacher, isAdmin, profilePicture } = useAuth();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
@@ -218,7 +218,7 @@ const Navbar = () => {
                                         <div className="text-left hidden lg:block">
                                             <p className="text-sm font-semibold text-gray-800 leading-none">{user?.fullName}</p>
                                             <p className="text-xs text-gray-400 mt-0.5 leading-none">
-                                                {isTeacher ? 'Müəllim' : 'Şagird'}
+                                                {isAdmin ? 'Admin' : isTeacher ? 'Müəllim' : 'Şagird'}
                                             </p>
                                         </div>
                                         <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
@@ -235,15 +235,27 @@ const Navbar = () => {
                                             </div>
 
                                             <div className="mx-3 mb-2 mt-0.5">
-                                                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${isTeacher ? 'bg-violet-50 text-violet-700' : 'bg-indigo-50 text-indigo-700'}`}>
-                                                    {isTeacher
-                                                        ? <><HiOutlinePencilAlt className="w-3 h-3" /> Müəllim</>
-                                                        : <><HiOutlineAcademicCap className="w-3 h-3" /> Şagird</>
+                                                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${isAdmin ? 'bg-purple-50 text-purple-700' : isTeacher ? 'bg-violet-50 text-violet-700' : 'bg-indigo-50 text-indigo-700'}`}>
+                                                    {isAdmin
+                                                        ? <><span className="text-[10px] font-black">⚙</span> Admin</>
+                                                        : isTeacher
+                                                            ? <><HiOutlinePencilAlt className="w-3 h-3" /> Müəllim</>
+                                                            : <><HiOutlineAcademicCap className="w-3 h-3" /> Şagird</>
                                                     }
                                                 </span>
                                             </div>
 
                                             <div className="border-t border-gray-100 pt-1">
+                                                {isAdmin && (
+                                                    <Link
+                                                        to="/admin"
+                                                        onClick={() => setDropdownOpen(false)}
+                                                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 transition-colors font-semibold"
+                                                    >
+                                                        <span className="w-4 h-4 shrink-0 text-center text-xs font-black">⚙</span>
+                                                        Admin Panel
+                                                    </Link>
+                                                )}
                                                 <Link
                                                     to="/profil"
                                                     onClick={() => setDropdownOpen(false)}
@@ -372,6 +384,15 @@ const Navbar = () => {
 
                         {isAuthenticated ? (
                             <div className="border-t border-gray-100 pt-2 mt-2 space-y-0.5">
+                                {isAdmin && (
+                                    <Link
+                                        to="/admin"
+                                        onClick={() => setMobileOpen(false)}
+                                        className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-purple-700 hover:bg-purple-50 transition-colors"
+                                    >
+                                        <span className="w-4 h-4 text-xs font-black">⚙</span> Admin Panel
+                                    </Link>
+                                )}
                                 <Link
                                     to="/profil"
                                     onClick={() => setMobileOpen(false)}

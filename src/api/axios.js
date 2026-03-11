@@ -40,6 +40,11 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
+        // Extract backend message so callers can use error.message directly
+        if (error.response?.data?.message) {
+            error.message = error.response.data.message;
+        }
+
         // Only retry once, and only for 401 errors
         if (error.response?.status !== 401 || originalRequest._retry) {
             return Promise.reject(error);

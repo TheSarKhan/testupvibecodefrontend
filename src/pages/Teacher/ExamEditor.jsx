@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
@@ -41,17 +41,47 @@ const ExamEditor = () => {
         subject: initialLocationState.subject === 'Seçilməyib' ? 'RIYAZIYYAT' : (subjectMapping[initialLocationState.subject] || 'RIYAZIYYAT'),
         duration: 60, visibility: 'PUBLIC', password: '', tags: [], description: ''
     });
-    const [questions, setQuestions] = useState([]);   // standalone questions
-    const [passages, setPassages] = useState([]);     // passage groups
+    const [questions, setQuestions] = useState([]);
+    const [passages, setPassages] = useState([]);
+    const [examStatus, setExamStatus] = useState('DRAFT');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isBatchPdfOpen, setIsBatchPdfOpen] = useState(false);
     const [batchPdfFile, setBatchPdfFile] = useState(null);
     const [loading, setLoading] = useState(isEditMode);
     const [showPassageTypeModal, setShowPassageTypeModal] = useState(false);
+    const [autoSaveStatus, setAutoSaveStatus] = useState(null); // 'saving' | 'saved'
+
+    // Tracks the backend ID of the draft (for new exams created silently via auto-save)
+    const createdIdRef = useRef(isEditMode ? id : null);
+    const autoSaveTimerRef = useRef(null);
 
     useEffect(() => {
         if (isEditMode) fetchExamData();
     }, [id]);
+
+    // Auto-save: debounce 2.5s after any content change
+    useEffect(() => {
+        if (loading) return;
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(async () => {
+            const payload = buildPayload('DRAFT');
+            setAutoSaveStatus('saving');
+            try {
+                if (createdIdRef.current) {
+                    await api.put(`/exams/${createdIdRef.current}`, payload);
+                } else {
+                    const { data } = await api.post('/exams', payload);
+                    createdIdRef.current = data.id;
+                    window.history.replaceState(null, '', `/imtahanlar/duzenle/${data.id}`);
+                }
+                setAutoSaveStatus('saved');
+                setTimeout(() => setAutoSaveStatus(null), 3000);
+            } catch {
+                setAutoSaveStatus(null);
+            }
+        }, 1500);
+        return () => clearTimeout(autoSaveTimerRef.current);
+    }, [questions, passages, examConfig, type, loading]);
 
     const fetchExamData = async () => {
         try {
@@ -62,6 +92,7 @@ const ExamEditor = () => {
                 tags: data.tags || [], description: data.description || ''
             });
             setType(data.examType.toLowerCase());
+            setExamStatus(data.status || 'DRAFT');
 
             const mappedQuestions = (data.questions || []).map(q => ({
                 id: q.id.toString(),
@@ -247,7 +278,50 @@ const ExamEditor = () => {
         })) : []
     });
 
-    const handleSaveExam = async () => {
+    const buildPayload = (status) => ({
+        title: examConfig.title || 'Adsız İmtahan',
+        description: examConfig.description || '',
+        subject: examConfig.subject || 'RIYAZIYYAT',
+        visibility: examConfig.visibility || 'PUBLIC',
+        examType: type === 'free' ? 'FREE' : 'TEMPLATE',
+        status,
+        durationMinutes: parseInt(examConfig.duration) || 60,
+        tags: examConfig.tags || [],
+        questions: questions.map((q) => mapQuestion(q, q.orderIndex ?? 0)),
+        passages: passages.map((p) => ({
+            id: isNewId(p.id) ? null : p.id,
+            passageType: p.passageType,
+            title: p.title || null,
+            textContent: p.textContent || null,
+            attachedImage: p.attachedImage || null,
+            audioContent: p.audioContent || null,
+            listenLimit: p.listenLimit ?? null,
+            orderIndex: p.orderIndex ?? 0,
+            questions: p.questions.map((q, qIdx) => mapQuestion(q, qIdx))
+        }))
+    });
+
+    const handleSaveDraft = async () => {
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        const currentId = createdIdRef.current;
+        const loadId = toast.loading('Qaralama saxlanılır...');
+        try {
+            if (currentId) {
+                await api.put(`/exams/${currentId}`, buildPayload('DRAFT'));
+                setExamStatus('DRAFT');
+                toast.success('Qaralama yeniləndi', { id: loadId });
+            } else {
+                const { data } = await api.post('/exams', buildPayload('DRAFT'));
+                createdIdRef.current = data.id;
+                window.history.replaceState(null, '', `/imtahanlar/duzenle/${data.id}`);
+                toast.success('Qaralama saxlanıldı', { id: loadId });
+            }
+        } catch (error) {
+            toast.error(error.message || 'Xəta baş verdi', { id: loadId });
+        }
+    };
+
+    const handlePublish = async () => {
         if (!examConfig.title) {
             toast.error('Zəhmət olmasa imtahanın adını qeyd edin (Parametrlər bölməsindən)');
             setIsSettingsOpen(true);
@@ -257,41 +331,21 @@ const ExamEditor = () => {
             toast.error('İmtahana ən azı bir sual əlavə edilməlidir');
             return;
         }
-
-        const payload = {
-            title: examConfig.title, description: examConfig.description || '',
-            subject: examConfig.subject || 'RIYAZIYYAT',
-            visibility: examConfig.visibility || 'PUBLIC',
-            examType: type === 'free' ? 'FREE' : 'TEMPLATE',
-            status: 'PUBLISHED', durationMinutes: parseInt(examConfig.duration) || 60,
-            tags: examConfig.tags || [],
-            questions: questions.map((q) => mapQuestion(q, q.orderIndex ?? 0)),
-            passages: passages.map((p) => ({
-                id: isNewId(p.id) ? null : p.id,
-                passageType: p.passageType,
-                title: p.title || null,
-                textContent: p.textContent || null,
-                attachedImage: p.attachedImage || null,
-                audioContent: p.audioContent || null,
-                listenLimit: p.listenLimit ?? null,
-                orderIndex: p.orderIndex ?? 0,
-                questions: p.questions.map((q, qIdx) => mapQuestion(q, qIdx))
-            }))
-        };
-
-        const loadId = toast.loading(isEditMode ? 'Dəyişikliklər yadda saxlanılır...' : 'İmtahan yaradılır...');
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        const currentId = createdIdRef.current;
+        const loadId = toast.loading(currentId ? 'Dəyişikliklər saxlanılır...' : 'İmtahan yayımlanır...');
         try {
-            if (isEditMode) {
-                await api.put(`/exams/${id}`, payload);
-                toast.success('Dəyişikliklər uğurla yadda saxlanıldı!', { id: loadId });
+            if (currentId) {
+                await api.put(`/exams/${currentId}`, buildPayload('PUBLISHED'));
+                setExamStatus('PUBLISHED');
+                toast.success('İmtahan yayımlandı!', { id: loadId });
             } else {
-                await api.post('/exams', payload);
-                toast.success('İmtahan uğurla yaradıldı!', { id: loadId });
+                await api.post('/exams', buildPayload('PUBLISHED'));
+                toast.success('İmtahan uğurla yayımlandı!', { id: loadId });
             }
             navigate('/imtahanlar');
         } catch (error) {
-            const errorMsg = error.response?.data?.message || 'Sistem xətası baş verdi';
-            toast.error(errorMsg, { id: loadId });
+            toast.error(error.message || 'Xəta baş verdi', { id: loadId });
         }
     };
 
@@ -330,9 +384,6 @@ const ExamEditor = () => {
                         <button onClick={() => setIsSettingsOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors">
                             <HiOutlineCog className="w-5 h-5" />
                             <span className="hidden sm:inline">Parametrlər</span>
-                        </button>
-                        <button onClick={handleSaveExam} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm transition-colors">
-                            {isEditMode ? 'Yenilə' : 'Yadda Saxla'}
                         </button>
                     </div>
                 </div>
@@ -438,6 +489,29 @@ const ExamEditor = () => {
                 isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)}
                 examConfig={examConfig} onSave={setExamConfig}
             />
+
+            {/* Floating Publish Button */}
+            <div className="fixed bottom-6 right-6 z-20 flex flex-col items-end gap-2">
+                {autoSaveStatus === 'saving' && (
+                    <span className="flex items-center gap-1.5 text-xs text-white bg-amber-400 px-3 py-1.5 rounded-full shadow">
+                        <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        Saxlanılır...
+                    </span>
+                )}
+                {autoSaveStatus === 'saved' && (
+                    <span className="flex items-center gap-1.5 text-xs text-white bg-green-500 px-3 py-1.5 rounded-full shadow">
+                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        Yadda saxlanıldı
+                    </span>
+                )}
+                <button
+                    onClick={handlePublish}
+                    className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-2xl shadow-xl shadow-indigo-300 transition-all"
+                >
+                    <HiOutlineDocumentText className="w-5 h-5" />
+                    {examStatus === 'PUBLISHED' ? 'Yenilə' : 'Yayımla'}
+                </button>
+            </div>
         </div>
     );
 };

@@ -57,6 +57,16 @@ const ExamList = () => {
         }
     };
 
+    const handleToggleStatus = async (id) => {
+        try {
+            const { data } = await api.patch(`/exams/${id}/toggle-status`);
+            setExams(prev => prev.map(e => e.id === id ? { ...e, status: data.status } : e));
+            toast.success(data.status === 'PUBLISHED' ? 'İmtahan açıldı' : 'İmtahan bağlandı');
+        } catch (err) {
+            toast.error(err.message || 'Xəta baş verdi');
+        }
+    };
+
     const handleShare = (id) => {
         const exam = exams.find(e => e.id === id);
         if (!exam) return;
@@ -78,7 +88,13 @@ const ExamList = () => {
         navigate(`/imtahan/${exam.shareLink}`);
     };
 
-    const filteredExams = exams.filter(exam =>
+    const draftExams = exams.filter(e => e.status === 'DRAFT');
+    const publishedExams = exams.filter(e => e.status !== 'DRAFT');
+    const filteredPublished = publishedExams.filter(exam =>
+        exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (exam.tags && exam.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+    );
+    const filteredDrafts = draftExams.filter(exam =>
         exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (exam.tags && exam.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
     );
@@ -147,72 +163,124 @@ const ExamList = () => {
                     <>
                         {/* Student mode: clickable cards that go directly to exam entry */}
                         {isStudent ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {filteredExams.map(exam => (
-                                    <div
-                                        key={exam.id}
-                                        onClick={() => handleJoinExam(exam)}
-                                        className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer group"
-                                    >
-                                        <div className="flex items-start justify-between mb-3">
-                                            <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-                                                {subjectDisplayNames[exam.subject] || exam.subject}
-                                            </span>
-                                            {exam.visibility === 'PRIVATE' && (
-                                                <HiOutlineLockClosed className="w-4 h-4 text-gray-400" />
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {filteredPublished.map(exam => (
+                                        <div
+                                            key={exam.id}
+                                            onClick={() => handleJoinExam(exam)}
+                                            className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer group"
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                                                    {subjectDisplayNames[exam.subject] || exam.subject}
+                                                </span>
+                                                {exam.visibility === 'PRIVATE' && (
+                                                    <HiOutlineLockClosed className="w-4 h-4 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-indigo-600 transition-colors">
+                                                {exam.title}
+                                            </h3>
+                                            {exam.description && (
+                                                <p className="text-gray-500 text-sm mb-3 line-clamp-2">{exam.description}</p>
                                             )}
+                                            <div className="flex items-center justify-between text-xs text-gray-400 mt-4 pt-3 border-t border-gray-50">
+                                                <span>{exam.questions?.length || 0} sual</span>
+                                                {exam.durationMinutes && <span>⏱ {exam.durationMinutes} dəq</span>}
+                                                <span className="text-indigo-500 font-medium group-hover:underline">İmtahana gir →</span>
+                                            </div>
                                         </div>
-                                        <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-indigo-600 transition-colors">
-                                            {exam.title}
+                                    ))}
+                                </div>
+                                {filteredPublished.length === 0 && (
+                                    <div className="text-center py-20 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <HiOutlineDocumentText className="w-8 h-8" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-gray-900">
+                                            {searchTerm ? 'Axtarışa uyğun imtahan tapılmadı' : 'Hazırda imtahan mövcud deyil'}
                                         </h3>
-                                        {exam.description && (
-                                            <p className="text-gray-500 text-sm mb-3 line-clamp-2">{exam.description}</p>
-                                        )}
-                                        <div className="flex items-center justify-between text-xs text-gray-400 mt-4 pt-3 border-t border-gray-50">
-                                            <span>{exam.questions?.length || 0} sual</span>
-                                            {exam.durationMinutes && <span>⏱ {exam.durationMinutes} dəq</span>}
-                                            <span className="text-indigo-500 font-medium group-hover:underline">İmtahana gir →</span>
+                                        <p className="text-gray-500 mt-2 max-w-md mx-auto">
+                                            {searchTerm ? 'Axtarış terminini dəyişərək yenidən yoxlayın.' : 'Admin hələ heç bir imtahan yerləşdirməyib.'}
+                                        </p>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            /* Teacher/Admin mode */
+                            <>
+                                {/* Drafts Section */}
+                                {filteredDrafts.length > 0 && (
+                                    <div className="mb-10">
+                                        <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                            <HiOutlineDocumentText className="w-5 h-5 text-gray-400" />
+                                            Qaralamalar
+                                            <span className="text-sm font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{filteredDrafts.length}</span>
+                                        </h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {filteredDrafts.map(exam => (
+                                                <ExamCard
+                                                    key={exam.id}
+                                                    exam={{
+                                                        ...exam,
+                                                        mainTag: subjectDisplayNames[exam.subject] || exam.subject,
+                                                        tags: exam.tags || [],
+                                                        duration: exam.durationMinutes,
+                                                        questionCount: exam.questions?.length || 0
+                                                    }}
+                                                    onDelete={handleDelete}
+                                                />
+                                            ))}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            /* Teacher/Admin mode: full ExamCard with delete/share */
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {filteredExams.map(exam => (
-                                    <ExamCard
-                                        key={exam.id}
-                                        exam={{
-                                            ...exam,
-                                            mainTag: subjectDisplayNames[exam.subject] || exam.subject,
-                                            tags: exam.tags || [],
-                                            duration: exam.durationMinutes,
-                                            questionCount: exam.questions ? exam.questions.length : 0
-                                        }}
-                                        onDelete={handleDelete}
-                                        onShare={handleShare}
-                                    />
-                                ))}
-                            </div>
-                        )}
+                                )}
 
-                        {/* Empty State */}
-                        {filteredExams.length === 0 && (
-                            <div className="text-center py-20 bg-gray-50 rounded-2xl border border-gray-100">
-                                <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <HiOutlineDocumentText className="w-8 h-8" />
-                                </div>
-                                <h3 className="text-xl font-semibold text-gray-900">
-                                    {searchTerm ? 'Axtarışa uyğun imtahan tapılmadı' : 'Hazırda imtahan mövcud deyil'}
-                                </h3>
-                                <p className="text-gray-500 mt-2 max-w-md mx-auto">
-                                    {searchTerm
-                                        ? 'Axtarış terminini dəyişərək yenidən yoxlayın.'
-                                        : isStudent
-                                            ? 'Admin hələ heç bir imtahan yerləşdirməyib.'
-                                            : 'İlk imtahanınızı yaratmaqla başlayın.'}
-                                </p>
-                            </div>
+                                {/* Published / Cancelled Exams Section */}
+                                {filteredPublished.length > 0 && (
+                                    <div>
+                                        {filteredDrafts.length > 0 && (
+                                            <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                                <HiOutlineDocumentText className="w-5 h-5 text-gray-400" />
+                                                Yayımlanmış İmtahanlar
+                                                <span className="text-sm font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{filteredPublished.length}</span>
+                                            </h2>
+                                        )}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {filteredPublished.map(exam => (
+                                                <ExamCard
+                                                    key={exam.id}
+                                                    exam={{
+                                                        ...exam,
+                                                        mainTag: subjectDisplayNames[exam.subject] || exam.subject,
+                                                        tags: exam.tags || [],
+                                                        duration: exam.durationMinutes,
+                                                        questionCount: exam.questions?.length || 0
+                                                    }}
+                                                    onDelete={handleDelete}
+                                                    onShare={handleShare}
+                                                    onToggleStatus={handleToggleStatus}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Empty State for Teacher */}
+                                {filteredDrafts.length === 0 && filteredPublished.length === 0 && (
+                                    <div className="text-center py-20 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <HiOutlineDocumentText className="w-8 h-8" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-gray-900">
+                                            {searchTerm ? 'Axtarışa uyğun imtahan tapılmadı' : 'Hazırda imtahan mövcud deyil'}
+                                        </h3>
+                                        <p className="text-gray-500 mt-2 max-w-md mx-auto">
+                                            {searchTerm ? 'Axtarış terminini dəyişərək yenidən yoxlayın.' : 'İlk imtahanınızı yaratmaqla başlayın.'}
+                                        </p>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </>
                 )}

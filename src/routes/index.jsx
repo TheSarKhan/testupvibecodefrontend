@@ -40,6 +40,7 @@ const router = createBrowserRouter([
             { path: 'imtahanlar/:id', element: <ExamView /> },
             { path: 'imtahanlar/yarat', element: <ExamEditor /> },
             { path: 'imtahanlar/edit/:id', element: <ExamEditor /> },
+            { path: 'imtahanlar/duzenle/:id', element: <ExamEditor /> },
             { 
                 path: 'imtahan/:shareLink', 
                 element: <ExamEntry /> 

@@ -71,6 +71,23 @@ const ExamEntry = () => {
 
     if (!exam) return null;
 
+    if (exam.status === 'CANCELLED' || exam.status === 'DRAFT') {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+                <div className="sm:mx-auto sm:w-full sm:max-w-md">
+                    <div className="bg-white py-10 px-8 shadow-xl sm:rounded-2xl border border-gray-100 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-5">
+                            <HiOutlineLockClosed className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">{exam.title}</h2>
+                        <p className="text-gray-500 mb-1">Bu imtahan hazırda <strong className="text-red-500">bağlıdır</strong>.</p>
+                        <p className="text-gray-400 text-sm">Müəllimlə əlaqə saxlayın və ya sonra yenidən yoxlayın.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">

@@ -1,26 +1,55 @@
-import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 
-const ExamCard = ({ exam, onDelete, onShare }) => {
+const ExamCard = ({ exam, onDelete, onShare, onToggleStatus }) => {
+    const isDraft = exam.status === 'DRAFT';
+    const isPublished = exam.status === 'PUBLISHED';
+
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full">
+        <div className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full ${isDraft ? 'border-dashed border-gray-300' : 'border-gray-100'}`}>
             {/* Header: Main Tag and Actions */}
             <div className="p-5 border-b border-gray-50 flex justify-between items-start gap-4 bg-gray-50/50">
-                <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide">
-                    {exam.mainTag}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide">
+                        {exam.mainTag}
+                    </div>
+                    {isDraft && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-100 text-amber-700 text-xs font-semibold">
+                            Qaralama
+                        </span>
+                    )}
+                    {!isDraft && (
+                        onToggleStatus ? (
+                            <button
+                                onClick={() => onToggleStatus(exam.id)}
+                                title={isPublished ? 'Bağlamaq üçün klikləyin' : 'Açmaq üçün klikləyin'}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-opacity hover:opacity-75 cursor-pointer ${isPublished ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}
+                            >
+                                {isPublished ? <HiOutlineEye className="w-3.5 h-3.5" /> : <HiOutlineEyeOff className="w-3.5 h-3.5" />}
+                                {isPublished ? 'Açıq' : 'Bağlı'}
+                            </button>
+                        ) : (
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold ${isPublished ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                {isPublished ? <HiOutlineEye className="w-3.5 h-3.5" /> : <HiOutlineEyeOff className="w-3.5 h-3.5" />}
+                                {isPublished ? 'Açıq' : 'Bağlı'}
+                            </span>
+                        )
+                    )}
                 </div>
 
                 {/* Secondary Actions */}
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => onShare(exam.id)}
-                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="Paylaş"
-                    >
-                        <HiOutlineShare className="w-5 h-5" />
-                    </button>
+                <div className="flex items-center gap-1 shrink-0">
+                    {!isDraft && onShare && (
+                        <button
+                            onClick={() => onShare(exam.id)}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Paylaş"
+                        >
+                            <HiOutlineShare className="w-5 h-5" />
+                        </button>
+                    )}
                     <Link
-                        to={`/imtahanlar/edit/${exam.id}`}
+                        to={`/imtahanlar/duzenle/${exam.id}`}
                         className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                         title="Düzəliş et"
                     >
@@ -54,7 +83,7 @@ const ExamCard = ({ exam, onDelete, onShare }) => {
                 <div className="mt-auto space-y-3">
                     <div className="flex items-center gap-2 text-gray-600 text-sm">
                         <HiOutlineClock className="w-5 h-5 text-gray-400" />
-                        <span>Müddət: <strong>{exam.duration} dəqiqə</strong></span>
+                        <span>Müddət: <strong>{exam.duration ? `${exam.duration} dəqiqə` : 'Sərbəst'}</strong></span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600 text-sm">
                         <HiOutlineDocumentText className="w-5 h-5 text-gray-400" />
@@ -64,22 +93,34 @@ const ExamCard = ({ exam, onDelete, onShare }) => {
             </div>
 
             {/* Footer: Primary Actions */}
-            <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-3">
-                <Link
-                    to={`/imtahanlar/${exam.id}`}
-                    className="flex justify-center items-center gap-2 py-2.5 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
-                >
-                    <HiOutlineEye className="w-5 h-5" />
-                    İmtahana bax
-                </Link>
-                <Link
-                    to={`/imtahanlar/${exam.id}/statistika`}
-                    className="flex justify-center items-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm shadow-indigo-200"
-                >
-                    <HiOutlineChartBar className="w-5 h-5" />
-                    Statistika
-                </Link>
-            </div>
+            {isDraft ? (
+                <div className="p-4 bg-gray-50 border-t border-gray-100">
+                    <Link
+                        to={`/imtahanlar/duzenle/${exam.id}`}
+                        className="flex justify-center items-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors w-full"
+                    >
+                        <HiOutlinePencilAlt className="w-5 h-5" />
+                        Davam Et
+                    </Link>
+                </div>
+            ) : (
+                <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-3">
+                    <Link
+                        to={`/imtahanlar/${exam.id}`}
+                        className="flex justify-center items-center gap-2 py-2.5 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+                    >
+                        <HiOutlineEye className="w-5 h-5" />
+                        İmtahana bax
+                    </Link>
+                    <Link
+                        to={`/imtahanlar/${exam.id}/statistika`}
+                        className="flex justify-center items-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm shadow-indigo-200"
+                    >
+                        <HiOutlineChartBar className="w-5 h-5" />
+                        Statistika
+                    </Link>
+                </div>
+            )}
         </div>
     );
 };

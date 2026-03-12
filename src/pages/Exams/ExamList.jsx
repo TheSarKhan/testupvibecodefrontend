@@ -1,31 +1,95 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { HiOutlinePlusCircle, HiOutlineSearch, HiOutlineDocumentText, HiOutlineLockClosed, HiOutlineBookmark, HiBookmark, HiOutlineClock, HiOutlineQuestionMarkCircle, HiOutlineArrowRight } from 'react-icons/hi';
+import {
+    HiOutlinePlusCircle, HiOutlineSearch, HiOutlineDocumentText,
+    HiOutlineLockClosed, HiOutlineBookmark, HiBookmark,
+    HiOutlineClock, HiOutlineQuestionMarkCircle, HiOutlineArrowRight,
+    HiOutlineFilter, HiOutlineX, HiOutlineChevronDown, HiOutlineAdjustments,
+} from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { ExamCard, CreateExamModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
+// ── Filter pill ───────────────────────────────────────────────────────────────
+const Pill = ({ label, active, onClick }) => (
+    <button
+        onClick={onClick}
+        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+            active
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600'
+        }`}
+    >
+        {label}
+    </button>
+);
+
+// ── Select filter ─────────────────────────────────────────────────────────────
+const FilterSelect = ({ label, value, onChange, options }) => (
+    <div className="relative">
+        <select
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            className="appearance-none pl-3 pr-8 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:border-indigo-400 cursor-pointer hover:border-indigo-300 transition-colors"
+        >
+            {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <HiOutlineChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+    </div>
+);
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 const ExamList = () => {
     const { user, isTeacher, isAdmin, isStudent, isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
-    // Admin manages exams only from admin panel
     useEffect(() => {
         if (isAdmin) navigate('/admin/oz-imtahanlar', { replace: true });
     }, [isAdmin, navigate]);
 
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [savedExamLinks, setSavedExamLinks] = useState(new Set());
     const [savingLink, setSavingLink] = useState(null);
 
-    useEffect(() => {
-        fetchExams();
-    }, [user]);
+    // ── Filter state ──────────────────────────────────────────────────────────
+    const [search, setSearch] = useState('');
+    // Teacher filters
+    const [statusFilter, setStatusFilter] = useState('ALL');   // ALL | DRAFT | PUBLISHED
+    const [visibilityFilter, setVisibilityFilter] = useState('ALL'); // ALL | PUBLIC | PRIVATE
+    // Student filters
+    const [priceFilter, setPriceFilter] = useState('ALL');     // ALL | FREE | PAID
+    const [durationFilter, setDurationFilter] = useState('ALL'); // ALL | SHORT | MEDIUM | LONG
+    // Shared
+    const [sortBy, setSortBy] = useState('NEWEST');            // NEWEST | OLDEST | TITLE | QUESTIONS
+
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (search.trim()) count++;
+        if (isTeacher) {
+            if (statusFilter !== 'ALL') count++;
+            if (visibilityFilter !== 'ALL') count++;
+        } else {
+            if (priceFilter !== 'ALL') count++;
+            if (durationFilter !== 'ALL') count++;
+        }
+        if (sortBy !== 'NEWEST') count++;
+        return count;
+    }, [search, statusFilter, visibilityFilter, priceFilter, durationFilter, sortBy, isTeacher]);
+
+    const clearFilters = () => {
+        setSearch('');
+        setStatusFilter('ALL');
+        setVisibilityFilter('ALL');
+        setPriceFilter('ALL');
+        setDurationFilter('ALL');
+        setSortBy('NEWEST');
+    };
+
+    useEffect(() => { fetchExams(); }, [user]);
 
     useEffect(() => {
         if (isStudent && isAuthenticated) {
@@ -35,51 +99,22 @@ const ExamList = () => {
         }
     }, [isStudent, isAuthenticated]);
 
-    const handleToggleDepot = async (exam) => {
-        if (!isAuthenticated) {
-            toast.error('Depoya əlavə etmək üçün hesabınıza daxil olun');
-            return;
-        }
-        const isSaved = savedExamLinks.has(exam.shareLink);
-        setSavingLink(exam.shareLink);
-        try {
-            if (isSaved) {
-                await api.delete(`/depot/${exam.shareLink}`);
-                setSavedExamLinks(prev => { const n = new Set(prev); n.delete(exam.shareLink); return n; });
-                toast.success('Depodan silindi');
-            } else {
-                await api.post(`/depot/${exam.shareLink}`);
-                setSavedExamLinks(prev => new Set([...prev, exam.shareLink]));
-                toast.success('Depoya əlavə edildi');
-                navigate('/profil', { state: { tab: 'depot' } });
-            }
-        } catch {
-            toast.error('Xəta baş verdi');
-        } finally {
-            setSavingLink(null);
-        }
-    };
-
     const fetchExams = async () => {
         setLoading(true);
         try {
             let data;
             if (isStudent) {
-                // Students see admin-created public exams
                 const response = await api.get('/exams/public');
                 data = response.data;
             } else if (isTeacher || isAdmin) {
-                // Teachers/admins see their own exams
                 const response = await api.get('/exams');
                 data = response.data;
             } else {
-                // Not logged in — show public exams too (optional, could be empty)
                 const response = await api.get('/exams/public');
                 data = response.data;
             }
             setExams(data);
         } catch (error) {
-            console.error("Error fetching exams:", error);
             toast.error("İmtahanları yükləyərkən xəta baş verdi");
         } finally {
             setLoading(false);
@@ -124,122 +159,249 @@ const ExamList = () => {
         toast.success("Paylaşım linki kopyalandı");
     };
 
-    const handleJoinExam = (exam) => {
-        navigate(`/imtahan/${exam.shareLink}`);
+    const handleJoinExam = (exam) => navigate(`/imtahan/${exam.shareLink}`);
+
+    const handleToggleDepot = async (exam) => {
+        if (!isAuthenticated) { toast.error('Depoya əlavə etmək üçün hesabınıza daxil olun'); return; }
+        const isSaved = savedExamLinks.has(exam.shareLink);
+        setSavingLink(exam.shareLink);
+        try {
+            if (isSaved) {
+                await api.delete(`/depot/${exam.shareLink}`);
+                setSavedExamLinks(prev => { const n = new Set(prev); n.delete(exam.shareLink); return n; });
+                toast.success('Depodan silindi');
+            } else {
+                await api.post(`/depot/${exam.shareLink}`);
+                setSavedExamLinks(prev => new Set([...prev, exam.shareLink]));
+                toast.success('Depoya əlavə edildi');
+                navigate('/profil', { state: { tab: 'depot' } });
+            }
+        } catch {
+            toast.error('Xəta baş verdi');
+        } finally {
+            setSavingLink(null);
+        }
     };
 
-    const draftExams = exams.filter(e => e.status === 'DRAFT');
-    const publishedExams = exams.filter(e => e.status !== 'DRAFT');
-    const filteredPublished = publishedExams.filter(exam =>
-        exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (exam.tags && exam.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
-    );
-    const filteredDrafts = draftExams.filter(exam =>
-        exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (exam.tags && exam.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
-    );
+    // ── Filtering + Sorting logic ─────────────────────────────────────────────
+    const filteredExams = useMemo(() => {
+        let list = [...exams];
 
+        // Search
+        if (search.trim()) {
+            const q = search.trim().toLowerCase();
+            list = list.filter(e =>
+                e.title.toLowerCase().includes(q) ||
+                (e.tags || []).some(t => t.toLowerCase().includes(q)) ||
+                (e.subjects || []).some(s => s.toLowerCase().includes(q)) ||
+                (e.subject || '').toLowerCase().includes(q)
+            );
+        }
+
+        if (isTeacher) {
+            // Status
+            if (statusFilter === 'DRAFT') list = list.filter(e => e.status === 'DRAFT');
+            else if (statusFilter === 'PUBLISHED') list = list.filter(e => e.status === 'PUBLISHED');
+
+            // Visibility
+            if (visibilityFilter === 'PUBLIC') list = list.filter(e => e.visibility === 'PUBLIC');
+            else if (visibilityFilter === 'PRIVATE') list = list.filter(e => e.visibility === 'PRIVATE');
+        } else {
+            // Price
+            if (priceFilter === 'FREE') list = list.filter(e => !e.price || Number(e.price) === 0);
+            else if (priceFilter === 'PAID') list = list.filter(e => e.price && Number(e.price) > 0);
+
+            // Duration
+            if (durationFilter === 'SHORT') list = list.filter(e => e.durationMinutes && e.durationMinutes < 30);
+            else if (durationFilter === 'MEDIUM') list = list.filter(e => e.durationMinutes && e.durationMinutes >= 30 && e.durationMinutes <= 60);
+            else if (durationFilter === 'LONG') list = list.filter(e => e.durationMinutes && e.durationMinutes > 60);
+        }
+
+        // Sort
+        if (sortBy === 'NEWEST') list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        else if (sortBy === 'OLDEST') list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+        else if (sortBy === 'TITLE') list.sort((a, b) => a.title.localeCompare(b.title, 'az'));
+        else if (sortBy === 'QUESTIONS') list.sort((a, b) => (b.questions?.length || 0) - (a.questions?.length || 0));
+
+        return list;
+    }, [exams, search, statusFilter, visibilityFilter, priceFilter, durationFilter, sortBy, isTeacher]);
+
+    const draftExams = filteredExams.filter(e => e.status === 'DRAFT');
+    const publishedExams = filteredExams.filter(e => e.status !== 'DRAFT');
 
     return (
-        <div className="bg-white min-h-screen py-10">
+        <div className="bg-gray-50/50 min-h-screen py-10">
             <Helmet>
                 <title>İmtahanlar — testup.az</title>
-                <meta name="description" content="testup.az platformasındakı bütün imtahanları nəzərdən keçirin, yeni imtahan yaradın və ya mövcud imtahanlara qoşulun." />
-                <meta property="og:title" content="İmtahanlar — testup.az" />
-                <meta property="og:type" content="website" />
+                <meta name="description" content="testup.az platformasındakı imtahanları nəzərdən keçirin, yeni imtahan yaradın və ya mövcud imtahanlara qoşulun." />
                 <link rel="canonical" href="https://testup.az/imtahanlar" />
             </Helmet>
-            <div className="container-main">
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div className="container-main">
+                {/* ── Page header ── */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">
+                        <h1 className="text-2xl font-extrabold text-gray-900">
                             {isStudent ? 'İmtahanlar' : 'İmtahanlarım'}
                         </h1>
-                        <p className="text-gray-600 mt-1">
+                        <p className="text-sm text-gray-500 mt-0.5">
                             {isStudent
-                                ? 'Sizin üçün hazırlanmış imtahanların siyahısı.'
-                                : 'Yaratdığınız və idarə etdiyiniz imtahanların siyahısı.'}
+                                ? 'Sizin üçün hazırlanmış imtahanların siyahısı'
+                                : 'Yaratdığınız imtahanları idarə edin'}
                         </p>
                     </div>
-
-                    {/* Only teachers/admins can create exams */}
                     {(isTeacher || isAdmin) && (
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-semibold shadow-md shadow-indigo-200 transition-all hover:-translate-y-0.5 whitespace-nowrap"
+                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-indigo-200/60 transition-all hover:-translate-y-0.5 text-sm whitespace-nowrap"
                         >
-                            <HiOutlinePlusCircle className="w-6 h-6" />
+                            <HiOutlinePlusCircle className="w-5 h-5" />
                             Yeni İmtahan
                         </button>
                     )}
                 </div>
 
-                {/* Search */}
-                <div className="bg-gray-50 p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 mb-8">
-                    <HiOutlineSearch className="w-5 h-5 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="İmtahan adı və ya tag ilə axtarış..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-transparent border-none focus:outline-none text-gray-700 placeholder-gray-400"
-                    />
+                {/* ── Filter panel ── */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-3">
+                    {/* Search row */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400 transition-all">
+                            <HiOutlineSearch className="w-4 h-4 text-gray-400 shrink-0" />
+                            <input
+                                type="text"
+                                placeholder={isTeacher ? 'Ad, tag, fənn ilə axtar...' : 'İmtahan adı, fənn, tag...'}
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className="flex-1 bg-transparent text-sm outline-none text-gray-700 placeholder-gray-400"
+                            />
+                            {search && (
+                                <button onClick={() => setSearch('')} className="text-gray-400 hover:text-gray-600">
+                                    <HiOutlineX className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                            <HiOutlineAdjustments className="w-4 h-4 text-gray-400" />
+                            <FilterSelect
+                                value={sortBy}
+                                onChange={setSortBy}
+                                options={[
+                                    { value: 'NEWEST', label: 'Ən yeni' },
+                                    { value: 'OLDEST', label: 'Ən köhnə' },
+                                    { value: 'TITLE', label: 'Ad (A-Z)' },
+                                    { value: 'QUESTIONS', label: 'Sual sayı' },
+                                ]}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Filter pills row */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 shrink-0">
+                            <HiOutlineFilter className="w-3.5 h-3.5" /> Filter:
+                        </span>
+
+                        {isTeacher ? (
+                            <>
+                                {/* Status */}
+                                <div className="flex items-center gap-1.5">
+                                    <Pill label="Hamısı" active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} />
+                                    <Pill label="Qaralamalar" active={statusFilter === 'DRAFT'} onClick={() => setStatusFilter('DRAFT')} />
+                                    <Pill label="Yayımlanmış" active={statusFilter === 'PUBLISHED'} onClick={() => setStatusFilter('PUBLISHED')} />
+                                </div>
+                                <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
+                                {/* Visibility */}
+                                <div className="flex items-center gap-1.5">
+                                    <Pill label="Bütün görünürlük" active={visibilityFilter === 'ALL'} onClick={() => setVisibilityFilter('ALL')} />
+                                    <Pill label="Açıq" active={visibilityFilter === 'PUBLIC'} onClick={() => setVisibilityFilter('PUBLIC')} />
+                                    <Pill label="Gizli" active={visibilityFilter === 'PRIVATE'} onClick={() => setVisibilityFilter('PRIVATE')} />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Price */}
+                                <div className="flex items-center gap-1.5">
+                                    <Pill label="Hamısı" active={priceFilter === 'ALL'} onClick={() => setPriceFilter('ALL')} />
+                                    <Pill label="Pulsuz" active={priceFilter === 'FREE'} onClick={() => setPriceFilter('FREE')} />
+                                    <Pill label="Ödənişli" active={priceFilter === 'PAID'} onClick={() => setPriceFilter('PAID')} />
+                                </div>
+                                <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
+                                {/* Duration */}
+                                <div className="flex items-center gap-1.5">
+                                    <Pill label="İstənilən vaxt" active={durationFilter === 'ALL'} onClick={() => setDurationFilter('ALL')} />
+                                    <Pill label="<30 dəq" active={durationFilter === 'SHORT'} onClick={() => setDurationFilter('SHORT')} />
+                                    <Pill label="30–60 dəq" active={durationFilter === 'MEDIUM'} onClick={() => setDurationFilter('MEDIUM')} />
+                                    <Pill label=">60 dəq" active={durationFilter === 'LONG'} onClick={() => setDurationFilter('LONG')} />
+                                </div>
+                            </>
+                        )}
+
+                        {activeFilterCount > 0 && (
+                            <button
+                                onClick={clearFilters}
+                                className="ml-auto flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors"
+                            >
+                                <HiOutlineX className="w-3.5 h-3.5" />
+                                Təmizlə ({activeFilterCount})
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                {/* Loading */}
+                {/* ── Results count ── */}
+                {!loading && (
+                    <p className="text-xs text-gray-400 mb-4">
+                        {filteredExams.length} imtahan tapıldı
+                        {activeFilterCount > 0 && <span className="text-indigo-500 font-semibold"> · {activeFilterCount} filter aktiv</span>}
+                    </p>
+                )}
+
+                {/* ── Content ── */}
                 {loading ? (
                     <div className="flex justify-center py-20">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
                     </div>
                 ) : (
                     <>
-                        {/* Student mode */}
+                        {/* Student view */}
                         {isStudent ? (
-                            <>
+                            filteredExams.length === 0 ? (
+                                <EmptyState search={search} activeFilterCount={activeFilterCount} onClear={clearFilters} isStudent />
+                            ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {filteredPublished.map(exam => {
+                                    {filteredExams.map(exam => {
                                         const isSaved = savedExamLinks.has(exam.shareLink);
                                         const isPaid = exam.price != null && Number(exam.price) > 0;
                                         const subjectName = (exam.subjects || []).join(', ') || exam.subject || '';
                                         return (
                                             <div key={exam.id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden">
-                                                {/* Colored top accent */}
                                                 <div className={`h-1 w-full ${isPaid ? 'bg-amber-400' : 'bg-indigo-500'}`} />
-
                                                 <div className="p-5 flex flex-col flex-1">
-                                                    {/* Top row: subject + bookmark */}
                                                     <div className="flex items-start justify-between gap-2 mb-3">
-                                                        <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full shrink-0">
-                                                            {subjectName}
-                                                        </span>
+                                                        {subjectName && (
+                                                            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full shrink-0 truncate max-w-[160px]">
+                                                                {subjectName}
+                                                            </span>
+                                                        )}
                                                         <button
                                                             onClick={e => { e.stopPropagation(); handleToggleDepot(exam); }}
                                                             disabled={savingLink === exam.shareLink}
                                                             title={isSaved ? 'Depodan çıxar' : 'Depoya əlavə et'}
-                                                            className={`p-1.5 rounded-xl transition-all disabled:opacity-50 shrink-0 ${isSaved ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'text-gray-300 hover:text-indigo-500 hover:bg-indigo-50'}`}
+                                                            className={`p-1.5 rounded-xl transition-all disabled:opacity-50 shrink-0 ml-auto ${isSaved ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'text-gray-300 hover:text-indigo-500 hover:bg-indigo-50'}`}
                                                         >
                                                             {savingLink === exam.shareLink
                                                                 ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                                                : isSaved
-                                                                    ? <HiBookmark className="w-4 h-4" />
-                                                                    : <HiOutlineBookmark className="w-4 h-4" />
+                                                                : isSaved ? <HiBookmark className="w-4 h-4" /> : <HiOutlineBookmark className="w-4 h-4" />
                                                             }
                                                         </button>
                                                     </div>
-
-                                                    {/* Title */}
                                                     <h3 className="font-bold text-gray-900 text-base leading-snug mb-1.5 group-hover:text-indigo-700 transition-colors line-clamp-2">
                                                         {exam.title}
                                                     </h3>
-
-                                                    {/* Description */}
                                                     {exam.description && (
                                                         <p className="text-gray-400 text-xs leading-relaxed line-clamp-2 mb-3">{exam.description}</p>
                                                     )}
-
-                                                    {/* Meta info */}
                                                     <div className="flex items-center gap-3 text-xs text-gray-400 mt-auto mb-4">
                                                         <span className="flex items-center gap-1">
                                                             <HiOutlineQuestionMarkCircle className="w-3.5 h-3.5" />
@@ -257,17 +419,11 @@ const ExamList = () => {
                                                             </span>
                                                         )}
                                                     </div>
-
-                                                    {/* Bottom row: price + CTA */}
                                                     <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-50">
                                                         {isPaid ? (
-                                                            <span className="text-sm font-black text-amber-600">
-                                                                {Number(exam.price).toFixed(2)} ₼
-                                                            </span>
+                                                            <span className="text-sm font-black text-amber-600">{Number(exam.price).toFixed(2)} ₼</span>
                                                         ) : (
-                                                            <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
-                                                                Pulsuz
-                                                            </span>
+                                                            <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">Pulsuz</span>
                                                         )}
                                                         <button
                                                             onClick={() => handleJoinExam(exam)}
@@ -282,105 +438,90 @@ const ExamList = () => {
                                         );
                                     })}
                                 </div>
-                                {filteredPublished.length === 0 && (
-                                    <div className="text-center py-20 bg-gray-50 rounded-2xl border border-gray-100">
-                                        <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <HiOutlineDocumentText className="w-8 h-8" />
-                                        </div>
-                                        <h3 className="text-xl font-semibold text-gray-900">
-                                            {searchTerm ? 'Axtarışa uyğun imtahan tapılmadı' : 'Hazırda imtahan mövcud deyil'}
-                                        </h3>
-                                        <p className="text-gray-500 mt-2 max-w-md mx-auto">
-                                            {searchTerm ? 'Axtarış terminini dəyişərək yenidən yoxlayın.' : 'Admin hələ heç bir imtahan yerləşdirməyib.'}
-                                        </p>
-                                    </div>
-                                )}
-                            </>
+                            )
                         ) : (
-                            /* Teacher/Admin mode */
-                            <>
-                                {/* Drafts Section */}
-                                {filteredDrafts.length > 0 && (
-                                    <div className="mb-10">
-                                        <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
-                                            <HiOutlineDocumentText className="w-5 h-5 text-gray-400" />
-                                            Qaralamalar
-                                            <span className="text-sm font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{filteredDrafts.length}</span>
-                                        </h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {filteredDrafts.map(exam => (
+                            /* Teacher / Admin view */
+                            filteredExams.length === 0 ? (
+                                <EmptyState search={search} activeFilterCount={activeFilterCount} onClear={clearFilters} />
+                            ) : (
+                                <>
+                                    {/* Show by status groups only when no status filter active */}
+                                    {statusFilter === 'ALL' && draftExams.length > 0 && publishedExams.length > 0 ? (
+                                        <>
+                                            <SectionHeader icon={HiOutlineDocumentText} label="Qaralamalar" count={draftExams.length} />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+                                                {draftExams.map(exam => (
+                                                    <ExamCard key={exam.id} exam={normalizeExam(exam)} onDelete={handleDelete} />
+                                                ))}
+                                            </div>
+                                            <SectionHeader icon={HiOutlineDocumentText} label="Yayımlanmış" count={publishedExams.length} />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                                {publishedExams.map(exam => (
+                                                    <ExamCard key={exam.id} exam={normalizeExam(exam)} onDelete={handleDelete} onShare={handleShare} onToggleStatus={handleToggleStatus} />
+                                                ))}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                            {filteredExams.map(exam => (
                                                 <ExamCard
                                                     key={exam.id}
-                                                    exam={{
-                                                        ...exam,
-                                                        subjects: exam.subjects || [],
-                                                        tags: exam.tags || [],
-                                                        duration: exam.durationMinutes,
-                                                        questionCount: exam.questions?.length || 0
-                                                    }}
+                                                    exam={normalizeExam(exam)}
                                                     onDelete={handleDelete}
+                                                    onShare={exam.status !== 'DRAFT' ? handleShare : undefined}
+                                                    onToggleStatus={exam.status !== 'DRAFT' ? handleToggleStatus : undefined}
                                                 />
                                             ))}
                                         </div>
-                                    </div>
-                                )}
-
-                                {/* Published / Cancelled Exams Section */}
-                                {filteredPublished.length > 0 && (
-                                    <div>
-                                        {filteredDrafts.length > 0 && (
-                                            <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
-                                                <HiOutlineDocumentText className="w-5 h-5 text-gray-400" />
-                                                Yayımlanmış İmtahanlar
-                                                <span className="text-sm font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{filteredPublished.length}</span>
-                                            </h2>
-                                        )}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {filteredPublished.map(exam => (
-                                                <ExamCard
-                                                    key={exam.id}
-                                                    exam={{
-                                                        ...exam,
-                                                        subjects: exam.subjects || [],
-                                                        tags: exam.tags || [],
-                                                        duration: exam.durationMinutes,
-                                                        questionCount: exam.questions?.length || 0
-                                                    }}
-                                                    onDelete={handleDelete}
-                                                    onShare={handleShare}
-                                                    onToggleStatus={handleToggleStatus}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Empty State for Teacher */}
-                                {filteredDrafts.length === 0 && filteredPublished.length === 0 && (
-                                    <div className="text-center py-20 bg-gray-50 rounded-2xl border border-gray-100">
-                                        <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <HiOutlineDocumentText className="w-8 h-8" />
-                                        </div>
-                                        <h3 className="text-xl font-semibold text-gray-900">
-                                            {searchTerm ? 'Axtarışa uyğun imtahan tapılmadı' : 'Hazırda imtahan mövcud deyil'}
-                                        </h3>
-                                        <p className="text-gray-500 mt-2 max-w-md mx-auto">
-                                            {searchTerm ? 'Axtarış terminini dəyişərək yenidən yoxlayın.' : 'İlk imtahanınızı yaratmaqla başlayın.'}
-                                        </p>
-                                    </div>
-                                )}
-                            </>
+                                    )}
+                                </>
+                            )
                         )}
                     </>
                 )}
             </div>
 
-            <CreateExamModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-            />
+            <CreateExamModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
         </div>
     );
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const normalizeExam = (exam) => ({
+    ...exam,
+    subjects: exam.subjects || [],
+    tags: exam.tags || [],
+    duration: exam.durationMinutes,
+    questionCount: exam.questions?.length || 0,
+});
+
+const SectionHeader = ({ icon: Icon, label, count }) => (
+    <h2 className="text-sm font-bold text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-wide">
+        <Icon className="w-4 h-4" />
+        {label}
+        <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{count}</span>
+    </h2>
+);
+
+const EmptyState = ({ search, activeFilterCount, onClear, isStudent }) => (
+    <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="w-16 h-16 bg-indigo-50 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <HiOutlineDocumentText className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-900">
+            {activeFilterCount > 0 ? 'Filterlərə uyğun imtahan tapılmadı' : 'Hələ imtahan yoxdur'}
+        </h3>
+        <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+            {activeFilterCount > 0
+                ? 'Filter şərtlərini dəyişərək yenidən yoxlayın.'
+                : isStudent ? 'Admin hələ heç bir imtahan yerləşdirməyib.' : 'İlk imtahanınızı yaratmaqla başlayın.'}
+        </p>
+        {activeFilterCount > 0 && (
+            <button onClick={onClear} className="mt-4 px-5 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors">
+                Filterləri təmizlə
+            </button>
+        )}
+    </div>
+);
 
 export default ExamList;

@@ -23,7 +23,7 @@ const BarChart = ({ data, color }) => {
         <div className="flex items-center justify-center h-32 text-gray-300 text-sm">Məlumat yoxdur</div>
     );
     const max = Math.max(...data.map(d => d.count), 1);
-    const monthNames = { '01':'Yan','02':'Fev','03':'Mar','04':'Apr','05':'May','06':'İyn','07':'İyl','08':'Avq','09':'Sen','10':'Okt','11':'Noy','12':'Dek' };
+    const monthNames = { '01': 'Yan', '02': 'Fev', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'İyn', '07': 'İyl', '08': 'Avq', '09': 'Sen', '10': 'Okt', '11': 'Noy', '12': 'Dek' };
     return (
         <div className="flex items-end gap-2 h-32">
             {data.map((d, i) => (
@@ -71,10 +71,10 @@ const AdminDashboard = () => {
 
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={HiOutlineUsers}        label="Ümumi İstifadəçi"  value={stats?.totalUsers}     bg="bg-gray-100"   color="text-gray-700" />
-                <StatCard icon={HiOutlineAcademicCap}  label="Müəllimlər"         value={stats?.totalTeachers} bg="bg-indigo-50"  color="text-indigo-600" />
-                <StatCard icon={HiOutlineUserGroup}    label="Tələbələr"           value={stats?.totalStudents} bg="bg-emerald-50" color="text-emerald-600" />
-                <StatCard icon={HiOutlineDocumentText} label="İmtahanlar"          value={stats?.totalExams}    bg="bg-amber-50"   color="text-amber-600" />
+                <StatCard icon={HiOutlineUsers} label="Ümumi İstifadəçi" value={stats?.totalUsers} bg="bg-gray-100" color="text-gray-700" />
+                <StatCard icon={HiOutlineAcademicCap} label="Müəllimlər" value={stats?.totalTeachers} bg="bg-indigo-50" color="text-indigo-600" />
+                <StatCard icon={HiOutlineUserGroup} label="Tələbələr" value={stats?.totalStudents} bg="bg-emerald-50" color="text-emerald-600" />
+                <StatCard icon={HiOutlineDocumentText} label="İmtahanlar" value={stats?.totalExams} bg="bg-amber-50" color="text-amber-600" />
             </div>
 
             {/* Submissions hero */}

@@ -195,11 +195,10 @@ const AdminExams = () => {
                                         <button
                                             onClick={() => handleToggleSitePublish(exam.id)}
                                             title={exam.sitePublished ? 'Saytdan çıxar' : 'Saytda paylaş'}
-                                            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors ${
-                                                exam.sitePublished
+                                            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors ${exam.sitePublished
                                                     ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
                                                     : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                            }`}
+                                                }`}
                                         >
                                             {exam.sitePublished
                                                 ? <><HiOutlineGlobe className="w-3.5 h-3.5" /> Paylaşılıb</>
@@ -241,15 +240,13 @@ const AdminExams = () => {
                                             >
                                                 <HiOutlineChartBar className="w-4 h-4" />
                                             </button>
-                                            <a
-                                                href={`/imtahan/${exam.shareLink}`}
-                                                target="_blank"
-                                                rel="noreferrer"
+                                            <button
+                                                onClick={() => navigate(`/imtahanlar/${exam.id}`)}
                                                 className="p-1.5 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
                                                 title="İmtahana bax"
                                             >
                                                 <HiOutlineExternalLink className="w-4 h-4" />
-                                            </a>
+                                            </button>
                                             <button
                                                 onClick={() => handleDelete(exam.id, exam.title)}
                                                 className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"

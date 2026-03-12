@@ -15,7 +15,7 @@ const ROLES = [
 ];
 
 const ROLE_STYLE = {
-    ADMIN:   { badge: 'bg-purple-100 text-purple-700 ring-purple-200', dot: 'bg-purple-500', avatar: 'bg-purple-100 text-purple-700' },
+    ADMIN: { badge: 'bg-purple-100 text-purple-700 ring-purple-200', dot: 'bg-purple-500', avatar: 'bg-purple-100 text-purple-700' },
     TEACHER: { badge: 'bg-indigo-100 text-indigo-700 ring-indigo-200', dot: 'bg-indigo-500', avatar: 'bg-indigo-100 text-indigo-700' },
     STUDENT: { badge: 'bg-emerald-100 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500', avatar: 'bg-emerald-100 text-emerald-700' },
 };
@@ -65,7 +65,7 @@ const AdminUsers = () => {
                 const counts = {};
                 results.forEach(r => { counts[r.role] = r.count; });
                 setRoleCounts(counts);
-            } catch {}
+            } catch { }
         };
         fetchCounts();
     }, []);

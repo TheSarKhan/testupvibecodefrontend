@@ -275,8 +275,8 @@ const ExamSession = () => {
 
             </div>
 
-            {/* Navigation Footer - sticky bottom */}
-            <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+            {/* Navigation Footer - fixed bottom */}
+            <div className="fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
                 <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center gap-2">
                     <button
                         onClick={() => setCurrentSectionIndex(prev => Math.max(0, prev - 1))}

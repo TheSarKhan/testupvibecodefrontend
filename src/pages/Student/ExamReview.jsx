@@ -29,13 +29,13 @@ const GradingPanel = ({ question, submissionId, onGraded }) => {
         if (fraction === null) { toast.error('Bal seçin'); return; }
         setSaving(true);
         try {
-            await api.post(`/submissions/${submissionId}/grade-answer`, {
+            const { data } = await api.post(`/submissions/${submissionId}/grade-answer`, {
                 questionId: question.id,
                 fraction,
                 feedback: feedback.trim() || null
             });
             toast.success('Bal qeydə alındı');
-            onGraded(question.id, fraction * question.points, feedback.trim());
+            onGraded(question.id, fraction * question.points, feedback.trim(), data);
         } catch (err) {
             toast.error(err.response?.data?.message || 'Xəta baş verdi');
         } finally {
@@ -89,7 +89,8 @@ const GradingPanel = ({ question, submissionId, onGraded }) => {
 const ExamReview = () => {
     const { sessionId } = useParams();
     const navigate = useNavigate();
-    const { isTeacher } = useAuth();
+    const { isTeacher, isAdmin } = useAuth();
+    const canGrade = isTeacher || isAdmin;
     const [review, setReview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showOnlyUngraded, setShowOnlyUngraded] = useState(false);
@@ -112,7 +113,7 @@ const ExamReview = () => {
         fetchReview();
     }, [sessionId, navigate]);
 
-    const handleGraded = (questionId, awardedScore, feedbackText) => {
+    const handleGraded = (questionId, awardedScore, feedbackText, submissionResp) => {
         setReview(prev => {
             const updatedQuestions = prev.questions.map(q =>
                 q.id === questionId
@@ -120,14 +121,14 @@ const ExamReview = () => {
                     : q
             );
             const newUngradedCount = updatedQuestions.filter(q => !q.isGraded).length;
-            const newTotal = updatedQuestions.reduce((sum, q) => sum + (q.awardedScore || 0), 0);
             if (newUngradedCount === 0) setShowOnlyUngraded(false);
             return {
                 ...prev,
                 questions: updatedQuestions,
                 ungradedCount: newUngradedCount,
                 isFullyGraded: newUngradedCount === 0,
-                totalScore: newTotal
+                totalScore: submissionResp?.totalScore ?? prev.totalScore,
+                templateScorePercent: submissionResp?.templateScorePercent ?? prev.templateScorePercent,
             };
         });
     };
@@ -142,7 +143,10 @@ const ExamReview = () => {
 
     if (!review) return null;
 
-    const scorePercent = review.maxScore > 0 ? Math.round((review.totalScore / review.maxScore) * 100) : 0;
+    const isTemplateExam = review.templateScorePercent != null;
+    const scorePercent = isTemplateExam
+        ? Math.round(review.templateScorePercent)
+        : review.maxScore > 0 ? Math.round((review.totalScore / review.maxScore) * 100) : 0;
     const sortedQuestions = [...review.questions].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
     const displayedQuestions = showOnlyUngraded
@@ -159,10 +163,10 @@ const ExamReview = () => {
             <div className="bg-white border-b sticky top-0 z-30">
                 <div className="container-main py-4 flex items-center justify-between">
                     <button
-                        onClick={() => isTeacher ? navigate(`/imtahanlar/${review.examId}/statistika`) : navigate('/profil')}
+                        onClick={() => canGrade ? navigate(`/imtahanlar/${review.examId}/statistika`) : navigate('/profil')}
                         className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 font-medium transition-colors"
                     >
-                        <HiOutlineArrowLeft /> {isTeacher ? 'Statistikaya Qayıt' : 'Profilə Qayıt'}
+                        <HiOutlineArrowLeft /> {canGrade ? 'Statistikaya Qayıt' : 'Profilə Qayıt'}
                     </button>
                     <div className="text-center">
                         <h1 className="text-xl font-bold text-gray-900">{review.examTitle}</h1>
@@ -191,8 +195,11 @@ const ExamReview = () => {
 
                     <div className="flex-1 grid grid-cols-2 gap-6 w-full">
                         <div className="bg-indigo-50/50 p-4 rounded-2xl">
-                            <p className="text-xs text-indigo-400 font-bold uppercase mb-1">Toplanan Bal</p>
-                            <p className="text-2xl font-black text-indigo-700">{fmtScore(review.totalScore)} / {review.maxScore}</p>
+                            <p className="text-xs text-indigo-400 font-bold uppercase mb-1">{isTemplateExam ? 'Şablon Nəticəsi' : 'Toplanan Bal'}</p>
+                            {isTemplateExam
+                                ? <p className="text-2xl font-black text-indigo-700">{review.templateScorePercent?.toFixed(1)}%</p>
+                                : <p className="text-2xl font-black text-indigo-700">{fmtScore(review.totalScore)} / {review.maxScore}</p>
+                            }
                         </div>
                         <div className="bg-purple-50/50 p-4 rounded-2xl">
                             <p className="text-xs text-purple-400 font-bold uppercase mb-1">Tarix</p>
@@ -204,7 +211,7 @@ const ExamReview = () => {
                 </div>
 
                 {/* Ungraded count banner (student) */}
-                {!isTeacher && review.ungradedCount > 0 && (
+                {!canGrade && review.ungradedCount > 0 && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-6 py-4 mb-6 flex items-center gap-3">
                         <span className="text-2xl">⏳</span>
                         <div>
@@ -214,8 +221,8 @@ const ExamReview = () => {
                     </div>
                 )}
 
-                {/* Teacher filter toggle */}
-                {isTeacher && (
+                {/* Teacher/Admin filter toggle */}
+                {canGrade && (
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                             {review.ungradedCount > 0 && (
@@ -363,7 +370,7 @@ const ExamReview = () => {
                                                     )}
                                                 </div>
                                                 {/* OPEN_AUTO: show correct answer after grading; OPEN_MANUAL: always show to teacher */}
-                                                {q.correctAnswer && (q.isGraded || (isTeacher && q.questionType === 'OPEN_MANUAL')) && (
+                                                {q.correctAnswer && (q.isGraded || (canGrade && q.questionType === 'OPEN_MANUAL')) && (
                                                     <div className="p-5 bg-green-50/50 rounded-2xl border border-green-100">
                                                         <p className="text-xs font-bold text-green-500 uppercase mb-2">
                                                             {q.questionType === 'OPEN_AUTO' ? 'Düzgün Cavab:' : 'İstinad Cavab (Müəllim):'}
@@ -380,8 +387,8 @@ const ExamReview = () => {
                                                     </div>
                                                 )}
 
-                                                {/* Teacher grading panel for ungraded OPEN_MANUAL */}
-                                                {isTeacher && q.questionType === 'OPEN_MANUAL' && !q.isGraded && (
+                                                {/* Teacher/Admin grading panel for ungraded OPEN_MANUAL */}
+                                                {canGrade && q.questionType === 'OPEN_MANUAL' && !q.isGraded && (
                                                     <GradingPanel
                                                         question={q}
                                                         submissionId={sessionId}
@@ -509,7 +516,7 @@ const ExamReview = () => {
                 </div>
 
                 {/* All graded message */}
-                {isTeacher && showOnlyUngraded && displayedQuestions.length === 0 && (
+                {canGrade && showOnlyUngraded && displayedQuestions.length === 0 && (
                     <div className="text-center py-16 text-gray-500">
                         <HiOutlineCheckCircle className="w-12 h-12 mx-auto text-green-400 mb-3" />
                         <p className="font-semibold text-gray-700">Bütün açıq suallar yoxlanılıb!</p>

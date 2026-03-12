@@ -1,11 +1,48 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import LatexPreview from '../../components/ui/LatexPreview';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+
+const TYPE_TO_FRONTEND = {
+    MCQ: 'MULTIPLE_CHOICE', TRUE_FALSE: 'MULTIPLE_CHOICE',
+    MULTI_SELECT: 'MULTI_SELECT', OPEN_AUTO: 'OPEN_AUTO',
+    FILL_IN_THE_BLANK: 'FILL_IN_THE_BLANK', MATCHING: 'MATCHING', OPEN_MANUAL: 'OPEN_MANUAL',
+};
+
+const buildQuestionsFromTypeCounts = (typeCounts) => {
+    const questions = [];
+    let orderIdx = 0;
+    typeCounts.forEach(({ questionType, count }) => {
+        const frontendType = TYPE_TO_FRONTEND[questionType] || 'MULTIPLE_CHOICE';
+        const isChoice = frontendType === 'MULTIPLE_CHOICE' || frontendType === 'MULTI_SELECT';
+        for (let i = 0; i < count; i++) {
+            const ts = Date.now();
+            questions.push({
+                id: `new-${ts}-${orderIdx}`,
+                type: frontendType,
+                text: '', points: 0,
+                orderIndex: orderIdx++,
+                subjectGroup: null,
+                options: isChoice ? [
+                    { id: `o1-${ts}-${orderIdx}`, text: 'A', isCorrect: false },
+                    { id: `o2-${ts}-${orderIdx}`, text: 'B', isCorrect: false },
+                    { id: `o3-${ts}-${orderIdx}`, text: 'C', isCorrect: false },
+                    { id: `o4-${ts}-${orderIdx}`, text: 'D', isCorrect: false },
+                ] : [],
+                matchingPairs: frontendType === 'MATCHING' ? [
+                    { id: `mp1-${ts}-${orderIdx}`, left: '', right: '' },
+                    { id: `mp2-${ts}-${orderIdx}`, left: '', right: '' },
+                ] : [],
+                sampleAnswer: ''
+            });
+        }
+    });
+    return questions;
+};
 
 const ExamEditor = () => {
     const { id } = useParams();
@@ -20,7 +57,7 @@ const ExamEditor = () => {
     const [examConfig, setExamConfig] = useState({
         title: '',
         subject: initialLocationState.subject && initialLocationState.subject !== 'Seçilməyib'
-            ? initialLocationState.subject : 'Riyaziyyat',
+            ? initialLocationState.subject : (initialLocationState.type === 'template' ? (initialLocationState.sectionData?.subjectName || 'Şablon') : 'Riyaziyyat'),
         extraSubjects: [],
         duration: 60, visibility: 'PUBLIC', password: '', tags: [], description: ''
     });
@@ -28,17 +65,22 @@ const ExamEditor = () => {
     const [showSectionPicker, setShowSectionPicker] = useState(false);
     const [passageSectionTarget, setPassageSectionTarget] = useState(null);
     const [batchPdfSection, setBatchPdfSection] = useState(null);
-    const [questions, setQuestions] = useState(() => isEditMode ? [] : [{
-        id: Date.now().toString(), type: 'MULTIPLE_CHOICE', text: '', points: 1,
-        orderIndex: 0, subjectGroup: null,
-        options: [
-            { id: Date.now() + 1, text: 'A', isCorrect: false },
-            { id: Date.now() + 2, text: 'B', isCorrect: false },
-            { id: Date.now() + 3, text: 'C', isCorrect: false },
-            { id: Date.now() + 4, text: 'D', isCorrect: false },
-        ],
-        matchingPairs: [], sampleAnswer: ''
-    }]);
+    const [questions, setQuestions] = useState(() => {
+        if (isEditMode) return [];
+        const state = location.state || {};
+        if (state.type === 'template') return []; // pre-populated via useEffect
+        return [{
+            id: Date.now().toString(), type: 'MULTIPLE_CHOICE', text: '', points: 1,
+            orderIndex: 0, subjectGroup: null,
+            options: [
+                { id: Date.now() + 1, text: 'A', isCorrect: false },
+                { id: Date.now() + 2, text: 'B', isCorrect: false },
+                { id: Date.now() + 3, text: 'C', isCorrect: false },
+                { id: Date.now() + 4, text: 'D', isCorrect: false },
+            ],
+            matchingPairs: [], sampleAnswer: ''
+        }];
+    });
     const [passages, setPassages] = useState([]);
     const [examStatus, setExamStatus] = useState('DRAFT');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -47,6 +89,10 @@ const ExamEditor = () => {
     const [loading, setLoading] = useState(isEditMode);
     const [showPassageTypeModal, setShowPassageTypeModal] = useState(false);
     const [autoSaveStatus, setAutoSaveStatus] = useState(null); // 'saving' | 'saved'
+
+    // Template mode state
+    const [templateInfo, setTemplateInfo] = useState(null); // { templateTitle, templateSubtitle, subjectName, questionCount, formula, typeCounts }
+    const [selectedSectionId, setSelectedSectionId] = useState(null);
 
     // Tracks the backend ID of the draft (for new exams created silently via auto-save)
     const createdIdRef = useRef(isEditMode ? id : null);
@@ -58,6 +104,16 @@ const ExamEditor = () => {
 
     useEffect(() => {
         api.get('/subjects').then(res => setSubjectsList(res.data)).catch(() => {});
+    }, []);
+
+    // On new template exam: load section data from navigation state
+    useEffect(() => {
+        if (!isEditMode && initialLocationState.type === 'template' && initialLocationState.sectionData) {
+            const sd = initialLocationState.sectionData;
+            setTemplateInfo(sd);
+            setSelectedSectionId(sd.id);
+            setQuestions(buildQuestionsFromTypeCounts(sd.typeCounts || []));
+        }
     }, []);
 
     // Auto-save: debounce 2.5s after any content change
@@ -82,7 +138,7 @@ const ExamEditor = () => {
             }
         }, 1500);
         return () => clearTimeout(autoSaveTimerRef.current);
-    }, [questions, passages, examConfig, type, loading]);
+    }, [questions, passages, examConfig, type, loading, examStatus]);
 
     const fetchExamData = async () => {
         try {
@@ -96,6 +152,16 @@ const ExamEditor = () => {
             });
             setType(data.examType.toLowerCase());
             setExamStatus(data.status || 'DRAFT');
+            if (data.templateSectionId) setSelectedSectionId(data.templateSectionId);
+            if (data.templateSectionId) {
+                api.get(`/templates/sections/${data.templateSectionId}`).then(({ data: sec }) => {
+                    setTemplateInfo({
+                        ...sec,
+                        templateTitle: sec.templateTitle,
+                        templateSubtitle: sec.subtitleName,
+                    });
+                }).catch(() => {});
+            }
 
             const mappedQuestions = (data.questions || []).map(q => ({
                 id: q.id.toString(),
@@ -288,7 +354,7 @@ const ExamEditor = () => {
             q.type === 'MATCHING' ? 'MATCHING' :
             q.type === 'OPEN_AUTO' ? 'OPEN_AUTO' :
             q.type === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'OPEN_MANUAL',
-        points: parseFloat(q.points) || 1,
+        points: type === 'template' ? 1 : (parseFloat(q.points) || 1),
         orderIndex: q.orderIndex ?? idx,
         correctAnswer: q.sampleAnswer || '',
         subjectGroup: q.subjectGroup || null,
@@ -313,6 +379,7 @@ const ExamEditor = () => {
         status,
         durationMinutes: parseInt(examConfig.duration) || 60,
         tags: examConfig.tags || [],
+        templateSectionId: type === 'template' ? (selectedSectionId || null) : null,
         questions: questions.map((q) => mapQuestion(q, q.orderIndex ?? 0)),
         passages: passages.map((p) => ({
             id: isNewId(p.id) ? null : p.id,
@@ -383,6 +450,9 @@ const ExamEditor = () => {
         );
     }
 
+    const isTemplateMode = type === 'template';
+    const isQuestionCountLocked = isTemplateMode && templateInfo !== null;
+
     return (
         <div className="bg-gray-50 min-h-screen pb-24">
             {/* Top Toolbar */}
@@ -415,6 +485,25 @@ const ExamEditor = () => {
 
             {/* Main Editor Area */}
             <div className="container-main mt-8 max-w-4xl">
+                {/* Template info banner (read-only) */}
+                {isTemplateMode && templateInfo && (
+                    <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wide">
+                                {templateInfo.templateTitle} · {templateInfo.templateSubtitle}
+                            </div>
+                            <div className="mt-0.5 font-bold text-indigo-800 text-base">{templateInfo.subjectName}</div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                            <span className="flex items-center gap-1 text-indigo-700 font-semibold bg-indigo-100 px-3 py-1 rounded-full">
+                                <HiOutlineInformationCircle className="w-4 h-4" />
+                                {templateInfo.questionCount} sual (sabit)
+                            </span>
+                            <code className="text-xs font-mono text-indigo-600 bg-white border border-indigo-200 px-2.5 py-1 rounded-lg">{templateInfo.formula}</code>
+                        </div>
+                    </div>
+                )}
+
                 {/* Subject Sections */}
                 {[examConfig.subject, ...(examConfig.extraSubjects || [])].map((sectionSubject, sectionIdx) => {
                     const isMain = sectionIdx === 0;
@@ -439,7 +528,7 @@ const ExamEditor = () => {
                                     <span className="font-bold text-sm">{sectionSubject}</span>
                                 </div>
                                 <div className="flex-1 h-px bg-gray-200" />
-                                {!isMain && (
+                                {!isMain && !isTemplateMode && (
                                     <button
                                         onClick={() => handleRemoveSection(sectionSubject)}
                                         className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -460,6 +549,8 @@ const ExamEditor = () => {
                                             question={item.data}
                                             onChange={handleUpdateQuestion}
                                             onDelete={handleDeleteQuestion}
+                                            hidePoints={isTemplateMode}
+                                            hideDelete={isQuestionCountLocked}
                                         />
                                     ) : (
                                         <PassageEditor
@@ -476,65 +567,69 @@ const ExamEditor = () => {
                             )}
 
                             {/* Add question / PDF / passage buttons for this section */}
-                            <div className="flex flex-wrap gap-3">
-                                <button
-                                    onClick={() => handleAddQuestion(sectionSubject)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm"
-                                >
-                                    <HiOutlinePlus className="w-4 h-4" />
-                                    Sual əlavə et
-                                </button>
-                                <button
-                                    onClick={() => { setPassageSectionTarget(sectionSubject); setShowPassageTypeModal(true); }}
-                                    className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700 font-semibold rounded-xl transition-colors text-sm"
-                                >
-                                    <HiOutlinePlus className="w-4 h-4" />
-                                    Mətn / Dinləmə
-                                </button>
-                                <div className="relative">
-                                    <input type="file" accept="application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfSection(sectionSubject); setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
-                                    <button className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm">
+                            {!isQuestionCountLocked && (
+                                <div className="flex flex-wrap gap-3">
+                                    <button
+                                        onClick={() => handleAddQuestion(sectionSubject)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm"
+                                    >
                                         <HiOutlinePlus className="w-4 h-4" />
-                                        PDF-dən
+                                        Sual əlavə et
                                     </button>
+                                    <button
+                                        onClick={() => { setPassageSectionTarget(sectionSubject); setShowPassageTypeModal(true); }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700 font-semibold rounded-xl transition-colors text-sm"
+                                    >
+                                        <HiOutlinePlus className="w-4 h-4" />
+                                        Mətn / Dinləmə
+                                    </button>
+                                    <div className="relative">
+                                        <input type="file" accept="application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfSection(sectionSubject); setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
+                                        <button className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm">
+                                            <HiOutlinePlus className="w-4 h-4" />
+                                            PDF-dən
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     );
                 })}
 
 
                 {/* Add new subject section */}
-                <div className="mt-4 mb-8">
-                    {showSectionPicker ? (
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-                            <p className="text-sm font-medium text-gray-700 mb-3">Yeni fənn seçin:</p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-3">
-                                {subjectsList
-                                    .filter(s => s !== examConfig.subject && !(examConfig.extraSubjects || []).includes(s))
-                                    .map(name => (
-                                        <button
-                                            key={name}
-                                            onClick={() => handleAddSection(name)}
-                                            className="text-left px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
-                                        >
-                                            {name}
-                                        </button>
-                                    ))}
+                {!isTemplateMode && (
+                    <div className="mt-4 mb-8">
+                        {showSectionPicker ? (
+                            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                                <p className="text-sm font-medium text-gray-700 mb-3">Yeni fənn seçin:</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-3">
+                                    {subjectsList
+                                        .filter(s => s !== examConfig.subject && !(examConfig.extraSubjects || []).includes(s))
+                                        .map(name => (
+                                            <button
+                                                key={name}
+                                                onClick={() => handleAddSection(name)}
+                                                className="text-left px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                                            >
+                                                {name}
+                                            </button>
+                                        ))}
+                                </div>
+                                <button onClick={() => setShowSectionPicker(false)} className="text-sm text-gray-400 hover:text-gray-600">Ləğv et</button>
                             </div>
-                            <button onClick={() => setShowSectionPicker(false)} className="text-sm text-gray-400 hover:text-gray-600">Ləğv et</button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => setShowSectionPicker(true)}
-                            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-2xl transition-colors"
-                        >
-                            <HiOutlinePlus className="w-5 h-5" />
-                            Yeni fənn əlavə et
-                        </button>
-                    )}
-                </div>
+                        ) : (
+                            <button
+                                onClick={() => setShowSectionPicker(true)}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-2xl transition-colors"
+                            >
+                                <HiOutlinePlus className="w-5 h-5" />
+                                Yeni fənn əlavə et
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Passage Type Selection Modal */}

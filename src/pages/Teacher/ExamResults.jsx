@@ -198,7 +198,11 @@ const ExamResults = () => {
                                                     {formatDuration(r.startedAt, r.submittedAt)}
                                                 </td>
                                                 <td className="p-4 text-sm font-bold text-indigo-600">
-                                                    {r.submittedAt ? `${r.totalScore} / ${r.maxScore}` : '–'}
+                                                    {r.submittedAt
+                                                        ? r.templateScorePercent != null
+                                                            ? `${r.templateScorePercent?.toFixed(1)}%`
+                                                            : `${r.totalScore} / ${r.maxScore}`
+                                                        : '–'}
                                                 </td>
                                                 <td className="p-4">
                                                     {r.rating ? (

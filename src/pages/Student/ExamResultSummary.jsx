@@ -99,9 +99,12 @@ const ExamResultSummary = () => {
         }
     };
 
-    const scorePercent = submission?.maxScore > 0
-        ? Math.round((submission.totalScore / submission.maxScore) * 100)
-        : null;
+    const isTemplateExam = submission?.templateScorePercent != null;
+    const scorePercent = isTemplateExam
+        ? Math.round(submission.templateScorePercent)
+        : submission?.maxScore > 0
+            ? Math.round((submission.totalScore / submission.maxScore) * 100)
+            : null;
 
     const getColor = (pct) => {
         if (pct >= 80) return 'green';
@@ -156,11 +159,19 @@ const ExamResultSummary = () => {
                             <DonutChart percent={scorePercent} color={getColor(scorePercent)} />
 
                             <div className="mt-4 text-center">
+                                {isTemplateExam ? (
+                                    <p className="text-gray-700 text-lg font-semibold">
+                                        <span className="font-black text-gray-900">{submission.templateScorePercent?.toFixed(1)}</span>
+                                        <span className="text-gray-400">%</span>
+                                        <span className="ml-2 text-sm text-indigo-600 font-medium">Şablon nəticəsi</span>
+                                    </p>
+                                ) : (
                                 <p className="text-gray-700 text-lg font-semibold">
                                     <span className="font-black text-gray-900">{submission.totalScore?.toFixed(1)}</span>
                                     <span className="text-gray-400"> / </span>
                                     <span>{submission.maxScore} bal</span>
                                 </p>
+                                )}
                                 <div className="mt-3 flex items-center gap-2 justify-center flex-wrap">
                                     {badge && (
                                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.bg}`}>

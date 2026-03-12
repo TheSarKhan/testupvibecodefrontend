@@ -26,6 +26,9 @@ import AdminUsers from '../pages/Admin/AdminUsers';
 import AdminMyExams from '../pages/Admin/AdminMyExams';
 import AdminExams from '../pages/Admin/AdminExams';
 import AdminSubjects from '../pages/Admin/AdminSubjects';
+import AdminTemplates from '../pages/Admin/AdminTemplates';
+import AdminSubtitles from '../pages/Admin/AdminSubtitles';
+import AdminTemplateSections from '../pages/Admin/AdminTemplateSections';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
@@ -72,6 +75,9 @@ const router = createBrowserRouter([
                     { path: 'oz-imtahanlar', element: <AdminMyExams /> },
                     { path: 'muellim-imtahanlar', element: <AdminExams /> },
                     { path: 'fennler', element: <AdminSubjects /> },
+                    { path: 'sablonlar', element: <AdminTemplates /> },
+                    { path: 'sablonlar/:templateId', element: <AdminSubtitles /> },
+                    { path: 'sablonlar/:templateId/:subtitleId', element: <AdminTemplateSections /> },
                 ],
             },
             { path: '*', element: <NotFound /> },

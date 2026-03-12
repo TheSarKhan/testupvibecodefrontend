@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate } from 'react-icons/hi';
 
 const navItems = [
     { to: '/admin', label: 'Dashboard', icon: HiOutlineChartBar, end: true },
@@ -7,6 +7,7 @@ const navItems = [
     { to: '/admin/oz-imtahanlar', label: 'Öz İmtahanlarım', icon: HiOutlineDocumentText },
     { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
     { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
+    { to: '/admin/sablonlar', label: 'Şablonlar', icon: HiOutlineTemplate },
 ];
 
 const AdminLayout = () => {
@@ -26,10 +27,9 @@ const AdminLayout = () => {
                             to={to}
                             end={end}
                             className={({ isActive }) =>
-                                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                                    isActive
-                                        ? 'bg-indigo-50 text-indigo-700'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isActive
+                                    ? 'bg-indigo-50 text-indigo-700'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                 }`
                             }
                         >

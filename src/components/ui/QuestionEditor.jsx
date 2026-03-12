@@ -14,7 +14,7 @@ const QUESTION_TYPES = {
     FILL_IN_THE_BLANK: 'Boşluq Doldurma'
 };
 
-const QuestionEditor = ({ question, index, onChange, onDelete }) => {
+const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false }) => {
     const [mathModalField, setMathModalField] = useState(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [pdfFile, setPdfFile] = useState(null);
@@ -732,23 +732,27 @@ const QuestionEditor = ({ question, index, onChange, onDelete }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
-                        <label className="text-sm text-gray-600 font-medium">Bal:</label>
-                        <input
-                            type="number"
-                            min="1"
-                            value={question.points}
-                            onChange={(e) => handleChange('points', parseFloat(e.target.value))}
-                            className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-indigo-700"
-                        />
-                    </div>
-                    <button
-                        onClick={() => onDelete(question.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        title="Sualı Sil"
-                    >
-                        <HiOutlineTrash className="w-5 h-5" />
-                    </button>
+                    {!hidePoints && (
+                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                            <label className="text-sm text-gray-600 font-medium">Bal:</label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={question.points}
+                                onChange={(e) => handleChange('points', parseFloat(e.target.value))}
+                                className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-indigo-700"
+                            />
+                        </div>
+                    )}
+                    {!hideDelete && (
+                        <button
+                            onClick={() => onDelete(question.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Sualı Sil"
+                        >
+                            <HiOutlineTrash className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
             </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
+import BankPickerModal from '../../components/ui/BankPickerModal';
 import LatexPreview from '../../components/ui/LatexPreview';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
@@ -93,6 +94,56 @@ const ExamEditor = () => {
     // Template mode state
     const [templateInfo, setTemplateInfo] = useState(null); // { templateTitle, templateSubtitle, subjectName, questionCount, formula, typeCounts }
     const [selectedSectionId, setSelectedSectionId] = useState(null);
+
+    // Bank picker state
+    const [bankPicker, setBankPicker] = useState(null); // null | { section, replaceId, filterType }
+
+    const bankQuestionToEditorFormat = (bq) => ({
+        id: Date.now().toString(),
+        type: TYPE_TO_FRONTEND[bq.questionType] || 'MULTIPLE_CHOICE',
+        text: bq.content || '',
+        attachedImage: bq.attachedImage || null,
+        points: type === 'template' ? 1 : (bq.points ?? 1),
+        orderIndex: nextOrderIndex(),
+        subjectGroup: null,
+        options: (bq.options || [])
+            .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+            .map(o => ({ id: String(o.id || Date.now() + Math.random()), text: o.content || '', isCorrect: !!o.isCorrect, attachedImage: o.attachedImage || null })),
+        matchingPairs: (bq.matchingPairs || [])
+            .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+            .map(mp => ({ id: String(mp.id || Date.now() + Math.random()), left: mp.leftItem || '', right: mp.rightItem || '' })),
+        sampleAnswer: bq.correctAnswer || '',
+    });
+
+    const handleBankSelect = (bq) => {
+        const { section, replaceId, filterType } = bankPicker;
+        setBankPicker(null);
+
+        if (replaceId) {
+            // Template mode: replace existing question's content, keep id/orderIndex/subjectGroup
+            setQuestions(prev => prev.map(q => {
+                if (q.id !== replaceId) return q;
+                const converted = bankQuestionToEditorFormat(bq);
+                const sameType = converted.type === q.type;
+                return {
+                    ...q,
+                    text: converted.text,
+                    attachedImage: converted.attachedImage,
+                    sampleAnswer: converted.sampleAnswer,
+                    // Replace options/pairs only if types match
+                    options: sameType ? converted.options : q.options,
+                    matchingPairs: sameType ? converted.matchingPairs : q.matchingPairs,
+                };
+            }));
+            toast.success('Sual bazadan seçildi');
+        } else {
+            // Normal mode: add as new question to section
+            const isMain = !section || section === examConfig.subject;
+            const newQ = { ...bankQuestionToEditorFormat(bq), subjectGroup: isMain ? null : section };
+            setQuestions(prev => [...prev, newQ]);
+            toast.success('Sual bazadan əlavə edildi');
+        }
+    };
 
     // Tracks the backend ID of the draft (for new exams created silently via auto-save)
     const createdIdRef = useRef(isEditMode ? id : null);
@@ -543,15 +594,27 @@ const ExamEditor = () => {
                             {sectionItems.length > 0 && (
                                 <div className="space-y-6 mb-4">
                                     {sectionItems.map((item, idx) => item.kind === 'question' ? (
-                                        <QuestionEditor
-                                            key={item.data.id}
-                                            index={idx}
-                                            question={item.data}
-                                            onChange={handleUpdateQuestion}
-                                            onDelete={handleDeleteQuestion}
-                                            hidePoints={isTemplateMode}
-                                            hideDelete={isQuestionCountLocked}
-                                        />
+                                        <div key={item.data.id}>
+                                            <QuestionEditor
+                                                index={idx}
+                                                question={item.data}
+                                                onChange={handleUpdateQuestion}
+                                                onDelete={handleDeleteQuestion}
+                                                hidePoints={isTemplateMode}
+                                                hideDelete={isQuestionCountLocked}
+                                            />
+                                            {isQuestionCountLocked && (
+                                                <div className="mt-2 flex justify-end">
+                                                    <button
+                                                        onClick={() => setBankPicker({ section: sectionSubject, replaceId: item.data.id, filterType: item.data.type })}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600 font-semibold rounded-lg transition-colors text-xs"
+                                                    >
+                                                        <HiOutlineBookOpen className="w-3.5 h-3.5" />
+                                                        Bazadan seç
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     ) : (
                                         <PassageEditor
                                             key={item.data.id}
@@ -588,9 +651,16 @@ const ExamEditor = () => {
                                             onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfSection(sectionSubject); setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
                                         <button className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm">
                                             <HiOutlinePlus className="w-4 h-4" />
-                                            PDF-dən
+                                            PDF-dən suallar əlavə et
                                         </button>
                                     </div>
+                                    <button
+                                        onClick={() => setBankPicker({ section: sectionSubject, replaceId: null, filterType: null })}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-700 font-semibold rounded-xl transition-colors text-sm"
+                                    >
+                                        <HiOutlineBookOpen className="w-4 h-4" />
+                                        Bazadan əlavə et
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -665,6 +735,15 @@ const ExamEditor = () => {
                 isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)}
                 examConfig={examConfig} onSave={setExamConfig}
             />
+
+            {/* Bank Picker Modal */}
+            {bankPicker && (
+                <BankPickerModal
+                    filterType={bankPicker.filterType}
+                    onSelect={handleBankSelect}
+                    onClose={() => setBankPicker(null)}
+                />
+            )}
 
             {/* Floating Publish Button */}
             <div className="fixed bottom-6 right-6 z-20 flex flex-col items-end gap-2">

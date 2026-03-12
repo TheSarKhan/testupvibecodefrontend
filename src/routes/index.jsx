@@ -20,6 +20,8 @@ import ExamSession from '../pages/Student/ExamSession';
 import ExamResultSummary from '../pages/Student/ExamResultSummary';
 import ExamReview from '../pages/Student/ExamReview';
 import ExamResults from '../pages/Teacher/ExamResults';
+import QuestionBank from '../pages/Teacher/QuestionBank';
+import QuestionBankSubject from '../pages/Teacher/QuestionBankSubject';
 import AdminLayout from '../pages/Admin/AdminLayout';
 import AdminDashboard from '../pages/Admin/AdminDashboard';
 import AdminUsers from '../pages/Admin/AdminUsers';
@@ -29,6 +31,8 @@ import AdminSubjects from '../pages/Admin/AdminSubjects';
 import AdminTemplates from '../pages/Admin/AdminTemplates';
 import AdminSubtitles from '../pages/Admin/AdminSubtitles';
 import AdminTemplateSections from '../pages/Admin/AdminTemplateSections';
+import AdminQuestionBank from '../pages/Admin/AdminQuestionBank';
+import AdminQuestionBankSubject from '../pages/Admin/AdminQuestionBankSubject';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
@@ -55,6 +59,22 @@ const router = createBrowserRouter([
             { path: 'test/result/:sessionId', element: <ExamResultSummary /> },
             { path: 'test/review/:sessionId', element: <ExamReview /> },
             {
+                path: 'sual-bazasi',
+                element: (
+                    <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                        <QuestionBank />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'sual-bazasi/:subjectId',
+                element: (
+                    <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
+                        <QuestionBankSubject />
+                    </ProtectedRoute>
+                ),
+            },
+            {
                 path: 'profil',
                 element: (
                     <ProtectedRoute>
@@ -78,6 +98,8 @@ const router = createBrowserRouter([
                     { path: 'sablonlar', element: <AdminTemplates /> },
                     { path: 'sablonlar/:templateId', element: <AdminSubtitles /> },
                     { path: 'sablonlar/:templateId/:subtitleId', element: <AdminTemplateSections /> },
+                    { path: 'sual-bazasi', element: <AdminQuestionBank /> },
+                    { path: 'sual-bazasi/:subjectId', element: <AdminQuestionBankSubject /> },
                 ],
             },
             { path: '*', element: <NotFound /> },

@@ -8,6 +8,7 @@ const navItems = [
     { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
     { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
     { to: '/admin/sablonlar', label: 'Şablonlar', icon: HiOutlineTemplate },
+    { to: '/admin/sual-bazasi', label: 'Sual Bazası', icon: HiOutlineBookOpen },
 ];
 
 const AdminLayout = () => {

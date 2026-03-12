@@ -26,6 +26,7 @@ const Navbar = () => {
         { to: '/', label: 'Ana Səhifə', end: true },
         { to: '/haqqimizda', label: 'Haqqımızda' },
         { to: '/imtahanlar', label: isTeacher ? 'İmtahanlarım' : 'İmtahanlar' },
+        ...(isTeacher && !isAdmin ? [{ to: '/sual-bazasi', label: 'Sual Bazası' }] : []),
         { to: '/elaqe', label: 'Əlaqə' },
     ];
 

@@ -18,7 +18,8 @@ const Navbar = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const dropdownRef = useRef(null);
-    const notifRef = useRef(null);
+    const notifDesktopRef = useRef(null);
+    const notifMobileRef = useRef(null);
     const navigate = useNavigate();
 
     const navLinks = [
@@ -80,7 +81,10 @@ const Navbar = () => {
     useEffect(() => {
         const handler = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setDropdownOpen(false);
-            if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
+            const insideNotif =
+                (notifDesktopRef.current && notifDesktopRef.current.contains(e.target)) ||
+                (notifMobileRef.current && notifMobileRef.current.contains(e.target));
+            if (!insideNotif) setNotifOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -152,7 +156,7 @@ const Navbar = () => {
                         {isAuthenticated ? (
                             <>
                                 {/* Notification bell */}
-                                <div className="relative" ref={notifRef}>
+                                <div className="relative" ref={notifDesktopRef}>
                                     <button
                                         onClick={openNotifications}
                                         className="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
@@ -300,7 +304,7 @@ const Navbar = () => {
                     {/* Mobile: bell + menu button */}
                     <div className="md:hidden flex items-center gap-1">
                         {isAuthenticated && (
-                            <div className="relative" ref={notifRef}>
+                            <div className="relative" ref={notifMobileRef}>
                                 <button
                                     onClick={openNotifications}
                                     className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"

@@ -8,6 +8,7 @@ import {
     HiOutlineShieldCheck, HiOutlineLink, HiOutlinePhotograph
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
+import Pricing from '../Pricing/Pricing';
 
 // ── Mini components ──────────────────────────────────────────────────────────
 
@@ -409,6 +410,9 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+
+            {/* ── Pricing ── */}
+            <Pricing isEmbedded={true} />
 
             {/* ── Final CTA ── */}
             <section className="py-24 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 relative overflow-hidden">

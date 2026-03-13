@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle, HiLockClosed } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import BankPickerModal from '../../components/ui/BankPickerModal';
 import LatexPreview from '../../components/ui/LatexPreview';
@@ -49,7 +49,7 @@ const ExamEditor = () => {
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAdmin } = useAuth();
+    const { isAdmin, hasPermission } = useAuth();
     const isEditMode = !!id;
     const backPath = isAdmin ? '/admin/oz-imtahanlar' : '/imtahanlar';
     const initialLocationState = location.state || { subject: 'Seçilməyib', type: 'free' };
@@ -421,30 +421,35 @@ const ExamEditor = () => {
         })) : []
     });
 
-    const buildPayload = (status) => ({
-        title: examConfig.title || 'Adsız İmtahan',
-        description: examConfig.description || '',
-        subjects: examConfig.subject ? [examConfig.subject, ...(examConfig.extraSubjects || [])] : [],
-        visibility: examConfig.visibility || 'PUBLIC',
-        examType: type === 'free' ? 'FREE' : 'TEMPLATE',
-        status,
-        durationMinutes: parseInt(examConfig.duration) || 60,
-        tags: examConfig.tags || [],
-        templateSectionId: type === 'template' ? (selectedSectionId || null) : null,
-        questions: questions.map((q) => mapQuestion(q, q.orderIndex ?? 0)),
-        passages: passages.map((p) => ({
-            id: isNewId(p.id) ? null : p.id,
-            passageType: p.passageType,
-            title: p.title || null,
-            textContent: p.textContent || null,
-            attachedImage: p.attachedImage || null,
-            audioContent: p.audioContent || null,
-            listenLimit: p.listenLimit ?? null,
-            orderIndex: p.orderIndex ?? 0,
-            subjectGroup: p.subjectGroup || null,
-            questions: p.questions.map((q, qIdx) => mapQuestion(q, qIdx))
-        }))
-    });
+    const buildPayload = (status, config) => {
+        const cfg = config || examConfig;
+        const durationAllowed = hasPermission('selectExamDuration');
+        const duration = durationAllowed ? (parseInt(cfg.duration) || null) : null;
+        return {
+            title: cfg.title || 'Adsız İmtahan',
+            description: cfg.description || '',
+            subjects: cfg.subject ? [cfg.subject, ...(cfg.extraSubjects || [])] : [],
+            visibility: cfg.visibility || 'PUBLIC',
+            examType: type === 'free' ? 'FREE' : 'TEMPLATE',
+            status,
+            durationMinutes: duration,
+            tags: cfg.tags || [],
+            templateSectionId: type === 'template' ? (selectedSectionId || null) : null,
+            questions: questions.map((q) => mapQuestion(q, q.orderIndex ?? 0)),
+            passages: passages.map((p) => ({
+                id: isNewId(p.id) ? null : p.id,
+                passageType: p.passageType,
+                title: p.title || null,
+                textContent: p.textContent || null,
+                attachedImage: p.attachedImage || null,
+                audioContent: p.audioContent || null,
+                listenLimit: p.listenLimit ?? null,
+                orderIndex: p.orderIndex ?? 0,
+                subjectGroup: p.subjectGroup || null,
+                questions: p.questions.map((q, qIdx) => mapQuestion(q, qIdx))
+            }))
+        };
+    };
 
     const handleSaveDraft = async () => {
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -466,8 +471,9 @@ const ExamEditor = () => {
     };
 
     const handlePublish = async () => {
+        // Validate required settings first — open settings modal if something is wrong
         if (!examConfig.title) {
-            toast.error('Zəhmət olmasa imtahanın adını qeyd edin (Parametrlər bölməsindən)');
+            toast.error('İmtahanın adını qeyd edin');
             setIsSettingsOpen(true);
             return;
         }
@@ -475,21 +481,29 @@ const ExamEditor = () => {
             toast.error('İmtahana ən azı bir sual əlavə edilməlidir');
             return;
         }
+
+        // If plan doesn't allow duration, silently strip it before publishing
+        let configToSend = examConfig;
+        if (!hasPermission('selectExamDuration') && examConfig.duration) {
+            configToSend = { ...examConfig, duration: 0 };
+            setExamConfig(configToSend);
+        }
+
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         const currentId = createdIdRef.current;
         const loadId = toast.loading(currentId ? 'Dəyişikliklər saxlanılır...' : 'İmtahan yayımlanır...');
         try {
             if (currentId) {
-                await api.put(`/exams/${currentId}`, buildPayload('PUBLISHED'));
+                await api.put(`/exams/${currentId}`, buildPayload('PUBLISHED', configToSend));
                 setExamStatus('PUBLISHED');
                 toast.success('İmtahan yayımlandı!', { id: loadId });
             } else {
-                await api.post('/exams', buildPayload('PUBLISHED'));
+                await api.post('/exams', buildPayload('PUBLISHED', configToSend));
                 toast.success('İmtahan uğurla yayımlandı!', { id: loadId });
             }
             navigate(backPath);
         } catch (error) {
-            toast.error(error.message || 'Xəta baş verdi', { id: loadId });
+            toast.error(error.response?.data?.message || error.message || 'Xəta baş verdi', { id: loadId });
         }
     };
 
@@ -616,15 +630,16 @@ const ExamEditor = () => {
                                             )}
                                         </div>
                                     ) : (
-                                        <PassageEditor
-                                            key={item.data.id}
-                                            passage={item.data}
-                                            onChange={handleUpdatePassage}
-                                            onDelete={handleDeletePassage}
-                                            onAddQuestion={handleAddPassageQuestion}
-                                            onUpdateQuestion={handleUpdatePassageQuestion}
-                                            onDeleteQuestion={handleDeletePassageQuestion}
-                                        />
+                                            <PassageEditor
+                                                key={item.data.id}
+                                                passage={item.data}
+                                                onChange={handleUpdatePassage}
+                                                onDelete={handleDeletePassage}
+                                                onAddQuestion={handleAddPassageQuestion}
+                                                onUpdateQuestion={handleUpdatePassageQuestion}
+                                                onDeleteQuestion={handleDeletePassageQuestion}
+                                                hasPermission={hasPermission}
+                                            />
                                     ))}
                                 </div>
                             )}
@@ -640,25 +655,37 @@ const ExamEditor = () => {
                                         Sual əlavə et
                                     </button>
                                     <button
-                                        onClick={() => { setPassageSectionTarget(sectionSubject); setShowPassageTypeModal(true); }}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700 font-semibold rounded-xl transition-colors text-sm"
+                                        onClick={() => hasPermission('addPassageQuestion') ? (setPassageSectionTarget(sectionSubject), setShowPassageTypeModal(true)) : null}
+                                        className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-xl transition-colors text-sm ${
+                                            hasPermission('addPassageQuestion')
+                                                ? 'bg-white border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700'
+                                                : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                        }`}
                                     >
-                                        <HiOutlinePlus className="w-4 h-4" />
+                                        {!hasPermission('addPassageQuestion') ? <HiLockClosed className="w-4 h-4"/> : <HiOutlinePlus className="w-4 h-4" />}
                                         Mətn / Dinləmə
                                     </button>
                                     <div className="relative">
-                                        <input type="file" accept="application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        <input type="file" disabled={!hasPermission('importQuestionsFromPdf')} accept="application/pdf" className={`absolute inset-0 w-full h-full opacity-0 ${hasPermission('importQuestionsFromPdf') ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                                             onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfSection(sectionSubject); setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
-                                        <button className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm">
-                                            <HiOutlinePlus className="w-4 h-4" />
+                                        <button className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-xl transition-colors text-sm ${
+                                            hasPermission('importQuestionsFromPdf')
+                                                ? 'bg-white border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700'
+                                                : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                        }`}>
+                                            {!hasPermission('importQuestionsFromPdf') ? <HiLockClosed className="w-4 h-4"/> : <HiOutlinePlus className="w-4 h-4" />}
                                             PDF-dən suallar əlavə et
                                         </button>
                                     </div>
                                     <button
-                                        onClick={() => setBankPicker({ section: sectionSubject, replaceId: null, filterType: null })}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-700 font-semibold rounded-xl transition-colors text-sm"
+                                        onClick={() => hasPermission('useQuestionBank') ? setBankPicker({ section: sectionSubject, replaceId: null, filterType: null }) : null}
+                                        className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-xl transition-colors text-sm ${
+                                            hasPermission('useQuestionBank')
+                                                ? 'bg-white border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-700'
+                                                : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                        }`}
                                     >
-                                        <HiOutlineBookOpen className="w-4 h-4" />
+                                        {!hasPermission('useQuestionBank') ? <HiLockClosed className="w-4 h-4"/> : <HiOutlineBookOpen className="w-4 h-4" />}
                                         Bazadan əlavə et
                                     </button>
                                 </div>
@@ -691,11 +718,15 @@ const ExamEditor = () => {
                             </div>
                         ) : (
                             <button
-                                onClick={() => setShowSectionPicker(true)}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-2xl transition-colors"
+                                onClick={() => hasPermission('multipleSubjects') ? setShowSectionPicker(true) : null}
+                                className={`w-full flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed font-semibold rounded-2xl transition-colors ${
+                                    hasPermission('multipleSubjects') 
+                                        ? 'bg-white border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700' 
+                                        : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                }`}
                             >
-                                <HiOutlinePlus className="w-5 h-5" />
-                                Yeni fənn əlavə et
+                                {!hasPermission('multipleSubjects') ? <HiLockClosed className="w-5 h-5"/> : <HiOutlinePlus className="w-5 h-5" />}
+                                Yeni fənn əlavə et {!hasPermission('multipleSubjects') && <span className="text-xs font-normal ml-2">(Pro plan tələb olunur)</span>}
                             </button>
                         )}
                     </div>
@@ -772,7 +803,7 @@ const ExamEditor = () => {
 };
 
 // ---------- PassageEditor component ----------
-const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQuestion, onDeleteQuestion }) => {
+const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQuestion, onDeleteQuestion, hasPermission }) => {
     const audioInputRef = useRef(null);
     const imageInputRef = useRef(null);
 
@@ -835,8 +866,9 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                         />
                         {/* Image for text passage */}
                         <div className="flex items-center gap-3">
-                            <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                            <button onClick={() => imageInputRef.current.click()} className="text-sm px-4 py-2 border border-teal-300 text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">
+                            <input ref={imageInputRef} type="file" accept="image/*" disabled={!hasPermission('addImage')} className="hidden" onChange={handleImageUpload} />
+                            <button onClick={() => hasPermission('addImage') ? imageInputRef.current.click() : null} className={`text-sm px-4 py-2 border rounded-lg transition-colors flex items-center gap-2 ${hasPermission('addImage') ? 'border-teal-300 text-teal-700 hover:bg-teal-50' : 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'}`}>
+                                {!hasPermission('addImage') ? <HiLockClosed className="w-4 h-4"/> : null}
                                 {passage.attachedImage ? 'Şəkli Dəyiş' : '+ Şəkil Əlavə Et'}
                             </button>
                             {passage.attachedImage && (
@@ -850,10 +882,10 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                 ) : (
                     <>
                         {/* Audio upload */}
-                        <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={handleAudioUpload} />
+                        <input ref={audioInputRef} type="file" accept="audio/*" disabled={!hasPermission('addPassageQuestion')} className="hidden" onChange={handleAudioUpload} />
                         <div className="flex flex-col gap-3">
-                            <button onClick={() => audioInputRef.current.click()} className="flex items-center justify-center gap-2 w-full py-8 border-2 border-dashed border-purple-300 rounded-xl hover:bg-purple-50 transition-colors text-purple-700 font-medium">
-                                <HiOutlineVolumeUp className="w-6 h-6" />
+                            <button onClick={() => hasPermission('addPassageQuestion') ? audioInputRef.current.click() : null} className={`flex items-center justify-center gap-2 w-full py-8 border-2 border-dashed rounded-xl transition-colors font-medium ${hasPermission('addPassageQuestion') ? 'border-purple-300 hover:bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'}`}>
+                                {!hasPermission('addPassageQuestion') ? <HiLockClosed className="w-6 h-6"/> : <HiOutlineVolumeUp className="w-6 h-6" />}
                                 {passage.audioContent ? 'Audio Faylı Dəyiş' : 'Audio Fayl Yüklə (.mp3, .wav, .ogg)'}
                             </button>
                             {passage.audioContent && (

@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar } from 'react-icons/hi';
 
 const navItems = [
     { to: '/admin', label: 'Dashboard', icon: HiOutlineChartBar, end: true },
@@ -9,6 +9,7 @@ const navItems = [
     { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
     { to: '/admin/sablonlar', label: 'Şablonlar', icon: HiOutlineTemplate },
     { to: '/admin/sual-bazasi', label: 'Sual Bazası', icon: HiOutlineBookOpen },
+    { to: '/admin/planlar', label: 'Abunəlik Planları', icon: HiOutlineCurrencyDollar },
 ];
 
 const AdminLayout = () => {

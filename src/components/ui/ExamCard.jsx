@@ -1,9 +1,9 @@
-import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
 
 const EXAM_TYPE_LABELS = { FREE: 'Sərbəst', TEMPLATE: 'Şablon' };
 
-const ExamCard = ({ exam, onDelete, onShare, onToggleStatus }) => {
+const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, canEdit = true }) => {
     const isDraft = exam.status === 'DRAFT';
     const isPublished = exam.status === 'PUBLISHED';
     const typeLabel = EXAM_TYPE_LABELS[exam.examType] || exam.examType || '';
@@ -54,13 +54,22 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus }) => {
                             <HiOutlineShare className="w-5 h-5" />
                         </button>
                     )}
-                    <Link
-                        to={`/imtahanlar/duzenle/${exam.id}`}
-                        className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                        title="Düzəliş et"
-                    >
-                        <HiOutlinePencilAlt className="w-5 h-5" />
-                    </Link>
+                    {canEdit ? (
+                        <Link
+                            to={`/imtahanlar/duzenle/${exam.id}`}
+                            className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Düzəliş et"
+                        >
+                            <HiOutlinePencilAlt className="w-5 h-5" />
+                        </Link>
+                    ) : (
+                        <span
+                            className="p-1.5 text-gray-300 cursor-not-allowed rounded-lg relative group"
+                            title="İmtahan redaktəsi cəri planınızda mövcud deyil"
+                        >
+                            <HiLockClosed className="w-5 h-5" />
+                        </span>
+                    )}
                     <button
                         onClick={() => onDelete(exam.id)}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -107,13 +116,20 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus }) => {
             {/* Footer: Primary Actions */}
             {isDraft ? (
                 <div className="p-4 bg-gray-50 border-t border-gray-100">
-                    <Link
-                        to={`/imtahanlar/duzenle/${exam.id}`}
-                        className="flex justify-center items-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors w-full"
-                    >
-                        <HiOutlinePencilAlt className="w-5 h-5" />
-                        Davam Et
-                    </Link>
+                    {canEdit ? (
+                        <Link
+                            to={`/imtahanlar/duzenle/${exam.id}`}
+                            className="flex justify-center items-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors w-full"
+                        >
+                            <HiOutlinePencilAlt className="w-5 h-5" />
+                            Davam Et
+                        </Link>
+                    ) : (
+                        <div className="flex justify-center items-center gap-2 py-2.5 px-4 bg-gray-200 text-gray-400 text-sm font-semibold rounded-xl w-full cursor-not-allowed">
+                            <HiLockClosed className="w-5 h-5" />
+                            Redaktə Bağlı (Plan)
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-3">

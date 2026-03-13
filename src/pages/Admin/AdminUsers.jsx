@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     HiOutlineSearch, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight,
     HiOutlineUsers, HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineShieldCheck,
-    HiOutlineX, HiOutlineCheck, HiOutlineLockClosed, HiOutlineLockOpen
+    HiOutlineX, HiOutlineCheck, HiOutlineLockClosed, HiOutlineLockOpen, HiOutlineCurrencyDollar
 } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -33,7 +33,19 @@ const AdminUsers = () => {
     const [roleFilter, setRoleFilter] = useState('');
     const [page, setPage] = useState(0);
     const [confirmDelete, setConfirmDelete] = useState(null); // userId
+    const [planModalUser, setPlanModalUser] = useState(null);
+    const [plans, setPlans] = useState([]);
+    const [planForm, setPlanForm] = useState({ planId: '', durationMonths: 1 });
+    const [assigningPlan, setAssigningPlan] = useState(false);
     const debounceRef = useRef(null);
+
+    // Fetch plans for assignment
+    useEffect(() => {
+        api.get('/subscription-plans')
+            .then(res => setPlans(res.data.sort((a,b) => a.price - b.price)))
+            .catch(() => {});
+    }, []);
+
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -126,6 +138,27 @@ const AdminUsers = () => {
         }
     };
 
+    const handleAssignPlan = async (e) => {
+        e.preventDefault();
+        setAssigningPlan(true);
+        try {
+            await api.post('/user-subscriptions/assign', {
+                userId: planModalUser.id,
+                planId: planForm.planId,
+                durationMonths: planForm.durationMonths,
+                paymentProvider: 'MANUAL_ADMIN'
+            });
+            toast.success('Abunəlik planı təyin edildi');
+            setPlanModalUser(null);
+            fetchUsers();
+
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Plan təyin edərkən xəta baş verdi');
+        } finally {
+            setAssigningPlan(false);
+        }
+    };
+
     const getPageNumbers = () => {
         const pages = [];
         const start = Math.max(0, page - 2);
@@ -206,7 +239,9 @@ const AdminUsers = () => {
                             <tr className="border-b border-gray-100 bg-gray-50/60">
                                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">İstifadəçi</th>
                                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Rol</th>
+                                <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Plan</th>
                                 <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Qeydiyyat</th>
+
                                 <th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Əməliyyat</th>
                             </tr>
                         </thead>
@@ -253,6 +288,18 @@ const AdminUsers = () => {
                                             </select>
                                         </td>
 
+                                        {/* Plan */}
+                                        <td className="px-5 py-3.5">
+                                            {user.activePlanName ? (
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200">
+                                                    {user.activePlanName}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">—</span>
+                                            )}
+                                        </td>
+
+
                                         {/* Date */}
                                         <td className="px-5 py-3.5 text-gray-400 text-xs hidden md:table-cell">
                                             {user.createdAt ? new Date(user.createdAt).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
@@ -278,6 +325,13 @@ const AdminUsers = () => {
                                                         title={user.enabled ? 'Hesabı deaktiv et' : 'Hesabı aktivləşdir'}
                                                     >
                                                         {user.enabled ? <HiOutlineLockClosed className="w-4 h-4" /> : <HiOutlineLockOpen className="w-4 h-4" />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setPlanModalUser(user); setPlanForm({ planId: '', durationMonths: 1 }); }}
+                                                        className="p-1.5 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                        title="Plan təyin et"
+                                                    >
+                                                        <HiOutlineCurrencyDollar className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => setConfirmDelete(user.id)}
@@ -327,6 +381,60 @@ const AdminUsers = () => {
                         >
                             <HiOutlineChevronRight className="w-4 h-4" />
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Plan Assignment Modal */}
+            {planModalUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setPlanModalUser(null)}>
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-black text-gray-900">Plan Təyin Et</h2>
+                            <button onClick={() => setPlanModalUser(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                                <HiOutlineX className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                            <strong>{planModalUser.fullName}</strong> adlı istifadəçiyə plan təyin edirsiniz.
+                        </p>
+                        <form onSubmit={handleAssignPlan} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Plan Seçin *</label>
+                                <select
+                                    required
+                                    value={planForm.planId}
+                                    onChange={e => setPlanForm({ ...planForm, planId: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                                >
+                                    <option value="">Plan seçin...</option>
+                                    {plans.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name} ({p.price} ₼)</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Müddət (Ay) *</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="1200"
+                                    required
+                                    value={planForm.durationMonths}
+                                    onChange={e => setPlanForm({ ...planForm, durationMonths: parseInt(e.target.value) || 1 })}
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">Sistem tərəfindən limitsiz planlaşdırmalar üçün (məs: 1200 ay = 100 il) yaza bilərsiniz.</p>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setPlanModalUser(null)} className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
+                                    Ləğv et
+                                </button>
+                                <button type="submit" disabled={assigningPlan} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors disabled:opacity-70">
+                                    {assigningPlan ? 'Təyin edilir...' : 'Təyin et'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

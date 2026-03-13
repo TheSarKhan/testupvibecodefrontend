@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [profilePicture, setProfilePicture] = useState('');
+    const [subscription, setSubscription] = useState(null);
 
     useEffect(() => {
         const initializeAuth = async () => {
@@ -84,16 +85,30 @@ export const AuthProvider = ({ children }) => {
         initializeAuth();
     }, []);
 
-    // Fetch profile picture once user is loaded
+    const refreshSubscription = async () => {
+        if (!user?.id || (!isTeacher && !isAdmin)) return;
+        try {
+            const res = await api.get(`/user-subscriptions/user/${user.id}/active`);
+
+            setSubscription(res.data);
+        } catch (err) {
+            console.error("Subscription refresh failed:", err);
+        }
+    };
+
+    // Fetch profile picture and subscription once user is loaded
     useEffect(() => {
         if (user) {
             api.get('/users/me').then(res => {
                 setProfilePicture(res.data?.profilePicture || '');
             }).catch(() => {});
+
+            refreshSubscription();
         } else {
             setProfilePicture('');
+            setSubscription(null);
         }
-    }, [user?.id]);
+    }, [user?.id, user?.role]);
 
     const login = async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password });
@@ -118,12 +133,22 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         setUser(null);
+        setSubscription(null);
     };
 
     const isAuthenticated = !!user;
     const isAdmin = user?.role === 'ADMIN';
     const isTeacher = user?.role === 'TEACHER';
     const isStudent = user?.role === 'STUDENT';
+
+    // Helper to check feature permission based on active plan
+    const hasPermission = (featureKey) => {
+        // If not a teacher, this doesn't apply (or allowed by default for admin)
+        if (isAdmin) return true;
+        if (!isTeacher) return false;
+        if (!subscription || !subscription.plan) return false; // Default blocks if no plan
+        return !!subscription.plan[featureKey];
+    };
 
     return (
         <AuthContext.Provider
@@ -139,6 +164,9 @@ export const AuthProvider = ({ children }) => {
                 isStudent,
                 profilePicture,
                 setProfilePicture,
+                subscription,
+                hasPermission,
+                refreshSubscription,
             }}
         >
             {children}

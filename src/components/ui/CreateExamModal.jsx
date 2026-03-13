@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineBookOpen, HiOutlineVolumeUp } from 'react-icons/hi';
+import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineBookOpen, HiOutlineVolumeUp, HiLockClosed } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 
 const QUESTION_TYPE_LABELS = {
     MCQ: 'Birseçimli / T-F',
@@ -16,6 +17,7 @@ const QUESTION_TYPE_LABELS = {
 const PASSAGE_LABELS = { LISTENING: 'Dinləmə', TEXT: 'Mətn' };
 
 const CreateExamModal = ({ isOpen, onClose }) => {
+    const { hasPermission } = useAuth();
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [examType, setExamType] = useState(null);
@@ -115,14 +117,32 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                     <p className="text-gray-500 text-sm mt-1">Öz suallarınızı sıfırdan yaradaraq test tərtib edin.</p>
                 </div>
             </button>
-            <button onClick={() => handleTypeSelect('template')}
-                className="w-full text-left p-5 rounded-xl border-2 border-purple-100 hover:border-purple-500 bg-white hover:bg-purple-50/50 transition-all flex items-start gap-4 group">
-                <div className="p-3 bg-purple-100 text-purple-600 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
+            <button onClick={() => hasPermission('useTemplateExams') ? handleTypeSelect('template') : null}
+                className={`w-full text-left p-5 rounded-xl border-2 transition-all flex items-start gap-4 group relative ${
+                    hasPermission('useTemplateExams') 
+                        ? 'border-purple-100 hover:border-purple-500 bg-white hover:bg-purple-50/50' 
+                        : 'border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed'
+                }`}>
+                
+                {!hasPermission('useTemplateExams') && (
+                    <div className="absolute top-3 right-3 text-gray-400">
+                        <HiLockClosed className="w-5 h-5" />
+                    </div>
+                )}
+                
+                <div className={`p-3 rounded-lg transition-colors ${
+                    hasPermission('useTemplateExams') 
+                        ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white' 
+                        : 'bg-gray-200 text-gray-500'
+                }`}>
                     <HiOutlineTemplate className="w-6 h-6" />
                 </div>
                 <div>
                     <h4 className="text-lg font-bold text-gray-900">Şablon Əsasında</h4>
                     <p className="text-gray-500 text-sm mt-1">Əvvəlcədən təyin edilmiş struktura uyğun imtahan yaradın.</p>
+                    {!hasPermission('useTemplateExams') && (
+                        <p className="text-xs text-red-500 mt-2 font-medium">Bu funksiya üçün Pro plana keçin.</p>
+                    )}
                 </div>
             </button>
         </div>

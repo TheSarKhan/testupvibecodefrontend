@@ -632,7 +632,7 @@ const StudentProfile = ({ user }) => {
 // ==== TEACHER PROFILE ====
 const TeacherProfile = ({ user }) => {
     const navigate = useNavigate();
-    const { setProfilePicture: setGlobalPicture } = useAuth();
+    const { setProfilePicture: setGlobalPicture, subscription } = useAuth();
     const [exams, setExams] = useState([]);
     const [pending, setPending] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -733,6 +733,29 @@ const TeacherProfile = ({ user }) => {
                         </Link>
                     </div>
                 </div>
+
+                {/* Subscription Info */}
+                {subscription?.plan && (
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl shadow-sm border border-indigo-100 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-white rounded-2xl shadow-sm">
+                                <HiOutlineCheckCircle className="w-8 h-8 text-indigo-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-gray-900 mb-1">Cari Abunəlik: <span className="text-indigo-700">{subscription.plan.name}</span></h2>
+                                <p className="text-sm text-gray-600 font-medium">
+                                    Qüvvədədir: {fmtDate(subscription.startDate)} — {fmtDate(subscription.endDate)}
+                                    <span className={`ml-3 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm ${subscription.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                        {subscription.isActive ? 'Aktivdir' : 'Aktiv deyil'}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        <Link to="/planlar" className="px-5 py-2.5 bg-white border border-indigo-200 text-indigo-700 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-sm whitespace-nowrap text-sm">
+                            Planı Dəyiş
+                        </Link>
+                    </div>
+                )}
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

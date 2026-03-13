@@ -7,6 +7,7 @@ import {
     HiOutlineHeart, HiOutlineGlobe, HiOutlineSparkles,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
+import Pricing from '../Pricing/Pricing';
 
 const ValueCard = ({ icon: Icon, title, desc, from, to }) => (
     <div className={`rounded-2xl p-6 bg-gradient-to-br ${from} ${to} flex gap-4`}>
@@ -188,6 +189,9 @@ const About = () => {
                     </p>
                 </div>
             </section>
+
+            {/* ── Pricing ── */}
+            <Pricing isEmbedded={true} />
 
             {/* ── CTA ── */}
             <section className="py-20 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 relative overflow-hidden">

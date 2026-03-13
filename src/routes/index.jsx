@@ -13,6 +13,7 @@ import ExamList from '../pages/Exams/ExamList';
 import ExamView from '../pages/Exams/ExamView';
 import ExamEditor from '../pages/Teacher/ExamEditor';
 import Profile from '../pages/Profile/Profile';
+import Pricing from '../pages/Pricing/Pricing';
 import NotFound from '../pages/NotFound';
 
 import ExamEntry from '../pages/Student/ExamEntry';
@@ -31,6 +32,7 @@ import AdminSubjects from '../pages/Admin/AdminSubjects';
 import AdminTemplates from '../pages/Admin/AdminTemplates';
 import AdminSubtitles from '../pages/Admin/AdminSubtitles';
 import AdminTemplateSections from '../pages/Admin/AdminTemplateSections';
+import AdminSubscriptionPlans from '../pages/Admin/AdminSubscriptionPlans';
 import AdminQuestionBank from '../pages/Admin/AdminQuestionBank';
 import AdminQuestionBankSubject from '../pages/Admin/AdminQuestionBankSubject';
 
@@ -58,6 +60,7 @@ const router = createBrowserRouter([
             { path: 'test/take/:sessionId', element: <ExamSession /> },
             { path: 'test/result/:sessionId', element: <ExamResultSummary /> },
             { path: 'test/review/:sessionId', element: <ExamReview /> },
+            { path: 'planlar', element: <Pricing /> },
             {
                 path: 'sual-bazasi',
                 element: (
@@ -100,6 +103,7 @@ const router = createBrowserRouter([
                     { path: 'sablonlar/:templateId/:subtitleId', element: <AdminTemplateSections /> },
                     { path: 'sual-bazasi', element: <AdminQuestionBank /> },
                     { path: 'sual-bazasi/:subjectId', element: <AdminQuestionBankSubject /> },
+                    { path: 'planlar', element: <AdminSubscriptionPlans /> },
                 ],
             },
             { path: '*', element: <NotFound /> },

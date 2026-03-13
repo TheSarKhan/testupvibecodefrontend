@@ -40,9 +40,63 @@ const FilterSelect = ({ label, value, onChange, options }) => (
     </div>
 );
 
+// ── Subscription Usage Bar ────────────────────────────────────────────────────
+const UsageBar = ({ label, used, limit, colorClass }) => {
+    // If limit is null/undefined but we have usage (e.g. no plan assigned yet)
+    const isUnlimited = limit === -1;
+    const hasNoLimit = limit === undefined || limit === null;
+
+    if (isUnlimited) {
+        return (
+            <div className="flex flex-col gap-1.5 min-w-[140px]">
+                <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                    <span>{label}</span>
+                    <span className="text-indigo-600">Limitsiz</span>
+                </div>
+                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 w-full opacity-20" />
+                </div>
+            </div>
+        );
+    }
+
+    if (hasNoLimit) {
+        return (
+            <div className="flex flex-col gap-1.5 min-w-[140px]">
+                <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                    <span>{label}</span>
+                    <span className="text-gray-400">{used} / —</span>
+                </div>
+                <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-gray-300 w-0" />
+                </div>
+            </div>
+        );
+    }
+
+    const percent = Math.min(100, Math.round((used / limit) * 100));
+    const isFull = used >= limit;
+
+    return (
+        <div className="flex flex-col gap-1.5 min-w-[140px]">
+            <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                <span>{label}</span>
+                <span className={isFull ? 'text-red-500' : 'text-gray-900'}>{used} / {limit}</span>
+            </div>
+            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                    className={`h-full transition-all duration-500 ${isFull ? 'bg-red-500' : colorClass}`} 
+                    style={{ width: `${percent}%` }} 
+                />
+            </div>
+        </div>
+    );
+};
+
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 const ExamList = () => {
-    const { user, isTeacher, isAdmin, isStudent, isAuthenticated } = useAuth();
+    const { user, isTeacher, isAdmin, isStudent, isAuthenticated, hasPermission, subscription, refreshSubscription } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -89,7 +143,10 @@ const ExamList = () => {
         setSortBy('NEWEST');
     };
 
-    useEffect(() => { fetchExams(); }, [user]);
+    useEffect(() => { 
+        fetchExams();
+        if (isTeacher) refreshSubscription();
+    }, [user]);
 
     useEffect(() => {
         if (isStudent && isAuthenticated) {
@@ -251,15 +308,110 @@ const ExamList = () => {
                         </p>
                     </div>
                     {(isTeacher || isAdmin) && (
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-indigo-200/60 transition-all hover:-translate-y-0.5 text-sm whitespace-nowrap"
-                        >
-                            <HiOutlinePlusCircle className="w-5 h-5" />
-                            Yeni İmtahan
-                        </button>
+                        <div className="flex flex-col md:flex-row items-end md:items-center gap-6">
+                            {(isTeacher || isAdmin) && (
+                                <div className="hidden lg:flex items-center gap-8 bg-white/50 backdrop-blur-sm px-5 py-3 rounded-2xl border border-gray-100 shadow-sm">
+                                    {subscription ? (
+                                        <>
+                                            <UsageBar 
+                                                label="Aylıq Limit" 
+                                                used={subscription.usedMonthlyExams} 
+                                                limit={subscription.plan?.monthlyExamLimit} 
+                                                colorClass="bg-indigo-500"
+                                            />
+                                            <div className="w-px h-8 bg-gray-100" />
+                                            <UsageBar 
+                                                label="Ümumi Limit" 
+                                                used={subscription.totalExamsCount} 
+                                                limit={subscription.plan?.maxSavedExamsLimit} 
+                                                colorClass="bg-emerald-500"
+                                            />
+                                        </>
+                                    ) : (
+                                        <div className="text-xs text-gray-400 font-medium px-4">
+                                            {isTeacher ? "Aktiv abunəlik tapılmadı" : "Admin (Limitsiz icazə)"}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <button
+                                onClick={() => {
+                                    if (isAdmin) {
+                                        setIsCreateModalOpen(true);
+                                        return;
+                                    }
+
+                                    if (!subscription?.plan) {
+                                        toast.error("İmtahan yaratmaq üçün aktiv aboneliyiniz olmalıdır.");
+                                        return;
+                                    }
+
+                                    const mLimit = subscription?.plan?.monthlyExamLimit;
+                                    const mUsed = subscription?.usedMonthlyExams || 0;
+                                    if (mLimit !== -1 && mUsed >= mLimit) {
+                                        toast.error(`Aylıq imtahan yaratma limitiniz (${mLimit}) dolub. Zəhmət olmasa planınızı yeniləyin.`);
+                                        return;
+                                    }
+
+                                    const tLimit = subscription?.plan?.maxSavedExamsLimit;
+                                    const tUsed = subscription?.totalExamsCount || 0;
+                                    if (tLimit !== -1 && tUsed >= tLimit) {
+                                        toast.error(`Maksimum yadda saxlanıla bilən imtahan limitini (${tLimit}) aşmısınız. Yeni yaratmaq üçün bəzi köhnə imtahanları silməlisiniz.`);
+                                        return;
+                                    }
+
+                                    setIsCreateModalOpen(true);
+                                }}
+                                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold shadow-md transition-all text-sm whitespace-nowrap ${
+                                    !isAdmin && (
+                                        !subscription?.plan ||
+                                        (subscription?.plan?.monthlyExamLimit !== -1 && (subscription?.usedMonthlyExams || 0) >= subscription?.plan?.monthlyExamLimit) ||
+                                        (subscription?.plan?.maxSavedExamsLimit !== -1 && (subscription?.totalExamsCount || 0) >= subscription?.plan?.maxSavedExamsLimit)
+                                    )
+                                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200/60 hover:-translate-y-0.5'
+                                }`}
+                            >
+                                {!isAdmin && (
+                                    !subscription?.plan ||
+                                    (subscription?.plan?.monthlyExamLimit !== -1 && (subscription?.usedMonthlyExams || 0) >= subscription?.plan?.monthlyExamLimit) ||
+                                    (subscription?.plan?.maxSavedExamsLimit !== -1 && (subscription?.totalExamsCount || 0) >= subscription?.plan?.maxSavedExamsLimit)
+                                )
+                                    ? <HiOutlineLockClosed className="w-5 h-5" /> 
+                                    : <HiOutlinePlusCircle className="w-5 h-5" />
+                                }
+                                Yeni İmtahan
+                            </button>
+                        </div>
                     )}
                 </div>
+
+                {/* Mobile Usage Info */}
+                {(isTeacher || isAdmin) && (
+                    <div className="lg:hidden mb-6 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+                        {subscription ? (
+                            <div className="grid grid-cols-2 gap-4">
+                                <UsageBar 
+                                    label="Aylıq" 
+                                    used={subscription.usedMonthlyExams} 
+                                    limit={subscription.plan?.monthlyExamLimit} 
+                                    colorClass="bg-indigo-500"
+                                />
+                                <UsageBar 
+                                    label="Ümumi" 
+                                    used={subscription.totalExamsCount} 
+                                    limit={subscription.plan?.maxSavedExamsLimit} 
+                                    colorClass="bg-emerald-500"
+                                />
+                            </div>
+                        ) : (
+                            <div className="text-xs text-center text-gray-400 font-medium">
+                                {isTeacher ? "Aktiv abunəlik tapılmadı" : "Admin (Limitsiz)"}
+                            </div>
+                        )}
+                    </div>
+                )}
+
 
                 {/* ── Filter panel ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-3">
@@ -451,13 +603,13 @@ const ExamList = () => {
                                             <SectionHeader icon={HiOutlineDocumentText} label="Qaralamalar" count={draftExams.length} />
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
                                                 {draftExams.map(exam => (
-                                                    <ExamCard key={exam.id} exam={normalizeExam(exam)} onDelete={handleDelete} />
+                                                    <ExamCard key={exam.id} exam={normalizeExam(exam)} onDelete={handleDelete} canEdit={hasPermission('examEditing')} />
                                                 ))}
                                             </div>
                                             <SectionHeader icon={HiOutlineDocumentText} label="Yayımlanmış" count={publishedExams.length} />
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                                 {publishedExams.map(exam => (
-                                                    <ExamCard key={exam.id} exam={normalizeExam(exam)} onDelete={handleDelete} onShare={handleShare} onToggleStatus={handleToggleStatus} />
+                                                    <ExamCard key={exam.id} exam={normalizeExam(exam)} onDelete={handleDelete} onShare={handleShare} onToggleStatus={handleToggleStatus} canEdit={hasPermission('examEditing')} />
                                                 ))}
                                             </div>
                                         </>
@@ -470,6 +622,7 @@ const ExamList = () => {
                                                     onDelete={handleDelete}
                                                     onShare={exam.status !== 'DRAFT' ? handleShare : undefined}
                                                     onToggleStatus={exam.status !== 'DRAFT' ? handleToggleStatus : undefined}
+                                                    canEdit={hasPermission('examEditing')}
                                                 />
                                             ))}
                                         </div>

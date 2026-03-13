@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { HiOutlineTrash, HiOutlinePlus, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineTrash, HiOutlinePlus, HiOutlineX, HiLockClosed } from 'react-icons/hi';
 import PdfCropperModal from './PdfCropperModal';
 import MathFormulaModal from './MathFormulaModal';
 import MathTextEditor from './MathTextEditor';
+import { useAuth } from '../../context/AuthContext';
 
 // Supported Question Types
 const QUESTION_TYPES = {
@@ -15,6 +16,7 @@ const QUESTION_TYPES = {
 };
 
 const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false }) => {
+    const { hasPermission } = useAuth();
     const [mathModalField, setMathModalField] = useState(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [pdfFile, setPdfFile] = useState(null);
@@ -133,10 +135,10 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     />
                                     <button
                                         type="button"
-                                        className="px-2 text-gray-400 hover:text-indigo-600 transition-colors"
-                                        title="Variant üçün şəkil və ya PDF kəsimi əlavə et"
+                                        className={`px-2 transition-colors ${(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? 'text-gray-300' : 'text-gray-400 hover:text-indigo-600'}`}
+                                        title={(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? 'Bu xüsusiyyət üçün plana keçin' : 'Variant üçün şəkil və ya PDF kəsimi əlavə et'}
                                     >
-                                        <HiOutlinePlus className="w-4 h-4" />
+                                        {(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? <HiLockClosed className="w-4 h-4" /> : <HiOutlinePlus className="w-4 h-4" />}
                                     </button>
                                 </div>
                                 <button
@@ -765,16 +767,20 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                         <div className="relative">
                             <input
                                 type="file"
-                                accept="image/*,application/pdf"
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                accept={[
+                                    hasPermission('addImage') ? 'image/*' : '',
+                                    hasPermission('importQuestionsFromPdf') ? 'application/pdf' : ''
+                                ].filter(Boolean).join(',')}
+                                disabled={!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')}
+                                className={`absolute inset-0 w-full h-full opacity-0 ${(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                                 onChange={(e) => {
                                     const file = e.target.files[0];
                                     if (file) {
-                                        if (file.type === 'application/pdf') {
+                                        if (file.type === 'application/pdf' && hasPermission('importQuestionsFromPdf')) {
                                             setPdfFile(file);
                                             setPdfTarget({ type: 'main' });
                                             setIsPdfModalOpen(true);
-                                        } else if (file.type.startsWith('image/')) {
+                                        } else if (file.type.startsWith('image/') && hasPermission('addImage')) {
                                             const reader = new FileReader();
                                             reader.onload = (event) => {
                                                 handleChange('attachedImage', event.target.result);
@@ -787,10 +793,11 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             />
                             <button
                                 type="button"
-                                className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center gap-1"
-                                title="Suala şəkil və ya PDF dən kəsim əlavə et"
+                                className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 ${(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? 'bg-gray-100 text-gray-400' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                                title={(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? 'Plana daxil deyil' : 'Suala şəkil və ya PDF dən kəsim əlavə et'}
                             >
-                                <HiOutlinePlus className="w-3 h-3" /> Şəkil / PDF
+                                {(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? <HiLockClosed className="w-3 h-3" /> : <HiOutlinePlus className="w-3 h-3" />} 
+                                Şəkil / PDF
                             </button>
                         </div>
 

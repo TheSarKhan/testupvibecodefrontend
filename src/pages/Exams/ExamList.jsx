@@ -199,6 +199,26 @@ const ExamList = () => {
         }
     };
 
+    const handleDownloadPdf = async (examId) => {
+        const loadingToast = toast.loading("PDF hazırlanır...");
+        try {
+            const response = await api.get(`/exams/${examId}/pdf`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `exam_${examId}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("PDF uğurla yükləndi", { id: loadingToast });
+        } catch (error) {
+            console.error("PDF download failed:", error);
+            toast.error("PDF yükləyərkən xəta baş verdi", { id: loadingToast });
+        }
+    };
+
     const handleShare = (id) => {
         const exam = exams.find(e => e.id === id);
         if (!exam) return;
@@ -603,14 +623,32 @@ const ExamList = () => {
                                             <SectionHeader icon={HiOutlineDocumentText} label="Qaralamalar" count={draftExams.length} />
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
                                                 {draftExams.map(exam => (
-                                                    <ExamCard key={exam.id} exam={normalizeExam(exam)} onDelete={handleDelete} canEdit={hasPermission('examEditing')} />
+                                                    <ExamCard 
+                                                        key={exam.id} 
+                                                        exam={normalizeExam(exam)} 
+                                                        onDelete={handleDelete} 
+                                                        onDownloadPdf={handleDownloadPdf}
+                                                        canEdit={hasPermission('examEditing')} 
+                                                        canDownloadPdf={hasPermission('downloadAsPdf')}
+                                                    />
                                                 ))}
+
                                             </div>
                                             <SectionHeader icon={HiOutlineDocumentText} label="Yayımlanmış" count={publishedExams.length} />
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                                 {publishedExams.map(exam => (
-                                                    <ExamCard key={exam.id} exam={normalizeExam(exam)} onDelete={handleDelete} onShare={handleShare} onToggleStatus={handleToggleStatus} canEdit={hasPermission('examEditing')} />
+                                                    <ExamCard 
+                                                        key={exam.id} 
+                                                        exam={normalizeExam(exam)} 
+                                                        onDelete={handleDelete} 
+                                                        onShare={handleShare} 
+                                                        onToggleStatus={handleToggleStatus} 
+                                                        onDownloadPdf={handleDownloadPdf}
+                                                        canEdit={hasPermission('examEditing')} 
+                                                        canDownloadPdf={hasPermission('downloadAsPdf')}
+                                                    />
                                                 ))}
+
                                             </div>
                                         </>
                                     ) : (

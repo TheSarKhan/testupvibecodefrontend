@@ -1,9 +1,11 @@
-import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed, HiOutlineDownload } from 'react-icons/hi';
+
 import { Link } from 'react-router-dom';
 
 const EXAM_TYPE_LABELS = { FREE: 'Sərbəst', TEMPLATE: 'Şablon' };
 
-const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, canEdit = true }) => {
+const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, canEdit = true, canDownloadPdf = true }) => {
+
     const isDraft = exam.status === 'DRAFT';
     const isPublished = exam.status === 'PUBLISHED';
     const typeLabel = EXAM_TYPE_LABELS[exam.examType] || exam.examType || '';
@@ -54,6 +56,25 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, canEdit = true }) =
                             <HiOutlineShare className="w-5 h-5" />
                         </button>
                     )}
+                    {!isDraft && onDownloadPdf && (
+                        canDownloadPdf ? (
+                            <button
+                                onClick={() => onDownloadPdf(exam.id)}
+                                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="PDF Yüklə"
+                            >
+                                <HiOutlineDownload className="w-5 h-5" />
+                            </button>
+                        ) : (
+                            <span 
+                                className="p-1.5 text-gray-300 cursor-not-allowed rounded-lg relative group"
+                                title="PDF yükləmə cari planınızda mövcud deyil"
+                            >
+                                <HiLockClosed className="w-5 h-5" />
+                            </span>
+                        )
+                    )}
+
                     {canEdit ? (
                         <Link
                             to={`/imtahanlar/duzenle/${exam.id}`}

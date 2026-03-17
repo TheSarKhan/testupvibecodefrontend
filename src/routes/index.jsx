@@ -38,12 +38,14 @@ import AdminQuestionBankSubject from '../pages/Admin/AdminQuestionBankSubject';
 import AdminBanners from '../pages/Admin/AdminBanners';
 import AdminNotifications from '../pages/Admin/AdminNotifications';
 import AdminCollaborativeExams from '../pages/Admin/AdminCollaborativeExams';
+import AdminLogs from '../pages/Admin/AdminLogs';
 import CollaborativeAssignments from '../pages/Teacher/CollaborativeAssignments';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
 
 const router = createBrowserRouter([
+    // ── Main site (with Navbar + Footer) ──
     {
         path: '/',
         element: <MainLayout />,
@@ -90,31 +92,34 @@ const router = createBrowserRouter([
                     </ProtectedRoute>
                 ),
             },
-            {
-                path: 'admin',
-                element: (
-                    <ProtectedRoute roles={['ADMIN']}>
-                        <AdminLayout />
-                    </ProtectedRoute>
-                ),
-                children: [
-                    { index: true, element: <AdminDashboard /> },
-                    { path: 'users', element: <AdminUsers /> },
-                    { path: 'oz-imtahanlar', element: <AdminMyExams /> },
-                    { path: 'birge-imtahanlar', element: <AdminCollaborativeExams /> },
-                    { path: 'muellim-imtahanlar', element: <AdminExams /> },
-                    { path: 'fennler', element: <AdminSubjects /> },
-                    { path: 'sablonlar', element: <AdminTemplates /> },
-                    { path: 'sablonlar/:templateId', element: <AdminSubtitles /> },
-                    { path: 'sablonlar/:templateId/:subtitleId', element: <AdminTemplateSections /> },
-                    { path: 'sual-bazasi', element: <AdminQuestionBank /> },
-                    { path: 'sual-bazasi/:subjectId', element: <AdminQuestionBankSubject /> },
-                    { path: 'planlar', element: <AdminSubscriptionPlans /> },
-                    { path: 'reklamlar', element: <AdminBanners /> },
-                    { path: 'bildirişlər', element: <AdminNotifications /> },
-                ],
-            },
             { path: '*', element: <NotFound /> },
+        ],
+    },
+
+    // ── Admin panel (standalone, no site Navbar) ──
+    {
+        path: '/admin',
+        element: (
+            <ProtectedRoute roles={['ADMIN']}>
+                <AdminLayout />
+            </ProtectedRoute>
+        ),
+        children: [
+            { index: true, element: <AdminDashboard /> },
+            { path: 'users', element: <AdminUsers /> },
+            { path: 'oz-imtahanlar', element: <AdminMyExams /> },
+            { path: 'birge-imtahanlar', element: <AdminCollaborativeExams /> },
+            { path: 'muellim-imtahanlar', element: <AdminExams /> },
+            { path: 'fennler', element: <AdminSubjects /> },
+            { path: 'sablonlar', element: <AdminTemplates /> },
+            { path: 'sablonlar/:templateId', element: <AdminSubtitles /> },
+            { path: 'sablonlar/:templateId/:subtitleId', element: <AdminTemplateSections /> },
+            { path: 'sual-bazasi', element: <AdminQuestionBank /> },
+            { path: 'sual-bazasi/:subjectId', element: <AdminQuestionBankSubject /> },
+            { path: 'planlar', element: <AdminSubscriptionPlans /> },
+            { path: 'reklamlar', element: <AdminBanners /> },
+            { path: 'bildirişlər', element: <AdminNotifications /> },
+            { path: 'loglar', element: <AdminLogs /> },
         ],
     },
 ]);

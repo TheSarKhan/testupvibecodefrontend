@@ -143,7 +143,7 @@ const ExamEntry = () => {
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900">{exam.title}</h2>
                         <p className="mt-2 text-sm text-gray-500">
-                            {exam.questions?.length || 0} sual • {exam.durationMinutes ? `${exam.durationMinutes} dəqiqə` : 'Sərbəst vaxt'}
+                            {(exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0)} sual • {exam.durationMinutes ? `${exam.durationMinutes} dəqiqə` : 'Sərbəst vaxt'}
                         </p>
                         {exam.price != null && exam.price > 0 && (
                             <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold px-3 py-1.5 rounded-full">

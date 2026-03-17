@@ -36,6 +36,8 @@ import AdminSubscriptionPlans from '../pages/Admin/AdminSubscriptionPlans';
 import AdminQuestionBank from '../pages/Admin/AdminQuestionBank';
 import AdminQuestionBankSubject from '../pages/Admin/AdminQuestionBankSubject';
 import AdminBanners from '../pages/Admin/AdminBanners';
+import AdminNotifications from '../pages/Admin/AdminNotifications';
+import AdminCollaborativeExams from '../pages/Admin/AdminCollaborativeExams';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
@@ -97,6 +99,7 @@ const router = createBrowserRouter([
                     { index: true, element: <AdminDashboard /> },
                     { path: 'users', element: <AdminUsers /> },
                     { path: 'oz-imtahanlar', element: <AdminMyExams /> },
+                    { path: 'birge-imtahanlar', element: <AdminCollaborativeExams /> },
                     { path: 'muellim-imtahanlar', element: <AdminExams /> },
                     { path: 'fennler', element: <AdminSubjects /> },
                     { path: 'sablonlar', element: <AdminTemplates /> },
@@ -106,6 +109,7 @@ const router = createBrowserRouter([
                     { path: 'sual-bazasi/:subjectId', element: <AdminQuestionBankSubject /> },
                     { path: 'planlar', element: <AdminSubscriptionPlans /> },
                     { path: 'reklamlar', element: <AdminBanners /> },
+                    { path: 'bildirişlər', element: <AdminNotifications /> },
                 ],
             },
             { path: '*', element: <NotFound /> },

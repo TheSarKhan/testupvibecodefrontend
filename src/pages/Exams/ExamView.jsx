@@ -184,7 +184,7 @@ const ExamView = () => {
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Sual sayı</p>
-                            <p className="text-lg font-bold text-gray-900">{exam.questions?.length || 0} ədəd</p>
+                            <p className="text-lg font-bold text-gray-900">{(exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0)} ədəd</p>
                         </div>
                     </div>
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">

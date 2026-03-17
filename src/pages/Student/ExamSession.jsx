@@ -858,7 +858,7 @@ const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {
                         ref={editorRef}
                         value={answer.textAnswer || ''}
                         onChange={(val) => onAnswerChange({ textAnswer: val })}
-                        placeholder="Cavabınızı bura yazın... Riyaziyyat üçün $$...$$ istifadə edin və ya fx düyməsini basın"
+                        placeholder="Cavabınızı bura yazın... Riyaziyyat simvolları üçün fx düyməsini basın"
                         className="w-full px-4 py-3 border-none focus:ring-0 text-base min-h-[120px] bg-transparent"
                     />
                 </div>

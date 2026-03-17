@@ -5,6 +5,8 @@ import {
     HiOutlineLockClosed, HiOutlineBookmark, HiBookmark,
     HiOutlineClock, HiOutlineQuestionMarkCircle, HiOutlineArrowRight,
     HiOutlineFilter, HiOutlineX, HiOutlineChevronDown, HiOutlineAdjustments,
+    HiOutlineUserGroup, HiOutlineExclamationCircle,
+    HiOutlinePencilAlt, HiOutlinePaperAirplane,
 } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { ExamCard, CreateExamModal } from '../../components/ui';
@@ -27,7 +29,7 @@ const Pill = ({ label, active, onClick }) => (
 );
 
 // ── Select filter ─────────────────────────────────────────────────────────────
-const FilterSelect = ({ label, value, onChange, options }) => (
+const FilterSelect = ({ value, onChange, options }) => (
     <div className="relative">
         <select
             value={value}
@@ -109,6 +111,10 @@ const ExamList = () => {
     const [savedExamLinks, setSavedExamLinks] = useState(new Set());
     const [savingLink, setSavingLink] = useState(null);
 
+    // Collaborative assignments (teacher only)
+    const [collaborativeAssignments, setCollaborativeAssignments] = useState([]);
+    const [openingDraft, setOpeningDraft] = useState(null); // collaboratorId being opened
+
     // ── Filter state ──────────────────────────────────────────────────────────
     const [search, setSearch] = useState('');
     // Teacher filters
@@ -143,10 +149,27 @@ const ExamList = () => {
         setSortBy('NEWEST');
     };
 
-    useEffect(() => { 
+    useEffect(() => {
         fetchExams();
-        if (isTeacher) refreshSubscription();
+        if (isTeacher) {
+            refreshSubscription();
+            api.get('/collaborative-exams/my-assignments')
+                .then(r => setCollaborativeAssignments(r.data))
+                .catch(() => {});
+        }
     }, [user]);
+
+    const handleOpenDraft = async (collaboratorId) => {
+        setOpeningDraft(collaboratorId);
+        try {
+            const { data } = await api.post(`/collaborative-exams/${collaboratorId}/open-draft`);
+            navigate(`/imtahanlar/edit/${data.draftExamId}`);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+        } finally {
+            setOpeningDraft(null);
+        }
+    };
 
     useEffect(() => {
         if (isStudent && isAuthenticated) {
@@ -365,7 +388,7 @@ const ExamList = () => {
                                     }
 
                                     if (!subscription?.plan) {
-                                        toast.error("İmtahan yaratmaq üçün aktiv aboneliyiniz olmalıdır.");
+                                        toast.error("İmtahan yaratmaq üçün aktiv abunəliyiniz olmalıdır.");
                                         return;
                                     }
 
@@ -435,6 +458,107 @@ const ExamList = () => {
                     </div>
                 )}
 
+
+                {/* ── Collaborative Assignments (Teacher only) ── */}
+                {isTeacher && collaborativeAssignments.filter(a => a.status !== 'APPROVED').length > 0 && (
+                    <div className="mb-8">
+                        <h2 className="text-sm font-bold text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                            <HiOutlineUserGroup className="w-4 h-4" />
+                            Adminlə birlikdə işlədiyim imtahanlar
+                            <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                {collaborativeAssignments.filter(a => a.status !== 'APPROVED').length}
+                            </span>
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {collaborativeAssignments
+                                .filter(a => a.status !== 'APPROVED')
+                                .map(assignment => {
+                                    const statusConfig = {
+                                        ASSIGNED: { label: 'Gözləyir', color: 'text-blue-600 bg-blue-50 border-blue-100' },
+                                        SUBMITTED: { label: 'Göndərildi', color: 'text-amber-600 bg-amber-50 border-amber-100' },
+                                        REJECTED: { label: 'Geri qaytarıldı', color: 'text-red-600 bg-red-50 border-red-100' },
+                                    };
+                                    const st = statusConfig[assignment.status] || statusConfig.ASSIGNED;
+                                    const canEdit = assignment.status === 'ASSIGNED' || assignment.status === 'REJECTED';
+                                    const isOpening = openingDraft === assignment.id;
+
+                                    return (
+                                        <div key={assignment.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
+                                            {/* Header */}
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                                                        <HiOutlineUserGroup className="w-4 h-4 text-indigo-600" />
+                                                    </div>
+                                                    <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{assignment.examTitle}</h3>
+                                                </div>
+                                                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${st.color}`}>
+                                                    {st.label}
+                                                </span>
+                                            </div>
+
+                                            {/* Subjects */}
+                                            {assignment.subjects?.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {assignment.subjects.map(s => (
+                                                        <span key={s} className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                                                            {s}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Rejection comment */}
+                                            {assignment.status === 'REJECTED' && assignment.adminComment && (
+                                                <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">
+                                                    <HiOutlineExclamationCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                                    <span className="leading-relaxed">{assignment.adminComment}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Draft question count */}
+                                            {assignment.draftQuestionCount > 0 && (
+                                                <p className="text-xs text-gray-400 flex items-center gap-1">
+                                                    <HiOutlineDocumentText className="w-3.5 h-3.5" />
+                                                    {assignment.draftQuestionCount} sual hazırlanıb
+                                                </p>
+                                            )}
+
+                                            {/* Action */}
+                                            <div className="mt-auto pt-2 border-t border-gray-50">
+                                                {assignment.status === 'SUBMITTED' ? (
+                                                    <div className="flex items-center gap-2 text-xs font-semibold text-amber-600">
+                                                        <HiOutlinePaperAirplane className="w-4 h-4" />
+                                                        Admin yoxlayır...
+                                                    </div>
+                                                ) : canEdit ? (
+                                                    <button
+                                                        onClick={() => handleOpenDraft(assignment.id)}
+                                                        disabled={isOpening}
+                                                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl transition-all"
+                                                    >
+                                                        {isOpening ? (
+                                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                        ) : assignment.status === 'REJECTED' ? (
+                                                            <>
+                                                                <HiOutlinePencilAlt className="w-4 h-4" />
+                                                                Düzəliş et
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <HiOutlinePencilAlt className="w-4 h-4" />
+                                                                {assignment.draftQuestionCount > 0 ? 'Davam et' : 'Sual əlavə et'}
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                        </div>
+                    </div>
+                )}
 
                 {/* ── Filter panel ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-3">
@@ -542,7 +666,7 @@ const ExamList = () => {
                         {/* Student view */}
                         {isStudent ? (
                             filteredExams.length === 0 ? (
-                                <EmptyState search={search} activeFilterCount={activeFilterCount} onClear={clearFilters} isStudent />
+                                <EmptyState activeFilterCount={activeFilterCount} onClear={clearFilters} isStudent />
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                     {filteredExams.map(exam => {
@@ -618,7 +742,7 @@ const ExamList = () => {
                         ) : (
                             /* Teacher / Admin view */
                             filteredExams.length === 0 ? (
-                                <EmptyState search={search} activeFilterCount={activeFilterCount} onClear={clearFilters} />
+                                <EmptyState activeFilterCount={activeFilterCount} onClear={clearFilters} />
                             ) : (
                                 <>
                                     {/* Show by status groups only when no status filter active */}
@@ -698,7 +822,7 @@ const SectionHeader = ({ icon: Icon, label, count }) => (
     </h2>
 );
 
-const EmptyState = ({ search, activeFilterCount, onClear, isStudent }) => (
+const EmptyState = ({ activeFilterCount, onClear, isStudent }) => (
     <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
         <div className="w-16 h-16 bg-indigo-50 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4">
             <HiOutlineDocumentText className="w-8 h-8" />

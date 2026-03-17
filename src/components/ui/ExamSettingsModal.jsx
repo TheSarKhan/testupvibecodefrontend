@@ -85,7 +85,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
                         onChange={handleChange}
                         rows="2"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        placeholder="İmtaham haqqında qısa məlumat..."
+                        placeholder="İmtahan haqqında qısa məlumat..."
                     />
                 </div>
 

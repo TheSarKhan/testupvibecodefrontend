@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle, HiLockClosed } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle, HiLockClosed, HiOutlineUserGroup, HiOutlinePaperAirplane, HiOutlineCheckCircle } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import BankPickerModal from '../../components/ui/BankPickerModal';
 import LatexPreview from '../../components/ui/LatexPreview';
@@ -108,6 +108,11 @@ const ExamEditor = () => {
     const [loading, setLoading] = useState(isEditMode);
     const [showPassageTypeModal, setShowPassageTypeModal] = useState(false);
     const [autoSaveStatus, setAutoSaveStatus] = useState(null); // 'saving' | 'saved'
+
+    // Collaborative mode
+    const [collaborativeParentId, setCollaborativeParentId] = useState(null);
+    const [collaborativeSubjects, setCollaborativeSubjects] = useState([]);
+    const [isCollaborativeParent, setIsCollaborativeParent] = useState(false); // admin editing the parent exam
 
     // Template mode state
     const [templateInfo, setTemplateInfo] = useState(null); // { templateTitle, templateSubtitle, subjectName, questionCount, formula, typeCounts }
@@ -222,6 +227,13 @@ const ExamEditor = () => {
             });
             setType(data.examType.toLowerCase());
             setExamStatus(data.status || 'DRAFT');
+            if (data.collaborativeParentId) {
+                setCollaborativeParentId(data.collaborativeParentId);
+                setCollaborativeSubjects(data.collaborativeSubjects || []);
+            }
+            if (data.isCollaborative && !data.collaborativeParentId) {
+                setIsCollaborativeParent(true);
+            }
             if (data.templateSectionId) setSelectedSectionId(data.templateSectionId);
             if (data.templateSectionId) {
                 api.get(`/templates/sections/${data.templateSectionId}`).then(({ data: sec }) => {
@@ -561,6 +573,27 @@ const ExamEditor = () => {
         }
     };
 
+    const isCollaborativeMode = !!collaborativeParentId;
+
+    const handleSubmitDraft = async () => {
+        const currentId = createdIdRef.current;
+        if (!currentId) { toast.error('Əvvəlcə ən azı bir sual əlavə edin'); return; }
+        if (questions.length === 0 && passages.length === 0) {
+            toast.error('Göndərməzdən əvvəl ən azı bir sual əlavə edin');
+            return;
+        }
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        const loadId = toast.loading('Göndərilir...');
+        try {
+            await api.put(`/exams/${currentId}`, buildPayload(examStatus));
+            await api.post(`/collaborative-exams/submit/${currentId}`);
+            toast.success('Suallarınız admin-ə göndərildi!', { id: loadId });
+            navigate('/imtahanlar');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Xəta baş verdi', { id: loadId });
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
@@ -571,6 +604,21 @@ const ExamEditor = () => {
 
     const isTemplateMode = type === 'template';
     const isQuestionCountLocked = isTemplateMode && templateInfo !== null;
+
+    // Pre-compute global question offset for each section so numbering continues across sections
+    const _sectionSubjectsList = [examConfig.subject, ...(examConfig.extraSubjects || [])];
+    let _gqc = 0;
+    const sectionQuestionOffsets = {};
+    _sectionSubjectsList.forEach((sub, si) => {
+        const isMain = si === 0;
+        sectionQuestionOffsets[sub] = _gqc;
+        _gqc += questions.filter(q => isMain
+            ? (q.subjectGroup == null || q.subjectGroup === sub)
+            : q.subjectGroup === sub).length;
+        _gqc += passages
+            .filter(p => isMain ? (p.subjectGroup == null || p.subjectGroup === sub) : p.subjectGroup === sub)
+            .reduce((acc, p) => acc + (p.questions?.length || 0), 0);
+    });
 
     return (
         <div className="bg-gray-50 min-h-screen pb-24">
@@ -594,7 +642,16 @@ const ExamEditor = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setIsSettingsOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors">
+                        <button
+                            onClick={() => isCollaborativeMode ? null : setIsSettingsOpen(true)}
+                            disabled={isCollaborativeMode}
+                            title={isCollaborativeMode ? 'Parametrləri yalnız admin dəyişə bilər' : 'Parametrlər'}
+                            className={`flex items-center gap-2 px-4 py-2 font-semibold rounded-lg transition-colors ${
+                                isCollaborativeMode
+                                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                            }`}
+                        >
                             <HiOutlineCog className="w-5 h-5" />
                             <span className="hidden sm:inline">Parametrlər</span>
                         </button>
@@ -604,6 +661,45 @@ const ExamEditor = () => {
 
             {/* Main Editor Area */}
             <div className="container-main mt-8 max-w-4xl">
+                {/* Collaborative parent banner (admin editing the main exam) */}
+                {isCollaborativeParent && (
+                    <div className="mb-6 bg-violet-50 border border-violet-200 rounded-2xl px-6 py-4 flex items-start gap-3">
+                        <HiOutlineUserGroup className="w-5 h-5 text-violet-500 mt-0.5 shrink-0" />
+                        <div>
+                            <p className="font-bold text-sm text-violet-800">Birgə İmtahan — Admin Redaktəsi</p>
+                            <p className="text-xs text-violet-600 mt-0.5">
+                                Bu imtahana müəllimlər də sual əlavə edir. Siz birbaşa sual, fənn və parametr əlavə edə bilərsiniz.
+                                Müəllimlərin göndərdiyi suallar admin panelindən təsdiq edildikdə avtomatik əlavə olunur.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Collaborative mode banner */}
+                {isCollaborativeMode && (
+                    <div className={`mb-6 rounded-2xl px-6 py-4 border ${examStatus === 'SUBMITTED' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+                        <div className="flex items-start gap-3">
+                            <HiOutlineUserGroup className={`w-5 h-5 mt-0.5 shrink-0 ${examStatus === 'SUBMITTED' ? 'text-amber-500' : 'text-blue-500'}`} />
+                            <div>
+                                <p className={`font-bold text-sm ${examStatus === 'SUBMITTED' ? 'text-amber-800' : 'text-blue-800'}`}>
+                                    {examStatus === 'SUBMITTED' ? 'Göndərildi — Admin yoxlayır' : 'Birgə İmtahan Workspace'}
+                                </p>
+                                {collaborativeSubjects.length > 0 && (
+                                    <p className={`text-xs mt-1 ${examStatus === 'SUBMITTED' ? 'text-amber-600' : 'text-blue-600'}`}>
+                                        Sizin fənnlər: {collaborativeSubjects.join(', ')}
+                                    </p>
+                                )}
+                                {examStatus === 'SUBMITTED' && (
+                                    <p className="text-xs text-amber-600 mt-0.5">Admin təsdiq etdikdən sonra suallar əsl imtahana əlavə ediləcək.</p>
+                                )}
+                            </div>
+                            {examStatus === 'SUBMITTED' && (
+                                <HiOutlineCheckCircle className="w-5 h-5 text-amber-500 ml-auto shrink-0" />
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Template info banner (read-only) */}
                 {isTemplateMode && templateInfo && (
                     <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-3">
@@ -661,40 +757,53 @@ const ExamEditor = () => {
                             {/* Questions and passages interleaved by orderIndex */}
                             {sectionItems.length > 0 && (
                                 <div className="space-y-6 mb-4">
-                                    {sectionItems.map((item, idx) => item.kind === 'question' ? (
-                                        <div key={item.data.id}>
-                                            <QuestionEditor
-                                                index={idx}
-                                                question={item.data}
-                                                onChange={handleUpdateQuestion}
-                                                onDelete={handleDeleteQuestion}
-                                                hidePoints={isTemplateMode}
-                                                hideDelete={isQuestionCountLocked}
-                                            />
-                                            {isQuestionCountLocked && (
-                                                <div className="mt-2 flex justify-end">
-                                                    <button
-                                                        onClick={() => setBankPicker({ section: sectionSubject, replaceId: item.data.id, filterType: item.data.type })}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600 font-semibold rounded-lg transition-colors text-xs"
-                                                    >
-                                                        <HiOutlineBookOpen className="w-3.5 h-3.5" />
-                                                        Bazadan seç
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                            <PassageEditor
-                                                key={item.data.id}
-                                                passage={item.data}
-                                                onChange={handleUpdatePassage}
-                                                onDelete={handleDeletePassage}
-                                                onAddQuestion={handleAddPassageQuestion}
-                                                onUpdateQuestion={handleUpdatePassageQuestion}
-                                                onDeleteQuestion={handleDeletePassageQuestion}
-                                                hasPermission={hasPermission}
-                                            />
-                                    ))}
+                                    {(() => {
+                                        let qOffset = sectionQuestionOffsets[sectionSubject] ?? 0;
+                                        return sectionItems.map((item) => {
+                                            if (item.kind === 'question') {
+                                                const globalIdx = qOffset++;
+                                                return (
+                                                    <div key={item.data.id}>
+                                                        <QuestionEditor
+                                                            index={globalIdx}
+                                                            question={item.data}
+                                                            onChange={handleUpdateQuestion}
+                                                            onDelete={handleDeleteQuestion}
+                                                            hidePoints={isTemplateMode}
+                                                            hideDelete={isQuestionCountLocked}
+                                                        />
+                                                        {isQuestionCountLocked && (
+                                                            <div className="mt-2 flex justify-end">
+                                                                <button
+                                                                    onClick={() => setBankPicker({ section: sectionSubject, replaceId: item.data.id, filterType: item.data.type })}
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600 font-semibold rounded-lg transition-colors text-xs"
+                                                                >
+                                                                    <HiOutlineBookOpen className="w-3.5 h-3.5" />
+                                                                    Bazadan seç
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            } else {
+                                                const passageOffset = qOffset;
+                                                qOffset += item.data.questions?.length || 0;
+                                                return (
+                                                    <PassageEditor
+                                                        key={item.data.id}
+                                                        passage={item.data}
+                                                        questionOffset={passageOffset}
+                                                        onChange={handleUpdatePassage}
+                                                        onDelete={handleDeletePassage}
+                                                        onAddQuestion={handleAddPassageQuestion}
+                                                        onUpdateQuestion={handleUpdatePassageQuestion}
+                                                        onDeleteQuestion={handleDeletePassageQuestion}
+                                                        hasPermission={hasPermission}
+                                                    />
+                                                );
+                                            }
+                                        });
+                                    })()}
                                 </div>
                             )}
 
@@ -830,7 +939,7 @@ const ExamEditor = () => {
                 />
             )}
 
-            {/* Floating Publish Button */}
+            {/* Floating Publish / Submit Button */}
             <div className="fixed bottom-6 right-6 z-20 flex flex-col items-end gap-2">
                 {autoSaveStatus === 'saving' && (
                     <span className="flex items-center gap-1.5 text-xs text-white bg-amber-400 px-3 py-1.5 rounded-full shadow">
@@ -844,20 +953,37 @@ const ExamEditor = () => {
                         Yadda saxlanıldı
                     </span>
                 )}
-                <button
-                    onClick={handlePublish}
-                    className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-2xl shadow-xl shadow-indigo-300 transition-all"
-                >
-                    <HiOutlineDocumentText className="w-5 h-5" />
-                    {examStatus === 'PUBLISHED' ? 'Yenilə' : 'Yayımla'}
-                </button>
+                {isCollaborativeMode ? (
+                    <button
+                        onClick={examStatus === 'SUBMITTED' ? undefined : handleSubmitDraft}
+                        disabled={examStatus === 'SUBMITTED'}
+                        className={`flex items-center gap-2 px-6 py-3.5 font-bold rounded-2xl shadow-xl transition-all ${
+                            examStatus === 'SUBMITTED'
+                                ? 'bg-amber-400 text-white cursor-not-allowed shadow-amber-200'
+                                : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-indigo-300'
+                        }`}
+                    >
+                        {examStatus === 'SUBMITTED'
+                            ? <><HiOutlineCheckCircle className="w-5 h-5" /> Göndərilib</>
+                            : <><HiOutlinePaperAirplane className="w-5 h-5" /> Admin-ə göndər</>
+                        }
+                    </button>
+                ) : (
+                    <button
+                        onClick={handlePublish}
+                        className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-2xl shadow-xl shadow-indigo-300 transition-all"
+                    >
+                        <HiOutlineDocumentText className="w-5 h-5" />
+                        {examStatus === 'PUBLISHED' ? 'Yenilə' : 'Yayımla'}
+                    </button>
+                )}
             </div>
         </div>
     );
 };
 
 // ---------- PassageEditor component ----------
-const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQuestion, onDeleteQuestion, hasPermission }) => {
+const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQuestion, onDeleteQuestion, hasPermission, questionOffset = 0 }) => {
     const audioInputRef = useRef(null);
     const imageInputRef = useRef(null);
 
@@ -915,7 +1041,7 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                             rows={6}
                             value={passage.textContent}
                             onChange={(e) => onChange(passage.id, { ...passage, textContent: e.target.value })}
-                            placeholder="Mətn parçasını bura daxil edin. LaTeX formulları $...$ şəklində istifadə edilə bilər."
+                            placeholder="Mətn parçasını bura daxil edin."
                             className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-teal-400 resize-y font-mono"
                         />
                         {/* Image for text passage */}
@@ -988,7 +1114,7 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                     {passage.questions.map((q, idx) => (
                         <div key={q.id} className="pl-4 border-l-4 border-indigo-200">
                             <QuestionEditor
-                                index={idx}
+                                index={questionOffset + idx}
                                 question={q}
                                 onChange={(qId, updated) => onUpdateQuestion(passage.id, qId, updated)}
                                 onDelete={(qId) => onDeleteQuestion(passage.id, qId)}

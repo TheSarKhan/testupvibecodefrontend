@@ -288,8 +288,8 @@ const ExamReview = () => {
             try {
                 const { data } = await api.get(`/submissions/${sessionId}/review`);
                 setReview(data);
-                // Default: teacher sees only ungraded if there are any
-                if (data.ungradedCount > 0) setShowOnlyUngraded(true);
+                // Default: teacher/admin sees only ungraded if there are any; students always see all
+                if (data.ungradedCount > 0 && canGrade) setShowOnlyUngraded(true);
             } catch (error) {
                 console.error("Error fetching review:", error);
                 toast.error("İmtahan nəticələrini yükləyərkən xəta baş verdi");

@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup } from 'react-icons/hi';
 
 const navGroups = [
     {
@@ -7,12 +7,14 @@ const navGroups = [
         items: [
             { to: '/admin', label: 'Dashboard', icon: HiOutlineChartBar, end: true },
             { to: '/admin/users', label: 'İstifadəçilər', icon: HiOutlineUsers },
+            { to: '/admin/bildirişlər', label: 'Bildirişlər', icon: HiOutlineBell },
         ],
     },
     {
         label: 'İmtahan İdarəsi',
         items: [
             { to: '/admin/oz-imtahanlar', label: 'Öz İmtahanlarım', icon: HiOutlineDocumentText },
+            { to: '/admin/birge-imtahanlar', label: 'Birgə İmtahanlar', icon: HiOutlineUserGroup },
             { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
             { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
             { to: '/admin/sablonlar', label: 'Şablonlar', icon: HiOutlineTemplate },

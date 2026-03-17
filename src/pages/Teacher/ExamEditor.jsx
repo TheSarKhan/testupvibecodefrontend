@@ -14,6 +14,27 @@ const TYPE_TO_FRONTEND = {
     FILL_IN_THE_BLANK: 'FILL_IN_THE_BLANK', MATCHING: 'MATCHING', OPEN_MANUAL: 'OPEN_MANUAL',
 };
 
+// Converts backend matchingPairs to frontend format with content-based canonical visualIds.
+// Pairs sharing the same leftItem/rightItem text get the SAME visualId so they appear
+// as one node in the editor (many-to-many connections).
+const toFrontendMatchingPairs = (pairs) => {
+    if (!pairs || pairs.length === 0) return [];
+    const lvMap = {}, rvMap = {};
+    pairs.forEach(p => {
+        if (p.leftItem && !lvMap[p.leftItem]) lvMap[p.leftItem] = `lv-${p.id}`;
+        if (p.rightItem && !rvMap[p.rightItem]) rvMap[p.rightItem] = `rv-${p.id}`;
+    });
+    return pairs.map(p => ({
+        id: p.id,
+        leftItem: p.leftItem || null,
+        rightItem: p.rightItem || null,
+        attachedImageLeft: p.attachedImageLeft || null,
+        attachedImageRight: p.attachedImageRight || null,
+        leftVisualId: p.leftItem ? lvMap[p.leftItem] : null,
+        rightVisualId: p.rightItem ? rvMap[p.rightItem] : null,
+    }));
+};
+
 const buildQuestionsFromTypeCounts = (typeCounts) => {
     const questions = [];
     let orderIdx = 0;
@@ -34,10 +55,7 @@ const buildQuestionsFromTypeCounts = (typeCounts) => {
                     { id: `o3-${ts}-${orderIdx}`, text: 'C', isCorrect: false },
                     { id: `o4-${ts}-${orderIdx}`, text: 'D', isCorrect: false },
                 ] : [],
-                matchingPairs: frontendType === 'MATCHING' ? [
-                    { id: `mp1-${ts}-${orderIdx}`, left: '', right: '' },
-                    { id: `mp2-${ts}-${orderIdx}`, left: '', right: '' },
-                ] : [],
+                matchingPairs: [],
                 sampleAnswer: ''
             });
         }
@@ -109,9 +127,9 @@ const ExamEditor = () => {
         options: (bq.options || [])
             .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
             .map(o => ({ id: String(o.id || Date.now() + Math.random()), text: o.content || '', isCorrect: !!o.isCorrect, attachedImage: o.attachedImage || null })),
-        matchingPairs: (bq.matchingPairs || [])
-            .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-            .map(mp => ({ id: String(mp.id || Date.now() + Math.random()), left: mp.leftItem || '', right: mp.rightItem || '' })),
+        matchingPairs: toFrontendMatchingPairs(
+            (bq.matchingPairs || []).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+        ).map(p => ({ ...p, id: String(p.id || Date.now() + Math.random()) })),
         sampleAnswer: bq.correctAnswer || '',
     });
 
@@ -226,10 +244,7 @@ const ExamEditor = () => {
                 sampleAnswer: q.correctAnswer,
                 subjectGroup: q.subjectGroup || null,
                 options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
-                matchingPairs: q.matchingPairs?.map(pair => ({
-                    id: pair.id, left: pair.leftItem, attachedImageLeft: pair.attachedImageLeft,
-                    right: pair.rightItem, attachedImageRight: pair.attachedImageRight
-                }))
+                matchingPairs: toFrontendMatchingPairs(q.matchingPairs)
             }));
             setQuestions(mappedQuestions);
 
@@ -253,9 +268,7 @@ const ExamEditor = () => {
                     text: q.content, points: q.points, attachedImage: q.attachedImage,
                     sampleAnswer: q.correctAnswer,
                     options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
-                    matchingPairs: q.matchingPairs?.map(pair => ({
-                        id: pair.id, left: pair.leftItem, right: pair.rightItem
-                    }))
+                    matchingPairs: toFrontendMatchingPairs(q.matchingPairs)
                 }))
             }));
             setPassages(mappedPassages);
@@ -413,12 +426,18 @@ const ExamEditor = () => {
             id: isNewId(opt.id) ? null : opt.id,
             content: opt.text, isCorrect: opt.isCorrect, orderIndex: oIdx
         })) : [],
-        matchingPairs: q.matchingPairs ? q.matchingPairs.map((pair, pIdx) => ({
-            id: isNewId(pair.id) ? null : pair.id,
-            leftItem: pair.left, attachedImageLeft: pair.attachedImageLeft || null,
-            rightItem: pair.right, attachedImageRight: pair.attachedImageRight || null,
-            orderIndex: pIdx
-        })) : []
+        matchingPairs: q.matchingPairs
+            ? q.matchingPairs
+                .filter(pair => pair.leftItem || pair.rightItem)  // save all non-empty pairs (linked + distractors)
+                .map((pair, pIdx) => ({
+                    id: isNewId(pair.id) ? null : pair.id,
+                    leftItem: pair.leftItem || null,
+                    attachedImageLeft: pair.attachedImageLeft || null,
+                    rightItem: pair.rightItem || null,
+                    attachedImageRight: pair.attachedImageRight || null,
+                    orderIndex: pIdx,
+                }))
+            : []
     });
 
     const buildPayload = (status, config) => {

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { HiOutlineTrash, HiOutlinePlus, HiOutlineX, HiLockClosed } from 'react-icons/hi';
 import PdfCropperModal from './PdfCropperModal';
 import MathFormulaModal from './MathFormulaModal';
@@ -23,6 +23,9 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
     const [pdfTarget, setPdfTarget] = useState(null); // { type: 'main' } or { type: 'option', id: optId }
     const [zoomedImage, setZoomedImage] = useState(null);
     const [activeTeacherLeftId, setActiveTeacherLeftId] = useState(null);
+    const [hoveredArrowId, setHoveredArrowId] = useState(null);
+    const [, forceArrowUpdate] = useState(0);
+    const matchingContainerRef = useRef(null);
     const editorsRefs = useRef({});
 
     // Register a ref dynamically
@@ -374,6 +377,10 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
         );
     };
 
+    // Force arrow re-render when linked pairs change
+    const linkedPairCount = (question.matchingPairs || []).filter(p => p.leftItem && p.rightItem).length;
+    useLayoutEffect(() => { forceArrowUpdate(v => v + 1); }, [linkedPairCount]);
+
     // MATCHING
     const renderMatching = () => {
         const pairs = question.matchingPairs || [];
@@ -521,26 +528,51 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
         // GENERATE VISUAL LISTS
         const leftNodes = [];
         pairs.forEach(p => {
-            if (p.leftItem !== null && !leftNodes.some(n => n.visualId === p.leftVisualId)) {
+            if (p.leftItem !== null && p.leftVisualId && !leftNodes.some(n => n.visualId === p.leftVisualId)) {
                 leftNodes.push({ visualId: p.leftVisualId, content: p.leftItem, image: p.attachedImageLeft });
             }
+        });
+        leftNodes.sort((a, b) => {
+            const aTs = parseInt((a.visualId || '').replace('lv-', '')) || 0;
+            const bTs = parseInt((b.visualId || '').replace('lv-', '')) || 0;
+            return aTs - bTs;
         });
 
         const rightNodes = [];
         pairs.forEach(p => {
-            if (p.rightItem !== null && !rightNodes.some(n => n.visualId === p.rightVisualId)) {
+            if (p.rightItem !== null && p.rightVisualId && !rightNodes.some(n => n.visualId === p.rightVisualId)) {
                 rightNodes.push({ visualId: p.rightVisualId, content: p.rightItem, image: p.attachedImageRight });
             }
         });
-
-        // Ensure every record has visual IDs during initialization if missing (for legacy data)
-        const initializedPairs = pairs.map(p => {
-            if (p.leftItem !== null && !p.leftVisualId) p.leftVisualId = 'lv-' + p.id;
-            if (p.rightItem !== null && !p.rightVisualId) p.rightVisualId = 'rv-' + p.id;
-            return p;
+        // Sort by timestamp embedded in visualId ('rv-<timestamp>') to preserve insertion order
+        // even when pairs are merged/reordered internally
+        rightNodes.sort((a, b) => {
+            const aTs = parseInt((a.visualId || '').replace('rv-', '')) || 0;
+            const bTs = parseInt((b.visualId || '').replace('rv-', '')) || 0;
+            return aTs - bTs;
         });
-        if (JSON.stringify(initializedPairs) !== JSON.stringify(pairs)) {
-            // Avoid infinite loop by only triggering if changed
+
+        // Ensure every record has visual IDs during initialization if missing (for legacy data).
+        // IMPORTANT: pairs sharing the same leftItem/rightItem content must get the SAME visualId
+        // so that many-to-many connections (e.g. A→X and A→Y) show as ONE node on each side.
+        let needsInit = false;
+        const leftVisualByContent = {};  // leftItem text → canonical leftVisualId
+        const rightVisualByContent = {}; // rightItem text → canonical rightVisualId
+        const initializedPairs = pairs.map(p => {
+            const np = { ...p };
+            if (np.leftItem !== null && np.leftItem !== undefined && !np.leftVisualId) {
+                if (!leftVisualByContent[np.leftItem]) leftVisualByContent[np.leftItem] = 'lv-' + np.id;
+                np.leftVisualId = leftVisualByContent[np.leftItem];
+                needsInit = true;
+            }
+            if (np.rightItem !== null && np.rightItem !== undefined && !np.rightVisualId) {
+                if (!rightVisualByContent[np.rightItem]) rightVisualByContent[np.rightItem] = 'rv-' + np.id;
+                np.rightVisualId = rightVisualByContent[np.rightItem];
+                needsInit = true;
+            }
+            return np;
+        });
+        if (needsInit) {
             setTimeout(() => handleChange('matchingPairs', initializedPairs), 0);
         }
 
@@ -552,18 +584,21 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     </p>
                 </div>
 
-                <div className="relative flex justify-between gap-32 py-4">
+                <div ref={matchingContainerRef} id={`matching-container-${question.id}`} className="relative flex justify-between gap-32 py-4">
                     <div className="flex-1 space-y-10 z-10">
                         <div className="flex items-center justify-between mb-2">
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sol Sütun</h4>
                             <button type="button" onClick={addLeftItem} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
                         </div>
-                        {leftNodes.map((node) => (
+                        {leftNodes.map((node) => {
+                            const isLinked = pairs.some(p => p.leftVisualId === node.visualId && p.rightItem);
+                            return (
                             <div
                                 key={`edit-left-${node.visualId}`}
                                 id={`edit-left-${node.visualId}`}
                                 className={`p-4 rounded-2xl border-2 transition-all group/item bg-white ${
-                                    activeTeacherLeftId === node.visualId ? 'border-yellow-400 ring-4 ring-yellow-100' : 'border-gray-100'
+                                    activeTeacherLeftId === node.visualId ? 'border-yellow-400 ring-4 ring-yellow-100'
+                                    : 'border-gray-100'
                                 }`}
                             >
                                 <div className="flex items-start gap-2">
@@ -609,7 +644,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     </button>
                                 </div>
                             </div>
-                        ))}
+                        );})}
                     </div>
 
                     {/* Right Column */}
@@ -618,11 +653,13 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sağ Sütun</h4>
                             <button type="button" onClick={addRightItem} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
                         </div>
-                        {rightNodes.map((node) => (
+                        {rightNodes.map((node) => {
+                            const isLinked = pairs.some(p => p.rightVisualId === node.visualId && p.leftItem);
+                            return (
                             <div
                                 key={`edit-right-${node.visualId}`}
                                 id={`edit-right-${node.visualId}`}
-                                className={`p-4 rounded-2xl border-2 border-gray-100 bg-white transition-all group/item`}
+                                className="p-4 rounded-2xl border-2 transition-all group/item bg-white border-gray-100"
                             >
                                 <div className="flex items-start gap-2">
                                     <MathTextEditor
@@ -660,55 +697,82 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     )}
                                 </div>
                             </div>
-                        ))}
+                        );})}
                     </div>
 
-                    {/* SVG Arrows to show correct connections */}
-                    <div className="absolute inset-0 pointer-events-none overflow-visible" style={{ zIndex: 0 }}>
-                        <svg className="w-full h-full overflow-visible">
-                            <defs>
-                                <marker id={`teacher-arrowhead`} markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                                    <polygon points="0 0, 8 3, 0 6" fill="#indigo-300" className="fill-indigo-300" />
-                                </marker>
-                            </defs>
-                            {pairs.filter(p => p.leftItem !== null && p.rightItem !== null).map(pair => {
-                                const leftEl = document.getElementById(`edit-left-${pair.leftVisualId}`);
-                                const rightEl = document.getElementById(`edit-right-${pair.rightVisualId}`);
-                                if (leftEl && rightEl) {
-                                    const lRect = leftEl.getBoundingClientRect();
-                                    const rRect = rightEl.getBoundingClientRect();
-                                    const containerRect = leftEl.parentElement.parentElement.parentElement.getBoundingClientRect();
-                                    
-                                    const x1 = lRect.right - containerRect.left;
-                                    const y1 = lRect.top + lRect.height / 2 - containerRect.top;
-                                    const x2 = rRect.left - containerRect.left;
-                                    const y2 = rRect.top + rRect.height / 2 - containerRect.top;
+                    {/* SVG Arrows — connections between left and right nodes */}
+                    {(() => {
+                        const COLORS = ['#6366f1','#8b5cf6','#ec4899','#0ea5e9','#10b981','#f59e0b','#ef4444','#14b8a6'];
+                        const linkedPairs = pairs.filter(p => p.leftItem !== null && p.rightItem !== null);
+                        if (linkedPairs.length === 0) return null;
+                        const containerEl = matchingContainerRef.current;
+                        if (!containerEl) return null;
+                        const containerRect = containerEl.getBoundingClientRect();
 
-                                    return (
-                                        <g key={`arrow-group-${pair.id}`} className="group/arrow pointer-events-auto cursor-pointer" onClick={() => removeLink(pair.id)}>
-                                            <path
-                                                d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
-                                                stroke="transparent"
-                                                strokeWidth="15"
-                                                fill="none"
-                                            />
-                                            <path
-                                                d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
-                                                stroke="#e0e7ff"
-                                                strokeWidth="3"
-                                                fill="none"
-                                                markerEnd="url(#teacher-arrowhead)"
-                                                className="stroke-indigo-100 group-hover/arrow:stroke-red-300 transition-colors"
-                                            />
-                                            <circle cx={(x1+x2)/2} cy={(y1+y2)/2} r="10" className="fill-white stroke-red-100 opacity-0 group-hover/arrow:opacity-100 transition-opacity" />
-                                            <text x={(x1+x2)/2} y={(y1+y2)/2 + 4} textAnchor="middle" className="fill-red-500 text-[12px] font-bold opacity-0 group-hover/arrow:opacity-100 transition-opacity">×</text>
-                                        </g>
-                                    );
-                                }
-                                return null;
-                            })}
-                        </svg>
-                    </div>
+                        const paths = linkedPairs.map((pair, idx) => {
+                            const leftEl = containerEl.querySelector(`#edit-left-${pair.leftVisualId}`);
+                            const rightEl = containerEl.querySelector(`#edit-right-${pair.rightVisualId}`);
+                            if (!leftEl || !rightEl) return null;
+                            const lRect = leftEl.getBoundingClientRect();
+                            const rRect = rightEl.getBoundingClientRect();
+                            const x1 = lRect.right - containerRect.left;
+                            const y1 = lRect.top + lRect.height / 2 - containerRect.top;
+                            const x2 = rRect.left - containerRect.left;
+                            const y2 = rRect.top + rRect.height / 2 - containerRect.top;
+                            const mx = (x1 + x2) / 2;
+                            const my = (y1 + y2) / 2;
+                            const color = COLORS[idx % COLORS.length];
+                            const isHovered = hoveredArrowId === pair.id;
+                            const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+                            return { pair, d, x1, y1, x2, y2, mx, my, color, isHovered, idx };
+                        }).filter(Boolean);
+
+                        return (
+                            <svg
+                                className="absolute inset-0 overflow-visible pointer-events-none"
+                                style={{ width: '100%', height: '100%', zIndex: 2 }}
+                            >
+                                <defs>
+                                    {paths.map(({ pair, color, idx }) => (
+                                        <marker key={`mdef-${pair.id}`} id={`arr-${pair.id}`}
+                                            markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                            <polygon points="0 0, 8 3, 0 6" fill={color} />
+                                        </marker>
+                                    ))}
+                                </defs>
+
+                                {paths.map(({ pair, d, mx, my, color, isHovered }) => (
+                                    <g key={`ag-${pair.id}`}
+                                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                                        onMouseEnter={() => setHoveredArrowId(pair.id)}
+                                        onMouseLeave={() => setHoveredArrowId(null)}
+                                        onClick={() => { setHoveredArrowId(null); removeLink(pair.id); }}
+                                    >
+                                        {/* invisible wide hit zone */}
+                                        <path d={d} stroke="transparent" strokeWidth="20" fill="none" />
+                                        {/* visible colored curve */}
+                                        <path d={d} stroke={color} strokeWidth={isHovered ? 3 : 2}
+                                            fill="none" markerEnd={`url(#arr-${pair.id})`}
+                                            strokeDasharray={isHovered ? '6 3' : 'none'}
+                                            style={{ opacity: isHovered ? 0.5 : 0.85, transition: 'all 0.15s' }} />
+                                        {/* midpoint delete badge */}
+                                        <circle cx={mx} cy={my} r="11"
+                                            fill="white" stroke={isHovered ? '#ef4444' : color}
+                                            strokeWidth="1.5"
+                                            style={{ opacity: isHovered ? 1 : 0.9, transition: 'all 0.15s' }} />
+                                        {isHovered ? (
+                                            <>
+                                                <line x1={mx-4} y1={my-4} x2={mx+4} y2={my+4} stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+                                                <line x1={mx+4} y1={my-4} x2={mx-4} y2={my+4} stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+                                            </>
+                                        ) : (
+                                            <text x={mx} y={my + 4} textAnchor="middle" fontSize="10" fontWeight="bold" fill={color}>✓</text>
+                                        )}
+                                    </g>
+                                ))}
+                            </svg>
+                        );
+                    })()}
                 </div>
             </div>
         );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineClock, HiOutlineChevronRight, HiOutlineChevronLeft, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineX, HiOutlinePlus } from 'react-icons/hi';
 import api from '../../api/axios';
@@ -639,67 +639,125 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
 };
 
 // ---- MatchingQuestion ----
-const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setActiveLeftId }) => (
-    <div className="space-y-4">
-        <div className="flex justify-between items-center mb-2">
-            <p className="text-sm text-gray-500 italic">Sol tərəfdəki maddədən başlayaraq sağ tərəfə xətt çəkin:</p>
-            <button
-                onClick={() => onAnswerChange(question.id, { matchingPairs: [] })}
-                className="text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 px-2 py-1 rounded transition-colors"
-            >
-                Təmizlə
-            </button>
-        </div>
+const MATCH_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#14b8a6'];
 
-        <div className="relative flex justify-between gap-40 py-8">
-            <div className="flex-1 space-y-12 z-10">
-                {question.matchingPairs.filter(p => p.leftItem !== null).map((pair) => {
-                    const isConnected = answer.matchingPairs?.some(m => m.leftItemId === pair.id);
-                    const isActive = activeLeftId === pair.id;
-                    return (
-                        <div
-                            key={`left-${pair.id}`}
-                            id={`left-${pair.id}`}
-                            className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
-                                isActive ? 'border-yellow-400 bg-yellow-50 shadow-md scale-105 ring-4 ring-yellow-200 ring-opacity-50' :
-                                isConnected ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-gray-200 hover:border-indigo-200'
-                            }`}
-                            onClick={() => {
-                                setActiveLeftId(pair.id);
-                                toast.success('İndi sağdan uyğun olanı seçin', { id: 'matching-hint', duration: 2000 });
-                            }}
-                        >
-                            <LatexPreview content={pair.leftItem} />
-                            {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
-                        </div>
-                    );
-                })}
+const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setActiveLeftId }) => {
+    const containerRef = useRef(null);
+    const [, forceUpdate] = useState(0);
+    const [hoveredArrow, setHoveredArrow] = useState(null);
+
+    const existingPairs = answer.matchingPairs || [];
+
+    // Build canonical maps: pairId → canonical pairId (first with same content text)
+    const leftCanonMap = {}, rightCanonMap = {};
+    const seenLText = {}, seenRText = {};
+    question.matchingPairs.forEach(p => {
+        if (p.leftItem) {
+            if (seenLText[p.leftItem] === undefined) seenLText[p.leftItem] = p.id;
+            leftCanonMap[p.id] = seenLText[p.leftItem];
+        }
+        if (p.rightItem) {
+            if (seenRText[p.rightItem] === undefined) seenRText[p.rightItem] = p.id;
+            rightCanonMap[p.id] = seenRText[p.rightItem];
+        }
+    });
+
+    // Deduplicate by content — one card per unique text
+    const seenLeft = new Set();
+    const leftPairs = question.matchingPairs.filter(p => {
+        if (!p.leftItem || seenLeft.has(p.leftItem)) return false;
+        seenLeft.add(p.leftItem); return true;
+    });
+    const seenRight = new Set();
+    const rightPairs = [...question.matchingPairs]
+        .filter(p => {
+            if (!p.rightItem || seenRight.has(p.rightItem)) return false;
+            seenRight.add(p.rightItem); return true;
+        })
+        .sort((a, b) => (a.rightItem || '').localeCompare(b.rightItem || ''));
+
+    // Force re-render after mount and after pair count changes so SVG arrows read correct DOM positions
+    useLayoutEffect(() => { forceUpdate(v => v + 1); }, []);
+    useLayoutEffect(() => { forceUpdate(v => v + 1); }, [existingPairs.length]);
+
+    // Compute arrow paths from DOM (resolve to canonical IDs, deduplicate by canonical pair)
+    const arrowPaths = (() => {
+        if (!containerRef.current) return [];
+        const rect = containerRef.current.getBoundingClientRect();
+        const seenArrows = new Set();
+        return existingPairs.map((m, idx) => {
+            const lc = leftCanonMap[m.leftItemId] ?? m.leftItemId;
+            const rc = rightCanonMap[m.rightItemId] ?? m.rightItemId;
+            const key = `${lc}-${rc}`;
+            if (seenArrows.has(key)) return null;
+            seenArrows.add(key);
+            const leftEl = containerRef.current.querySelector(`[data-left="${lc}"]`);
+            const rightEl = containerRef.current.querySelector(`[data-right="${rc}"]`);
+            if (!leftEl || !rightEl) return null;
+            const lRect = leftEl.getBoundingClientRect();
+            const rRect = rightEl.getBoundingClientRect();
+            const x1 = lRect.right - rect.left, y1 = lRect.top + lRect.height / 2 - rect.top;
+            const x2 = rRect.left - rect.left, y2 = rRect.top + rRect.height / 2 - rect.top;
+            return { idx, x1, y1, x2, y2, color: MATCH_COLORS[idx % MATCH_COLORS.length] };
+        }).filter(Boolean);
+    })();
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center mb-2">
+                <p className="text-sm text-gray-500 italic">Sol tərəfdəki maddədən başlayaraq sağ tərəfə xətt çəkin:</p>
+                <button
+                    onClick={() => { onAnswerChange(question.id, { matchingPairs: [] }); setActiveLeftId(null); }}
+                    className="text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 px-2 py-1 rounded transition-colors"
+                >
+                    Təmizlə
+                </button>
             </div>
 
-            <div className="flex-1 space-y-12 z-10">
-                {[...question.matchingPairs]
-                    .filter(p => p.rightItem !== null)
-                    .sort((a, b) => (a.rightItem || '').localeCompare(b.rightItem || ''))
-                    .map((pair) => {
-                        const isConnected = answer.matchingPairs?.some(m => m.rightItemId === pair.id);
+            <div ref={containerRef} className="relative flex justify-between py-6">
+                {/* Left column */}
+                <div className="w-[40%] space-y-6" style={{ zIndex: 10, position: 'relative' }}>
+                    {leftPairs.map((pair) => {
+                        const isConnected = existingPairs.some(m => (leftCanonMap[m.leftItemId] ?? m.leftItemId) === pair.id);
+                        const isActive = activeLeftId === pair.id;
                         return (
                             <div
-                                key={`right-${pair.id}`}
-                                id={`right-${pair.id}`}
-                                className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${isConnected ? 'border-indigo-600 bg-indigo-50 shadow-sm' : 'border-gray-200 hover:border-indigo-200'}`}
+                                key={pair.id}
+                                data-left={pair.id}
+                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer min-h-[52px] flex flex-col justify-center ${
+                                    isActive ? 'border-yellow-400 bg-yellow-50 shadow-md ring-4 ring-yellow-200' :
+                                    isConnected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'
+                                }`}
                                 onClick={() => {
-                                    if (activeLeftId) {
-                                        const existingPairs = answer.matchingPairs || [];
-                                        const alreadyExists = existingPairs.some(m => m.leftItemId === activeLeftId && m.rightItemId === pair.id);
-                                        if (alreadyExists) {
-                                            toast.error('Bu birləşmə artıq mövcuddur');
-                                        } else {
-                                            onAnswerChange(question.id, { matchingPairs: [...existingPairs, { leftItemId: activeLeftId, rightItemId: pair.id }] });
-                                        }
-                                        setActiveLeftId(null);
+                                    setActiveLeftId(isActive ? null : pair.id);
+                                    if (!isActive) toast.success('İndi sağdan uyğun olanı seçin', { id: 'matching-hint', duration: 2000 });
+                                }}
+                            >
+                                <LatexPreview content={pair.leftItem} />
+                                {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Right column */}
+                <div className="w-[40%] space-y-6" style={{ zIndex: 10, position: 'relative' }}>
+                    {rightPairs.map((pair) => {
+                        const isConnected = existingPairs.some(m => (rightCanonMap[m.rightItemId] ?? m.rightItemId) === pair.id);
+                        return (
+                            <div
+                                key={pair.id}
+                                data-right={pair.id}
+                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer min-h-[52px] flex flex-col justify-center ${isConnected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'}`}
+                                onClick={() => {
+                                    if (!activeLeftId) { toast.error('Əvvəlcə soldan bir bənd seçin'); return; }
+                                    const alreadyExists = existingPairs.some(m => m.leftItemId === activeLeftId && m.rightItemId === pair.id);
+                                    if (alreadyExists) {
+                                        toast.error('Bu birləşmə artıq mövcuddur');
                                     } else {
-                                        toast.error('Əvvəlcə soldan bir bənd seçin');
+                                        onAnswerChange(question.id, { matchingPairs: [...existingPairs, { leftItemId: activeLeftId, rightItemId: pair.id }] });
                                     }
+                                    setActiveLeftId(null);
                                 }}
                             >
                                 <LatexPreview content={pair.rightItem} />
@@ -707,46 +765,54 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                             </div>
                         );
                     })}
-            </div>
+                </div>
 
-            <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible" style={{ zIndex: 5 }}>
-                <defs>
-                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5" />
-                    </marker>
-                </defs>
-                {answer.matchingPairs?.map((m, idx) => {
-                    const leftEl = document.getElementById(`left-${m.leftItemId}`);
-                    const rightEl = document.getElementById(`right-${m.rightItemId}`);
-                    const container = leftEl?.closest('.relative');
-                    if (!leftEl || !rightEl || !container) return null;
-                    const rect = container.getBoundingClientRect();
-                    const lRect = leftEl.getBoundingClientRect();
-                    const rRect = rightEl.getBoundingClientRect();
-                    const x1 = lRect.right - rect.left, y1 = lRect.top + lRect.height / 2 - rect.top;
-                    const x2 = rRect.left - rect.left, y2 = rRect.top + rRect.height / 2 - rect.top;
-                    const colors = ['#4f46e5', '#7c3aed', '#db2777', '#2563eb'];
-                    const color = colors[idx % colors.length];
-                    return (
-                        <g key={`path-group-${m.leftItemId}-${m.rightItemId}`} className="group cursor-pointer pointer-events-auto"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onAnswerChange(question.id, { matchingPairs: answer.matchingPairs.filter((_, i) => i !== idx) });
-                                toast.success('Əlaqə silindi');
-                            }}>
-                            <path d={`M ${x1} ${y1} C ${(x1+x2)/2} ${y1}, ${(x1+x2)/2} ${y2}, ${x2} ${y2}`} stroke="transparent" strokeWidth="15" fill="none" />
-                            <path d={`M ${x1} ${y1} C ${(x1+x2)/2} ${y1}, ${(x1+x2)/2} ${y2}, ${x2} ${y2}`} stroke={color} strokeWidth="3" fill="none" markerEnd="url(#arrowhead)" className="transition-all group-hover:stroke-red-400 group-hover:stroke-[4px]" />
-                            <g className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                <circle cx={(x1+x2)/2} cy={(y1+y2)/2} r="10" fill="white" stroke="#fee2e2" strokeWidth="1" />
-                                <text x={(x1+x2)/2} y={(y1+y2)/2+4} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#ef4444">×</text>
+                {/* SVG arrows */}
+                <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: '100%', height: '100%', zIndex: 5 }}>
+                    <defs>
+                        {arrowPaths.map(({ idx, color }) => (
+                            <marker key={idx} id={`sarr-${question.id}-${idx}`} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill={hoveredArrow === idx ? '#ef4444' : color} />
+                            </marker>
+                        ))}
+                    </defs>
+                    {arrowPaths.map(({ idx, x1, y1, x2, y2, color }) => {
+                        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+                        const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+                        const isHov = hoveredArrow === idx;
+                        return (
+                            <g key={idx} style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                                onMouseEnter={() => setHoveredArrow(idx)}
+                                onMouseLeave={() => setHoveredArrow(null)}
+                                onClick={() => {
+                                    setHoveredArrow(null);
+                                    onAnswerChange(question.id, { matchingPairs: existingPairs.filter((_, i) => i !== idx) });
+                                    toast.success('Əlaqə silindi');
+                                }}>
+                                {/* invisible wide hit zone */}
+                                <path d={d} stroke="transparent" strokeWidth="16" fill="none" />
+                                {/* visible curve */}
+                                <path d={d} stroke={isHov ? '#ef4444' : color} strokeWidth={isHov ? 3.5 : 2.5}
+                                    strokeDasharray={isHov ? '6 3' : 'none'}
+                                    fill="none" markerEnd={`url(#sarr-${question.id}-${idx})`} />
+                                {/* midpoint badge */}
+                                <circle cx={mx} cy={my} r="10" fill="white" stroke={isHov ? '#ef4444' : color} strokeWidth="1.5" />
+                                {isHov ? (
+                                    <g>
+                                        <line x1={mx-5} y1={my-5} x2={mx+5} y2={my+5} stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+                                        <line x1={mx+5} y1={my-5} x2={mx-5} y2={my+5} stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+                                    </g>
+                                ) : (
+                                    <text x={mx} y={my + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill={color}>✓</text>
+                                )}
                             </g>
-                        </g>
-                    );
-                })}
-            </svg>
+                        );
+                    })}
+                </svg>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // ---- OpenAnswerInput ----
 const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +10,194 @@ const fmtScore = (v) => {
     if (v === null || v === undefined) return '0';
     const n = Math.round(v * 100) / 100;
     return n % 1 === 0 ? n.toString() : n.toFixed(2);
+};
+
+// ---- MatchingReview ----
+const MatchingReview = ({ q }) => {
+    const containerRef = useRef(null);
+    const [arrows, setArrows] = useState([]);
+
+    let studentMatches = [];
+    try { if (q.studentMatchingAnswerJson) studentMatches = JSON.parse(q.studentMatchingAnswerJson); } catch (e) {}
+
+    // Text-based correctness: pairId → text, then check if (leftText, rightText) is a valid linked pair
+    const pairById = {};
+    q.matchingPairs.forEach(p => { pairById[p.id] = p; });
+    const correctConnectionSet = new Set(
+        q.matchingPairs
+            .filter(p => p.leftItem && p.rightItem)
+            .map(p => p.leftItem + '|||' + p.rightItem)
+    );
+    const isMatchCorrect = (m) => {
+        const lp = pairById[m.leftItemId];
+        const rp = pairById[m.rightItemId];
+        if (!lp || !rp) return false;
+        return correctConnectionSet.has((lp.leftItem || '') + '|||' + (rp.rightItem || ''));
+    };
+
+    // Content-deduped left groups: leftItem text → { pair (representative), allIds }
+    const leftGroupMap = {};
+    q.matchingPairs.forEach(p => {
+        if (!p.leftItem) return;
+        if (!leftGroupMap[p.leftItem]) leftGroupMap[p.leftItem] = { pair: p, allIds: [] };
+        if (!leftGroupMap[p.leftItem].allIds.includes(p.id)) leftGroupMap[p.leftItem].allIds.push(p.id);
+    });
+    const leftNodes = Object.values(leftGroupMap);
+
+    // Content-deduped right groups, sorted alphabetically
+    const rightGroupMap = {};
+    q.matchingPairs.forEach(p => {
+        if (!p.rightItem) return;
+        if (!rightGroupMap[p.rightItem]) rightGroupMap[p.rightItem] = { pair: p, allIds: [] };
+        if (!rightGroupMap[p.rightItem].allIds.includes(p.id)) rightGroupMap[p.rightItem].allIds.push(p.id);
+    });
+    const rightNodes = Object.values(rightGroupMap).sort((a, b) => (a.pair.rightItem || '').localeCompare(b.pair.rightItem || ''));
+
+    // Reverse maps: any pairId → canonical (representative) pair id
+    const leftIdToCanon = {};
+    leftNodes.forEach(g => g.allIds.forEach(id => { leftIdToCanon[id] = g.pair.id; }));
+    const rightIdToCanon = {};
+    rightNodes.forEach(g => g.allIds.forEach(id => { rightIdToCanon[id] = g.pair.id; }));
+
+    // Aggregate matches by canonical pair id
+    const matchesByLeft = {};
+    const matchesByRight = {};
+    studentMatches.forEach(m => {
+        const lc = leftIdToCanon[m.leftItemId] ?? m.leftItemId;
+        const rc = rightIdToCanon[m.rightItemId] ?? m.rightItemId;
+        if (!matchesByLeft[lc]) matchesByLeft[lc] = [];
+        matchesByLeft[lc].push(m);
+        if (!matchesByRight[rc]) matchesByRight[rc] = [];
+        matchesByRight[rc].push(m);
+    });
+
+    useLayoutEffect(() => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const computed = [];
+        const seenArrows = new Set();
+        studentMatches.forEach((m, idx) => {
+            const lc = leftIdToCanon[m.leftItemId] ?? m.leftItemId;
+            const rc = rightIdToCanon[m.rightItemId] ?? m.rightItemId;
+            const key = `${lc}-${rc}`;
+            if (seenArrows.has(key)) return;
+            seenArrows.add(key);
+            const leftEl = containerRef.current.querySelector(`[data-left-id="${lc}"]`);
+            const rightEl = containerRef.current.querySelector(`[data-right-id="${rc}"]`);
+            if (!leftEl || !rightEl) return;
+            const lRect = leftEl.getBoundingClientRect();
+            const rRect = rightEl.getBoundingClientRect();
+            computed.push({
+                idx,
+                x1: lRect.right - rect.left,
+                y1: lRect.top + lRect.height / 2 - rect.top,
+                x2: rRect.left - rect.left,
+                y2: rRect.top + rRect.height / 2 - rect.top,
+                isCorrect: isMatchCorrect(m),
+            });
+        });
+        setArrows(computed);
+    }, [q.id, q.studentMatchingAnswerJson]);
+
+    return (
+        <div className="space-y-4">
+            <p className="text-xs font-bold text-gray-400 uppercase mb-2">Uyğunluq Nəticələri:</p>
+            <div ref={containerRef} className="relative flex justify-between py-6">
+                {/* Left column */}
+                <div className="w-[40%] space-y-6" style={{ zIndex: 10, position: 'relative' }}>
+                    {leftNodes.map(({ pair, allIds }) => {
+                        const matches = matchesByLeft[pair.id] || [];
+                        const isLinked = allIds.some(id => {
+                            const p = q.matchingPairs.find(mp => mp.id === id);
+                            return p && !!p.rightItem;
+                        });
+                        const hasAnyCorrect = matches.some(m => isMatchCorrect(m));
+                        const hasMatch = matches.length > 0;
+                        const missed = isLinked && !hasMatch;
+                        const cls = missed
+                            ? 'border-orange-300 bg-orange-50 text-orange-900'
+                            : !hasMatch
+                            ? 'border-gray-200 bg-gray-50 text-gray-600'
+                            : hasAnyCorrect
+                            ? 'border-green-400 bg-green-50 text-green-900'
+                            : 'border-red-400 bg-red-50 text-red-900';
+                        return (
+                            <div key={pair.id} data-left-id={pair.id} className={`p-4 rounded-2xl border-2 text-sm font-medium min-h-[52px] flex flex-col justify-center ${cls}`}>
+                                <LatexPreview content={pair.leftItem} />
+                                {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
+                                {missed && <p className="text-[10px] font-bold text-orange-500 mt-1">Birləşdirilməyib</p>}
+                            </div>
+                        );
+                    })}
+                </div>
+                {/* Right column */}
+                <div className="w-[40%] space-y-6" style={{ zIndex: 10, position: 'relative' }}>
+                    {rightNodes.map(({ pair, allIds }) => {
+                        const matches = matchesByRight[pair.id] || [];
+                        const isLinked = allIds.some(id => {
+                            const p = q.matchingPairs.find(mp => mp.id === id);
+                            return p && !!p.leftItem;
+                        });
+                        const hasAnyCorrect = matches.some(m => isMatchCorrect(m));
+                        const hasMatch = matches.length > 0;
+                        const missed = isLinked && !hasMatch;
+                        const cls = missed
+                            ? 'border-orange-300 bg-orange-50 text-orange-900'
+                            : !hasMatch
+                            ? 'border-gray-200 bg-gray-50 text-gray-600'
+                            : hasAnyCorrect
+                            ? 'border-green-400 bg-green-50 text-green-900'
+                            : 'border-red-400 bg-red-50 text-red-900';
+                        return (
+                            <div key={pair.id} data-right-id={pair.id} className={`p-4 rounded-2xl border-2 text-sm font-medium min-h-[52px] flex flex-col justify-center ${cls}`}>
+                                <LatexPreview content={pair.rightItem} />
+                                {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
+                                {missed && <p className="text-[10px] font-bold text-orange-500 mt-1">Birləşdirilməyib</p>}
+                            </div>
+                        );
+                    })}
+                </div>
+                {/* SVG arrows */}
+                <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: '100%', height: '100%', zIndex: 5 }}>
+                    <defs>
+                        {arrows.map(({ idx, isCorrect }) => (
+                            <marker key={idx} id={`rarr-${q.id}-${idx}`} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill={isCorrect ? '#10b981' : '#ef4444'} />
+                            </marker>
+                        ))}
+                    </defs>
+                    {arrows.map(({ idx, x1, y1, x2, y2, isCorrect }) => {
+                        const color = isCorrect ? '#10b981' : '#ef4444';
+                        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+                        const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+                        return (
+                            <g key={idx}>
+                                <path d={d} stroke={color} strokeWidth="2.5" fill="none"
+                                    markerEnd={`url(#rarr-${q.id}-${idx})`} opacity={0.85} />
+                                <circle cx={mx} cy={my} r="10" fill="white" stroke={color} strokeWidth="1.5" />
+                                {isCorrect
+                                    ? <text x={mx} y={my + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill={color}>✓</text>
+                                    : <g>
+                                        <line x1={mx-4} y1={my-4} x2={mx+4} y2={my+4} stroke={color} strokeWidth="2" strokeLinecap="round" />
+                                        <line x1={mx+4} y1={my-4} x2={mx-4} y2={my+4} stroke={color} strokeWidth="2" strokeLinecap="round" />
+                                      </g>
+                                }
+                            </g>
+                        );
+                    })}
+                </svg>
+            </div>
+            {/* Legend */}
+            <div className="flex items-center gap-6 text-xs text-gray-500 mt-2">
+                <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-6 h-0.5 bg-green-500 rounded"></span> Düzgün cavab
+                </span>
+                <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-6 h-0.5 bg-red-500 rounded"></span> Səhv cavab
+                </span>
+            </div>
+        </div>
+    );
 };
 
 // ---- GradingPanel ----
@@ -437,77 +625,7 @@ const ExamReview = () => {
                                         })()}
 
                                         {/* Matching */}
-                                        {q.questionType === 'MATCHING' && (
-                                            <div className="space-y-4">
-                                                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Uyğunluq Nəticələri:</p>
-                                                <div className="relative flex justify-between gap-40 py-8">
-                                                    <div className="flex-1 space-y-12 z-10">
-                                                        {(() => {
-                                                            const leftNodes = [];
-                                                            q.matchingPairs.forEach(p => {
-                                                                if (p.leftItem !== null && (!p.leftVisualId || !leftNodes.some(n => n.leftVisualId === p.leftVisualId))) {
-                                                                    leftNodes.push(p);
-                                                                }
-                                                            });
-                                                            return leftNodes.map((pair) => (
-                                                                <div key={`review-left-${pair.id}`} id={`review-left-${pair.leftVisualId || pair.id}`} className="p-3 rounded-xl border-2 text-sm font-medium border-gray-100 bg-gray-50">
-                                                                    <LatexPreview content={pair.leftItem} />
-                                                                    {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
-                                                                </div>
-                                                            ));
-                                                        })()}
-                                                    </div>
-                                                    <div className="flex-1 space-y-12 z-10">
-                                                        {(() => {
-                                                            const rightNodes = [];
-                                                            [...q.matchingPairs].filter(p => p.rightItem !== null).sort((a, b) => (a.rightItem || '').localeCompare(b.rightItem || '')).forEach(p => {
-                                                                if (!p.rightVisualId || !rightNodes.some(n => n.rightVisualId === p.rightVisualId)) rightNodes.push(p);
-                                                            });
-                                                            return rightNodes.map((pair) => (
-                                                                <div key={`review-right-${pair.id}`} id={`review-right-${pair.rightVisualId || pair.id}`} className="p-3 rounded-xl border-2 text-sm font-medium border-gray-100 bg-gray-50">
-                                                                    <LatexPreview content={pair.rightItem} />
-                                                                    {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
-                                                                </div>
-                                                            ));
-                                                        })()}
-                                                    </div>
-                                                    <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible" style={{ zIndex: 5 }}>
-                                                        <defs>
-                                                            <marker id="arrowhead-correct" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#10b981" /></marker>
-                                                            <marker id="arrowhead-incorrect" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" /></marker>
-                                                        </defs>
-                                                        {(() => {
-                                                            let studentMatches = [];
-                                                            try { if (q.studentMatchingAnswerJson) studentMatches = JSON.parse(q.studentMatchingAnswerJson); } catch(e) {}
-                                                            return studentMatches.map((m, idx) => {
-                                                                const pairL = q.matchingPairs.find(pp => pp.id === m.leftItemId);
-                                                                const pairR = q.matchingPairs.find(pp => pp.id === m.rightItemId);
-                                                                if (!pairL || !pairR) return null;
-                                                                const leftEl = document.getElementById(`review-left-${pairL.leftVisualId || pairL.id}`);
-                                                                const rightEl = document.getElementById(`review-right-${pairR.rightVisualId || pairR.id}`);
-                                                                const container = leftEl?.closest('.relative');
-                                                                if (!leftEl || !rightEl || !container) return null;
-                                                                const rect = container.getBoundingClientRect();
-                                                                const lRect = leftEl.getBoundingClientRect();
-                                                                const rRect = rightEl.getBoundingClientRect();
-                                                                const x1 = lRect.right - rect.left, y1 = lRect.top + lRect.height / 2 - rect.top;
-                                                                const x2 = rRect.left - rect.left, y2 = rRect.top + rRect.height / 2 - rect.top;
-                                                                const isCorrectLink = q.matchingPairs.some(pp => pp.leftItem === pairL.leftItem && pp.rightItem === pairR.rightItem);
-                                                                return (
-                                                                    <path key={`review-path-${idx}`}
-                                                                        d={`M ${x1} ${y1} C ${(x1+x2)/2} ${y1}, ${(x1+x2)/2} ${y2}, ${x2} ${y2}`}
-                                                                        stroke={isCorrectLink ? '#10b981' : '#ef4444'}
-                                                                        strokeWidth="3" fill="none"
-                                                                        markerEnd={isCorrectLink ? 'url(#arrowhead-correct)' : 'url(#arrowhead-incorrect)'}
-                                                                        className="opacity-70"
-                                                                    />
-                                                                );
-                                                            });
-                                                        })()}
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        )}
+                                        {q.questionType === 'MATCHING' && <MatchingReview q={q} />}
                                     </div>
                                 </div>
                             </div>

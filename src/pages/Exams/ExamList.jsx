@@ -5,10 +5,9 @@ import {
     HiOutlineLockClosed, HiOutlineBookmark, HiBookmark,
     HiOutlineClock, HiOutlineQuestionMarkCircle, HiOutlineArrowRight,
     HiOutlineFilter, HiOutlineX, HiOutlineChevronDown, HiOutlineAdjustments,
-    HiOutlineUserGroup, HiOutlineExclamationCircle,
-    HiOutlinePencilAlt, HiOutlinePaperAirplane,
+    HiOutlineUserGroup, HiOutlinePaperAirplane,
 } from 'react-icons/hi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { ExamCard, CreateExamModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
@@ -113,7 +112,6 @@ const ExamList = () => {
 
     // Collaborative assignments (teacher only)
     const [collaborativeAssignments, setCollaborativeAssignments] = useState([]);
-    const [openingDraft, setOpeningDraft] = useState(null); // collaboratorId being opened
 
     // ── Filter state ──────────────────────────────────────────────────────────
     const [search, setSearch] = useState('');
@@ -150,26 +148,35 @@ const ExamList = () => {
     };
 
     useEffect(() => {
-        fetchExams();
+        let cancelled = false;
+        const load = async () => {
+            setLoading(true);
+            try {
+                let data;
+                if (isStudent) {
+                    data = (await api.get('/exams/public')).data;
+                } else if (isTeacher || isAdmin) {
+                    data = (await api.get('/exams')).data;
+                } else {
+                    data = (await api.get('/exams/public')).data;
+                }
+                if (!cancelled) setExams(data);
+            } catch {
+                if (!cancelled) toast.error("İmtahanları yükləyərkən xəta baş verdi");
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        load();
         if (isTeacher) {
             refreshSubscription();
             api.get('/collaborative-exams/my-assignments')
-                .then(r => setCollaborativeAssignments(r.data))
+                .then(r => { if (!cancelled) setCollaborativeAssignments(r.data); })
                 .catch(() => {});
         }
+        return () => { cancelled = true; };
     }, [user]);
 
-    const handleOpenDraft = async (collaboratorId) => {
-        setOpeningDraft(collaboratorId);
-        try {
-            const { data } = await api.post(`/collaborative-exams/${collaboratorId}/open-draft`);
-            navigate(`/imtahanlar/edit/${data.draftExamId}`);
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
-        } finally {
-            setOpeningDraft(null);
-        }
-    };
 
     useEffect(() => {
         if (isStudent && isAuthenticated) {
@@ -179,27 +186,6 @@ const ExamList = () => {
         }
     }, [isStudent, isAuthenticated]);
 
-    const fetchExams = async () => {
-        setLoading(true);
-        try {
-            let data;
-            if (isStudent) {
-                const response = await api.get('/exams/public');
-                data = response.data;
-            } else if (isTeacher || isAdmin) {
-                const response = await api.get('/exams');
-                data = response.data;
-            } else {
-                const response = await api.get('/exams/public');
-                data = response.data;
-            }
-            setExams(data);
-        } catch (error) {
-            toast.error("İmtahanları yükləyərkən xəta baş verdi");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleDelete = async (id) => {
         if (!window.confirm('Bu imtahanı silmək istədiyinizə əminsiniz?')) return;
@@ -459,106 +445,33 @@ const ExamList = () => {
                 )}
 
 
-                {/* ── Collaborative Assignments (Teacher only) ── */}
-                {isTeacher && collaborativeAssignments.filter(a => a.status !== 'APPROVED').length > 0 && (
-                    <div className="mb-8">
-                        <h2 className="text-sm font-bold text-gray-500 mb-3 flex items-center gap-2 uppercase tracking-wide">
-                            <HiOutlineUserGroup className="w-4 h-4" />
-                            Adminlə birlikdə işlədiyim imtahanlar
-                            <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                {collaborativeAssignments.filter(a => a.status !== 'APPROVED').length}
-                            </span>
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {collaborativeAssignments
-                                .filter(a => a.status !== 'APPROVED')
-                                .map(assignment => {
-                                    const statusConfig = {
-                                        ASSIGNED: { label: 'Gözləyir', color: 'text-blue-600 bg-blue-50 border-blue-100' },
-                                        SUBMITTED: { label: 'Göndərildi', color: 'text-amber-600 bg-amber-50 border-amber-100' },
-                                        REJECTED: { label: 'Geri qaytarıldı', color: 'text-red-600 bg-red-50 border-red-100' },
-                                    };
-                                    const st = statusConfig[assignment.status] || statusConfig.ASSIGNED;
-                                    const canEdit = assignment.status === 'ASSIGNED' || assignment.status === 'REJECTED';
-                                    const isOpening = openingDraft === assignment.id;
-
-                                    return (
-                                        <div key={assignment.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
-                                            {/* Header */}
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                                                        <HiOutlineUserGroup className="w-4 h-4 text-indigo-600" />
-                                                    </div>
-                                                    <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{assignment.examTitle}</h3>
-                                                </div>
-                                                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${st.color}`}>
-                                                    {st.label}
-                                                </span>
-                                            </div>
-
-                                            {/* Subjects */}
-                                            {assignment.subjects?.length > 0 && (
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {assignment.subjects.map(s => (
-                                                        <span key={s} className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                                                            {s}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Rejection comment */}
-                                            {assignment.status === 'REJECTED' && assignment.adminComment && (
-                                                <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">
-                                                    <HiOutlineExclamationCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                                                    <span className="leading-relaxed">{assignment.adminComment}</span>
-                                                </div>
-                                            )}
-
-                                            {/* Draft question count */}
-                                            {assignment.draftQuestionCount > 0 && (
-                                                <p className="text-xs text-gray-400 flex items-center gap-1">
-                                                    <HiOutlineDocumentText className="w-3.5 h-3.5" />
-                                                    {assignment.draftQuestionCount} sual hazırlanıb
-                                                </p>
-                                            )}
-
-                                            {/* Action */}
-                                            <div className="mt-auto pt-2 border-t border-gray-50">
-                                                {assignment.status === 'SUBMITTED' ? (
-                                                    <div className="flex items-center gap-2 text-xs font-semibold text-amber-600">
-                                                        <HiOutlinePaperAirplane className="w-4 h-4" />
-                                                        Admin yoxlayır...
-                                                    </div>
-                                                ) : canEdit ? (
-                                                    <button
-                                                        onClick={() => handleOpenDraft(assignment.id)}
-                                                        disabled={isOpening}
-                                                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl transition-all"
-                                                    >
-                                                        {isOpening ? (
-                                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                        ) : assignment.status === 'REJECTED' ? (
-                                                            <>
-                                                                <HiOutlinePencilAlt className="w-4 h-4" />
-                                                                Düzəliş et
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <HiOutlinePencilAlt className="w-4 h-4" />
-                                                                {assignment.draftQuestionCount > 0 ? 'Davam et' : 'Sual əlavə et'}
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                ) : null}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                        </div>
-                    </div>
-                )}
+                {/* ── Collaborative banner (Teacher only) ── */}
+                {isTeacher && collaborativeAssignments.filter(a => a.status !== 'APPROVED').length > 0 && (() => {
+                    const active = collaborativeAssignments.filter(a => a.status !== 'APPROVED');
+                    const rejected = active.filter(a => a.status === 'REJECTED').length;
+                    const submitted = active.filter(a => a.status === 'SUBMITTED').length;
+                    return (
+                        <Link
+                            to="/birge-imtahanlari"
+                            className="mb-6 flex items-center justify-between gap-4 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-4 rounded-2xl shadow-md shadow-indigo-200 transition-all group"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                                    <HiOutlineUserGroup className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="font-bold text-sm">Birgə İmtahanlarım</p>
+                                    <p className="text-xs text-indigo-200 mt-0.5">
+                                        {active.length} aktiv tapşırıq
+                                        {rejected > 0 && <span className="ml-2 text-red-300 font-semibold">· {rejected} geri qaytarıldı</span>}
+                                        {submitted > 0 && <span className="ml-2 text-amber-200 font-semibold">· {submitted} admin yoxlayır</span>}
+                                    </p>
+                                </div>
+                            </div>
+                            <HiOutlinePaperAirplane className="w-5 h-5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity rotate-90" />
+                        </Link>
+                    );
+                })()}
 
                 {/* ── Filter panel ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-3">

@@ -27,7 +27,7 @@ const MathFormulaModal = ({ isOpen, onClose, onInsert }) => {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Riyaziyyat Formulu Əlavə Et" maxWidth="max-w-2xl">
+        <Modal isOpen={isOpen} onClose={onClose} closeOnBackdrop={false} title="Riyaziyyat Formulu Əlavə Et" maxWidth="max-w-2xl">
             <div className="flex flex-col gap-4">
                 <p className="text-sm text-gray-500">
                     Aşağıdakı xanaya riyazi ifadəni daxil edin. İfadə mətnin içərisinə LaTeX formatında əlavə olunacaq.

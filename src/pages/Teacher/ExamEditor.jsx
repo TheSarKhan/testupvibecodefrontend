@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle, HiLockClosed, HiOutlineUserGroup, HiOutlinePaperAirplane, HiOutlineCheckCircle } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import BankPickerModal from '../../components/ui/BankPickerModal';
-import LatexPreview from '../../components/ui/LatexPreview';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -112,6 +111,7 @@ const ExamEditor = () => {
     // Collaborative mode
     const [collaborativeParentId, setCollaborativeParentId] = useState(null);
     const [collaborativeSubjects, setCollaborativeSubjects] = useState([]);
+    const [collaborativeTemplateSections, setCollaborativeTemplateSections] = useState([]); // template sections for this draft
     const [isCollaborativeParent, setIsCollaborativeParent] = useState(false); // admin editing the parent exam
 
     // Template mode state
@@ -230,6 +230,7 @@ const ExamEditor = () => {
             if (data.collaborativeParentId) {
                 setCollaborativeParentId(data.collaborativeParentId);
                 setCollaborativeSubjects(data.collaborativeSubjects || []);
+                setCollaborativeTemplateSections(data.collaborativeTemplateSections || []);
             }
             if (data.isCollaborative && !data.collaborativeParentId) {
                 setIsCollaborativeParent(true);
@@ -680,17 +681,38 @@ const ExamEditor = () => {
                     <div className={`mb-6 rounded-2xl px-6 py-4 border ${examStatus === 'SUBMITTED' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
                         <div className="flex items-start gap-3">
                             <HiOutlineUserGroup className={`w-5 h-5 mt-0.5 shrink-0 ${examStatus === 'SUBMITTED' ? 'text-amber-500' : 'text-blue-500'}`} />
-                            <div>
+                            <div className="flex-1 min-w-0">
                                 <p className={`font-bold text-sm ${examStatus === 'SUBMITTED' ? 'text-amber-800' : 'text-blue-800'}`}>
                                     {examStatus === 'SUBMITTED' ? 'Göndərildi — Admin yoxlayır' : 'Birgə İmtahan Workspace'}
                                 </p>
-                                {collaborativeSubjects.length > 0 && (
+                                {collaborativeTemplateSections.length > 0 ? (
+                                    <div className="mt-2 flex flex-col gap-1.5">
+                                        {collaborativeTemplateSections.map(sec => {
+                                            const filled = questions.filter(q => q.subjectGroup === sec.subjectName && q.text?.trim()).length;
+                                            const pct = sec.questionCount > 0 ? Math.round((filled / sec.questionCount) * 100) : 0;
+                                            return (
+                                                <div key={sec.id}>
+                                                    <div className="flex items-center justify-between text-xs mb-0.5">
+                                                        <span className={`font-semibold ${examStatus === 'SUBMITTED' ? 'text-amber-700' : 'text-blue-700'}`}>{sec.subjectName}</span>
+                                                        <span className={`${examStatus === 'SUBMITTED' ? 'text-amber-600' : 'text-blue-600'}`}>{filled}/{sec.questionCount} sual</span>
+                                                    </div>
+                                                    <div className="h-1.5 rounded-full bg-white/60 overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-green-500' : examStatus === 'SUBMITTED' ? 'bg-amber-400' : 'bg-blue-400'}`}
+                                                            style={{ width: `${pct}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : collaborativeSubjects.length > 0 && (
                                     <p className={`text-xs mt-1 ${examStatus === 'SUBMITTED' ? 'text-amber-600' : 'text-blue-600'}`}>
                                         Sizin fənnlər: {collaborativeSubjects.join(', ')}
                                     </p>
                                 )}
                                 {examStatus === 'SUBMITTED' && (
-                                    <p className="text-xs text-amber-600 mt-0.5">Admin təsdiq etdikdən sonra suallar əsl imtahana əlavə ediləcək.</p>
+                                    <p className="text-xs text-amber-600 mt-1.5">Admin təsdiq etdikdən sonra suallar əsl imtahana əlavə ediləcək.</p>
                                 )}
                             </div>
                             {examStatus === 'SUBMITTED' && (
@@ -743,7 +765,7 @@ const ExamEditor = () => {
                                     <span className="font-bold text-sm">{sectionSubject}</span>
                                 </div>
                                 <div className="flex-1 h-px bg-gray-200" />
-                                {!isMain && !isTemplateMode && (
+                                {!isMain && !isTemplateMode && !isCollaborativeMode && (
                                     <button
                                         onClick={() => handleRemoveSection(sectionSubject)}
                                         className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -859,7 +881,7 @@ const ExamEditor = () => {
 
 
                 {/* Add new subject section */}
-                {!isTemplateMode && (
+                {!isTemplateMode && !isCollaborativeMode && (
                     <div className="mt-4 mb-8">
                         {showSectionPicker ? (
                             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">

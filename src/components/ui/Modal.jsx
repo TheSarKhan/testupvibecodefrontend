@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { HiX } from 'react-icons/hi';
 
-const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-md" }) => {
+const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-md", closeOnBackdrop = true }) => {
     if (!isOpen) return null;
 
     return (
@@ -11,7 +11,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-md" }) => {
                 {/* Backdrop */}
                 <div
                     className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
-                    onClick={onClose}
+                    onClick={closeOnBackdrop ? onClose : undefined}
                     aria-hidden="true"
                 ></div>
 

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     HiOutlineArrowLeft, HiOutlinePlus, HiOutlineTrash, HiOutlineSave,
     HiOutlineBookOpen, HiOutlineSearch, HiOutlinePencil, HiOutlineEye,
-    HiOutlineX, HiOutlineCheckCircle
+    HiOutlineX, HiOutlineCheckCircle, HiOutlineTag
 } from 'react-icons/hi';
 import { QuestionEditor, LatexPreview } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
@@ -35,6 +35,20 @@ const TYPE_COLORS = {
     MATCHING: 'bg-pink-50 text-pink-700',
 };
 
+// ── Difficulty config ─────────────────────────────────────────────────────────
+const DIFFICULTY_LABELS = { EASY: 'Asan', MEDIUM: 'Orta', HARD: 'Çətin' };
+const DIFFICULTY_COLORS = {
+    EASY: 'bg-green-50 text-green-700',
+    MEDIUM: 'bg-yellow-50 text-yellow-700',
+    HARD: 'bg-red-50 text-red-700',
+};
+const DIFFICULTY_OPTIONS = [
+    { value: '', label: '— Çətinlik (istəyə bağlı) —' },
+    { value: 'EASY', label: 'Asan' },
+    { value: 'MEDIUM', label: 'Orta' },
+    { value: 'HARD', label: 'Çətin' },
+];
+
 // ── Data mappers ─────────────────────────────────────────────────────────────
 const bankToEditor = (bq) => ({
     id: String(bq.id),
@@ -45,6 +59,8 @@ const bankToEditor = (bq) => ({
     points: bq.points ?? 1,
     orderIndex: bq.orderIndex ?? 0,
     subjectGroup: null,
+    topic: bq.topic || null,
+    difficulty: bq.difficulty || null,
     options: (bq.options || [])
         .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
         .map(o => ({ id: String(o.id), text: o.content || '', isCorrect: !!o.isCorrect, attachedImage: o.attachedImage || null })),
@@ -62,6 +78,8 @@ const editorToBank = (subjectId, eq) => ({
     points: eq.points ?? 1,
     orderIndex: eq.orderIndex ?? 0,
     correctAnswer: eq.sampleAnswer || null,
+    topic: eq.topic || null,
+    difficulty: eq.difficulty || null,
     options: (eq.options || []).map((o, i) => ({
         content: o.text || '',
         isCorrect: !!o.isCorrect,
@@ -84,6 +102,8 @@ const newEditorQuestion = (orderIndex) => ({
     points: 1,
     orderIndex,
     subjectGroup: null,
+    topic: null,
+    difficulty: null,
     options: [
         { id: `o1-${Date.now()}`, text: 'A', isCorrect: false },
         { id: `o2-${Date.now()}`, text: 'B', isCorrect: false },
@@ -102,11 +122,21 @@ const ViewModal = ({ question, onClose }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${TYPE_COLORS[question.type] || 'bg-gray-100 text-gray-600'}`}>
                             {TYPE_LABELS[question.type] || question.type}
                         </span>
                         <span className="text-xs text-gray-400">{question.points} bal</span>
+                        {question.difficulty && (
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${DIFFICULTY_COLORS[question.difficulty] || 'bg-gray-100 text-gray-600'}`}>
+                                {DIFFICULTY_LABELS[question.difficulty] || question.difficulty}
+                            </span>
+                        )}
+                        {question.topic && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">
+                                <HiOutlineTag className="w-3 h-3" />{question.topic}
+                            </span>
+                        )}
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
                         <HiOutlineX className="w-5 h-5" />
@@ -153,7 +183,7 @@ const ViewModal = ({ question, onClose }) => {
 };
 
 // ── Edit Modal ───────────────────────────────────────────────────────────────
-const EditModal = ({ question, onSave, onClose, saving }) => {
+const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
     const [local, setLocal] = useState(question);
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
@@ -164,10 +194,46 @@ const EditModal = ({ question, onSave, onClose, saving }) => {
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 </div>
+
+                <div className="px-5 pt-4 pb-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Topic selector */}
+                    {availableTopics.length > 0 && (
+                        <div>
+                            <label className="text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
+                                <HiOutlineTag className="w-3.5 h-3.5 text-teal-500" /> Mövzu
+                            </label>
+                            <select
+                                value={local.topic || ''}
+                                onChange={e => setLocal(prev => ({ ...prev, topic: e.target.value || null }))}
+                                className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            >
+                                <option value="">— Mövzu seçin (istəyə bağlı) —</option>
+                                {availableTopics.map(t => (
+                                    <option key={t.id} value={t.name}>{t.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Difficulty selector */}
+                    <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Çətinlik dərəcəsi</label>
+                        <select
+                            value={local.difficulty || ''}
+                            onChange={e => setLocal(prev => ({ ...prev, difficulty: e.target.value || null }))}
+                            className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                            {DIFFICULTY_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
                 <QuestionEditor
                     question={local}
                     index={0}
-                    onChange={(_qId, updated) => setLocal(prev => ({ ...updated, id: prev.id, _bankId: prev._bankId }))}
+                    onChange={(_qId, updated) => setLocal(prev => ({ ...updated, id: prev.id, _bankId: prev._bankId, topic: prev.topic, difficulty: prev.difficulty }))}
                     onDelete={null}
                     hidePoints={false}
                     hideDelete
@@ -200,17 +266,27 @@ const QuestionBankSubject = () => {
     const [saving, setSaving] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
     const [search, setSearch] = useState('');
+    const [topicFilter, setTopicFilter] = useState('ALL');
+    const [difficultyFilter, setDifficultyFilter] = useState('ALL');
     const [viewQuestion, setViewQuestion] = useState(null);
     const [editQuestion, setEditQuestion] = useState(null);
+    const [availableTopics, setAvailableTopics] = useState([]);
 
     const filteredQuestions = useMemo(() => {
+        let list = questions;
+        if (topicFilter !== 'ALL') {
+            list = list.filter(q => q.topic === topicFilter);
+        }
+        if (difficultyFilter !== 'ALL') {
+            list = list.filter(q => q.difficulty === difficultyFilter);
+        }
         const q = search.trim().toLowerCase();
-        if (!q) return questions;
-        return questions.filter(question =>
+        if (!q) return list;
+        return list.filter(question =>
             question.text.toLowerCase().includes(q) ||
             (question.options || []).some(o => o.text.toLowerCase().includes(q))
         );
-    }, [questions, search]);
+    }, [questions, search, topicFilter, difficultyFilter]);
 
     useEffect(() => { fetchData(); }, [subjectId]);
 
@@ -223,7 +299,15 @@ const QuestionBankSubject = () => {
             const found = subjectsRes.data.find(s => String(s.id) === String(subjectId));
             setSubject(found || { name: 'Fənn', isGlobal: false });
             setCanEdit(!!found && (!found.isGlobal || isAdmin));
-            setQuestions(questionsRes.data.map(bankToEditor));
+            const mapped = questionsRes.data.map(bankToEditor);
+            setQuestions(mapped);
+
+            // Fetch topics for this bank subject's name from ExamSubject topics
+            if (found?.name) {
+                api.get('/subjects/topics', { params: { name: found.name } })
+                    .then(r => setAvailableTopics(r.data || []))
+                    .catch(() => {});
+            }
         } catch {
             toast.error('Məlumatlar yüklənmədi');
         } finally {
@@ -277,6 +361,18 @@ const QuestionBankSubject = () => {
         setEditQuestion(newQ);
     };
 
+    // Unique topics among existing questions (for filter pills)
+    const usedTopics = useMemo(() => {
+        const set = new Set(questions.map(q => q.topic).filter(Boolean));
+        return [...set].sort();
+    }, [questions]);
+
+    // Used difficulties among existing questions
+    const usedDifficulties = useMemo(() => {
+        const set = new Set(questions.map(q => q.difficulty).filter(Boolean));
+        return ['EASY', 'MEDIUM', 'HARD'].filter(d => set.has(d));
+    }, [questions]);
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
@@ -322,6 +418,56 @@ const QuestionBankSubject = () => {
             </div>
 
             <div className="container-main mt-6">
+                {/* Filter pills */}
+                {(usedTopics.length > 0 || usedDifficulties.length > 0) && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {/* Topic filters */}
+                        {usedTopics.length > 0 && (
+                            <>
+                                <button
+                                    onClick={() => setTopicFilter('ALL')}
+                                    className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${topicFilter === 'ALL' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}
+                                >
+                                    Hamısı
+                                </button>
+                                {usedTopics.map(t => (
+                                    <button
+                                        key={t}
+                                        onClick={() => setTopicFilter(topicFilter === t ? 'ALL' : t)}
+                                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${topicFilter === t ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-teal-700 border-teal-200 hover:border-teal-400'}`}
+                                    >
+                                        <HiOutlineTag className="w-3 h-3" />{t}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+
+                        {/* Difficulty filters */}
+                        {usedDifficulties.length > 0 && (
+                            <>
+                                {usedTopics.length > 0 && <span className="w-px bg-gray-200 self-stretch" />}
+                                {usedDifficulties.map(d => (
+                                    <button
+                                        key={d}
+                                        onClick={() => setDifficultyFilter(difficultyFilter === d ? 'ALL' : d)}
+                                        className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                                            difficultyFilter === d
+                                                ? d === 'EASY' ? 'bg-green-600 text-white border-green-600'
+                                                    : d === 'MEDIUM' ? 'bg-yellow-500 text-white border-yellow-500'
+                                                    : 'bg-red-600 text-white border-red-600'
+                                                : d === 'EASY' ? 'bg-white text-green-700 border-green-200 hover:border-green-400'
+                                                    : d === 'MEDIUM' ? 'bg-white text-yellow-700 border-yellow-200 hover:border-yellow-400'
+                                                    : 'bg-white text-red-700 border-red-200 hover:border-red-400'
+                                        }`}
+                                    >
+                                        {DIFFICULTY_LABELS[d]}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                    </div>
+                )}
+
                 {questions.length === 0 ? (
                     <div className="text-center py-20">
                         <HiOutlineBookOpen className="w-12 h-12 mx-auto text-gray-300 mb-4" />
@@ -339,6 +485,8 @@ const QuestionBankSubject = () => {
                                 <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                     <th className="px-4 py-3 text-left w-10">#</th>
                                     <th className="px-4 py-3 text-left">Sual mətni</th>
+                                    <th className="px-4 py-3 text-left w-28">Mövzu</th>
+                                    <th className="px-4 py-3 text-left w-24">Çətinlik</th>
                                     <th className="px-4 py-3 text-left w-36">Tip</th>
                                     <th className="px-4 py-3 text-center w-16">Bal</th>
                                     <th className="px-4 py-3 text-right w-28">Əməliyyatlar</th>
@@ -347,7 +495,7 @@ const QuestionBankSubject = () => {
                             <tbody className="divide-y divide-gray-50">
                                 {filteredQuestions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="text-center py-12 text-gray-400">
+                                        <td colSpan={7} className="text-center py-12 text-gray-400">
                                             <HiOutlineSearch className="w-8 h-8 mx-auto mb-2 opacity-50" />
                                             <p>Axtarışa uyğun sual tapılmadı</p>
                                         </td>
@@ -361,6 +509,24 @@ const QuestionBankSubject = () => {
                                             </div>
                                             {!q._bankId && (
                                                 <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full mt-1 inline-block">Yadda saxlanılmayıb</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {q.topic ? (
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">
+                                                    <HiOutlineTag className="w-3 h-3" />{q.topic}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-300">—</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {q.difficulty ? (
+                                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${DIFFICULTY_COLORS[q.difficulty] || 'bg-gray-100 text-gray-600'}`}>
+                                                    {DIFFICULTY_LABELS[q.difficulty] || q.difficulty}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-300">—</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
@@ -401,6 +567,7 @@ const QuestionBankSubject = () => {
                     onSave={handleSave}
                     onClose={() => setEditQuestion(null)}
                     saving={saving}
+                    availableTopics={availableTopics}
                 />
             )}
         </div>

@@ -19,6 +19,7 @@ const ExamSession = () => {
     const [activeLeftId, setActiveLeftId] = useState(null);
     // listenCounts: { [passageId]: number }
     const [listenCounts, setListenCounts] = useState({});
+    const [zoomImage, setZoomImage] = useState(null);
 
     useEffect(() => { fetchSessionDetails(); }, [sessionId]);
 
@@ -58,11 +59,11 @@ const ExamSession = () => {
             });
             setAnswers(initialAnswers);
 
-            if (data.durationMinutes) {
-                const startTime = new Date(data.startedAt).getTime();
-                const now = new Date().getTime();
-                const diffSeconds = Math.floor((now - startTime) / 1000);
-                const remaining = data.durationMinutes * 60 - diffSeconds;
+            if (data.durationMinutes && data.durationMinutes > 0) {
+                // Use server-calculated remainingSeconds to avoid client timezone issues
+                const remaining = data.remainingSeconds != null
+                    ? data.remainingSeconds
+                    : data.durationMinutes * 60;
                 if (remaining <= 0) {
                     toast.error("İmtahan vaxtı bitib!");
                     navigate('/imtahanlar');
@@ -174,6 +175,12 @@ const ExamSession = () => {
     };
 
     const formatTime = (seconds) => {
+        if (seconds >= 3600) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -209,6 +216,19 @@ const ExamSession = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
+            {/* Image Zoom Overlay */}
+            {zoomImage && (
+                <div className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4 cursor-pointer"
+                    onClick={() => setZoomImage(null)}>
+                    <img src={zoomImage} alt="Böyüdülmüş şəkil"
+                        className="max-w-full max-h-[90vh] rounded-xl shadow-2xl border-2 border-white/10 object-contain" />
+                    <button className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-colors"
+                        onClick={() => setZoomImage(null)}>
+                        <HiOutlineX className="w-6 h-6" />
+                    </button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <div className="container-main py-4 flex items-center justify-between">
@@ -258,6 +278,7 @@ const ExamSession = () => {
                         onAnswerChange={handleAnswerChange}
                         activeLeftId={activeLeftId}
                         setActiveLeftId={setActiveLeftId}
+                        onZoomImage={setZoomImage}
                     />
                 )}
 
@@ -270,6 +291,7 @@ const ExamSession = () => {
                         setActiveLeftId={setActiveLeftId}
                         listenCounts={listenCounts}
                         setListenCounts={setListenCounts}
+                        onZoomImage={setZoomImage}
                     />
                 )}
 
@@ -346,7 +368,7 @@ const ExamSession = () => {
 };
 
 // ---- PassageSection ----
-const PassageSection = ({ passage, answers, onAnswerChange, activeLeftId, setActiveLeftId, listenCounts, setListenCounts }) => {
+const PassageSection = ({ passage, answers, onAnswerChange, activeLeftId, setActiveLeftId, listenCounts, setListenCounts, onZoomImage }) => {
     const audioRef = useRef(null);
     const listenCount = listenCounts[passage.id] || 0;
     const isLimited = passage.listenLimit !== null && passage.listenLimit !== undefined;
@@ -393,7 +415,8 @@ const PassageSection = ({ passage, answers, onAnswerChange, activeLeftId, setAct
                                 </div>
                             )}
                             {passage.attachedImage && (
-                                <img src={passage.attachedImage} alt="Mətn" className="max-w-full h-auto max-h-96 rounded-lg border border-gray-200" />
+                                <img src={passage.attachedImage} alt="Mətn" className="max-w-full h-auto max-h-96 rounded-lg border border-gray-200 cursor-zoom-in"
+                                    onClick={() => onZoomImage?.(passage.attachedImage)} />
                             )}
                         </>
                     ) : (
@@ -430,6 +453,7 @@ const PassageSection = ({ passage, answers, onAnswerChange, activeLeftId, setAct
                     activeLeftId={activeLeftId}
                     setActiveLeftId={setActiveLeftId}
                     subIndex={idx + 1}
+                    onZoomImage={onZoomImage}
                 />
             ))}
         </div>
@@ -437,7 +461,7 @@ const PassageSection = ({ passage, answers, onAnswerChange, activeLeftId, setAct
 };
 
 // ---- QuestionCard ----
-const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiveLeftId, subIndex }) => {
+const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiveLeftId, subIndex, onZoomImage }) => {
     if (!answer) return null;
 
     return (
@@ -457,7 +481,8 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                 )}
 
                 {question.attachedImage && (
-                    <div className="mb-8 rounded-lg overflow-hidden border border-gray-200 inline-block">
+                    <div className="mb-8 rounded-lg overflow-hidden border border-gray-200 inline-block cursor-zoom-in"
+                        onClick={() => onZoomImage?.(question.attachedImage)}>
                         <img src={question.attachedImage} alt="Sual" className="max-w-full h-auto max-h-96" />
                     </div>
                 )}
@@ -492,7 +517,7 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                                         </div>
                                         <div className="flex-1 text-lg">
                                             <LatexPreview content={opt.content} />
-                                            {opt.attachedImage && <img src={opt.attachedImage} className="mt-2 max-h-32 rounded border" alt="Varyant" />}
+                                            {opt.attachedImage && <img src={opt.attachedImage} className="mt-2 max-h-32 rounded border cursor-zoom-in" alt="Varyant" onClick={e => { e.stopPropagation(); onZoomImage?.(opt.attachedImage); }} />}
                                         </div>
                                     </div>
                                 );
@@ -523,6 +548,7 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                             onAnswerChange={onAnswerChange}
                             activeLeftId={activeLeftId}
                             setActiveLeftId={setActiveLeftId}
+                            onZoomImage={onZoomImage}
                         />
                     )}
                 </div>
@@ -641,7 +667,7 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
 // ---- MatchingQuestion ----
 const MATCH_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#14b8a6'];
 
-const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setActiveLeftId }) => {
+const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setActiveLeftId, onZoomImage }) => {
     const containerRef = useRef(null);
     const [, forceUpdate] = useState(0);
     const [hoveredArrow, setHoveredArrow] = useState(null);
@@ -716,7 +742,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
 
             <div ref={containerRef} className="relative flex justify-between py-6">
                 {/* Left column */}
-                <div className="w-[40%] space-y-6" style={{ zIndex: 10, position: 'relative' }}>
+                <div className="w-[40%] space-y-3" style={{ zIndex: 10, position: 'relative' }}>
                     {leftPairs.map((pair) => {
                         const isConnected = existingPairs.some(m => (leftCanonMap[m.leftItemId] ?? m.leftItemId) === pair.id);
                         const isActive = activeLeftId === pair.id;
@@ -724,8 +750,8 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                             <div
                                 key={pair.id}
                                 data-left={pair.id}
-                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer min-h-[52px] flex flex-col justify-center ${
-                                    isActive ? 'border-yellow-400 bg-yellow-50 shadow-md ring-4 ring-yellow-200' :
+                                className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer min-h-[38px] flex flex-col justify-center ${
+                                    isActive ? 'border-yellow-400 bg-yellow-50 shadow-md ring-2 ring-yellow-200' :
                                     isConnected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'
                                 }`}
                                 onClick={() => {
@@ -734,21 +760,21 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                                 }}
                             >
                                 <LatexPreview content={pair.leftItem} />
-                                {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
+                                {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto cursor-zoom-in" onClick={e => { e.stopPropagation(); onZoomImage?.(pair.attachedImageLeft); }} /></div>}
                             </div>
                         );
                     })}
                 </div>
 
                 {/* Right column */}
-                <div className="w-[40%] space-y-6" style={{ zIndex: 10, position: 'relative' }}>
+                <div className="w-[40%] space-y-3" style={{ zIndex: 10, position: 'relative' }}>
                     {rightPairs.map((pair) => {
                         const isConnected = existingPairs.some(m => (rightCanonMap[m.rightItemId] ?? m.rightItemId) === pair.id);
                         return (
                             <div
                                 key={pair.id}
                                 data-right={pair.id}
-                                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer min-h-[52px] flex flex-col justify-center ${isConnected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'}`}
+                                className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer min-h-[38px] flex flex-col justify-center ${isConnected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'}`}
                                 onClick={() => {
                                     if (!activeLeftId) { toast.error('Əvvəlcə soldan bir bənd seçin'); return; }
                                     const alreadyExists = existingPairs.some(m => m.leftItemId === activeLeftId && m.rightItemId === pair.id);
@@ -761,7 +787,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                                 }}
                             >
                                 <LatexPreview content={pair.rightItem} />
-                                {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
+                                {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto cursor-zoom-in" onClick={e => { e.stopPropagation(); onZoomImage?.(pair.attachedImageRight); }} /></div>}
                             </div>
                         );
                     })}

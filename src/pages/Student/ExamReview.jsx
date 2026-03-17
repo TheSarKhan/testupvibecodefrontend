@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter, HiOutlineX } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -209,6 +209,7 @@ const GradingPanel = ({ question, submissionId, onGraded }) => {
     const fractions = [
         { value: 0, label: '0 bal' },
         { value: 1 / 3, label: '1/3 bal' },
+        { value: 1 / 2, label: '1/2 bal' },
         { value: 2 / 3, label: '2/3 bal' },
         { value: 1, label: 'Tam bal' },
     ];
@@ -282,6 +283,7 @@ const ExamReview = () => {
     const [review, setReview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showOnlyUngraded, setShowOnlyUngraded] = useState(false);
+    const [zoomImage, setZoomImage] = useState(null);
 
     useEffect(() => {
         const fetchReview = async () => {
@@ -347,6 +349,19 @@ const ExamReview = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
+            {/* Image Zoom Overlay */}
+            {zoomImage && (
+                <div className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4 cursor-pointer"
+                    onClick={() => setZoomImage(null)}>
+                    <img src={zoomImage} alt="Böyüdülmüş şəkil"
+                        className="max-w-full max-h-[90vh] rounded-xl shadow-2xl border-2 border-white/10 object-contain" />
+                    <button className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full transition-colors"
+                        onClick={() => setZoomImage(null)}>
+                        <HiOutlineX className="w-6 h-6" />
+                    </button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-30">
                 <div className="container-main py-4 flex items-center justify-between">
@@ -491,7 +506,8 @@ const ExamReview = () => {
                                         </div>
 
                                         {q.attachedImage && (
-                                            <div className="mb-6 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 max-h-96 flex justify-center">
+                                            <div className="mb-6 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 max-h-96 flex justify-center cursor-zoom-in"
+                                                onClick={() => setZoomImage(q.attachedImage)}>
                                                 <img src={q.attachedImage} alt="Question" className="object-contain" />
                                             </div>
                                         )}

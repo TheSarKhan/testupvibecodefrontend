@@ -140,7 +140,22 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                     className="p-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40">
                                     <HiOutlineChevronLeft className="w-4 h-4" />
                                 </button>
-                                <span className="text-sm font-medium text-gray-600">{pageNumber} / {numPages || '--'}</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={numPages || 1}
+                                    value={pageNumber}
+                                    onChange={e => {
+                                        const v = parseInt(e.target.value);
+                                        if (v >= 1 && v <= (numPages || 1)) {
+                                            setPageNumber(v);
+                                            setCompletedCrop(null);
+                                            setCrop(undefined);
+                                        }
+                                    }}
+                                    className="w-14 text-center px-2 py-1 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-400"
+                                />
+                                <span className="text-sm text-gray-500">/ {numPages || '--'}</span>
                                 <button type="button" disabled={pageNumber >= numPages} onClick={() => changePage(1)}
                                     className="p-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40">
                                     <HiOutlineChevronRight className="w-4 h-4" />

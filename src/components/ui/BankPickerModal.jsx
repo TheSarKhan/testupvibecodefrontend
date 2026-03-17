@@ -66,9 +66,7 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
     };
 
     const filteredQuestions = questions.filter(q => {
-        const matchesSearch = !search || q.content.toLowerCase().includes(search.toLowerCase());
-        const matchesType = !filterType || BACKEND_FRONTEND_MAP[q.questionType] === filterType;
-        return matchesSearch && matchesType;
+        return !search || q.content.toLowerCase().includes(search.toLowerCase());
     });
 
     const globalSubjects = subjects.filter(s => s.isGlobal);
@@ -107,7 +105,7 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                             </h2>
                             {selectedSubject && filterType && (
                                 <p className="text-xs text-gray-400 mt-0.5">
-                                    {filterType === 'MULTIPLE_CHOICE' ? 'Yalnız Qapalı suallar' : `Yalnız ${filterType} suallar`} göstərilir
+                                    Fərqli tipli suallardan yalnız mətn köçürüləcək
                                 </p>
                             )}
                         </div>
@@ -178,11 +176,13 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                             </div>
                         ) : filteredQuestions.length === 0 ? (
                             <div className="text-center py-12 text-gray-400 text-sm">
-                                {questions.length === 0 ? 'Bu fənndə sual yoxdur' : 'Nəticə tapılmadı'}
+                                {questions.length === 0 ? 'Bu fənndə sual yoxdur' : 'Axtarış üzrə nəticə tapılmadı'}
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-50">
-                                {filteredQuestions.map((q, idx) => (
+                                {filteredQuestions.map((q, idx) => {
+                                    const isDifferentType = filterType && BACKEND_FRONTEND_MAP[q.questionType] !== filterType;
+                                    return (
                                     <button
                                         key={q.id}
                                         onClick={() => onSelect(q)}
@@ -195,6 +195,11 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                                                     {TYPE_LABELS[q.questionType] || q.questionType}
                                                 </span>
                                                 <span className="text-[10px] text-gray-400">{q.points} bal</span>
+                                                {isDifferentType && (
+                                                    <span className="text-[10px] font-semibold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
+                                                        Yalnız mətn köçürüləcək
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="text-sm text-gray-800 line-clamp-2">
                                                 <LatexPreview content={q.content} />
@@ -202,7 +207,8 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                                         </div>
                                         <span className="text-xs text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">Seç</span>
                                     </button>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )
                     )}

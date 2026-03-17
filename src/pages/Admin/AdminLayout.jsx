@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup } from 'react-icons/hi';
+import api from '../../api/axios';
 
 const navGroups = [
     {
@@ -32,6 +34,19 @@ const navGroups = [
 
 const AdminLayout = () => {
     const navigate = useNavigate();
+    const [pendingCount, setPendingCount] = useState(0);
+
+    useEffect(() => {
+        const fetchPending = () => {
+            api.get('/admin/collaborative-exams/pending-count')
+                .then(r => setPendingCount(r.data.count || 0))
+                .catch(() => {});
+        };
+        fetchPending();
+        const interval = setInterval(fetchPending, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <div className="flex min-h-screen bg-gray-50">
             {/* Sidebar */}
@@ -58,7 +73,12 @@ const AdminLayout = () => {
                                         }
                                     >
                                         <Icon className="w-4 h-4 shrink-0" />
-                                        {label}
+                                        <span className="flex-1">{label}</span>
+                                        {to === '/admin/birge-imtahanlar' && pendingCount > 0 && (
+                                            <span className="h-5 min-w-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                                {pendingCount > 9 ? '9+' : pendingCount}
+                                            </span>
+                                        )}
                                     </NavLink>
                                 ))}
                             </div>

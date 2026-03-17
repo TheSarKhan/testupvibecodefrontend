@@ -38,6 +38,7 @@ import AdminQuestionBankSubject from '../pages/Admin/AdminQuestionBankSubject';
 import AdminBanners from '../pages/Admin/AdminBanners';
 import AdminNotifications from '../pages/Admin/AdminNotifications';
 import AdminCollaborativeExams from '../pages/Admin/AdminCollaborativeExams';
+import CollaborativeAssignments from '../pages/Teacher/CollaborativeAssignments';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
             { path: 'login', element: <Login /> },
             { path: 'register', element: <Register /> },
             { path: 'imtahanlar', element: <ExamList /> },
+            { path: 'birge-imtahanlari', element: <CollaborativeAssignments /> },
             { path: 'imtahanlar/:examId/neticeler', element: <ExamResults /> },
             { path: 'imtahanlar/:examId/statistika', element: <ExamResults /> },
             { path: 'imtahanlar/:id', element: <ExamView /> },

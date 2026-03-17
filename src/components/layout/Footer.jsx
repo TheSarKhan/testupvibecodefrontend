@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 
+const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
 const Footer = () => {
     return (
         <footer className="bg-gray-900 text-gray-400 mt-auto">
@@ -19,10 +21,10 @@ const Footer = () => {
                     <div>
                         <h3 className="text-white text-sm font-semibold mb-3">Keçidlər</h3>
                         <ul className="space-y-2 text-sm">
-                            <li><Link to="/" className="hover:text-white transition-colors">Ana Səhifə</Link></li>
-                            <li><Link to="/haqqimizda" className="hover:text-white transition-colors">Haqqımızda</Link></li>
-                            <li><Link to="/imtahanlar" className="hover:text-white transition-colors">İmtahanlar</Link></li>
-                            <li><Link to="/elaqe" className="hover:text-white transition-colors">Əlaqə</Link></li>
+                            <li><Link to="/" onClick={scrollTop} className="hover:text-white transition-colors">Ana Səhifə</Link></li>
+                            <li><Link to="/haqqimizda" onClick={scrollTop} className="hover:text-white transition-colors">Haqqımızda</Link></li>
+                            <li><Link to="/imtahanlar" onClick={scrollTop} className="hover:text-white transition-colors">İmtahanlar</Link></li>
+                            <li><Link to="/elaqe" onClick={scrollTop} className="hover:text-white transition-colors">Əlaqə</Link></li>
                         </ul>
                     </div>
 

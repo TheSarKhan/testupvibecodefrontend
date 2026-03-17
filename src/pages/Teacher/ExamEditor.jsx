@@ -190,6 +190,7 @@ const ExamEditor = () => {
         if (loading) return;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(async () => {
+            if (!examConfig.title || !examConfig.title.trim()) return;
             const payload = buildPayload(examStatus);
             setAutoSaveStatus('saving');
             try {
@@ -499,6 +500,40 @@ const ExamEditor = () => {
         if (questions.length === 0 && passages.length === 0) {
             toast.error('İmtahana ən azı bir sual əlavə edilməlidir');
             return;
+        }
+
+        // Validate that every auto-graded question has a correct answer defined
+        const allQs = [
+            ...questions,
+            ...passages.flatMap(p => p.questions || [])
+        ];
+        for (let i = 0; i < allQs.length; i++) {
+            const q = allQs[i];
+            const label = `Sual ${i + 1}`;
+            if (q.type === 'MULTIPLE_CHOICE' || q.type === 'MULTI_SELECT') {
+                if (!q.options || !q.options.some(o => o.isCorrect)) {
+                    toast.error(`${label}: düzgün cavab variantı seçilməyib`);
+                    return;
+                }
+            } else if (q.type === 'OPEN_AUTO') {
+                if (!q.sampleAnswer || !q.sampleAnswer.trim()) {
+                    toast.error(`${label}: düzgün cavab daxil edilməyib`);
+                    return;
+                }
+            } else if (q.type === 'FILL_IN_THE_BLANK') {
+                let blanks = [];
+                try { blanks = JSON.parse(q.sampleAnswer || '[]'); } catch (e) {}
+                if (!blanks.some(b => b && b.trim() !== '')) {
+                    toast.error(`${label}: boşluqların düzgün cavabları daxil edilməyib`);
+                    return;
+                }
+            } else if (q.type === 'MATCHING') {
+                const hasConnection = (q.matchingPairs || []).some(p => p.leftItem && p.rightItem);
+                if (!hasConnection) {
+                    toast.error(`${label}: ən azı bir uyğunlaşdırma əlaqəsi qurulmalıdır`);
+                    return;
+                }
+            }
         }
 
         // If plan doesn't allow duration, silently strip it before publishing

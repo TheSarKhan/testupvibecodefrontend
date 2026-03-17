@@ -1,15 +1,31 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone } from 'react-icons/hi';
 
-const navItems = [
-    { to: '/admin', label: 'Dashboard', icon: HiOutlineChartBar, end: true },
-    { to: '/admin/users', label: 'İstifadəçilər', icon: HiOutlineUsers },
-    { to: '/admin/oz-imtahanlar', label: 'Öz İmtahanlarım', icon: HiOutlineDocumentText },
-    { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
-    { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
-    { to: '/admin/sablonlar', label: 'Şablonlar', icon: HiOutlineTemplate },
-    { to: '/admin/sual-bazasi', label: 'Sual Bazası', icon: HiOutlineBookOpen },
-    { to: '/admin/planlar', label: 'Abunəlik Planları', icon: HiOutlineCurrencyDollar },
+const navGroups = [
+    {
+        label: 'Ümumi',
+        items: [
+            { to: '/admin', label: 'Dashboard', icon: HiOutlineChartBar, end: true },
+            { to: '/admin/users', label: 'İstifadəçilər', icon: HiOutlineUsers },
+        ],
+    },
+    {
+        label: 'İmtahan İdarəsi',
+        items: [
+            { to: '/admin/oz-imtahanlar', label: 'Öz İmtahanlarım', icon: HiOutlineDocumentText },
+            { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
+            { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
+            { to: '/admin/sablonlar', label: 'Şablonlar', icon: HiOutlineTemplate },
+            { to: '/admin/sual-bazasi', label: 'Sual Bazası', icon: HiOutlineBookOpen },
+        ],
+    },
+    {
+        label: 'Kontent & Maliyyə',
+        items: [
+            { to: '/admin/reklamlar', label: 'Reklamlar', icon: HiOutlineSpeakerphone },
+            { to: '/admin/planlar', label: 'Abunəlik Planları', icon: HiOutlineCurrencyDollar },
+        ],
+    },
 ];
 
 const AdminLayout = () => {
@@ -22,22 +38,29 @@ const AdminLayout = () => {
                     <span className="text-lg font-extrabold text-indigo-700 tracking-tight">testup.az</span>
                     <p className="text-xs text-gray-400 mt-0.5">Admin Panel</p>
                 </div>
-                <nav className="flex-1 p-3 space-y-1">
-                    {navItems.map(({ to, label, icon: Icon, end }) => (
-                        <NavLink
-                            key={to}
-                            to={to}
-                            end={end}
-                            className={({ isActive }) =>
-                                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isActive
-                                    ? 'bg-indigo-50 text-indigo-700'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                }`
-                            }
-                        >
-                            <Icon className="w-5 h-5" />
-                            {label}
-                        </NavLink>
+                <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+                    {navGroups.map(group => (
+                        <div key={group.label}>
+                            <p className="px-3 mb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group.label}</p>
+                            <div className="space-y-0.5">
+                                {group.items.map(({ to, label, icon: Icon, end }) => (
+                                    <NavLink
+                                        key={to}
+                                        to={to}
+                                        end={end}
+                                        className={({ isActive }) =>
+                                            `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isActive
+                                                ? 'bg-indigo-50 text-indigo-700'
+                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                            }`
+                                        }
+                                    >
+                                        <Icon className="w-4 h-4 shrink-0" />
+                                        {label}
+                                    </NavLink>
+                                ))}
+                            </div>
+                        </div>
                     ))}
                 </nav>
                 <div className="p-3 border-t border-gray-100">

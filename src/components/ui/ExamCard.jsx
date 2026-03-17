@@ -12,7 +12,7 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, canE
     const subjects = exam.subjects || [];
 
     return (
-        <div className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full ${isDraft ? 'border-dashed border-gray-300' : 'border-gray-100'}`}>
+        <div className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full cursor-pointer ${isDraft ? 'border-dashed border-gray-300' : 'border-gray-100'}`}>
             {/* Header: Main Tag and Actions */}
             <div className="p-5 border-b border-gray-50 flex justify-between items-start gap-4 bg-gray-50/50">
                 <div className="flex items-center gap-2 flex-wrap">

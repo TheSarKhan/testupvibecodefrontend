@@ -35,6 +35,7 @@ import AdminTemplateSections from '../pages/Admin/AdminTemplateSections';
 import AdminSubscriptionPlans from '../pages/Admin/AdminSubscriptionPlans';
 import AdminQuestionBank from '../pages/Admin/AdminQuestionBank';
 import AdminQuestionBankSubject from '../pages/Admin/AdminQuestionBankSubject';
+import AdminBanners from '../pages/Admin/AdminBanners';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
@@ -104,6 +105,7 @@ const router = createBrowserRouter([
                     { path: 'sual-bazasi', element: <AdminQuestionBank /> },
                     { path: 'sual-bazasi/:subjectId', element: <AdminQuestionBankSubject /> },
                     { path: 'planlar', element: <AdminSubscriptionPlans /> },
+                    { path: 'reklamlar', element: <AdminBanners /> },
                 ],
             },
             { path: '*', element: <NotFound /> },

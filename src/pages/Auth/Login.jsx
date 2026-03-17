@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -57,14 +59,23 @@ const Login = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Şifrə
                         </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-                            placeholder="••••••••"
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                className="w-full px-4 py-2.5 pr-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(v => !v)}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                            >
+                                {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+                            </button>
+                        </div>
                     </div>
 
                     <button

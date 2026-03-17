@@ -298,7 +298,10 @@ const ExamList = () => {
         if (sortBy === 'NEWEST') list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
         else if (sortBy === 'OLDEST') list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
         else if (sortBy === 'TITLE') list.sort((a, b) => a.title.localeCompare(b.title, 'az'));
-        else if (sortBy === 'QUESTIONS') list.sort((a, b) => (b.questions?.length || 0) - (a.questions?.length || 0));
+        else if (sortBy === 'QUESTIONS') {
+            const total = e => (e.questions?.length || 0) + (e.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0);
+            list.sort((a, b) => total(b) - total(a));
+        }
 
         return list;
     }, [exams, search, statusFilter, visibilityFilter, priceFilter, durationFilter, sortBy, isTeacher]);
@@ -547,7 +550,7 @@ const ExamList = () => {
                                         const isPaid = exam.price != null && Number(exam.price) > 0;
                                         const subjectName = (exam.subjects || []).join(', ') || exam.subject || '';
                                         return (
-                                            <div key={exam.id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden">
+                                            <div key={exam.id} onClick={() => handleJoinExam(exam)} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden cursor-pointer">
                                                 <div className={`h-1 w-full ${isPaid ? 'bg-amber-400' : 'bg-indigo-500'}`} />
                                                 <div className="p-5 flex flex-col flex-1">
                                                     <div className="flex items-start justify-between gap-2 mb-3">
@@ -558,6 +561,7 @@ const ExamList = () => {
                                                         )}
                                                         <button
                                                             onClick={e => { e.stopPropagation(); handleToggleDepot(exam); }}
+
                                                             disabled={savingLink === exam.shareLink}
                                                             title={isSaved ? 'Depodan çıxar' : 'Depoya əlavə et'}
                                                             className={`p-1.5 rounded-xl transition-all disabled:opacity-50 shrink-0 ml-auto ${isSaved ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'text-gray-300 hover:text-indigo-500 hover:bg-indigo-50'}`}
@@ -577,7 +581,7 @@ const ExamList = () => {
                                                     <div className="flex items-center gap-3 text-xs text-gray-400 mt-auto mb-4">
                                                         <span className="flex items-center gap-1">
                                                             <HiOutlineQuestionMarkCircle className="w-3.5 h-3.5" />
-                                                            {exam.questions?.length || 0} sual
+                                                            {(exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0)} sual
                                                         </span>
                                                         {exam.durationMinutes && (
                                                             <span className="flex items-center gap-1">
@@ -598,7 +602,7 @@ const ExamList = () => {
                                                             <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">Pulsuz</span>
                                                         )}
                                                         <button
-                                                            onClick={() => handleJoinExam(exam)}
+                                                            onClick={e => { e.stopPropagation(); handleJoinExam(exam); }}
                                                             className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all ${isPaid ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                                                         >
                                                             {isPaid ? '💳 Satın al' : 'Başla'}
@@ -683,7 +687,7 @@ const normalizeExam = (exam) => ({
     subjects: exam.subjects || [],
     tags: exam.tags || [],
     duration: exam.durationMinutes,
-    questionCount: exam.questions?.length || 0,
+    questionCount: (exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0),
 });
 
 const SectionHeader = ({ icon: Icon, label, count }) => (

@@ -11,7 +11,7 @@ import logo from '../../assets/logo.png';
 import api from '../../api/axios';
 
 const Navbar = () => {
-    const { isAuthenticated, user, logout, isTeacher, isAdmin, profilePicture } = useAuth();
+    const { isAuthenticated, user, logout, isTeacher, isAdmin, isStudent, profilePicture } = useAuth();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
@@ -27,6 +27,7 @@ const Navbar = () => {
         { to: '/haqqimizda', label: 'Haqqımızda' },
         { to: '/imtahanlar', label: isTeacher ? 'İmtahanlarım' : 'İmtahanlar' },
         ...(isTeacher && !isAdmin ? [{ to: '/sual-bazasi', label: 'Sual Bazası' }] : []),
+        ...(!isStudent ? [{ to: '/planlar', label: 'Planlar' }] : []),
         { to: '/elaqe', label: 'Əlaqə' },
     ];
 

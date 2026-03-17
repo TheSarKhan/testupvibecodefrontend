@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import {
     HiOutlineMail, HiOutlineLocationMarker, HiOutlineChatAlt2,
     HiOutlineCheckCircle, HiOutlineArrowRight, HiOutlineLightningBolt,
+    HiOutlineChevronDown,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,7 @@ const InfoCard = ({ icon: Icon, iconBg, iconColor, title, value, sub }) => (
 const Contact = () => {
     const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
     const [sending, setSending] = useState(false);
+    const [openFaq, setOpenFaq] = useState(null);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -209,9 +211,19 @@ const Contact = () => {
                     </div>
                     <div className="space-y-3">
                         {faqs.map((faq, i) => (
-                            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                                <p className="font-bold text-gray-900 text-sm mb-1.5">{faq.q}</p>
-                                <p className="text-sm text-gray-500 leading-relaxed">{faq.a}</p>
+                            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                <button
+                                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                                    className="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                                >
+                                    <span className="font-bold text-gray-900 text-sm">{faq.q}</span>
+                                    <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`} />
+                                </button>
+                                {openFaq === i && (
+                                    <div className="px-5 pb-5 text-sm text-gray-500 leading-relaxed border-t border-gray-50 pt-3">
+                                        {faq.a}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

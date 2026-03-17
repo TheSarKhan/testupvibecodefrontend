@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -9,6 +10,7 @@ import {
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import Pricing from '../Pricing/Pricing';
+import api from '../../api/axios';
 
 // ── Mini components ──────────────────────────────────────────────────────────
 
@@ -88,9 +90,53 @@ const Stat = ({ value, label }) => (
     </div>
 );
 
+// ── Banner Strip ──────────────────────────────────────────────────────────────
+const BannerStrip = ({ banners, position }) => {
+    const filtered = banners.filter(b => b.position === position);
+    if (!filtered.length) return null;
+    return (
+        <section className="py-6 bg-white">
+            <div className="container-main space-y-4">
+                {filtered.map(b => {
+                    const grad = b.bgGradient || 'from-indigo-600 to-purple-600';
+                    const inner = (
+                        <div className={`bg-gradient-to-r ${grad} rounded-2xl p-6 flex items-center gap-6 relative overflow-hidden group`}>
+                            <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors rounded-2xl" />
+                            {b.imageUrl && (
+                                <img src={b.imageUrl} alt="" className="relative z-10 h-16 w-16 object-cover rounded-xl shrink-0 shadow-lg" />
+                            )}
+                            <div className="relative z-10 flex-1 min-w-0">
+                                <p className="font-extrabold text-white text-lg leading-tight">{b.title}</p>
+                                {b.subtitle && <p className="text-white/80 text-sm mt-1 line-clamp-2">{b.subtitle}</p>}
+                            </div>
+                            {b.linkUrl && (
+                                <span className="relative z-10 shrink-0 inline-flex items-center px-5 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-bold rounded-xl border border-white/30 backdrop-blur-sm transition-colors whitespace-nowrap">
+                                    {b.linkText || 'Ətraflı bax'} →
+                                </span>
+                            )}
+                        </div>
+                    );
+                    return b.linkUrl ? (
+                        <a key={b.id} href={b.linkUrl} target={b.linkUrl.startsWith('http') ? '_blank' : '_self'} rel="noreferrer" className="block">
+                            {inner}
+                        </a>
+                    ) : (
+                        <div key={b.id}>{inner}</div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+};
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 const Home = () => {
     const { isAuthenticated, isTeacher } = useAuth();
+    const [banners, setBanners] = useState([]);
+
+    useEffect(() => {
+        api.get('/content/banners').then(r => setBanners(r.data)).catch(() => {});
+    }, []);
 
     const features = [
         { icon: HiOutlineLightningBolt, title: 'Sürətli imtahan yaratma', desc: 'Sualları əlavə edin, vaxt, bal və şərtləri tənzimləyin — hazırlıq 5 dəqiqədən az vaxt aparır.', color: 'bg-amber-50 text-amber-600' },
@@ -202,6 +248,9 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+
+            {/* ── Hero Banners ── */}
+            <BannerStrip banners={banners} position="HERO" />
 
             {/* ── Stats ── */}
             <section className="py-12 border-y border-gray-100 bg-white">
@@ -323,6 +372,9 @@ const Home = () => {
                 </div>
             </section>
 
+            {/* ── Inline Banners ── */}
+            <BannerStrip banners={banners} position="INLINE" />
+
             {/* ── For teachers / students ── */}
             <section className="py-20 bg-gray-50/60">
                 <div className="container-main">
@@ -410,6 +462,9 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+
+            {/* ── Bottom Banners ── */}
+            <BannerStrip banners={banners} position="BOTTOM" />
 
             {/* ── Pricing ── */}
             <Pricing isEmbedded={true} />

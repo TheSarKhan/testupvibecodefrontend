@@ -1,23 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { HiOutlineUser, HiOutlineLockClosed } from 'react-icons/hi';
+import { HiOutlineUser, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
 const ExamEntry = () => {
     const { shareLink } = useParams();
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, login } = useAuth();
     const [exam, setExam] = useState(null);
     const [loading, setLoading] = useState(true);
-    
+
     // Form states
     const [guestName, setGuestName] = useState('');
     const [accessCode, setAccessCode] = useState('');
     const [isJoining, setIsJoining] = useState(false);
     const [hasPurchased, setHasPurchased] = useState(false);
     const [isPurchasing, setIsPurchasing] = useState(false);
+
+    // Inline login states
+    const [showLoginForm, setShowLoginForm] = useState(false);
+    const [loginEmail, setLoginEmail] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
+    const [showLoginPassword, setShowLoginPassword] = useState(false);
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     useEffect(() => {
         fetchExamInfo();
@@ -27,7 +34,6 @@ const ExamEntry = () => {
         try {
             const { data } = await api.get(`/exams/${shareLink}`);
             setExam(data);
-            // If exam is free, mark as purchased automatically
             if (data.price == null || data.price === 0 || data.price === '0') {
                 setHasPurchased(true);
             }
@@ -39,10 +45,24 @@ const ExamEntry = () => {
         }
     };
 
+    const handleInlineLogin = async (e) => {
+        e.preventDefault();
+        setIsLoggingIn(true);
+        try {
+            await login(loginEmail, loginPassword);
+            toast.success('Uğurla daxil oldunuz!');
+            setShowLoginForm(false);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Xəta baş verdi');
+        } finally {
+            setIsLoggingIn(false);
+        }
+    };
+
     const handlePurchase = async () => {
         if (!isAuthenticated) {
             toast.error("Ödənişli imtahan üçün hesabınıza daxil olun");
-            navigate('/login', { state: { returnUrl: `/imtahan/${shareLink}` } });
+            setShowLoginForm(true);
             return;
         }
         setIsPurchasing(true);
@@ -59,7 +79,7 @@ const ExamEntry = () => {
 
     const handleStartExam = async (e) => {
         e?.preventDefault();
-        
+
         if (!isAuthenticated && !guestName.trim()) {
             toast.error("Zəhmət olmasa adınızı qeyd edin");
             return;
@@ -76,7 +96,6 @@ const ExamEntry = () => {
                 guestName: isAuthenticated ? undefined : guestName,
                 accessCode: exam?.visibility === 'PRIVATE' ? accessCode : undefined
             });
-            // data.id is the submission id
             navigate(`/test/take/${data.id}`);
         } catch (error) {
             toast.error(error.response?.data?.message || "İmtahana başlamaq mümkün olmadı");
@@ -139,8 +158,58 @@ const ExamEntry = () => {
                         )}
                     </div>
 
+                    {/* Inline login form */}
+                    {showLoginForm && !isAuthenticated && (
+                        <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                            <p className="text-sm font-semibold text-indigo-800 mb-3">Hesabınıza daxil olun</p>
+                            <form onSubmit={handleInlineLogin} className="space-y-3">
+                                <input
+                                    type="email"
+                                    required
+                                    value={loginEmail}
+                                    onChange={e => setLoginEmail(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                    placeholder="E-poçt"
+                                />
+                                <div className="relative">
+                                    <input
+                                        type={showLoginPassword ? 'text' : 'password'}
+                                        required
+                                        value={loginPassword}
+                                        onChange={e => setLoginPassword(e.target.value)}
+                                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                        placeholder="Şifrə"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowLoginPassword(v => !v)}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    >
+                                        {showLoginPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="submit"
+                                        disabled={isLoggingIn}
+                                        className="flex-1 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                                    >
+                                        {isLoggingIn ? 'Gözləyin...' : 'Daxil ol'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowLoginForm(false)}
+                                        className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg"
+                                    >
+                                        Ləğv et
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
                     <form onSubmit={handleStartExam} className="space-y-6">
-                        {!isAuthenticated && (
+                        {!isAuthenticated && !showLoginForm && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                     Ad və Soyad
@@ -162,7 +231,7 @@ const ExamEntry = () => {
                                     <span className="text-sm text-gray-500">Və ya hesabınız varsa </span>
                                     <button
                                         type="button"
-                                        onClick={() => navigate('/login', { state: { returnUrl: `/test/${shareLink}` } })}
+                                        onClick={() => setShowLoginForm(true)}
                                         className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
                                     >
                                         Daxil olun
@@ -212,7 +281,7 @@ const ExamEntry = () => {
                         ) : (
                             <button
                                 type="submit"
-                                disabled={isJoining}
+                                disabled={isJoining || (showLoginForm && !isAuthenticated)}
                                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-70"
                             >
                                 {isJoining ? 'Yüklənir...' : 'İmtahana Başla'}

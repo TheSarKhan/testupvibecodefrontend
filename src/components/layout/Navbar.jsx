@@ -17,16 +17,25 @@ const Navbar = () => {
     const [notifOpen, setNotifOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [hasCollaborative, setHasCollaborative] = useState(false);
     const dropdownRef = useRef(null);
     const notifDesktopRef = useRef(null);
     const notifMobileRef = useRef(null);
     const navigate = useNavigate();
 
+    useEffect(() => {
+        if (isTeacher && !isAdmin) {
+            api.get('/collaborative-exams/my-assignments')
+                .then(r => setHasCollaborative(r.data.some(a => a.status !== 'APPROVED')))
+                .catch(() => {});
+        }
+    }, [isTeacher, isAdmin]);
+
     const navLinks = [
         { to: '/', label: 'Ana Səhifə', end: true },
         { to: '/haqqimizda', label: 'Haqqımızda' },
         { to: '/imtahanlar', label: isTeacher ? 'İmtahanlarım' : 'İmtahanlar' },
-        ...(isTeacher && !isAdmin ? [{ to: '/birge-imtahanlari', label: 'Birgə İmtahanlar' }] : []),
+        ...(isTeacher && !isAdmin && hasCollaborative ? [{ to: '/birge-imtahanlari', label: 'Birgə İmtahanlar' }] : []),
         ...(isTeacher && !isAdmin ? [{ to: '/sual-bazasi', label: 'Sual Bazası' }] : []),
         ...(!isStudent ? [{ to: '/planlar', label: 'Planlar' }] : []),
         { to: '/elaqe', label: 'Əlaqə' },

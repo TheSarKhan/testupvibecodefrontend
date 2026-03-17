@@ -1,8 +1,64 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { HiOutlineDocumentText, HiOutlineClock, HiOutlineEye } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+
+const MOTIVATION = {
+    excellent: {
+        emojis: ['🏆', '🌟', '🎯'],
+        headline: ['Möhtəşəm nəticə!', 'Ustadsan!', 'Fantastik!'],
+        messages: [
+            'Sən bu imtahana hazırlaşmaq üçün çox əmək sərf etmisən — bu nəticə ona layiqdir. Davam et!',
+            'Bu cür nəticə hər kəsin əlinə keçmir. Sənin əzmkarlığın bunu mümkün etdi.',
+            'Biliyini sübut etdin. Özünlə fəxr et — bu nailiyyətin əsl dəyəri var.',
+        ],
+        gradient: 'from-emerald-500 to-teal-600',
+        ring: 'ring-emerald-200',
+    },
+    good: {
+        emojis: ['👏', '💪', '⭐'],
+        headline: ['Yaxşı iş çıxardın!', 'Əla gedişat!', 'Gözəl nəticə!'],
+        messages: [
+            'Biliklərin möhkəmdir. Bir az daha çalışsaq, növbəti dəfə zirvəyə çatacaqsan!',
+            'Bu nəticə sənin potensialının yalnız bir hissəsidir. Daha yüksəyə!',
+            'Hər addım sənə yeni zirvəyə yaxınlaşdırır. Bu yolda dayan — uğur qarşındadır.',
+        ],
+        gradient: 'from-blue-500 to-indigo-600',
+        ring: 'ring-blue-200',
+    },
+    pass: {
+        emojis: ['📈', '🔥', '💡'],
+        headline: ['Keçid balını aldın!', 'İrəliləyirsən!', 'Yaxşı başlanğıc!'],
+        messages: [
+            'Bəzi mövzularda boşluqlar var, amma bunları bağlamaq sənin əlindədir. Hər sual bir fürsətdir.',
+            'Bu nəticə hazırlığına dair bir siqnaldır. Zəif olduğun yerləri tap, üzərində işlə — fərq böyük olacaq.',
+            'Çatdığın yer pislik deyil, amma bacardığın yerdən aşağıdır. Sən daha yaxşısını edə bilərsən.',
+        ],
+        gradient: 'from-amber-500 to-orange-500',
+        ring: 'ring-amber-200',
+    },
+    fail: {
+        emojis: ['📚', '🌱', '🎯'],
+        headline: ['Təslim olma!', 'Hər uğursuzluq dərsdir.', 'Başlanğıc buradan keçir.'],
+        messages: [
+            'Bugünkü nəticə son nəticə deyil. Ən böyük uğurlar məhz çətin başlanğıclardan doğur.',
+            'Mövzuları yenidən nəzərdən keçir, sualları analiz et — növbəti dəfə bu səhvlər sənin güclü tərəflərinə çevriləcək.',
+            'Bütün uğurlu insanlar bir vaxt bu yerdə olublar. Əsas — düzgün istiqamətdə addım atmağa davam etməkdir.',
+        ],
+        gradient: 'from-rose-500 to-red-600',
+        ring: 'ring-rose-200',
+    },
+};
+
+const getLevel = (pct) => {
+    if (pct >= 90) return 'excellent';
+    if (pct >= 75) return 'good';
+    if (pct >= 50) return 'pass';
+    return 'fail';
+};
+
+const pick = (arr, seed) => arr[seed % arr.length];
 
 const StarRating = ({ value, onChange }) => {
     const [hovered, setHovered] = useState(0);
@@ -32,9 +88,10 @@ const DonutChart = ({ percent, color }) => {
     const offset = circumference - (circumference * percent) / 100;
 
     const colorMap = {
-        green: { stroke: '#22c55e', text: 'text-green-600', bg: 'from-green-50 to-emerald-50' },
-        yellow: { stroke: '#eab308', text: 'text-yellow-600', bg: 'from-yellow-50 to-amber-50' },
-        red: { stroke: '#ef4444', text: 'text-red-600', bg: 'from-red-50 to-rose-50' },
+        green:  { stroke: '#22c55e', text: 'text-green-600' },
+        blue:   { stroke: '#6366f1', text: 'text-indigo-600' },
+        yellow: { stroke: '#f59e0b', text: 'text-amber-600' },
+        red:    { stroke: '#ef4444', text: 'text-red-600' },
     };
     const c = colorMap[color] || colorMap.green;
 
@@ -61,15 +118,14 @@ const DonutChart = ({ percent, color }) => {
     );
 };
 
-const StatCard = ({ icon, label, value, sub, colorClass }) => (
-    <div className={`bg-gray-50 rounded-2xl p-4 flex items-center gap-3 border border-gray-100`}>
+const StatCard = ({ icon, label, value, colorClass }) => (
+    <div className="bg-gray-50 rounded-2xl p-4 flex items-center gap-3 border border-gray-100">
         <div className={`p-2.5 rounded-xl ${colorClass}`}>
             {icon}
         </div>
         <div>
             <p className="text-xs text-gray-400 font-medium">{label}</p>
             <p className="text-base font-bold text-gray-800">{value}</p>
-            {sub && <p className="text-xs text-gray-400">{sub}</p>}
         </div>
     </div>
 );
@@ -106,16 +162,27 @@ const ExamResultSummary = () => {
             ? Math.round((submission.totalScore / submission.maxScore) * 100)
             : null;
 
-    const getColor = (pct) => {
-        if (pct >= 80) return 'green';
+    // Deterministic pick so it doesn't change on re-render
+    const seed = useMemo(() => parseInt(sessionId || '0', 10) || 0, [sessionId]);
+
+    const level = scorePercent !== null ? getLevel(scorePercent) : null;
+    const motiv = level ? MOTIVATION[level] : null;
+    const emoji    = motiv ? pick(motiv.emojis, seed) : '🎉';
+    const headline = motiv ? pick(motiv.headline, seed) : 'İmtahan bitdi!';
+    const message  = motiv ? pick(motiv.messages, seed + 1) : '';
+    const gradient = motiv ? motiv.gradient : 'from-indigo-500 to-purple-600';
+
+    const getDonutColor = (pct) => {
+        if (pct >= 90) return 'green';
+        if (pct >= 75) return 'blue';
         if (pct >= 50) return 'yellow';
         return 'red';
     };
 
     const getBadge = (pct) => {
-        if (pct >= 90) return { label: 'Əla', bg: 'bg-green-100 text-green-700' };
+        if (pct >= 90) return { label: 'Əla', bg: 'bg-emerald-100 text-emerald-700' };
         if (pct >= 75) return { label: 'Yaxşı', bg: 'bg-blue-100 text-blue-700' };
-        if (pct >= 50) return { label: 'Kafi', bg: 'bg-yellow-100 text-yellow-700' };
+        if (pct >= 50) return { label: 'Kafi', bg: 'bg-amber-100 text-amber-700' };
         return { label: 'Zəif', bg: 'bg-red-100 text-red-700' };
     };
 
@@ -138,17 +205,17 @@ const ExamResultSummary = () => {
     const badge = scorePercent !== null ? getBadge(scorePercent) : null;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col justify-center items-center py-12 px-4">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex flex-col justify-center items-center py-12 px-4">
             <div className="bg-white w-full max-w-xl rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
 
-                {/* Top Banner */}
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-8 pt-8 pb-6 text-white text-center">
+                {/* Top Banner — dynamic based on score */}
+                <div className={`bg-gradient-to-r ${gradient} px-8 pt-8 pb-6 text-white text-center`}>
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm mb-3 text-3xl">
-                        🎉
+                        {emoji}
                     </div>
-                    <h1 className="text-2xl font-bold">Təbrik edirik!</h1>
-                    <p className="mt-1 text-indigo-100 text-sm">
-                        {submission?.examTitle || 'İmtahan'} bitdi
+                    <h1 className="text-2xl font-bold">{headline}</h1>
+                    <p className="mt-1 text-white/75 text-sm">
+                        {submission?.examTitle || 'İmtahan'} tamamlandı
                     </p>
                 </div>
 
@@ -156,7 +223,7 @@ const ExamResultSummary = () => {
                 <div className="px-8 py-8 flex flex-col items-center border-b border-gray-100">
                     {scorePercent !== null ? (
                         <>
-                            <DonutChart percent={scorePercent} color={getColor(scorePercent)} />
+                            <DonutChart percent={scorePercent} color={getDonutColor(scorePercent)} />
 
                             <div className="mt-4 text-center">
                                 {isTemplateExam ? (
@@ -166,11 +233,11 @@ const ExamResultSummary = () => {
                                         <span className="ml-2 text-sm text-indigo-600 font-medium">Şablon nəticəsi</span>
                                     </p>
                                 ) : (
-                                <p className="text-gray-700 text-lg font-semibold">
-                                    <span className="font-black text-gray-900">{submission.totalScore?.toFixed(1)}</span>
-                                    <span className="text-gray-400"> / </span>
-                                    <span>{submission.maxScore} bal</span>
-                                </p>
+                                    <p className="text-gray-700 text-lg font-semibold">
+                                        <span className="font-black text-gray-900">{submission.totalScore?.toFixed(1)}</span>
+                                        <span className="text-gray-400"> / </span>
+                                        <span>{submission.maxScore} bal</span>
+                                    </p>
                                 )}
                                 <div className="mt-3 flex items-center gap-2 justify-center flex-wrap">
                                     {badge && (
@@ -183,9 +250,7 @@ const ExamResultSummary = () => {
                                             ? 'bg-green-100 text-green-700'
                                             : 'bg-yellow-100 text-yellow-700'
                                     }`}>
-                                        {submission.isFullyGraded
-                                            ? '✓ Tam Yoxlanılıb'
-                                            : '⏳ Açıq suallar gözləyir'}
+                                        {submission.isFullyGraded ? '✓ Tam Yoxlanılıb' : '⏳ Açıq suallar gözləyir'}
                                     </span>
                                 </div>
                             </div>
@@ -200,9 +265,28 @@ const ExamResultSummary = () => {
                     )}
                 </div>
 
+                {/* Motivational message */}
+                {message && (
+                    <div className={`mx-6 my-5 rounded-2xl px-5 py-4 border ${
+                        level === 'excellent' ? 'bg-emerald-50 border-emerald-100' :
+                        level === 'good'      ? 'bg-blue-50 border-blue-100' :
+                        level === 'pass'      ? 'bg-amber-50 border-amber-100' :
+                                               'bg-rose-50 border-rose-100'
+                    }`}>
+                        <p className={`text-sm font-medium leading-relaxed ${
+                            level === 'excellent' ? 'text-emerald-800' :
+                            level === 'good'      ? 'text-blue-800' :
+                            level === 'pass'      ? 'text-amber-800' :
+                                                   'text-rose-800'
+                        }`}>
+                            {message}
+                        </p>
+                    </div>
+                )}
+
                 {/* Stat Cards */}
                 {(timeTaken || submission?.durationMinutes) && (
-                    <div className="px-8 py-6 border-b border-gray-100">
+                    <div className="px-8 pb-6 border-b border-gray-100">
                         <div className="grid grid-cols-2 gap-3">
                             {timeTaken && (
                                 <StatCard

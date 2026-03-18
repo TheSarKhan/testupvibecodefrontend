@@ -183,10 +183,10 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                                 {filteredQuestions.map((q, idx) => {
                                     const isDifferentType = filterType && BACKEND_FRONTEND_MAP[q.questionType] !== filterType;
                                     return (
-                                    <button
+                                    <div
                                         key={q.id}
                                         onClick={() => onSelect(q)}
-                                        className="w-full flex items-start gap-3 px-5 py-4 hover:bg-indigo-50/40 transition-colors text-left group"
+                                        className="flex items-start gap-3 px-5 py-4 hover:bg-indigo-50/40 transition-colors cursor-pointer group"
                                     >
                                         <span className="text-xs font-bold text-gray-400 mt-0.5 shrink-0 w-5">{idx + 1}.</span>
                                         <div className="flex-1 min-w-0 space-y-1.5">
@@ -201,12 +201,12 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-sm text-gray-800 overflow-hidden" style={{maxHeight: '3em'}}>
-                                                <LatexPreview content={q.content} className="pointer-events-none" />
+                                            <div className="text-sm text-gray-800">
+                                                <LatexPreview content={q.content} />
                                             </div>
                                         </div>
                                         <span className="text-xs text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">Seç</span>
-                                    </button>
+                                    </div>
                                     );
                                 })}
                             </div>

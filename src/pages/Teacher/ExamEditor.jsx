@@ -187,6 +187,11 @@ const ExamEditor = () => {
             setTemplateInfo(sd);
             setSelectedSectionId(sd.id);
             setQuestions(buildQuestionsFromTypeCounts(sd.typeCounts || []));
+            // Auto-set title so auto-save can proceed without user input
+            setExamConfig(prev => ({
+                ...prev,
+                title: prev.title || `${sd.subjectName || 'Şablon'} - ${sd.subtitleName || sd.name || 'İmtahan'}`
+            }));
         }
     }, []);
 
@@ -195,7 +200,7 @@ const ExamEditor = () => {
         if (loading) return;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(async () => {
-            if (!examConfig.title || !examConfig.title.trim()) return;
+            if (type !== 'template' && (!examConfig.title || !examConfig.title.trim())) return;
             const payload = buildPayload(examStatus);
             setAutoSaveStatus('saving');
             try {

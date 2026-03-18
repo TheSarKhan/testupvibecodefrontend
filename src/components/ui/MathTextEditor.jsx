@@ -23,14 +23,21 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className }, 
         return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }, []);
 
-    // Parse $$ latex $$ into HTML with Katex nodes
+    // Parse $$ latex $$ or $ latex $ into HTML with Katex nodes
     const parseToHtml = (text) => {
         if (!text) return '';
-        const parts = text.split(/(\$\$.*?\$\$)/g);
+        // Match $$...$$ first (display), then $...$ (inline)
+        const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+?\$)/g);
         let html = '';
         parts.forEach(part => {
-            if (part.startsWith('$$') && part.endsWith('$$')) {
-                const math = part.slice(2, -2).trim();
+            let math = null;
+            if (part.startsWith('$$') && part.endsWith('$$') && part.length > 4) {
+                math = part.slice(2, -2).trim();
+            } else if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
+                math = part.slice(1, -1).trim();
+            }
+
+            if (math !== null) {
                 try {
                     const mathHtml = katex.renderToString(math, { throwOnError: false, displayMode: false });
                     html += `<span class="math-node mx-1 inline-block align-middle cursor-default bg-indigo-50/50 px-1 rounded" contenteditable="false" data-latex="${math}">${mathHtml}</span>`;
@@ -38,7 +45,6 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className }, 
                     html += part;
                 }
             } else {
-                // escape html tags
                 const escaped = part
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')

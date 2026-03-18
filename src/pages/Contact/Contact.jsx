@@ -6,6 +6,7 @@ import {
     HiOutlineChevronDown,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import api from '../../api/axios';
 
 const InfoCard = ({ icon: Icon, iconBg, iconColor, title, value, sub }) => (
     <div className="flex items-start gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
@@ -25,14 +26,18 @@ const Contact = () => {
     const [sending, setSending] = useState(false);
     const [openFaq, setOpenFaq] = useState(null);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setSending(true);
-        setTimeout(() => {
+        try {
+            await api.post('/contact', formData);
             toast.success('Mesajınız göndərildi. Tezliklə geri dönəcəyik!');
             setFormData({ name: '', email: '', subject: '', message: '' });
+        } catch {
+            toast.error('Xəta baş verdi. Yenidən cəhd edin.');
+        } finally {
             setSending(false);
-        }, 800);
+        }
     };
 
     const faqs = [

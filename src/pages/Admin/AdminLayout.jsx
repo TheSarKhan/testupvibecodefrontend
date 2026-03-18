@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineMenu, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineMenu, HiOutlineX, HiOutlineMail } from 'react-icons/hi';
 import api from '../../api/axios';
 
 const navGroups = [
@@ -9,6 +9,7 @@ const navGroups = [
         items: [
             { to: '/admin', label: 'Dashboard', icon: HiOutlineChartBar, end: true },
             { to: '/admin/users', label: 'İstifadəçilər', icon: HiOutlineUsers },
+            { to: '/admin/mesajlar', label: 'Əlaqə Mesajları', icon: HiOutlineMail, badge: 'contact' },
             { to: '/admin/bildirişlər', label: 'Bildirişlər', icon: HiOutlineBell },
             { to: '/admin/loglar', label: 'Loglar', icon: HiOutlineClipboardList },
         ],
@@ -37,19 +38,23 @@ const AdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [pendingCount, setPendingCount] = useState(0);
+    const [unreadContactCount, setUnreadContactCount] = useState(0);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Close sidebar on route change (mobile)
     useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
     useEffect(() => {
-        const fetchPending = () => {
+        const fetchCounts = () => {
             api.get('/admin/collaborative-exams/pending-count')
                 .then(r => setPendingCount(r.data.count || 0))
                 .catch(() => {});
+            api.get('/admin/contact-messages/unread-count')
+                .then(r => setUnreadContactCount(r.data.count || 0))
+                .catch(() => {});
         };
-        fetchPending();
-        const interval = setInterval(fetchPending, 60000);
+        fetchCounts();
+        const interval = setInterval(fetchCounts, 60000);
         return () => clearInterval(interval);
     }, []);
 
@@ -69,7 +74,7 @@ const AdminLayout = () => {
                     <div key={group.label}>
                         <p className="px-3 mb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">{group.label}</p>
                         <div className="space-y-0.5">
-                            {group.items.map(({ to, label, icon: Icon, end }) => (
+                            {group.items.map(({ to, label, icon: Icon, end, badge }) => (
                                 <NavLink
                                     key={to}
                                     to={to}
@@ -86,6 +91,11 @@ const AdminLayout = () => {
                                     {to === '/admin/birge-imtahanlar' && pendingCount > 0 && (
                                         <span className="h-5 min-w-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                                             {pendingCount > 9 ? '9+' : pendingCount}
+                                        </span>
+                                    )}
+                                    {badge === 'contact' && unreadContactCount > 0 && (
+                                        <span className="h-5 min-w-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                            {unreadContactCount > 9 ? '9+' : unreadContactCount}
                                         </span>
                                     )}
                                 </NavLink>

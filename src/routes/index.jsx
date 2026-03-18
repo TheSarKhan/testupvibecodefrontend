@@ -39,6 +39,7 @@ import AdminBanners from '../pages/Admin/AdminBanners';
 import AdminNotifications from '../pages/Admin/AdminNotifications';
 import AdminCollaborativeExams from '../pages/Admin/AdminCollaborativeExams';
 import AdminLogs from '../pages/Admin/AdminLogs';
+import AdminContactMessages from '../pages/Admin/AdminContactMessages';
 import CollaborativeAssignments from '../pages/Teacher/CollaborativeAssignments';
 
 // Protected
@@ -118,6 +119,7 @@ const router = createBrowserRouter([
             { path: 'sual-bazasi/:subjectId', element: <AdminQuestionBankSubject /> },
             { path: 'planlar', element: <AdminSubscriptionPlans /> },
             { path: 'reklamlar', element: <AdminBanners /> },
+            { path: 'mesajlar', element: <AdminContactMessages /> },
             { path: 'bildirişlər', element: <AdminNotifications /> },
             { path: 'loglar', element: <AdminLogs /> },
         ],

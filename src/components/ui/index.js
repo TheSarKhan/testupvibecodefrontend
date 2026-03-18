@@ -9,6 +9,7 @@ export { default as MathFormulaModal } from './MathFormulaModal';
 export { default as LatexPreview } from './LatexPreview';
 export { default as MathTextEditor } from './MathTextEditor';
 export { default as AiGenerateModal } from './AiGenerateModal';
+export { default as AiExamModal } from './AiExamModal';
 
 
 

@@ -195,6 +195,39 @@ const ExamEditor = () => {
         }
     }, []);
 
+    // On new exam with AI-generated questions
+    useEffect(() => {
+        if (!isEditMode && initialLocationState.aiQuestions?.length > 0) {
+            const mapped = initialLocationState.aiQuestions.map((q, idx) => ({
+                id: (Date.now() + idx).toString(),
+                orderIndex: idx,
+                type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
+                      q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
+                      q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
+                      q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' :
+                      q.questionType === 'OPEN_MANUAL' ? 'OPEN_MANUAL' : 'MULTIPLE_CHOICE',
+                text: q.content || '',
+                points: q.points ?? 1,
+                subjectGroup: null,
+                options: (q.options || []).map((o, oi) => ({
+                    id: Date.now() + idx * 100 + oi,
+                    text: o.content || '',
+                    isCorrect: !!o.isCorrect
+                })),
+                matchingPairs: [],
+                sampleAnswer: q.correctAnswer || ''
+            }));
+            setQuestions(mapped);
+            // Auto-set title so auto-save can proceed
+            const subj = initialLocationState.subject || 'AI';
+            setExamConfig(prev => ({
+                ...prev,
+                title: prev.title || `${subj} - AI İmtahan`,
+                subject: prev.subject || subj,
+            }));
+        }
+    }, []);
+
     // Auto-save: debounce 2.5s after any content change
     useEffect(() => {
         if (loading) return;

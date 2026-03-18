@@ -9,6 +9,7 @@ import {
 } from 'react-icons/hi';
 import { useNavigate, Link } from 'react-router-dom';
 import { ExamCard, CreateExamModal } from '../../components/ui';
+import AiExamModal from '../../components/ui/AiExamModal';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -107,6 +108,7 @@ const ExamList = () => {
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [showAiExamModal, setShowAiExamModal] = useState(false);
     const [savedExamLinks, setSavedExamLinks] = useState(new Set());
     const [savingLink, setSavingLink] = useState(null);
 
@@ -247,6 +249,17 @@ const ExamList = () => {
 
     const handleJoinExam = (exam) => navigate(`/imtahan/${exam.shareLink}`);
 
+    const handleAiExamGenerate = (questions, subjectName) => {
+        setShowAiExamModal(false);
+        navigate('/imtahanlar/yarat', {
+            state: {
+                type: 'free',
+                subject: subjectName,
+                aiQuestions: questions
+            }
+        });
+    };
+
     const handleToggleDepot = async (exam) => {
         if (!isAuthenticated) { toast.error('Depoya əlavə etmək üçün hesabınıza daxil olun'); return; }
         const isSaved = savedExamLinks.has(exam.shareLink);
@@ -366,6 +379,12 @@ const ExamList = () => {
                                     )}
                                 </div>
                             )}
+                            <button
+                                onClick={() => setShowAiExamModal(true)}
+                                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-bold shadow-sm transition-all text-sm whitespace-nowrap bg-violet-100 hover:bg-violet-200 text-violet-700 border border-violet-200 hover:-translate-y-0.5"
+                            >
+                                ✨ AI ilə Yarat
+                            </button>
                             <button
                                 onClick={() => {
                                     if (isAdmin) {
@@ -714,6 +733,12 @@ const ExamList = () => {
             </div>
 
             <CreateExamModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+            {showAiExamModal && (
+                <AiExamModal
+                    onClose={() => setShowAiExamModal(false)}
+                    onGenerate={handleAiExamGenerate}
+                />
+            )}
         </div>
     );
 };

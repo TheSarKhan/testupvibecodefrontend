@@ -201,8 +201,8 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-sm text-gray-800 line-clamp-2">
-                                                <LatexPreview content={q.content} />
+                                            <div className="text-sm text-gray-800 overflow-hidden" style={{maxHeight: '3em'}}>
+                                                <LatexPreview content={q.content} className="pointer-events-none" />
                                             </div>
                                         </div>
                                         <span className="text-xs text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">Seç</span>

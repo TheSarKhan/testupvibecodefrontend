@@ -11,6 +11,9 @@ export default defineConfig({
     wasm(),
     topLevelAwait()
   ],
+  define: {
+    global: 'window',
+  },
   server: {
     port: 5173,
     proxy: {

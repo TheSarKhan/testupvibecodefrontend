@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
     HiBell, HiMail, HiUsers, HiUserGroup, HiShieldCheck, HiAcademicCap,
     HiPaperClip, HiX, HiCheckCircle, HiClock, HiChevronLeft, HiChevronRight,
-    HiSearch, HiCheck, HiInformationCircle
+    HiSearch, HiCheck, HiInformationCircle, HiOutlineSpeakerphone, HiOutlineExclamationCircle, HiOutlineLink, HiOutlinePencilAlt
 } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -298,6 +298,11 @@ const AdminNotifications = () => {
     const [targetType, setTargetType] = useState('ALL');
     const [roleFilter, setRoleFilter] = useState('STUDENT');
     const [selectedUserIds, setSelectedUserIds] = useState([]);
+    
+    // NEW: Type & Link
+    const [notifType, setNotifType] = useState('SYSTEM');
+    const [actionUrl, setActionUrl] = useState('');
+
     const [channelSite, setChannelSite] = useState(true);
     const [channelEmail, setChannelEmail] = useState(false);
     const [emailProvider, setEmailProvider] = useState('GMAIL');
@@ -345,6 +350,8 @@ const AdminNotifications = () => {
             targetType,
             roleFilter: targetType === 'ROLE' ? roleFilter : null,
             userIds: targetType === 'SELECTED' ? selectedUserIds : null,
+            type: notifType,
+            actionUrl: actionUrl.trim() || null
         };
 
         const formData = new FormData();
@@ -497,9 +504,56 @@ const AdminNotifications = () => {
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
                                         placeholder="Bildiriş məzmununu yazın..."
-                                        rows={5}
+                                        rows={4}
                                         className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
                                     />
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                                    {/* Bildiriş növü seçimi */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-2">Bildirişin Növü</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[
+                                                { value: 'SYSTEM', label: 'Sistem', icon: HiBell, color: 'text-indigo-500 bg-indigo-50 border-indigo-200' },
+                                                { value: 'ANNOUNCEMENT', label: 'Elan', icon: HiOutlineSpeakerphone, color: 'text-purple-500 bg-purple-50 border-purple-200' },
+                                                { value: 'WARNING', label: 'Təcili', icon: HiOutlineExclamationCircle, color: 'text-red-500 bg-red-50 border-red-200' },
+                                                { value: 'EXAM_CREATED', label: 'İmtahan', icon: HiOutlinePencilAlt, color: 'text-emerald-500 bg-emerald-50 border-emerald-200' },
+                                            ].map(type => (
+                                                <button
+                                                    key={type.value}
+                                                    type="button"
+                                                    onClick={() => setNotifType(type.value)}
+                                                    className={`flex items-center gap-2 px-3 py-2 border rounded-xl text-xs font-semibold transition-all ${
+                                                        notifType === type.value
+                                                            ? `border-opacity-100 shadow-sm ${type.color}`
+                                                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <type.icon className="w-4 h-4 shrink-0" />
+                                                    {type.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Yönləndirmə Linki */}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-2">Yönləndirmə Linki (könüllü)</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <HiOutlineLink className="h-4 w-4 text-gray-400" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={actionUrl}
+                                                onChange={e => setActionUrl(e.target.value)}
+                                                placeholder="Məs. /imtahanlar/123"
+                                                className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                            />
+                                        </div>
+                                        <p className="mt-1.5 text-[10px] text-gray-400">İstifadəçi bildirişə klikləyəndə avtomatik bu səhifəyə gedəcək.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

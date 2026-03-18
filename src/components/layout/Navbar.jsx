@@ -5,10 +5,13 @@ import {
     HiOutlineMenu, HiOutlineX, HiOutlineChevronDown,
     HiOutlineUser, HiOutlineLogout,
     HiOutlineAcademicCap, HiOutlinePencilAlt,
-    HiOutlineBell, HiOutlineCheckCircle
+    HiOutlineBell, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineSpeakerphone, HiOutlineCreditCard
 } from 'react-icons/hi';
 import logo from '../../assets/logo.png';
 import api from '../../api/axios';
+import toast from 'react-hot-toast';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
 
 const Navbar = () => {
     const { isAuthenticated, user, logout, isTeacher, isAdmin, isStudent, profilePicture } = useAuth();
@@ -53,9 +56,80 @@ const Navbar = () => {
 
     useEffect(() => {
         loadNotifications();
-        const interval = setInterval(loadNotifications, 30000);
-        return () => clearInterval(interval);
-    }, [loadNotifications]);
+        
+        // Start WebSocket Connection for Real-Time Notifications
+        if (!isAuthenticated || !user?.id) return;
+        
+        const client = new Client({
+            webSocketFactory: () => new SockJS('http://localhost:8082/ws'),
+            reconnectDelay: 5000,
+            onConnect: () => {
+                client.subscribe(`/topic/notifications/${user.id}`, (message) => {
+                    const newNotif = JSON.parse(message.body);
+                    
+                    // Add to dropdown list and increase count
+                    setNotifications(prev => [newNotif, ...prev]);
+                    setUnreadCount(prev => prev + 1);
+                    
+                    // Show beautiful toast based on type
+                    toast.custom((t) => (
+                        <div
+                            className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
+                            max-w-md w-full bg-white shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all cursor-pointer hover:bg-gray-50`}
+                            onClick={() => {
+                                toast.dismiss(t.id);
+                                markRead(newNotif.id);
+                                if (newNotif.actionUrl) {
+                                    navigate(newNotif.actionUrl);
+                                } else {
+                                    setNotifOpen(true);
+                                }
+                            }}
+                        >
+                            <div className="flex-1 w-0 p-4">
+                                <div className="flex items-start">
+                                    <div className="flex-shrink-0 pt-0.5">
+                                        {/* Icon based on Type */}
+                                        {newNotif.type === 'EXAM_CREATED' && <HiOutlinePencilAlt className="h-10 w-10 text-emerald-500 bg-emerald-100 p-2 rounded-full" />}
+                                        {newNotif.type === 'PAYMENT_SUCCESS' && <HiOutlineCreditCard className="h-10 w-10 text-blue-500 bg-blue-100 p-2 rounded-full" />}
+                                        {newNotif.type === 'ANNOUNCEMENT' && <HiOutlineSpeakerphone className="h-10 w-10 text-purple-500 bg-purple-100 p-2 rounded-full" />}
+                                        {newNotif.type === 'WARNING' && <HiOutlineExclamationCircle className="h-10 w-10 text-red-500 bg-red-100 p-2 rounded-full" />}
+                                        {(!newNotif.type || newNotif.type === 'SYSTEM' || newNotif.type === 'EXAM_GRADED') && <HiOutlineBell className="h-10 w-10 text-indigo-500 bg-indigo-100 p-2 rounded-full" />}
+                                    </div>
+                                    <div className="ml-3 flex-1">
+                                        <p className="text-sm font-bold text-gray-900">{newNotif.title}</p>
+                                        <p className="mt-1 text-sm text-gray-500 line-clamp-2">{newNotif.message}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex border-l border-gray-100">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toast.dismiss(t.id);
+                                    }}
+                                    className="w-full border border-transparent rounded-none rounded-r-2xl p-4 flex items-center justify-center text-sm font-bold text-indigo-600 hover:text-indigo-500 focus:outline-none"
+                                >
+                                    Bağla
+                                </button>
+                            </div>
+                        </div>
+                    ), { duration: 6000, position: 'top-right' });
+                });
+            },
+            onStompError: (frame) => {
+                console.error('STOMP Broker err: ', frame.headers['message']);
+            }
+        });
+
+        client.activate();
+
+        return () => {
+            if (client) {
+                client.deactivate();
+            }
+        };
+    }, [isAuthenticated, user?.id, navigate]);
 
     const openNotifications = async () => {
         const opening = !notifOpen;
@@ -210,10 +284,22 @@ const Navbar = () => {
                                                         >
                                                             <div className="flex items-start gap-2.5">
                                                                 <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${!n.isRead ? 'bg-indigo-500' : 'bg-transparent'}`} />
-                                                                <div className="flex-1 min-w-0">
+                                                                <div className="flex-1 min-w-0" onClick={() => {
+                                                                    if (n.actionUrl) {
+                                                                        navigate(n.actionUrl);
+                                                                        setNotifOpen(false);
+                                                                    }
+                                                                }}>
                                                                     <p className={`text-sm font-semibold ${!n.isRead ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
                                                                     <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.message}</p>
-                                                                    <p className="text-[11px] text-gray-400 mt-1">{fmtTime(n.createdAt)}</p>
+                                                                    <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-2">
+                                                                        {fmtTime(n.createdAt)}
+                                                                        {n.type && n.type !== 'SYSTEM' && (
+                                                                            <span className="bg-gray-100 text-gray-600 px-1.5 rounded uppercase text-[9px] font-bold tracking-wider">
+                                                                                {n.type.replace('_', ' ')}
+                                                                            </span>
+                                                                        )}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -345,7 +431,13 @@ const Navbar = () => {
                                                     className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-indigo-50/40' : ''}`}>
                                                     <div className="flex items-start gap-2">
                                                         <div className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${!n.isRead ? 'bg-indigo-500' : 'bg-transparent'}`} />
-                                                        <div>
+                                                        <div className="flex-1 min-w-0" onClick={() => {
+                                                            if (n.actionUrl) {
+                                                                navigate(n.actionUrl);
+                                                                setNotifOpen(false);
+                                                                setMobileOpen(false);
+                                                            }
+                                                        }}>
                                                             <p className="text-xs font-semibold text-gray-800">{n.title}</p>
                                                             <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
                                                             <p className="text-[10px] text-gray-400 mt-1">{fmtTime(n.createdAt)}</p>

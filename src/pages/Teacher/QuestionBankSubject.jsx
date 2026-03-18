@@ -5,7 +5,7 @@ import {
     HiOutlineBookOpen, HiOutlineSearch, HiOutlinePencil, HiOutlineEye,
     HiOutlineX, HiOutlineCheckCircle, HiOutlineTag
 } from 'react-icons/hi';
-import { QuestionEditor, LatexPreview } from '../../components/ui';
+import { QuestionEditor, LatexPreview, AiGenerateModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -271,6 +271,7 @@ const QuestionBankSubject = () => {
     const [viewQuestion, setViewQuestion] = useState(null);
     const [editQuestion, setEditQuestion] = useState(null);
     const [availableTopics, setAvailableTopics] = useState([]);
+    const [aiModalOpen, setAiModalOpen] = useState(false);
 
     const filteredQuestions = useMemo(() => {
         let list = questions;
@@ -407,12 +408,20 @@ const QuestionBankSubject = () => {
                         />
                     </div>
                     {canEdit && (
-                        <button
-                            onClick={handleAddQuestion}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
-                        >
-                            <HiOutlinePlus className="w-4 h-4" /> Yeni sual
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setAiModalOpen(true)}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
+                            >
+                                <span className="text-base leading-none">✨</span> AI ilə yarat
+                            </button>
+                            <button
+                                onClick={handleAddQuestion}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                            >
+                                <HiOutlinePlus className="w-4 h-4" /> Yeni sual
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -570,6 +579,15 @@ const QuestionBankSubject = () => {
                     availableTopics={availableTopics}
                 />
             )}
+
+            <AiGenerateModal
+                isOpen={aiModalOpen}
+                onClose={() => setAiModalOpen(false)}
+                subjectId={Number(subjectId)}
+                subjectName={subject?.name || ''}
+                topics={availableTopics}
+                onSave={fetchData}
+            />
         </div>
     );
 };

@@ -2,14 +2,18 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
+import { GoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
+import api from '../../api/axios';
+import GoogleRoleModal from '../../components/ui/GoogleRoleModal';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const [googlePending, setGooglePending] = useState(null); // {googleToken, userInfo}
+    const { login, loginWithTokens } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -32,7 +36,35 @@ const Login = () => {
         }
     };
 
+    const handleGoogleCredential = async (credentialResponse) => {
+        try {
+            const { data } = await api.post('/auth/google', { googleToken: credentialResponse.credential });
+            if (data.status === 'LOGIN') {
+                loginWithTokens(data);
+                toast.success('Uğurla daxil oldunuz!');
+                navigate(data.role === 'ADMIN' ? '/admin' : '/');
+            } else if (data.status === 'NEEDS_REGISTRATION') {
+                setGooglePending({ googleToken: credentialResponse.credential, userInfo: data });
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Google ilə giriş xətası');
+        }
+    };
+
     return (
+        <>
+        {googlePending && (
+            <GoogleRoleModal
+                googleToken={googlePending.googleToken}
+                userInfo={googlePending.userInfo}
+                onSuccess={(data) => {
+                    loginWithTokens(data);
+                    toast.success('Qeydiyyat tamamlandı!');
+                    navigate(data.role === 'ADMIN' ? '/admin' : '/');
+                }}
+                onClose={() => setGooglePending(null)}
+            />
+        )}
         <div className="min-h-[80vh] flex items-center justify-center px-4">
             <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
                 <h2 className="text-2xl font-bold text-gray-900 text-center">Daxil ol</h2>
@@ -87,6 +119,25 @@ const Login = () => {
                     </button>
                 </form>
 
+                <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs text-gray-400">
+                        <span className="bg-white px-2">və ya</span>
+                    </div>
+                </div>
+
+                <div className="flex justify-center">
+                    <GoogleLogin
+                        onSuccess={handleGoogleCredential}
+                        onError={() => toast.error('Google girişi ləğv edildi')}
+                        text="signin_with"
+                        locale="az"
+                        width="360"
+                    />
+                </div>
+
                 <p className="mt-6 text-center text-sm text-gray-500">
                     Hesabınız yoxdur?{' '}
                     <Link to="/register" className="text-indigo-600 font-medium hover:underline">
@@ -95,6 +146,7 @@ const Login = () => {
                 </p>
             </div>
         </div>
+        </>
     );
 };
 

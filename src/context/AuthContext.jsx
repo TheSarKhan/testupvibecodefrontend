@@ -124,6 +124,20 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
+    // Called after Google OAuth login or complete-registration succeeds
+    const loginWithTokens = (data) => {
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        const decoded = jwtDecode(data.accessToken);
+        setUser({
+            id: decoded.sub,
+            email: decoded.email,
+            role: decoded.role,
+            fullName: decoded.fullName,
+        });
+        return data;
+    };
+
     const register = async (userData) => {
         const { data } = await api.post('/auth/register', userData);
         return data;
@@ -156,6 +170,7 @@ export const AuthProvider = ({ children }) => {
                 user,
                 loading,
                 login,
+                loginWithTokens,
                 register,
                 logout,
                 isAuthenticated,

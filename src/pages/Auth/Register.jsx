@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { HiOutlineEye, HiOutlineEyeOff, HiOutlineSparkles, HiOutlineX } from 'react-icons/hi';
+import { GoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
+import api from '../../api/axios';
+import GoogleRoleModal from '../../components/ui/GoogleRoleModal';
 
 const WelcomeGiftModal = ({ onClose }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -53,20 +56,42 @@ const Register = () => {
         password: '',
         confirmPassword: '',
         role: 'STUDENT',
+        termsAccepted: false,
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showGiftModal, setShowGiftModal] = useState(false);
-    const { register } = useAuth();
+    const [googlePending, setGooglePending] = useState(null);
+    const { register, loginWithTokens } = useAuth();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleGoogleCredential = async (credentialResponse) => {
+        try {
+            const { data } = await api.post('/auth/google', { googleToken: credentialResponse.credential });
+            if (data.status === 'LOGIN') {
+                loginWithTokens(data);
+                toast.success('Uğurla daxil oldunuz!');
+                navigate(data.role === 'ADMIN' ? '/admin' : '/');
+            } else if (data.status === 'NEEDS_REGISTRATION') {
+                setGooglePending({ googleToken: credentialResponse.credential, userInfo: data });
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Google ilə qeydiyyat xətası');
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.termsAccepted) {
+            toast.error('İstifadə şərtlərini qəbul etməlisiniz');
+            return;
+        }
 
         if (formData.password !== formData.confirmPassword) {
             toast.error('Şifrələr uyğun gəlmir');
@@ -80,6 +105,7 @@ const Register = () => {
                 email: formData.email,
                 password: formData.password,
                 role: formData.role,
+                termsAccepted: formData.termsAccepted,
             });
             toast.success('Qeydiyyat uğurla tamamlandı!');
             if (data?.giftPlanAssigned) {
@@ -206,14 +232,51 @@ const Register = () => {
                             </div>
                         </div>
 
+                        <div>
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    name="termsAccepted"
+                                    checked={formData.termsAccepted}
+                                    onChange={(e) => setFormData({ ...formData, termsAccepted: e.target.checked })}
+                                    className="mt-0.5 w-4 h-4 accent-indigo-600 cursor-pointer"
+                                />
+                                <span className="text-sm text-gray-600 leading-relaxed">
+                                    <a href="/istifade-sertleri" target="_blank" className="text-indigo-600 hover:underline font-medium">İstifadə şərtlərini</a>
+                                    {' '}və{' '}
+                                    <a href="/gizlilik-siyaseti" target="_blank" className="text-indigo-600 hover:underline font-medium">Gizlilik Siyasətini</a>
+                                    {' '}oxuyub qəbul edirəm
+                                </span>
+                            </label>
+                        </div>
+
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || !formData.termsAccepted}
                             className="w-full py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                         >
                             {loading ? 'Gözləyin...' : 'Qeydiyyatdan keç'}
                         </button>
                     </form>
+
+                    <div className="relative my-4">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-200" />
+                        </div>
+                        <div className="relative flex justify-center text-xs text-gray-400">
+                            <span className="bg-white px-2">və ya</span>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                        <GoogleLogin
+                            onSuccess={handleGoogleCredential}
+                            onError={() => toast.error('Google girişi ləğv edildi')}
+                            text="signup_with"
+                            locale="az"
+                            width="360"
+                        />
+                    </div>
 
                     <p className="mt-6 text-center text-sm text-gray-500">
                         Artıq hesabınız var?{' '}
@@ -223,6 +286,22 @@ const Register = () => {
                     </p>
                 </div>
             </div>
+            {googlePending && (
+                <GoogleRoleModal
+                    googleToken={googlePending.googleToken}
+                    userInfo={googlePending.userInfo}
+                    onSuccess={(data) => {
+                        loginWithTokens(data);
+                        if (data.giftPlanAssigned) {
+                            setShowGiftModal(true);
+                        } else {
+                            toast.success('Qeydiyyat tamamlandı!');
+                            navigate('/');
+                        }
+                    }}
+                    onClose={() => setGooglePending(null)}
+                />
+            )}
         </>
     );
 };

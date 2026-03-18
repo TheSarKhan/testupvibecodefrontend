@@ -127,7 +127,7 @@ const AdminLayout = () => {
             )}
 
             {/* Sidebar — hidden on mobile, slide-in when open */}
-            <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-100 flex flex-col shadow-sm transform transition-transform duration-200
+            <aside className={`fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-100 flex flex-col shadow-sm transform transition-transform duration-200
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
                 <SidebarContent />
             </aside>

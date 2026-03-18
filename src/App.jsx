@@ -1,11 +1,13 @@
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import router from './routes';
 
 function App() {
   return (
+    <GoogleOAuthProvider clientId="407408718192.apps.googleusercontent.com">
     <HelmetProvider>
     <AuthProvider>
       <RouterProvider router={router} />
@@ -22,6 +24,7 @@ function App() {
       />
     </AuthProvider>
     </HelmetProvider>
+    </GoogleOAuthProvider>
   );
 }
 

@@ -1,10 +1,10 @@
-import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed, HiOutlineDownload } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed, HiOutlineDownload, HiOutlineDuplicate } from 'react-icons/hi';
 
 import { Link } from 'react-router-dom';
 
 const EXAM_TYPE_LABELS = { FREE: 'Sərbəst', TEMPLATE: 'Şablon' };
 
-const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, canEdit = true, canDownloadPdf = true }) => {
+const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onClone, onTagClick, canEdit = true, canDownloadPdf = true }) => {
 
     const isDraft = exam.status === 'DRAFT';
     const isPublished = exam.status === 'PUBLISHED';
@@ -66,7 +66,7 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, canE
                                 <HiOutlineDownload className="w-5 h-5" />
                             </button>
                         ) : (
-                            <span 
+                            <span
                                 className="p-1.5 text-gray-300 cursor-not-allowed rounded-lg relative group"
                                 title="PDF yükləmə cari planınızda mövcud deyil"
                             >
@@ -91,6 +91,15 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, canE
                             <HiLockClosed className="w-5 h-5" />
                         </span>
                     )}
+                    {onClone && (
+                        <button
+                            onClick={() => onClone(exam.id)}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Kopyala"
+                        >
+                            <HiOutlineDuplicate className="w-5 h-5" />
+                        </button>
+                    )}
                     <button
                         onClick={() => onDelete(exam.id)}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -108,13 +117,26 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, canE
                 </h3>
 
                 {/* Minor Tags */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                    {exam.tags.map((tag, index) => (
-                        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
-                            #{tag}
-                        </span>
-                    ))}
-                </div>
+                {(exam.tags || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                        {(exam.tags || []).map((tag, index) => (
+                            onTagClick ? (
+                                <button
+                                    key={index}
+                                    onClick={() => onTagClick(tag)}
+                                    className="px-2 py-0.5 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-700 text-gray-500 text-xs rounded-full font-medium transition-colors"
+                                    title={`"${tag}" teqinə görə filtrele`}
+                                >
+                                    #{tag}
+                                </button>
+                            ) : (
+                                <span key={index} className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full font-medium">
+                                    #{tag}
+                                </span>
+                            )
+                        ))}
+                    </div>
+                )}
 
                 <div className="mt-auto space-y-3">
                     {subjects.length > 0 && (

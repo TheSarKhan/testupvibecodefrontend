@@ -5,7 +5,7 @@ import {
     HiOutlineMenu, HiOutlineX, HiOutlineChevronDown,
     HiOutlineUser, HiOutlineLogout,
     HiOutlineAcademicCap, HiOutlinePencilAlt,
-    HiOutlineBell, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineSpeakerphone, HiOutlineCreditCard
+    HiOutlineBell, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineSpeakerphone, HiOutlineCreditCard,
 } from 'react-icons/hi';
 import logo from '../../assets/logo.png';
 import api from '../../api/axios';
@@ -56,25 +56,25 @@ const Navbar = () => {
 
     useEffect(() => {
         loadNotifications();
-        
+
         // Start WebSocket Connection for Real-Time Notifications
         if (!isAuthenticated || !user?.id) return;
-        
+
         const client = new Client({
             webSocketFactory: () => new SockJS('http://localhost:8082/ws'),
             reconnectDelay: 5000,
             onConnect: () => {
                 client.subscribe(`/topic/notifications/${user.id}`, (message) => {
                     const newNotif = JSON.parse(message.body);
-                    
+
                     // Add to dropdown list and increase count
                     setNotifications(prev => [newNotif, ...prev]);
                     setUnreadCount(prev => prev + 1);
-                    
+
                     // Show beautiful toast based on type
                     toast.custom((t) => (
                         <div
-                            className={`${t.visible ? 'animate-enter' : 'animate-leave'} 
+                            className={`${t.visible ? 'animate-enter' : 'animate-leave'}
                             max-w-md w-full bg-white shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all cursor-pointer hover:bg-gray-50`}
                             onClick={() => {
                                 toast.dismiss(t.id);
@@ -89,7 +89,6 @@ const Navbar = () => {
                             <div className="flex-1 w-0 p-4">
                                 <div className="flex items-start">
                                     <div className="flex-shrink-0 pt-0.5">
-                                        {/* Icon based on Type */}
                                         {newNotif.type === 'EXAM_CREATED' && <HiOutlinePencilAlt className="h-10 w-10 text-emerald-500 bg-emerald-100 p-2 rounded-full" />}
                                         {newNotif.type === 'PAYMENT_SUCCESS' && <HiOutlineCreditCard className="h-10 w-10 text-blue-500 bg-blue-100 p-2 rounded-full" />}
                                         {newNotif.type === 'ANNOUNCEMENT' && <HiOutlineSpeakerphone className="h-10 w-10 text-purple-500 bg-purple-100 p-2 rounded-full" />}
@@ -185,7 +184,8 @@ const Navbar = () => {
 
     const fmtTime = (iso) => {
         if (!iso) return '';
-        const d = new Date(iso);
+        const normalized = /[Zz]|[+-]\d{2}:\d{2}$/.test(iso) ? iso : iso + 'Z';
+        const d = new Date(normalized);
         const now = new Date();
         const diff = Math.floor((now - d) / 60000);
         if (diff < 1) return 'İndicə';

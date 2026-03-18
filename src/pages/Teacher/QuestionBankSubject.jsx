@@ -318,6 +318,14 @@ const QuestionBankSubject = () => {
 
     const handleSave = async (localQuestion) => {
         if (!localQuestion.text.trim()) { toast.error('Sualın mətni boş ola bilməz'); return; }
+        const needsCorrect = ['MULTIPLE_CHOICE', 'MULTI_SELECT'].includes(localQuestion.type);
+        const needsAnswer = ['OPEN_AUTO', 'FILL_IN_THE_BLANK'].includes(localQuestion.type);
+        if (needsCorrect && !localQuestion.options?.some(o => o.isCorrect)) {
+            toast.error('Ən azı bir düzgün variant seçilməlidir'); return;
+        }
+        if (needsAnswer && !localQuestion.sampleAnswer?.trim()) {
+            toast.error('Düzgün cavab daxil edilməlidir'); return;
+        }
         setSaving(true);
         try {
             const payload = editorToBank(Number(subjectId), localQuestion);

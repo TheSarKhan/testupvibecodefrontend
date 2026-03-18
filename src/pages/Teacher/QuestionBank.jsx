@@ -17,11 +17,13 @@ const QuestionBank = () => {
     const [loading, setLoading] = useState(true);
     const [adding, setAdding] = useState(false);
     const [newName, setNewName] = useState('');
+    const [examSubjects, setExamSubjects] = useState([]);
     const [editId, setEditId] = useState(null);
     const [editName, setEditName] = useState('');
 
     useEffect(() => {
         fetchSubjects();
+        api.get('/subjects').then(r => setExamSubjects(r.data || [])).catch(() => {});
     }, []);
 
     const fetchSubjects = async () => {
@@ -60,7 +62,12 @@ const QuestionBank = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Bu fənni silmək istədiyinizdən əminsiniz? Bütün suallar da silinəcək.')) return;
+        const subject = subjects.find(s => s.id === id);
+        if (subject?.questionCount > 0) {
+            toast.error(`Bu fənndə ${subject.questionCount} sual var. Əvvəlcə sualları silin.`);
+            return;
+        }
+        if (!window.confirm('Bu fənni silmək istədiyinizdən əminsiniz?')) return;
         try {
             await api.delete(`/bank/subjects/${id}`);
             setSubjects(prev => prev.filter(s => s.id !== id));
@@ -155,15 +162,18 @@ const QuestionBank = () => {
                     <div className="bg-white rounded-2xl border border-indigo-200 shadow-sm p-5">
                         <p className="text-sm font-semibold text-gray-700 mb-3">Yeni fənn</p>
                         <div className="flex gap-3">
-                            <input
+                            <select
                                 autoFocus
-                                type="text"
                                 value={newName}
                                 onChange={e => setNewName(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAdding(false); setNewName(''); } }}
-                                placeholder="Fənnin adı..."
-                                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                            />
+                                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
+                            >
+                                <option value="">— Fənn seçin —</option>
+                                {examSubjects
+                                    .filter(name => !subjects.some(s => s.name === name))
+                                    .map(name => <option key={name} value={name}>{name}</option>)
+                                }
+                            </select>
                             <button onClick={handleAdd} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl">Əlavə et</button>
                             <button onClick={() => { setAdding(false); setNewName(''); }} className="px-3 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 text-sm">Ləğv et</button>
                         </div>

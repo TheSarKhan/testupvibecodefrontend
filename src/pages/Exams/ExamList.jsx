@@ -5,7 +5,7 @@ import {
     HiOutlineLockClosed, HiOutlineBookmark, HiBookmark,
     HiOutlineClock, HiOutlineQuestionMarkCircle, HiOutlineArrowRight,
     HiOutlineFilter, HiOutlineX, HiOutlineChevronDown, HiOutlineAdjustments,
-    HiOutlineUserGroup, HiOutlinePaperAirplane,
+    HiOutlineUserGroup, HiOutlinePaperAirplane, HiOutlineTag,
 } from 'react-icons/hi';
 import { useNavigate, Link } from 'react-router-dom';
 import { ExamCard, CreateExamModal } from '../../components/ui';
@@ -86,9 +86,9 @@ const UsageBar = ({ label, used, limit, colorClass }) => {
                 <span className={isFull ? 'text-red-500' : 'text-gray-900'}>{used} / {limit}</span>
             </div>
             <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                    className={`h-full transition-all duration-500 ${isFull ? 'bg-red-500' : colorClass}`} 
-                    style={{ width: `${percent}%` }} 
+                <div
+                    className={`h-full transition-all duration-500 ${isFull ? 'bg-red-500' : colorClass}`}
+                    style={{ width: `${percent}%` }}
                 />
             </div>
         </div>
@@ -125,6 +125,23 @@ const ExamList = () => {
     const [durationFilter, setDurationFilter] = useState('ALL'); // ALL | SHORT | MEDIUM | LONG
     // Shared
     const [sortBy, setSortBy] = useState('NEWEST');            // NEWEST | OLDEST | TITLE | QUESTIONS
+    // New filters
+    const [selectedTags, setSelectedTags] = useState([]);      // array of tag strings
+    const [subjectFilter, setSubjectFilter] = useState('');    // '' = all
+    const [typeFilter, setTypeFilter] = useState('ALL');       // ALL | FREE | TEMPLATE
+
+    // ── Computed values ───────────────────────────────────────────────────────
+    const allTags = useMemo(() => {
+        const map = {};
+        exams.forEach(e => (e.tags || []).forEach(t => { map[t] = (map[t] || 0) + 1; }));
+        return Object.entries(map).sort((a, b) => b[1] - a[1]); // [[tag, count], ...]
+    }, [exams]);
+
+    const allSubjects = useMemo(() => {
+        const set = new Set();
+        exams.forEach(e => (e.subjects || []).forEach(s => set.add(s)));
+        return [...set].sort();
+    }, [exams]);
 
     const activeFilterCount = useMemo(() => {
         let count = 0;
@@ -137,8 +154,9 @@ const ExamList = () => {
             if (durationFilter !== 'ALL') count++;
         }
         if (sortBy !== 'NEWEST') count++;
+        count += selectedTags.length + (subjectFilter ? 1 : 0) + (typeFilter !== 'ALL' ? 1 : 0);
         return count;
-    }, [search, statusFilter, visibilityFilter, priceFilter, durationFilter, sortBy, isTeacher]);
+    }, [search, statusFilter, visibilityFilter, priceFilter, durationFilter, sortBy, isTeacher, selectedTags, subjectFilter, typeFilter]);
 
     const clearFilters = () => {
         setSearch('');
@@ -147,6 +165,9 @@ const ExamList = () => {
         setPriceFilter('ALL');
         setDurationFilter('ALL');
         setSortBy('NEWEST');
+        setSelectedTags([]);
+        setSubjectFilter('');
+        setTypeFilter('ALL');
     };
 
     useEffect(() => {
@@ -197,6 +218,17 @@ const ExamList = () => {
             setExams(exams.filter(e => e.id !== id));
         } catch {
             toast.error("İmtahanı silmək mümkün olmadı");
+        }
+    };
+
+    const handleClone = async (id) => {
+        try {
+            const { data } = await api.post(`/exams/${id}/clone`);
+            setExams(prev => [data, ...prev]);
+            toast.success('İmtahan kopyalandı');
+            navigate(`/imtahanlar/duzenle/${data.id}`);
+        } catch {
+            toast.error('Kopyalama mümkün olmadı');
         }
     };
 
@@ -282,6 +314,11 @@ const ExamList = () => {
         }
     };
 
+    const handleTagClick = (tag) => {
+        setSelectedTags(prev => prev.includes(tag) ? prev : [...prev, tag]);
+        // scroll to filter panel
+    };
+
     // ── Filtering + Sorting logic ─────────────────────────────────────────────
     const filteredExams = useMemo(() => {
         let list = [...exams];
@@ -316,6 +353,19 @@ const ExamList = () => {
             else if (durationFilter === 'LONG') list = list.filter(e => e.durationMinutes && e.durationMinutes > 60);
         }
 
+        // Tag filter (OR: exam must have at least one selected tag)
+        if (selectedTags.length > 0) {
+            list = list.filter(e => selectedTags.some(t => (e.tags || []).includes(t)));
+        }
+        // Subject filter
+        if (subjectFilter) {
+            list = list.filter(e => (e.subjects || []).includes(subjectFilter));
+        }
+        // Type filter (teacher only)
+        if (isTeacher && typeFilter !== 'ALL') {
+            list = list.filter(e => e.examType === typeFilter);
+        }
+
         // Sort
         if (sortBy === 'NEWEST') list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
         else if (sortBy === 'OLDEST') list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
@@ -326,7 +376,7 @@ const ExamList = () => {
         }
 
         return list;
-    }, [exams, search, statusFilter, visibilityFilter, priceFilter, durationFilter, sortBy, isTeacher]);
+    }, [exams, search, statusFilter, visibilityFilter, priceFilter, durationFilter, sortBy, isTeacher, selectedTags, subjectFilter, typeFilter]);
 
     const draftExams = filteredExams.filter(e => e.status === 'DRAFT');
     const publishedExams = filteredExams.filter(e => e.status !== 'DRAFT');
@@ -358,17 +408,17 @@ const ExamList = () => {
                                 <div className="hidden lg:flex items-center gap-8 bg-white/50 backdrop-blur-sm px-5 py-3 rounded-2xl border border-gray-100 shadow-sm">
                                     {subscription ? (
                                         <>
-                                            <UsageBar 
-                                                label="Aylıq Limit" 
-                                                used={subscription.usedMonthlyExams} 
-                                                limit={subscription.plan?.monthlyExamLimit} 
+                                            <UsageBar
+                                                label="Aylıq Limit"
+                                                used={subscription.usedMonthlyExams}
+                                                limit={subscription.plan?.monthlyExamLimit}
                                                 colorClass="bg-indigo-500"
                                             />
                                             <div className="w-px h-8 bg-gray-100" />
-                                            <UsageBar 
-                                                label="Ümumi Limit" 
-                                                used={subscription.totalExamsCount} 
-                                                limit={subscription.plan?.maxSavedExamsLimit} 
+                                            <UsageBar
+                                                label="Ümumi Limit"
+                                                used={subscription.totalExamsCount}
+                                                limit={subscription.plan?.maxSavedExamsLimit}
                                                 colorClass="bg-emerald-500"
                                             />
                                         </>
@@ -428,7 +478,7 @@ const ExamList = () => {
                                     (subscription?.plan?.monthlyExamLimit !== -1 && (subscription?.usedMonthlyExams || 0) >= subscription?.plan?.monthlyExamLimit) ||
                                     (subscription?.plan?.maxSavedExamsLimit !== -1 && (subscription?.totalExamsCount || 0) >= subscription?.plan?.maxSavedExamsLimit)
                                 )
-                                    ? <HiOutlineLockClosed className="w-5 h-5" /> 
+                                    ? <HiOutlineLockClosed className="w-5 h-5" />
                                     : <HiOutlinePlusCircle className="w-5 h-5" />
                                 }
                                 Yeni İmtahan
@@ -442,16 +492,16 @@ const ExamList = () => {
                     <div className="lg:hidden mb-6 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
                         {subscription ? (
                             <div className="grid grid-cols-2 gap-4">
-                                <UsageBar 
-                                    label="Aylıq" 
-                                    used={subscription.usedMonthlyExams} 
-                                    limit={subscription.plan?.monthlyExamLimit} 
+                                <UsageBar
+                                    label="Aylıq"
+                                    used={subscription.usedMonthlyExams}
+                                    limit={subscription.plan?.monthlyExamLimit}
                                     colorClass="bg-indigo-500"
                                 />
-                                <UsageBar 
-                                    label="Ümumi" 
-                                    used={subscription.totalExamsCount} 
-                                    limit={subscription.plan?.maxSavedExamsLimit} 
+                                <UsageBar
+                                    label="Ümumi"
+                                    used={subscription.totalExamsCount}
+                                    limit={subscription.plan?.maxSavedExamsLimit}
                                     colorClass="bg-emerald-500"
                                 />
                             </div>
@@ -494,7 +544,7 @@ const ExamList = () => {
 
                 {/* ── Filter panel ── */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 space-y-3">
-                    {/* Search row */}
+                    {/* Row 1: Search + Sort */}
                     <div className="flex items-center gap-3">
                         <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400 transition-all">
                             <HiOutlineSearch className="w-4 h-4 text-gray-400 shrink-0" />
@@ -527,65 +577,124 @@ const ExamList = () => {
                         </div>
                     </div>
 
-                    {/* Filter pills row */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 shrink-0">
-                            <HiOutlineFilter className="w-3.5 h-3.5" /> Filter:
-                        </span>
+                    {/* Row 2: Status/visibility pills + Subject dropdown + Type filter (teacher) OR Price/Duration + Subject (student) */}
+                    {isTeacher ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-gray-400 shrink-0 flex items-center gap-1">
+                                <HiOutlineFilter className="w-3.5 h-3.5" /> Status:
+                            </span>
+                            <Pill label="Hamısı" active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} />
+                            <Pill label="Qaralama" active={statusFilter === 'DRAFT'} onClick={() => setStatusFilter('DRAFT')} />
+                            <Pill label="Yayımlanmış" active={statusFilter === 'PUBLISHED'} onClick={() => setStatusFilter('PUBLISHED')} />
 
-                        {isTeacher ? (
-                            <>
-                                {/* Status */}
-                                <div className="flex items-center gap-1.5">
-                                    <Pill label="Hamısı" active={statusFilter === 'ALL'} onClick={() => setStatusFilter('ALL')} />
-                                    <Pill label="Qaralamalar" active={statusFilter === 'DRAFT'} onClick={() => setStatusFilter('DRAFT')} />
-                                    <Pill label="Yayımlanmış" active={statusFilter === 'PUBLISHED'} onClick={() => setStatusFilter('PUBLISHED')} />
-                                </div>
-                                <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
-                                {/* Visibility */}
-                                <div className="flex items-center gap-1.5">
-                                    <Pill label="Bütün görünürlük" active={visibilityFilter === 'ALL'} onClick={() => setVisibilityFilter('ALL')} />
-                                    <Pill label="Açıq" active={visibilityFilter === 'PUBLIC'} onClick={() => setVisibilityFilter('PUBLIC')} />
-                                    <Pill label="Gizli" active={visibilityFilter === 'PRIVATE'} onClick={() => setVisibilityFilter('PRIVATE')} />
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                {/* Price */}
-                                <div className="flex items-center gap-1.5">
-                                    <Pill label="Hamısı" active={priceFilter === 'ALL'} onClick={() => setPriceFilter('ALL')} />
-                                    <Pill label="Pulsuz" active={priceFilter === 'FREE'} onClick={() => setPriceFilter('FREE')} />
-                                    <Pill label="Ödənişli" active={priceFilter === 'PAID'} onClick={() => setPriceFilter('PAID')} />
-                                </div>
-                                <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
-                                {/* Duration */}
-                                <div className="flex items-center gap-1.5">
-                                    <Pill label="İstənilən vaxt" active={durationFilter === 'ALL'} onClick={() => setDurationFilter('ALL')} />
-                                    <Pill label="<30 dəq" active={durationFilter === 'SHORT'} onClick={() => setDurationFilter('SHORT')} />
-                                    <Pill label="30–60 dəq" active={durationFilter === 'MEDIUM'} onClick={() => setDurationFilter('MEDIUM')} />
-                                    <Pill label=">60 dəq" active={durationFilter === 'LONG'} onClick={() => setDurationFilter('LONG')} />
-                                </div>
-                            </>
-                        )}
+                            <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
 
-                        {activeFilterCount > 0 && (
+                            <Pill label="Hər görünürlük" active={visibilityFilter === 'ALL'} onClick={() => setVisibilityFilter('ALL')} />
+                            <Pill label="Açıq" active={visibilityFilter === 'PUBLIC'} onClick={() => setVisibilityFilter('PUBLIC')} />
+                            <Pill label="Gizli" active={visibilityFilter === 'PRIVATE'} onClick={() => setVisibilityFilter('PRIVATE')} />
+
+                            {allSubjects.length > 0 && <>
+                                <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
+                                <FilterSelect value={subjectFilter} onChange={setSubjectFilter} options={[
+                                    { value: '', label: 'Bütün fənnlər' },
+                                    ...allSubjects.map(s => ({ value: s, label: s }))
+                                ]} />
+                            </>}
+
+                            {activeFilterCount > 0 && (
+                                <button onClick={clearFilters} className="ml-auto flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors">
+                                    <HiOutlineX className="w-3.5 h-3.5" /> Təmizlə ({activeFilterCount})
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-gray-400 shrink-0 flex items-center gap-1">
+                                <HiOutlineFilter className="w-3.5 h-3.5" /> Filter:
+                            </span>
+                            {/* Price */}
+                            <Pill label="Hamısı" active={priceFilter === 'ALL'} onClick={() => setPriceFilter('ALL')} />
+                            <Pill label="Pulsuz" active={priceFilter === 'FREE'} onClick={() => setPriceFilter('FREE')} />
+                            <Pill label="Ödənişli" active={priceFilter === 'PAID'} onClick={() => setPriceFilter('PAID')} />
+                            <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
+                            {/* Duration */}
+                            <Pill label="İstənilən vaxt" active={durationFilter === 'ALL'} onClick={() => setDurationFilter('ALL')} />
+                            <Pill label="<30 dəq" active={durationFilter === 'SHORT'} onClick={() => setDurationFilter('SHORT')} />
+                            <Pill label="30–60 dəq" active={durationFilter === 'MEDIUM'} onClick={() => setDurationFilter('MEDIUM')} />
+                            <Pill label=">60 dəq" active={durationFilter === 'LONG'} onClick={() => setDurationFilter('LONG')} />
+
+                            {allSubjects.length > 0 && <>
+                                <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
+                                <FilterSelect value={subjectFilter} onChange={setSubjectFilter} options={[
+                                    { value: '', label: 'Bütün fənnlər' },
+                                    ...allSubjects.map(s => ({ value: s, label: s }))
+                                ]} />
+                            </>}
+
+                            {activeFilterCount > 0 && (
+                                <button onClick={clearFilters} className="ml-auto flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors">
+                                    <HiOutlineX className="w-3.5 h-3.5" /> Təmizlə ({activeFilterCount})
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Row 3: Tag filter (only if tags exist) */}
+                    {allTags.length > 0 && (
+                        <div className="flex items-start gap-2">
+                            <span className="text-xs font-semibold text-gray-400 shrink-0 pt-1.5 flex items-center gap-1">
+                                <HiOutlineTag className="w-3.5 h-3.5" /> Teqlər:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5 flex-1">
+                                {allTags.map(([tag, count]) => {
+                                    const active = selectedTags.includes(tag);
+                                    return (
+                                        <button
+                                            key={tag}
+                                            onClick={() => setSelectedTags(prev =>
+                                                prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                            )}
+                                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                                                active
+                                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'
+                                            }`}
+                                        >
+                                            #{tag}
+                                            <span className={`text-[10px] ${active ? 'text-indigo-200' : 'text-gray-400'}`}>{count}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Results count + active tag badges ── */}
+                {!loading && (
+                    <div className="flex items-center flex-wrap gap-2 mb-4">
+                        <p className="text-xs text-gray-400">
+                            {filteredExams.length} imtahan tapıldı
+                            {activeFilterCount > 0 && <span className="text-indigo-500 font-semibold"> · {activeFilterCount} filter aktiv</span>}
+                        </p>
+                        {selectedTags.map(tag => (
                             <button
-                                onClick={clearFilters}
-                                className="ml-auto flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors"
+                                key={tag}
+                                onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-full hover:bg-indigo-200 transition-colors"
                             >
-                                <HiOutlineX className="w-3.5 h-3.5" />
-                                Təmizlə ({activeFilterCount})
+                                #{tag} <HiOutlineX className="w-3 h-3" />
+                            </button>
+                        ))}
+                        {subjectFilter && (
+                            <button
+                                onClick={() => setSubjectFilter('')}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full hover:bg-green-200 transition-colors"
+                            >
+                                {subjectFilter} <HiOutlineX className="w-3 h-3" />
                             </button>
                         )}
                     </div>
-                </div>
-
-                {/* ── Results count ── */}
-                {!loading && (
-                    <p className="text-xs text-gray-400 mb-4">
-                        {filteredExams.length} imtahan tapıldı
-                        {activeFilterCount > 0 && <span className="text-indigo-500 font-semibold"> · {activeFilterCount} filter aktiv</span>}
-                    </p>
                 )}
 
                 {/* ── Content ── */}
@@ -683,13 +792,15 @@ const ExamList = () => {
                                             <SectionHeader icon={HiOutlineDocumentText} label="Qaralamalar" count={draftExams.length} />
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
                                                 {draftExams.map(exam => (
-                                                    <ExamCard 
-                                                        key={exam.id} 
-                                                        exam={normalizeExam(exam)} 
-                                                        onDelete={handleDelete} 
+                                                    <ExamCard
+                                                        key={exam.id}
+                                                        exam={normalizeExam(exam)}
+                                                        onDelete={handleDelete}
+                                                        onClone={handleClone}
                                                         onDownloadPdf={handleDownloadPdf}
-                                                        canEdit={hasPermission('examEditing')} 
+                                                        canEdit={hasPermission('examEditing')}
                                                         canDownloadPdf={hasPermission('downloadAsPdf')}
+                                                        onTagClick={handleTagClick}
                                                     />
                                                 ))}
 
@@ -697,15 +808,17 @@ const ExamList = () => {
                                             <SectionHeader icon={HiOutlineDocumentText} label="Yayımlanmış" count={publishedExams.length} />
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                                 {publishedExams.map(exam => (
-                                                    <ExamCard 
-                                                        key={exam.id} 
-                                                        exam={normalizeExam(exam)} 
-                                                        onDelete={handleDelete} 
-                                                        onShare={handleShare} 
-                                                        onToggleStatus={handleToggleStatus} 
+                                                    <ExamCard
+                                                        key={exam.id}
+                                                        exam={normalizeExam(exam)}
+                                                        onDelete={handleDelete}
+                                                        onClone={handleClone}
+                                                        onShare={handleShare}
+                                                        onToggleStatus={handleToggleStatus}
                                                         onDownloadPdf={handleDownloadPdf}
-                                                        canEdit={hasPermission('examEditing')} 
+                                                        canEdit={hasPermission('examEditing')}
                                                         canDownloadPdf={hasPermission('downloadAsPdf')}
+                                                        onTagClick={handleTagClick}
                                                     />
                                                 ))}
 
@@ -718,9 +831,11 @@ const ExamList = () => {
                                                     key={exam.id}
                                                     exam={normalizeExam(exam)}
                                                     onDelete={handleDelete}
+                                                    onClone={handleClone}
                                                     onShare={exam.status !== 'DRAFT' ? handleShare : undefined}
                                                     onToggleStatus={exam.status !== 'DRAFT' ? handleToggleStatus : undefined}
                                                     canEdit={hasPermission('examEditing')}
+                                                    onTagClick={handleTagClick}
                                                 />
                                             ))}
                                         </div>

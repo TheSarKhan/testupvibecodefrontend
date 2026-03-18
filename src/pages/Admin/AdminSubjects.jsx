@@ -43,7 +43,6 @@ const AdminSubjects = () => {
 
     // Metadata editor state
     const [metaColor, setMetaColor] = useState('');
-    const [metaEmoji, setMetaEmoji] = useState('');
     const [metaDesc, setMetaDesc] = useState('');
     const [savingMeta, setSavingMeta] = useState(false);
 
@@ -59,7 +58,6 @@ const AdminSubjects = () => {
     useEffect(() => {
         if (selectedSubject) {
             setMetaColor(selectedSubject.color || '');
-            setMetaEmoji(selectedSubject.iconEmoji || '');
             setMetaDesc(selectedSubject.description || '');
         }
     }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -158,7 +156,6 @@ const AdminSubjects = () => {
         try {
             const { data } = await api.put(`/admin/subjects/${selectedId}/metadata`, {
                 color: metaColor || null,
-                iconEmoji: metaEmoji || null,
                 description: metaDesc || null,
             });
             setSubjects(prev => prev.map(s => s.id === selectedId ? { ...s, ...data } : s));
@@ -240,13 +237,11 @@ const AdminSubjects = () => {
                                                 onClick={() => setSelectedId(subject.id)}
                                                 className={`w-full flex items-center gap-2.5 px-4 py-3 text-left transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
                                             >
-                                                {/* Color dot + emoji */}
+                                                {/* Color dot */}
                                                 <span
-                                                    className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-sm"
+                                                    className="w-3 h-3 rounded-full shrink-0"
                                                     style={{ backgroundColor: subject.color || '#e5e7eb' }}
-                                                >
-                                                    {subject.iconEmoji || <HiOutlineBookOpen className="w-4 h-4 text-white" />}
-                                                </span>
+                                                />
                                                 <div className="flex-1 min-w-0">
                                                     <p className={`text-sm font-medium truncate ${isSelected ? 'text-indigo-700' : 'text-gray-800'}`}>
                                                         {subject.name}
@@ -278,11 +273,9 @@ const AdminSubjects = () => {
                         {/* Subject header */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex items-center gap-3">
                             <span
-                                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                                className="w-4 h-4 rounded-full shrink-0"
                                 style={{ backgroundColor: selectedSubject.color || '#e5e7eb' }}
-                            >
-                                {selectedSubject.iconEmoji || '📚'}
-                            </span>
+                            />
                             <div>
                                 <h2 className="text-lg font-bold text-gray-900">{selectedSubject.name}</h2>
                                 {selectedSubject.default && (
@@ -330,19 +323,6 @@ const AdminSubjects = () => {
                                 </div>
 
                                 <div className="flex flex-col gap-3">
-                                    {/* Emoji input */}
-                                    <div>
-                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Emoji</label>
-                                        <input
-                                            type="text"
-                                            value={metaEmoji}
-                                            onChange={e => setMetaEmoji(e.target.value)}
-                                            placeholder="📐"
-                                            className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                            maxLength={8}
-                                        />
-                                    </div>
-
                                     {/* Description */}
                                     <div>
                                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Təsvir</label>

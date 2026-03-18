@@ -351,7 +351,7 @@ const AdminBanners = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 {[
                     { label: 'Ümumi Banner', value: banners.length, color: 'text-gray-900' },
                     { label: 'Aktiv', value: banners.filter(b => b.isActive).length, color: 'text-green-600' },

@@ -6,7 +6,8 @@ import {
     HiOutlineLightningBolt, HiOutlineBookOpen, HiOutlineTemplate,
     HiOutlineUserGroup, HiOutlineArrowRight, HiOutlineSparkles,
     HiOutlinePencilAlt, HiOutlineAcademicCap, HiOutlineClock,
-    HiOutlineShieldCheck, HiOutlineLink, HiOutlinePhotograph
+    HiOutlineShieldCheck, HiOutlineLink, HiOutlinePhotograph,
+    HiOutlineDuplicate, HiOutlineSpeakerphone
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import Pricing from '../Pricing/Pricing';
@@ -139,14 +140,18 @@ const Home = () => {
     }, []);
 
     const features = [
+        { icon: HiOutlineSparkles, title: 'AI ilə İmtahan Yaratma', desc: 'Fənn, mövzu və çətinlik dərəcəsi seçin — süni intellekt sualları avtomatik yaradır.', color: 'bg-violet-50 text-violet-600' },
         { icon: HiOutlineLightningBolt, title: 'Sürətli imtahan yaratma', desc: 'Sualları əlavə edin, vaxt, bal və şərtləri tənzimləyin — hazırlıq 5 dəqiqədən az vaxt aparır.', color: 'bg-amber-50 text-amber-600' },
         { icon: HiOutlineCheckCircle, title: 'Avtomatik qiymətləndirmə', desc: 'Qapalı, çoxseçimli, boşluqdoldurma sualları sistem tərəfindən dərhal yoxlanılır.', color: 'bg-green-50 text-green-600' },
-        { icon: HiOutlineSparkles, title: 'Riyazi formullar (LaTeX)', desc: 'MathQuill klaviaturası ilə mürəkkəb riyazi ifadələri asanlıqla daxil edin.', color: 'bg-purple-50 text-purple-600' },
+        { icon: HiOutlineUserGroup, title: 'Birgə imtahan yaratma', desc: 'Admin imtahanı fənlər üzrə müəllimlərə tapşırır. Hər müəllim öz fənninin suallarını hazırlayır.', color: 'bg-blue-50 text-blue-600' },
         { icon: HiOutlineBookOpen, title: 'Sual bazası', desc: 'Sualları fənlər üzrə saxlayın, sonradan imtahanlara əlavə edin. Ümumi və şəxsi baza.', color: 'bg-indigo-50 text-indigo-600' },
         { icon: HiOutlineTemplate, title: 'Şablon imtahanlar', desc: 'Dərs planlarınıza uyğun şablonlar yaradın, hər dəfə yenidən qurmadan istifadə edin.', color: 'bg-pink-50 text-pink-600' },
-        { icon: HiOutlineChartBar, title: 'Ətraflı statistika', desc: 'Sual üzrə düzgün cavab faizi, şagird performansı, qrup müqayisəsi və daha çoxu.', color: 'bg-cyan-50 text-cyan-600' },
-        { icon: HiOutlineLink, title: 'Link ilə paylaşım', desc: 'İmtahanı bir link ilə paylaşın. Şagirdlər qeydiyyatsız, yalnız adla qoşula bilər.', color: 'bg-orange-50 text-orange-600' },
-        { icon: HiOutlinePhotograph, title: 'PDF-dən sual idxalı', desc: 'Mövcud test materiallarını PDF formatında yükləyin, sualları avtomatik əlavə edin.', color: 'bg-teal-50 text-teal-600' },
+        { icon: HiOutlineChartBar, title: 'Ətraflı statistika', desc: 'Doğru/Yanlış/Boş/Yoxlanılmamış kateqoriyalar üzrə qrafik, sual analizi, şagird nəticəsi.', color: 'bg-cyan-50 text-cyan-600' },
+        { icon: HiOutlineDuplicate, title: 'İmtahan klonlama', desc: 'Mövcud imtahanı bir klikdə kopyalayın. Qaralama kimi açılır, redaktə etməyə hazırdır.', color: 'bg-orange-50 text-orange-600' },
+        { icon: HiOutlinePhotograph, title: 'Keçid mətni & Dinləmə', desc: 'Mətndən suallar qrupu, audio dinləmə imtahanı — kompleks formatlara tam dəstək.', color: 'bg-teal-50 text-teal-600' },
+        { icon: HiOutlineLink, title: 'Link ilə paylaşım', desc: 'İmtahanı bir link ilə paylaşın. Şagirdlər qeydiyyatsız, yalnız adla qoşula bilər.', color: 'bg-rose-50 text-rose-600' },
+        { icon: HiOutlineSpeakerphone, title: 'LaTeX & Riyazi formullar', desc: 'MathQuill klaviaturası ilə mürəkkəb riyazi ifadələri daxil edin. KaTeX ilə göstərilir.', color: 'bg-purple-50 text-purple-600' },
+        { icon: HiOutlineDocumentText, title: 'PDF-dən sual idxalı', desc: 'Mövcud test materiallarını PDF formatında yükləyin, sualları avtomatik əlavə edin.', color: 'bg-gray-50 text-gray-600' },
     ];
 
     const questionTypes = [
@@ -183,15 +188,15 @@ const Home = () => {
                             </div>
 
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-[1.1] mb-6">
-                                Onlayn imtahanı<br />
+                                İmtahanı AI ilə<br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500">
                                     ağıllı qurun
                                 </span>
                             </h1>
 
                             <p className="text-lg text-gray-600 leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
-                                Müəllimlər üçün güclü alət: 7 sual tipi, riyazi formullar, avtomatik qiymətləndirmə,
-                                sual bazası və ətraflı statistika — hamısı bir platformada.
+                                Müəllimlər üçün güclü alət: AI ilə sual yaratma, 7 sual tipi, riyazi formullar, birgə imtahan,
+                                avtomatik qiymətləndirmə, sual bazası — hamısı bir platformada.
                             </p>
 
                             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
@@ -221,7 +226,7 @@ const Home = () => {
                             </div>
 
                             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 mt-8 text-xs text-gray-500">
-                                {['Qeydiyyat tələb olunmur (şagirdlər üçün)', 'Pulsuz istifadə', '7 sual tipi'].map(t => (
+                                {['Şagirdlər üçün qeydiyyatsız giriş', 'Yeni müəllimlərə pulsuz plan', 'AI + 7 sual tipi'].map(t => (
                                     <span key={t} className="flex items-center gap-1.5">
                                         <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-500" /> {t}
                                     </span>
@@ -257,7 +262,7 @@ const Home = () => {
                 <div className="container-main">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                         <Stat value="7" label="Sual tipi" />
-                        <Stat value="100%" label="Pulsuz qeydiyyat" />
+                        <Stat value="AI" label="Avtomatik sual yaratma" />
                         <Stat value="∞" label="Sual bazası limiti yoxdur" />
                         <Stat value="5 dəq" label="İlk imtahanı yaratmaq üçün" />
                     </div>
@@ -265,6 +270,7 @@ const Home = () => {
             </section>
 
             {/* ── How it works ── */}
+            {!isAuthenticated && (
             <section className="py-20 bg-white">
                 <div className="container-main">
                     <div className="flex flex-col lg:flex-row gap-16 items-start">
@@ -278,13 +284,14 @@ const Home = () => {
                             </p>
                         </div>
                         <div className="flex-1">
-                            <StepCard n={1} title="Qeydiyyatdan keçin" desc="E-poçt ünvanınızla 30 saniyədə hesab yaradın. Heç bir ödəniş tələb olunmur." />
-                            <StepCard n={2} title="İmtahanı qurun" desc="Sual tipini seçin, mətn daxil edin (LaTeX dəstəyi ilə), bal və vaxt limitini tənzimləyin." />
-                            <StepCard n={3} title="Paylaşın və nəticəyə baxın" desc="Linki şagirdlərə göndərin. Bitdikdən sonra nəticələri dərhal görün, statistikaya baxın." />
+                            <StepCard n={1} title="Qeydiyyatdan keçin" desc="E-poçt ünvanınızla 30 saniyədə hesab yaradın. Yeni müəllimlərə pulsuz Basic plan verilir." />
+                            <StepCard n={2} title="İmtahanı qurun" desc="AI ilə avtomatik yarat, şablondan başla, ya da sualları əl ilə daxil et — LaTeX dəstəyi, 7 tip, sual bazası." />
+                            <StepCard n={3} title="Paylaşın və nəticəyə baxın" desc="Linki şagirdlərə göndərin. Bitdikdən sonra doğru/yanlış/boş analizi ilə ətraflı statistikaya baxın." />
                         </div>
                     </div>
                 </div>
             </section>
+            )}
 
             {/* ── Features ── */}
             <section className="py-20 bg-gray-50/60">
@@ -296,7 +303,7 @@ const Home = () => {
                             Sadə interfeys, güclü alətlər. Hazırlıqdan nəticəyə qədər bütün addımlar bir platformada.
                         </p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {features.map((f, i) => <FeatureCard key={i} {...f} />)}
                     </div>
                 </div>
@@ -389,9 +396,10 @@ const Home = () => {
                                 <h3 className="text-xl font-extrabold mb-3">Müəllimlər üçün</h3>
                                 <ul className="space-y-2 mb-6">
                                     {[
-                                        'İmtahan yarat, redaktə et, şablona çevir',
+                                        'AI ilə sualları avtomatik yarat',
+                                        'Adminlə birlikdə birgə imtahan hazırla',
                                         'Sual bazasını fənlər üzrə idarə et',
-                                        'Nəticələri ətraflı statistika ilə izlə',
+                                        'Nəticələri 4 kateqoriyalı qrafiklə izlə',
                                         'Açıq sualları əl ilə qiymətləndir',
                                     ].map(t => (
                                         <li key={t} className="flex items-start gap-2.5 text-sm text-indigo-100">
@@ -447,12 +455,12 @@ const Home = () => {
                         <div className="flex flex-col items-center gap-3 p-6">
                             <HiOutlineShieldCheck className="w-8 h-8 text-indigo-400" />
                             <h4 className="font-bold text-gray-900">Etibarlı platforma</h4>
-                            <p className="text-sm text-gray-500">Məlumatlarınız güvəndədir. HTTPS şifrələməsi və etibarlı server altyapısı.</p>
+                            <p className="text-sm text-gray-500">Məlumatlarınız güvəndədir. HTTPS şifrələməsi, audit logları və etibarlı server altyapısı.</p>
                         </div>
                         <div className="flex flex-col items-center gap-3 p-6">
-                            <HiOutlineLightningBolt className="w-8 h-8 text-amber-400" />
-                            <h4 className="font-bold text-gray-900">Sürətli interfeys</h4>
-                            <p className="text-sm text-gray-500">Optimallaşdırılmış UI — istər telefon, istərsə kompüterdən rahat istifadə.</p>
+                            <HiOutlineSparkles className="w-8 h-8 text-violet-400" />
+                            <h4 className="font-bold text-gray-900">AI əsaslı köməkçi</h4>
+                            <p className="text-sm text-gray-500">LLaMA modeli ilə LaTeX formatlı suallar avtomatik yaranır — vaxt qənaəti maksimuma çatır.</p>
                         </div>
                         <div className="flex flex-col items-center gap-3 p-6">
                             <HiOutlineUserGroup className="w-8 h-8 text-purple-400" />

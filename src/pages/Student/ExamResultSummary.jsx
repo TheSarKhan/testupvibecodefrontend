@@ -82,11 +82,55 @@ const StarRating = ({ value, onChange }) => {
     );
 };
 
+const MultiDonutChart = ({ correct, wrong, skipped, pending, total, percent }) => {
+    const r = 70;
+    const circ = 2 * Math.PI * r;
+    const safeTotal = total || 1;
+
+    const segments = [
+        { value: correct, color: '#22c55e' },   // Doğru
+        { value: wrong,   color: '#ef4444' },   // Yanlış
+        { value: pending, color: '#f59e0b' },   // Yoxlanılmamış
+        { value: skipped, color: '#9ca3af' },   // Boş
+    ];
+
+    let cumulative = 0;
+    const arcs = segments.map(seg => {
+        const pct = seg.value / safeTotal;
+        const dash = circ * pct;
+        const gap  = circ - dash;
+        const offset = circ * (1 - cumulative);
+        cumulative += pct;
+        return { ...seg, dash, gap, offset };
+    });
+
+    const textColor = percent >= 90 ? 'text-emerald-600' : percent >= 75 ? 'text-indigo-600' : percent >= 50 ? 'text-amber-600' : 'text-red-600';
+
+    return (
+        <div className="relative inline-flex">
+            <svg className="w-44 h-44 -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r={r} stroke="#f3f4f6" strokeWidth="14" fill="transparent" />
+                {arcs.map((arc, i) => arc.value > 0 && (
+                    <circle key={i} cx="80" cy="80" r={r}
+                        stroke={arc.color} strokeWidth="14" fill="transparent"
+                        strokeDasharray={`${arc.dash} ${arc.gap}`}
+                        strokeDashoffset={arc.offset}
+                        style={{ transition: 'stroke-dashoffset 1s ease' }}
+                    />
+                ))}
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`text-4xl font-black ${textColor}`}>{percent}%</span>
+                <span className="text-xs text-gray-400 font-medium mt-0.5">nəticə</span>
+            </div>
+        </div>
+    );
+};
+
 const DonutChart = ({ percent, color }) => {
     const r = 70;
     const circumference = 2 * Math.PI * r;
     const offset = circumference - (circumference * percent) / 100;
-
     const colorMap = {
         green:  { stroke: '#22c55e', text: 'text-green-600' },
         blue:   { stroke: '#6366f1', text: 'text-indigo-600' },
@@ -94,19 +138,12 @@ const DonutChart = ({ percent, color }) => {
         red:    { stroke: '#ef4444', text: 'text-red-600' },
     };
     const c = colorMap[color] || colorMap.green;
-
     return (
         <div className="relative inline-flex">
             <svg className="w-44 h-44 -rotate-90" viewBox="0 0 160 160">
                 <circle cx="80" cy="80" r={r} stroke="#f3f4f6" strokeWidth="14" fill="transparent" />
-                <circle
-                    cx="80" cy="80" r={r}
-                    stroke={c.stroke}
-                    strokeWidth="14"
-                    fill="transparent"
-                    strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
+                <circle cx="80" cy="80" r={r} stroke={c.stroke} strokeWidth="14" fill="transparent"
+                    strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
                     style={{ transition: 'stroke-dashoffset 1s ease' }}
                 />
             </svg>
@@ -223,7 +260,35 @@ const ExamResultSummary = () => {
                 <div className="px-8 py-8 flex flex-col items-center border-b border-gray-100">
                     {scorePercent !== null ? (
                         <>
-                            <DonutChart percent={scorePercent} color={getDonutColor(scorePercent)} />
+                            {submission?.correctCount != null ? (
+                                <MultiDonutChart
+                                    correct={submission.correctCount}
+                                    wrong={submission.wrongCount}
+                                    skipped={submission.skippedCount}
+                                    pending={submission.pendingManualCount}
+                                    total={(submission.correctCount || 0) + (submission.wrongCount || 0) + (submission.skippedCount || 0) + (submission.pendingManualCount || 0)}
+                                    percent={scorePercent}
+                                />
+                            ) : (
+                                <DonutChart percent={scorePercent} color={getDonutColor(scorePercent)} />
+                            )}
+
+                            {submission?.correctCount != null && (
+                                <div className="mt-5 grid grid-cols-2 gap-2 w-full max-w-xs">
+                                    {[
+                                        { label: 'Doğru',           count: submission.correctCount,      color: 'bg-green-500' },
+                                        { label: 'Yanlış',          count: submission.wrongCount,        color: 'bg-red-500' },
+                                        { label: 'Yoxlanılmamış',   count: submission.pendingManualCount, color: 'bg-amber-400' },
+                                        { label: 'Boş buraxılmış',  count: submission.skippedCount,      color: 'bg-gray-300' },
+                                    ].map(item => (
+                                        <div key={item.label} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                                            <span className={`w-3 h-3 rounded-full shrink-0 ${item.color}`} />
+                                            <span className="text-xs text-gray-600 flex-1">{item.label}</span>
+                                            <span className="text-xs font-bold text-gray-800">{item.count}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <div className="mt-4 text-center">
                                 {isTemplateExam ? (

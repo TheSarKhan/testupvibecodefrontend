@@ -804,8 +804,9 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             <input
                                 type="number"
                                 min="1"
+                                max="100"
                                 value={question.points}
-                                onChange={(e) => handleChange('points', parseFloat(e.target.value))}
+                                onChange={(e) => handleChange('points', Math.min(100, Math.max(1, parseFloat(e.target.value) || 1)))}
                                 className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-indigo-700"
                             />
                         </div>

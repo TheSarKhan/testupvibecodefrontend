@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineBookOpen, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck } from 'react-icons/hi';
+import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -159,11 +159,10 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                 <p className="text-gray-600 text-sm">İmtahan üçün fənn seçin:</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-0.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-0.5">
                 {subjects.map(s => {
                     const name = typeof s === 'string' ? s : s.name;
                     const color = typeof s === 'string' ? null : s.color;
-                    const emoji = typeof s === 'string' ? null : s.iconEmoji;
                     const isSelected = selectedSubject === name;
                     return (
                         <button
@@ -179,13 +178,11 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                 backgroundColor: color ? `${color}12` : '#eef2ff',
                             } : {}}
                         >
-                            {/* Emoji/icon circle */}
+                            {/* Color circle */}
                             <span
-                                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 shadow-sm"
+                                className="w-10 h-10 rounded-xl shrink-0 shadow-sm"
                                 style={{ backgroundColor: color || '#e5e7eb' }}
-                            >
-                                {emoji || <HiOutlineBookOpen className="w-5 h-5 text-white" />}
-                            </span>
+                            />
                             <span
                                 className={`text-xs text-center leading-tight font-semibold ${isSelected ? '' : 'text-gray-700'}`}
                                 style={isSelected ? { color: color || '#6366f1' } : {}}
@@ -315,11 +312,9 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2.5">
                                             <span
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
+                                                className="w-8 h-8 rounded-lg shrink-0"
                                                 style={{ backgroundColor: meta?.color || '#e5e7eb' }}
-                                            >
-                                                {meta?.iconEmoji || <HiOutlineBookOpen className="w-4 h-4 text-white" />}
-                                            </span>
+                                            />
                                             <span className="font-bold text-gray-900">{section.subjectName}</span>
                                         </div>
                                         <span

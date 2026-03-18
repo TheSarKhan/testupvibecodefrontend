@@ -4,7 +4,8 @@ import {
     HiOutlineLightBulb, HiOutlineAcademicCap, HiOutlineShieldCheck,
     HiOutlineCalculator, HiOutlineClipboardCheck, HiOutlinePencilAlt,
     HiOutlineEye, HiOutlineChip, HiOutlineArrowRight, HiOutlineCheckCircle,
-    HiOutlineHeart, HiOutlineGlobe, HiOutlineSparkles,
+    HiOutlineHeart, HiOutlineGlobe, HiOutlineSparkles, HiOutlineUserGroup,
+    HiOutlineDuplicate, HiOutlineChartBar,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import Pricing from '../Pricing/Pricing';
@@ -36,14 +37,29 @@ const About = () => {
 
     const innovations = [
         {
+            icon: HiOutlineSparkles, iconColor: 'text-violet-600', bg: 'bg-violet-50',
+            title: 'AI ilə Sual Yaratma',
+            desc: 'Fənn, mövzu və çətinlik seçin — LLaMA əsaslı AI sistemi sualları LaTeX formullarla birlikdə avtomatik hazırlayır.',
+        },
+        {
+            icon: HiOutlineUserGroup, iconColor: 'text-blue-600', bg: 'bg-blue-50',
+            title: 'Birgə İmtahan (Collaborative)',
+            desc: 'Admin imtahanı fənlər üzrə müəllimlərə bölür. Hər müəllim öz hissəsini hazırlar, admin təsdiqləyir.',
+        },
+        {
             icon: HiOutlineCalculator, iconColor: 'text-indigo-600', bg: 'bg-indigo-50',
             title: 'Riyaziyyat Klaviaturası (LaTeX)',
-            desc: 'Kəsrlər, kvadrat köklər, inteqrallar və digər riyazi ifadələr MathQuill klaviaturası ilə daxil edilir. Düsturlar real vaxtda göstərilir.',
+            desc: 'Kəsrlər, kvadrat köklər, inteqrallar MathQuill klaviaturası ilə daxil edilir. KaTeX ilə real vaxtda göstərilir.',
         },
         {
             icon: HiOutlineClipboardCheck, iconColor: 'text-purple-600', bg: 'bg-purple-50',
             title: 'Açıq Suallar + Əl ilə Yoxlama',
             desc: 'Esse tipli suallar müəllim tərəfindən nəzərdən keçirilir. Avtomatik sistemin yetmədiyi yerdə insan dəqiqliyi qorunur.',
+        },
+        {
+            icon: HiOutlineChartBar, iconColor: 'text-cyan-600', bg: 'bg-cyan-50',
+            title: '4 Kateqoriyalı Nəticə Analizi',
+            desc: 'Doğru, Yanlış, Boş, Yoxlanılmamış — hər cavab kateqoriyası ayrı rənglə qrafikdə göstərilir.',
         },
         {
             icon: HiOutlinePencilAlt, iconColor: 'text-pink-600', bg: 'bg-pink-50',
@@ -52,18 +68,18 @@ const About = () => {
         },
         {
             icon: HiOutlineEye, iconColor: 'text-orange-600', bg: 'bg-orange-50',
-            title: 'Link ilə Gizli Giriş',
-            desc: 'Unikal imtahan linki yaradılır. Şagirdlər qeydiyyatsız, yalnız ad daxil edərək qoşulur. İcazəsiz girişin qarşısı alınır.',
+            title: 'Link & Giriş Kodu ilə Paylaşım',
+            desc: 'Unikal link və ya vaxt məhdudiyyətli giriş kodu. Şagirdlər qeydiyyatsız, yalnız ad daxil edərək qoşulur.',
         },
         {
-            icon: HiOutlineChip, iconColor: 'text-cyan-600', bg: 'bg-cyan-50',
+            icon: HiOutlineDuplicate, iconColor: 'text-teal-600', bg: 'bg-teal-50',
+            title: 'Klonlama & Şablonlar',
+            desc: 'Mövcud imtahanı bir klikdə kopyala. Şablonlarla hər dəfə yenidən qurmadan hazır struktura başla.',
+        },
+        {
+            icon: HiOutlineChip, iconColor: 'text-amber-600', bg: 'bg-amber-50',
             title: 'Avtomatik Qiymətləndirmə',
             desc: 'Qapalı suallar dərhal yoxlanılır, bal hesablanır. Müəllim vaxtını sual hazırlığına yönəldə bilər.',
-        },
-        {
-            icon: HiOutlineLightBulb, iconColor: 'text-amber-600', bg: 'bg-amber-50',
-            title: 'Sual Bazası & Şablonlar',
-            desc: 'Sualları bir dəfə əlavə et, dəfələrlə istifadə et. Şablonlarla imtahan strukturunu öncədən hazırla.',
         },
     ];
 
@@ -89,8 +105,9 @@ const About = () => {
                         Haqqımızda
                     </h1>
                     <p className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
-                        <strong className="text-gray-900">testup.az</strong> — müəllimlərin vaxtını dəyərləndirən, şagirdlər üçün
-                        ədalətli qiymətləndirmə mühiti yaradan onlayn imtahan platformasıdır.
+                        <strong className="text-gray-900">testup.az</strong> — AI dəstəkli sual yaratma, birgə imtahan,
+                        7 sual tipi və ətraflı statistika ilə müəllimlərə güclü, şagirdlərə isə
+                        ədalətli qiymətləndirmə mühiti yaradan Azərbaycanın müasir onlayn imtahan platformasıdır.
                     </p>
                 </div>
             </section>
@@ -118,7 +135,7 @@ const About = () => {
                                 </p>
                             </div>
                             <div className="mt-8 flex flex-wrap gap-3">
-                                {['Pulsuz qeydiyyat', 'Azərbaycan dili', 'LaTeX dəstəyi', 'Avtomatik yoxlama'].map(t => (
+                                {['Pulsuz qeydiyyat', 'AI sual yaratma', 'LaTeX dəstəyi', 'Birgə imtahan', 'Avtomatik yoxlama'].map(t => (
                                     <span key={t} className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
                                         <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-500" /> {t}
                                     </span>
@@ -166,7 +183,7 @@ const About = () => {
                             Sadə görünsə də — hər detalı müəllimin həyatını asanlaşdırmaq üçün düşünülüb.
                         </p>
                     </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {innovations.map((item, i) => <InnovCard key={i} {...item} />)}
                     </div>
                 </div>

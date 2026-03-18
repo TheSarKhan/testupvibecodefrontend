@@ -49,10 +49,10 @@ const buildQuestionsFromTypeCounts = (typeCounts) => {
                 orderIndex: orderIdx++,
                 subjectGroup: null,
                 options: isChoice ? [
-                    { id: `o1-${ts}-${orderIdx}`, text: 'A', isCorrect: false },
-                    { id: `o2-${ts}-${orderIdx}`, text: 'B', isCorrect: false },
-                    { id: `o3-${ts}-${orderIdx}`, text: 'C', isCorrect: false },
-                    { id: `o4-${ts}-${orderIdx}`, text: 'D', isCorrect: false },
+                    { id: `o1-${ts}-${orderIdx}`, text: '', isCorrect: false },
+                    { id: `o2-${ts}-${orderIdx}`, text: '', isCorrect: false },
+                    { id: `o3-${ts}-${orderIdx}`, text: '', isCorrect: false },
+                    { id: `o4-${ts}-${orderIdx}`, text: '', isCorrect: false },
                 ] : [],
                 matchingPairs: [],
                 sampleAnswer: ''
@@ -177,7 +177,7 @@ const ExamEditor = () => {
     }, [id]);
 
     useEffect(() => {
-        api.get('/subjects').then(res => setSubjectsList(res.data)).catch(() => {});
+        api.get('/subjects/meta').then(res => setSubjectsList(res.data)).catch(() => {});
     }, []);
 
     // On new template exam: load section data from navigation state
@@ -926,14 +926,18 @@ const ExamEditor = () => {
                                 <p className="text-sm font-medium text-gray-700 mb-3">Yeni fənn seçin:</p>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-3">
                                     {subjectsList
-                                        .filter(s => s !== examConfig.subject && !(examConfig.extraSubjects || []).includes(s))
-                                        .map(name => (
+                                        .filter(s => s.name !== examConfig.subject && !(examConfig.extraSubjects || []).includes(s.name))
+                                        .map(s => (
                                             <button
-                                                key={name}
-                                                onClick={() => handleAddSection(name)}
-                                                className="text-left px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                                                key={s.name}
+                                                onClick={() => handleAddSection(s.name)}
+                                                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
                                             >
-                                                {name}
+                                                <span
+                                                    className="w-3 h-3 rounded-full shrink-0"
+                                                    style={{ backgroundColor: s.color || '#6366f1' }}
+                                                />
+                                                <span className="truncate">{s.name}</span>
                                             </button>
                                         ))}
                                 </div>

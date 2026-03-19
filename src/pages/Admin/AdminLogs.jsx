@@ -25,6 +25,10 @@ const ACTION_LABELS = {
     TOPIC_ADDED: 'Mövzu əlavə edildi',
     TOPIC_DELETED: 'Mövzu silindi',
     NOTIFICATION_SENT: 'Bildiriş göndərildi',
+    SUBSCRIPTION_PURCHASED: 'Abunəlik alındı',
+    SUBSCRIPTION_SWITCHED: 'Plan dəyişdirildi',
+    SUBSCRIPTION_ASSIGNED_MANUAL: 'Plan əl ilə təyin edildi',
+    SUBSCRIPTION_CANCELLED: 'Abunəlik ləğv edildi',
     SYSTEM_ERROR: 'Sistem xətası',
 };
 
@@ -34,6 +38,7 @@ const CATEGORIES = [
     { key: 'USER', label: 'İstifadəçi' },
     { key: 'EXAM', label: 'İmtahan' },
     { key: 'CONTENT', label: 'Kontent' },
+    { key: 'PAYMENT', label: 'Ödəniş' },
     { key: 'SYSTEM', label: 'Sistem' },
 ];
 
@@ -42,6 +47,7 @@ const CATEGORY_STYLES = {
     USER:    'bg-purple-100 text-purple-700',
     EXAM:    'bg-indigo-100 text-indigo-700',
     CONTENT: 'bg-teal-100 text-teal-700',
+    PAYMENT: 'bg-emerald-100 text-emerald-700',
     SYSTEM:  'bg-gray-100 text-gray-600',
 };
 

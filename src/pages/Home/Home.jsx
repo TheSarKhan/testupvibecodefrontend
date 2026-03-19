@@ -140,13 +140,13 @@ const Home = () => {
     }, []);
 
     const features = [
-        { icon: HiOutlineSparkles, title: 'AI ilə İmtahan Yaratma', desc: 'Fənn, mövzu və çətinlik dərəcəsi seçin — süni intellekt sualları avtomatik yaradır.', color: 'bg-violet-50 text-violet-600' },
         { icon: HiOutlineLightningBolt, title: 'Sürətli imtahan yaratma', desc: 'Sualları əlavə edin, vaxt, bal və şərtləri tənzimləyin — hazırlıq 5 dəqiqədən az vaxt aparır.', color: 'bg-amber-50 text-amber-600' },
         { icon: HiOutlineCheckCircle, title: 'Avtomatik qiymətləndirmə', desc: 'Qapalı, çoxseçimli, boşluqdoldurma sualları sistem tərəfindən dərhal yoxlanılır.', color: 'bg-green-50 text-green-600' },
+        { icon: HiOutlineChartBar, title: 'Ətraflı statistika', desc: 'Doğru/Yanlış/Boş/Yoxlanılmamış kateqoriyalar üzrə qrafik, sual analizi, şagird nəticəsi.', color: 'bg-cyan-50 text-cyan-600' },
         { icon: HiOutlineUserGroup, title: 'Birgə imtahan yaratma', desc: 'Admin imtahanı fənlər üzrə müəllimlərə tapşırır. Hər müəllim öz fənninin suallarını hazırlayır.', color: 'bg-blue-50 text-blue-600' },
         { icon: HiOutlineBookOpen, title: 'Sual bazası', desc: 'Sualları fənlər üzrə saxlayın, sonradan imtahanlara əlavə edin. Ümumi və şəxsi baza.', color: 'bg-indigo-50 text-indigo-600' },
         { icon: HiOutlineTemplate, title: 'Şablon imtahanlar', desc: 'Dərs planlarınıza uyğun şablonlar yaradın, hər dəfə yenidən qurmadan istifadə edin.', color: 'bg-pink-50 text-pink-600' },
-        { icon: HiOutlineChartBar, title: 'Ətraflı statistika', desc: 'Doğru/Yanlış/Boş/Yoxlanılmamış kateqoriyalar üzrə qrafik, sual analizi, şagird nəticəsi.', color: 'bg-cyan-50 text-cyan-600' },
+        { icon: HiOutlineSparkles, title: 'AI ilə sual yaratma', desc: 'Fənn, mövzu və çətinlik dərəcəsi seçin — süni intellekt sualları avtomatik yaradır.', color: 'bg-violet-50 text-violet-600' },
         { icon: HiOutlineDuplicate, title: 'İmtahan klonlama', desc: 'Mövcud imtahanı bir klikdə kopyalayın. Qaralama kimi açılır, redaktə etməyə hazırdır.', color: 'bg-orange-50 text-orange-600' },
         { icon: HiOutlinePhotograph, title: 'Keçid mətni & Dinləmə', desc: 'Mətndən suallar qrupu, audio dinləmə imtahanı — kompleks formatlara tam dəstək.', color: 'bg-teal-50 text-teal-600' },
         { icon: HiOutlineLink, title: 'Link ilə paylaşım', desc: 'İmtahanı bir link ilə paylaşın. Şagirdlər qeydiyyatsız, yalnız adla qoşula bilər.', color: 'bg-rose-50 text-rose-600' },
@@ -187,21 +187,52 @@ const Home = () => {
                                 Azərbaycanda müəllimlər üçün #1 imtahan platforması
                             </div>
 
-                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-[1.1] mb-6">
-                                İmtahanı AI ilə<br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500">
-                                    ağıllı qurun
-                                </span>
-                            </h1>
-
-                            <p className="text-lg text-gray-600 leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
-                                Müəllimlər üçün güclü alət: AI ilə sual yaratma, 7 sual tipi, riyazi formullar, birgə imtahan,
-                                avtomatik qiymətləndirmə, sual bazası — hamısı bir platformada.
-                            </p>
-
-                            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
-                                {!isAuthenticated ? (
-                                    <>
+                            {isAuthenticated ? (
+                                <>
+                                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-[1.1] mb-6">
+                                        İmtahanlarınız<br />
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500">
+                                            bir yerdə hazır
+                                        </span>
+                                    </h1>
+                                    <p className="text-lg text-gray-600 leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
+                                        Yeni imtahan yaradın, sual bazanızı genişləndirin, nəticələri izləyin — hamısı bir platformada.
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+                                        <Link
+                                            to={isTeacher ? '/imtahanlar' : '/profil'}
+                                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200/60 transition-all hover:-translate-y-0.5 text-sm"
+                                        >
+                                            {isTeacher ? 'İmtahanlarıma keç' : 'Profilimə keç'} <HiOutlineArrowRight className="w-4 h-4" />
+                                        </Link>
+                                        <Link
+                                            to="/imtahanlar"
+                                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 bg-white border border-gray-200 hover:border-indigo-300 text-gray-700 font-semibold rounded-xl transition-all hover:bg-gray-50 text-sm"
+                                        >
+                                            İmtahanlara bax
+                                        </Link>
+                                    </div>
+                                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 mt-8 text-xs text-gray-500">
+                                        {['7 sual tipi', 'Avtomatik qiymətləndirmə', 'Ətraflı statistika'].map(t => (
+                                            <span key={t} className="flex items-center gap-1.5">
+                                                <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-500" /> {t}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-[1.1] mb-6">
+                                        İmtahanı rəqəmsal<br />
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500">
+                                            yeni formata daşıyın
+                                        </span>
+                                    </h1>
+                                    <p className="text-lg text-gray-600 leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
+                                        Müəllimlər üçün güclü alət: 7 sual tipi, riyazi formullar, birgə imtahan,
+                                        avtomatik qiymətləndirmə, sual bazası — hamısı bir platformada.
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
                                         <Link
                                             to="/register"
                                             className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200/60 transition-all hover:-translate-y-0.5 text-sm"
@@ -214,24 +245,16 @@ const Home = () => {
                                         >
                                             İmtahanlara bax
                                         </Link>
-                                    </>
-                                ) : (
-                                    <Link
-                                        to={isTeacher ? '/imtahanlar' : '/profil'}
-                                        className="flex items-center gap-2 px-7 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200/60 transition-all text-sm"
-                                    >
-                                        Sistemə keçid <HiOutlineArrowRight className="w-4 h-4" />
-                                    </Link>
-                                )}
-                            </div>
-
-                            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 mt-8 text-xs text-gray-500">
-                                {['Şagirdlər üçün qeydiyyatsız giriş', 'Yeni müəllimlərə pulsuz plan', 'AI + 7 sual tipi'].map(t => (
-                                    <span key={t} className="flex items-center gap-1.5">
-                                        <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-500" /> {t}
-                                    </span>
-                                ))}
-                            </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 mt-8 text-xs text-gray-500">
+                                        {['Şagirdlər üçün qeydiyyatsız giriş', 'Yeni müəllimlərə pulsuz plan', '7 sual tipi'].map(t => (
+                                            <span key={t} className="flex items-center gap-1.5">
+                                                <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-500" /> {t}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Right — mock card */}
@@ -458,9 +481,9 @@ const Home = () => {
                             <p className="text-sm text-gray-500">Məlumatlarınız güvəndədir. HTTPS şifrələməsi, audit logları və etibarlı server altyapısı.</p>
                         </div>
                         <div className="flex flex-col items-center gap-3 p-6">
-                            <HiOutlineSparkles className="w-8 h-8 text-violet-400" />
-                            <h4 className="font-bold text-gray-900">AI əsaslı köməkçi</h4>
-                            <p className="text-sm text-gray-500">LLaMA modeli ilə LaTeX formatlı suallar avtomatik yaranır — vaxt qənaəti maksimuma çatır.</p>
+                            <HiOutlineLightningBolt className="w-8 h-8 text-violet-400" />
+                            <h4 className="font-bold text-gray-900">Müasir texnologiya</h4>
+                            <p className="text-sm text-gray-500">LaTeX formullar, PDF idxalı, audio dinləmə, avtomatik qiymətləndirmə — müasir tədrisə uyğun alətlər.</p>
                         </div>
                         <div className="flex flex-col items-center gap-3 p-6">
                             <HiOutlineUserGroup className="w-8 h-8 text-purple-400" />
@@ -481,34 +504,52 @@ const Home = () => {
             <section className="py-24 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
                 <div className="container-main relative z-10 text-center max-w-2xl mx-auto">
-                    <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">
-                        İmtahan prosesinizi bu gün modernləşdirin
-                    </h2>
-                    <p className="text-indigo-200 text-base mb-8 leading-relaxed">
-                        Qeydiyyat pulsuz, imtahan yaratmaq isə 5 dəqiqə çəkir.
-                    </p>
-                    {!isAuthenticated ? (
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                            <Link
-                                to="/register"
-                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-indigo-700 font-bold rounded-xl shadow-xl hover:bg-indigo-50 transition-colors text-sm"
-                            >
-                                Pulsuz qeydiyyat <HiOutlineArrowRight className="w-4 h-4" />
-                            </Link>
-                            <Link
-                                to="/imtahanlar"
-                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-white/10 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/20 transition-colors text-sm"
-                            >
-                                İmtahanlara nəzər sal
-                            </Link>
-                        </div>
+                    {isAuthenticated ? (
+                        <>
+                            <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">
+                                Hazırsınız. Başlayın.
+                            </h2>
+                            <p className="text-indigo-200 text-base mb-8 leading-relaxed">
+                                İmtahanlarınızı idarə edin, nəticələri izləyin, sual bazanızı genişləndirin.
+                            </p>
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                <Link
+                                    to={isTeacher ? '/imtahanlar' : '/profil'}
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-indigo-700 font-bold rounded-xl shadow-xl hover:bg-indigo-50 transition-colors text-sm"
+                                >
+                                    {isTeacher ? 'İmtahanlarıma keç' : 'Profilimə keç'} <HiOutlineArrowRight className="w-4 h-4" />
+                                </Link>
+                                <Link
+                                    to="/imtahanlar"
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-white/10 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/20 transition-colors text-sm"
+                                >
+                                    İmtahanlara bax
+                                </Link>
+                            </div>
+                        </>
                     ) : (
-                        <Link
-                            to={isTeacher ? '/imtahanlar' : '/profil'}
-                            className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-indigo-700 font-bold rounded-xl shadow-xl hover:bg-indigo-50 transition-colors text-sm"
-                        >
-                            Sistemə keçid <HiOutlineArrowRight className="w-4 h-4" />
-                        </Link>
+                        <>
+                            <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">
+                                İmtahan prosesinizi bu gün modernləşdirin
+                            </h2>
+                            <p className="text-indigo-200 text-base mb-8 leading-relaxed">
+                                Qeydiyyat pulsuz, imtahan yaratmaq isə 5 dəqiqə çəkir.
+                            </p>
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                <Link
+                                    to="/register"
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-indigo-700 font-bold rounded-xl shadow-xl hover:bg-indigo-50 transition-colors text-sm"
+                                >
+                                    Pulsuz qeydiyyat <HiOutlineArrowRight className="w-4 h-4" />
+                                </Link>
+                                <Link
+                                    to="/imtahanlar"
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 bg-white/10 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/20 transition-colors text-sm"
+                                >
+                                    İmtahanlara nəzər sal
+                                </Link>
+                            </div>
+                        </>
                     )}
                 </div>
             </section>

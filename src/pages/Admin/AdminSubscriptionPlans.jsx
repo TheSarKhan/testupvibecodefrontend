@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 const INITIAL_FORM = {
     name: '',
     price: 0,
+    level: 0,
     description: '',
     monthlyExamLimit: 0,
     maxQuestionsPerExam: 0,
@@ -256,6 +257,19 @@ const AdminSubscriptionPlans = () => {
                                             step="0.01"
                                             className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Səviyyə (Level) *</label>
+                                        <input
+                                            type="number"
+                                            name="level"
+                                            value={form.level}
+                                            onChange={handleChange}
+                                            required
+                                            min="0"
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">0=Free, 1=Basic, 2=Limitsiz, 3+ = yeni planlar</p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1">Açıqlama</label>

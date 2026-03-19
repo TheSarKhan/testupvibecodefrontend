@@ -735,27 +735,58 @@ const TeacherProfile = ({ user }) => {
                 </div>
 
                 {/* Subscription Info */}
-                {subscription?.plan && (
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl shadow-sm border border-indigo-100 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-white rounded-2xl shadow-sm">
-                                <HiOutlineCheckCircle className="w-8 h-8 text-indigo-600" />
+                {subscription?.plan && (() => {
+                    const totalDays = Math.max(1, Math.ceil((new Date(subscription.endDate) - new Date(subscription.startDate)) / 86400000));
+                    const remainingDays = Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000));
+                    const usedPct = Math.min(100, Math.round(((totalDays - remainingDays) / totalDays) * 100));
+                    const isExpiringSoon = remainingDays <= 7;
+                    const isExpiringSoonish = remainingDays <= 30 && remainingDays > 7;
+                    const barColor = isExpiringSoon ? 'bg-red-500' : isExpiringSoonish ? 'bg-amber-400' : 'bg-indigo-500';
+                    const textColor = isExpiringSoon ? 'text-red-600' : isExpiringSoonish ? 'text-amber-600' : 'text-indigo-600';
+                    const bgColor = isExpiringSoon ? 'from-red-50 to-rose-50 border-red-100' : isExpiringSoonish ? 'from-amber-50 to-yellow-50 border-amber-100' : 'from-indigo-50 to-purple-50 border-indigo-100';
+                    return (
+                        <div className={`bg-gradient-to-r ${bgColor} rounded-3xl shadow-sm border p-6`}>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-white rounded-2xl shadow-sm">
+                                        <HiOutlineCheckCircle className={`w-8 h-8 ${textColor}`} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h2 className="text-lg font-black text-gray-900">{subscription.plan.name}</h2>
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${subscription.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {subscription.isActive ? 'Aktivdir' : 'Aktiv deyil'}
+                                            </span>
+                                            {isExpiringSoon && (
+                                                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 animate-pulse">
+                                                    Tezliklə bitir!
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-gray-500 mt-0.5">
+                                            {fmtDate(subscription.startDate)} — {fmtDate(subscription.endDate)}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Link to="/planlar" className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap text-sm">
+                                    {isExpiringSoon ? 'Uzat' : 'Planı Dəyiş'}
+                                </Link>
                             </div>
+                            {/* Time progress bar */}
                             <div>
-                                <h2 className="text-lg font-black text-gray-900 mb-1">Cari Abunəlik: <span className="text-indigo-700">{subscription.plan.name}</span></h2>
-                                <p className="text-sm text-gray-600 font-medium">
-                                    Qüvvədədir: {fmtDate(subscription.startDate)} — {fmtDate(subscription.endDate)}
-                                    <span className={`ml-3 px-2 py-0.5 rounded-md text-xs font-bold shadow-sm ${subscription.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                        {subscription.isActive ? 'Aktivdir' : 'Aktiv deyil'}
+                                <div className="flex justify-between items-center mb-1.5">
+                                    <span className="text-xs text-gray-500 font-medium">Müddət</span>
+                                    <span className={`text-xs font-bold ${textColor}`}>
+                                        {remainingDays === 0 ? 'Bu gün bitir' : `${remainingDays} gün qalır`}
                                     </span>
-                                </p>
+                                </div>
+                                <div className="h-2 bg-white/70 rounded-full overflow-hidden">
+                                    <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${usedPct}%` }} />
+                                </div>
                             </div>
                         </div>
-                        <Link to="/planlar" className="px-5 py-2.5 bg-white border border-indigo-200 text-indigo-700 font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-sm whitespace-nowrap text-sm">
-                            Planı Dəyiş
-                        </Link>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

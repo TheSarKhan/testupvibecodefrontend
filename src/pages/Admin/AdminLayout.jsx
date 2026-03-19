@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineMenu, HiOutlineX, HiOutlineMail } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineMenu, HiOutlineX, HiOutlineMail, HiOutlineTrendingUp } from 'react-icons/hi';
 import api from '../../api/axios';
 
 const navGroups = [
@@ -30,6 +30,7 @@ const navGroups = [
         items: [
             { to: '/admin/reklamlar', label: 'Reklamlar', icon: HiOutlineSpeakerphone },
             { to: '/admin/planlar', label: 'Abunəlik Planları', icon: HiOutlineCurrencyDollar },
+            { to: '/admin/qazanc', label: 'Qazanc Statistikası', icon: HiOutlineTrendingUp },
         ],
     },
 ];

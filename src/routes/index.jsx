@@ -40,7 +40,10 @@ import AdminNotifications from '../pages/Admin/AdminNotifications';
 import AdminCollaborativeExams from '../pages/Admin/AdminCollaborativeExams';
 import AdminLogs from '../pages/Admin/AdminLogs';
 import AdminContactMessages from '../pages/Admin/AdminContactMessages';
+import AdminRevenue from '../pages/Admin/AdminRevenue';
 import CollaborativeAssignments from '../pages/Teacher/CollaborativeAssignments';
+import PaymentSuccess from '../pages/Payment/PaymentSuccess';
+import PaymentDecline from '../pages/Payment/PaymentDecline';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
@@ -69,6 +72,9 @@ const router = createBrowserRouter([
             { path: 'test/result/:sessionId', element: <ExamResultSummary /> },
             { path: 'test/review/:sessionId', element: <ExamReview /> },
             { path: 'planlar', element: <Pricing /> },
+            { path: 'odenis/ugurlu', element: <PaymentSuccess /> },
+            { path: 'odenis/legv', element: <PaymentDecline /> },
+            { path: 'odenis/red', element: <PaymentDecline /> },
             {
                 path: 'sual-bazasi',
                 element: (
@@ -122,6 +128,7 @@ const router = createBrowserRouter([
             { path: 'mesajlar', element: <AdminContactMessages /> },
             { path: 'bildirişlər', element: <AdminNotifications /> },
             { path: 'loglar', element: <AdminLogs /> },
+            { path: 'qazanc', element: <AdminRevenue /> },
         ],
     },
 ]);

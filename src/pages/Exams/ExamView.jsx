@@ -21,9 +21,23 @@ const fmtExpiry = (iso) => {
 const AccessCodeCard = ({ exam, onCodeGenerated }) => {
     const [generating, setGenerating] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [remaining, setRemaining] = useState(() => {
+        const active = exam.accessCode && exam.accessCodeExpiresAt && new Date(exam.accessCodeExpiresAt) > new Date();
+        return active ? fmtExpiry(exam.accessCodeExpiresAt) : null;
+    });
 
     const isActive = exam.accessCode && exam.accessCodeExpiresAt && new Date(exam.accessCodeExpiresAt) > new Date();
-    const remaining = isActive ? fmtExpiry(exam.accessCodeExpiresAt) : null;
+
+    useEffect(() => {
+        if (!exam.accessCodeExpiresAt) return;
+        const tick = () => {
+            const val = fmtExpiry(exam.accessCodeExpiresAt);
+            setRemaining(val);
+        };
+        tick();
+        const id = setInterval(tick, 30000);
+        return () => clearInterval(id);
+    }, [exam.accessCodeExpiresAt]);
 
     const generateCode = async () => {
         setGenerating(true);

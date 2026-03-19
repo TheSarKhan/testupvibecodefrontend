@@ -420,6 +420,22 @@ const ExamList = () => {
                                                 limit={subscription.plan?.maxSavedExamsLimit}
                                                 colorClass="bg-emerald-500"
                                             />
+                                            {subscription.endDate && (() => {
+                                                const days = Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000));
+                                                const urgent = days <= 7;
+                                                const soon = days <= 30;
+                                                return (
+                                                    <>
+                                                        <div className="w-px h-8 bg-gray-100" />
+                                                        <div className="text-center">
+                                                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-0.5">{subscription.plan?.name}</p>
+                                                            <p className={`text-xs font-bold ${urgent ? 'text-red-600' : soon ? 'text-amber-600' : 'text-gray-600'}`}>
+                                                                {days === 0 ? 'Bu gün bitir' : `${days} gün qalır`}
+                                                            </p>
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
                                         </>
                                     ) : (
                                         <div className="text-xs text-gray-400 font-medium px-4">

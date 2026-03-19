@@ -73,7 +73,8 @@ const ExamEditor = () => {
 
     const [type, setType] = useState(initialLocationState.type);
     const [examConfig, setExamConfig] = useState({
-        title: '',
+        title: (!id && initialLocationState.type === 'free' && initialLocationState.subject && initialLocationState.subject !== 'Seçilməyib')
+            ? initialLocationState.subject : '',
         subject: initialLocationState.subject && initialLocationState.subject !== 'Seçilməyib'
             ? initialLocationState.subject : (initialLocationState.type === 'template' ? (initialLocationState.sectionData?.subjectName || 'Şablon') : 'Riyaziyyat'),
         extraSubjects: [],
@@ -673,7 +674,7 @@ const ExamEditor = () => {
                                 {examConfig.title || (isEditMode ? 'İmtahan Redaktə Edilir' : 'Yeni İmtahan Yaradılır')}
                             </h1>
                             <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-semibold uppercase">{type}</span>
+                                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-semibold">{{ free: 'Sərbəst', template: 'Şablon' }[type] || type}</span>
                                 <span>•</span>
                                 <span>{examConfig.subject}</span>
                                 {examConfig.duration && <><span>•</span><span>{examConfig.duration} dəq</span></>}

@@ -18,6 +18,7 @@ const ExamEntry = () => {
     const [isJoining, setIsJoining] = useState(false);
     const [hasPurchased, setHasPurchased] = useState(false);
     const [isPurchasing, setIsPurchasing] = useState(false);
+    const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
 
     // Inline login states
     const [showLoginForm, setShowLoginForm] = useState(false);
@@ -59,6 +60,26 @@ const ExamEntry = () => {
         }
     };
 
+    // Auto-check payment when tab regains focus
+    useEffect(() => {
+        if (!paymentWindowOpen) return;
+        const onFocus = async () => {
+            const orderId = localStorage.getItem('pendingPayriffOrderId');
+            if (!orderId) return;
+            try {
+                const { data } = await api.post('/payment/verify', { orderId });
+                if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status) || data.alreadyProcessed) {
+                    localStorage.removeItem('pendingPayriffOrderId');
+                    setPaymentWindowOpen(false);
+                    setHasPurchased(true);
+                    toast.success('Ödəniş uğurlu! İmtahana başlaya bilərsiniz.');
+                }
+            } catch {}
+        };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+    }, [paymentWindowOpen]);
+
     const handlePurchase = async () => {
         if (!isAuthenticated) {
             toast.error("Ödənişli imtahan üçün hesabınıza daxil olun");
@@ -67,11 +88,18 @@ const ExamEntry = () => {
         }
         setIsPurchasing(true);
         try {
-            await api.post(`/exams/${shareLink}/purchase`);
-            setHasPurchased(true);
-            toast.success('Ödəniş qeyd edildi. İmtahana başlaya bilərsiniz!');
-        } catch {
-            toast.error('Ödəniş zamanı xəta baş verdi');
+            const { data } = await api.post('/payment/initiate-exam', { shareLink });
+            if (data.alreadyPurchased) {
+                setHasPurchased(true);
+                toast.success('Bu imtahanı artıq almışsınız. İmtahana başlaya bilərsiniz.');
+                return;
+            }
+            localStorage.setItem('pendingPayriffOrderId', data.orderId);
+            window.open(data.paymentUrl, '_blank', 'noopener');
+            setPaymentWindowOpen(true);
+            toast('Ödəniş pəncərəsi açıldı. Ödənişi tamamlayıb bu səhifəyə qayıdın.', { icon: '💳', duration: 6000 });
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');
         } finally {
             setIsPurchasing(false);
         }

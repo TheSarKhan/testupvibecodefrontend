@@ -1,4 +1,4 @@
-import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed, HiOutlineDownload, HiOutlineDuplicate } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed, HiOutlineDownload, HiOutlineDuplicate, HiOutlineClipboardCheck } from 'react-icons/hi';
 
 import { Link } from 'react-router-dom';
 
@@ -44,6 +44,13 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                         )
                     )}
                 </div>
+
+                {exam.pendingManualCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-semibold" title={`${exam.pendingManualCount} göndərmə yoxlanılmağı gözləyir`}>
+                        <HiOutlineClipboardCheck className="w-3.5 h-3.5" />
+                        {exam.pendingManualCount} yoxlanılmağı gözləyir
+                    </span>
+                )}
 
                 {/* Secondary Actions */}
                 <div className="flex items-center gap-1 shrink-0">

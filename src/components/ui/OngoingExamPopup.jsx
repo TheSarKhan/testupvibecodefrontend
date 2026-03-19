@@ -25,8 +25,7 @@ const OngoingExamPopup = () => {
                 if (data.length > 0 && data[0].startedAt && data[0].durationMinutes) {
                     calculateTimeLeft(data[0].startedAt, data[0].durationMinutes);
                 }
-            } catch (error) {
-                console.error("Error fetching ongoing exams:", error);
+            } catch {
             }
         };
 

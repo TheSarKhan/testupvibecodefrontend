@@ -257,7 +257,6 @@ const ExamList = () => {
             link.remove();
             toast.success("PDF uğurla yükləndi", { id: loadingToast });
         } catch (error) {
-            console.error("PDF download failed:", error);
             toast.error("PDF yükləyərkən xəta baş verdi", { id: loadingToast });
         }
     };

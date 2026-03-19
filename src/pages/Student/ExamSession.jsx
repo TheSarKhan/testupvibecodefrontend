@@ -118,8 +118,7 @@ const ExamSession = () => {
     const syncAnswer = async (questionId, answerData) => {
         try {
             await api.post(`/submissions/${sessionId}/save-answer`, { questionId, ...answerData });
-        } catch (error) {
-            console.error("Failed to sync answer:", error);
+        } catch {
         }
     };
 

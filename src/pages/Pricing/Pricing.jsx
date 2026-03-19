@@ -43,7 +43,6 @@ const Pricing = () => {
             const sortedPlans = response.data.sort((a, b) => a.price - b.price);
             setPlans(sortedPlans);
         } catch (error) {
-            console.error('Error fetching plans:', error);
             toast.error('Planları yükləyərkən xəta baş verdi');
         } finally {
             setLoading(false);

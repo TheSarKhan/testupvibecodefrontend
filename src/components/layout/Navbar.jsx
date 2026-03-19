@@ -61,7 +61,7 @@ const Navbar = () => {
         if (!isAuthenticated || !user?.id) return;
 
         const client = new Client({
-            webSocketFactory: () => new SockJS('http://localhost:8082/ws'),
+            webSocketFactory: () => new SockJS(`${window.location.origin}/ws`),
             reconnectDelay: 5000,
             onConnect: () => {
                 client.subscribe(`/topic/notifications/${user.id}`, (message) => {
@@ -116,8 +116,7 @@ const Navbar = () => {
                     ), { duration: 6000, position: 'top-right' });
                 });
             },
-            onStompError: (frame) => {
-                console.error('STOMP Broker err: ', frame.headers['message']);
+            onStompError: () => {
             }
         });
 

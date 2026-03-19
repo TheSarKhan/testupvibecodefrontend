@@ -92,7 +92,6 @@ export const AuthProvider = ({ children }) => {
 
             setSubscription(res.data);
         } catch (err) {
-            console.error("Subscription refresh failed:", err);
         }
     };
 

@@ -113,6 +113,7 @@ const ExamList = () => {
     const [savingLink, setSavingLink] = useState(null);
     const [examPaymentWindowOpen, setExamPaymentWindowOpen] = useState(false);
     const [payingExam, setPayingExam] = useState(null);
+    const [purchasedExams, setPurchasedExams] = useState(new Set());
 
     // Collaborative assignments (teacher only)
     const [collaborativeAssignments, setCollaborativeAssignments] = useState([]);
@@ -208,6 +209,9 @@ const ExamList = () => {
             api.get('/depot').then(res => {
                 setSavedExamLinks(new Set(res.data.map(e => e.shareLink)));
             }).catch(() => {});
+            api.get('/exams/my-purchased-exams').then(res => {
+                setPurchasedExams(new Set(res.data));
+            }).catch(() => {});
         }
     }, [isStudent, isAuthenticated]);
 
@@ -294,8 +298,11 @@ const ExamList = () => {
                     localStorage.removeItem('pendingPayriffOrderId');
                     setExamPaymentWindowOpen(false);
                     setPayingExam(null);
-                    toast.success('Ödəniş uğurlu! İmtahana daxil ola bilərsiniz.');
-                    if (data.examShareLink) navigate(`/imtahan/${data.examShareLink}`);
+                    toast.success('Ödəniş uğurlu! İmtahana başlaya bilərsiniz.');
+                    if (data.examShareLink) {
+                        setPurchasedExams(prev => new Set([...prev, data.examShareLink]));
+                        navigate(`/imtahan/${data.examShareLink}`);
+                    }
                 }
             } catch {}
         };
@@ -313,6 +320,7 @@ const ExamList = () => {
         try {
             const { data } = await api.post('/payment/initiate-exam', { shareLink: exam.shareLink });
             if (data.alreadyPurchased) {
+                setPurchasedExams(prev => new Set([...prev, exam.shareLink]));
                 navigate(`/imtahan/${exam.shareLink}`);
                 return;
             }
@@ -775,10 +783,12 @@ const ExamList = () => {
                                     {filteredExams.map(exam => {
                                         const isSaved = savedExamLinks.has(exam.shareLink);
                                         const isPaid = exam.price != null && Number(exam.price) > 0;
+                                        const isPurchased = isPaid && purchasedExams.has(exam.shareLink);
                                         const subjectName = (exam.subjects || []).join(', ') || exam.subject || '';
+                                        const canStart = !isPaid || isPurchased;
                                         return (
-                                            <div key={exam.id} onClick={() => !isPaid && handleJoinExam(exam)} className={`group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden ${!isPaid ? 'cursor-pointer' : 'cursor-default'}`}>
-                                                <div className={`h-1 w-full ${isPaid ? 'bg-amber-400' : 'bg-indigo-500'}`} />
+                                            <div key={exam.id} onClick={() => canStart && handleJoinExam(exam)} className={`group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden ${canStart ? 'cursor-pointer' : 'cursor-default'}`}>
+                                                <div className={`h-1 w-full ${isPurchased ? 'bg-green-500' : isPaid ? 'bg-amber-400' : 'bg-indigo-500'}`} />
                                                 <div className="p-5 flex flex-col flex-1">
                                                     <div className="flex items-start justify-between gap-2 mb-3">
                                                         {subjectName && (
@@ -823,17 +833,21 @@ const ExamList = () => {
                                                         )}
                                                     </div>
                                                     <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-50">
-                                                        {isPaid ? (
+                                                        {isPurchased ? (
+                                                            <span className="text-xs font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">Alınıb</span>
+                                                        ) : isPaid ? (
                                                             <span className="text-sm font-black text-amber-600">{Number(exam.price).toFixed(2)} ₼</span>
                                                         ) : (
                                                             <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">Pulsuz</span>
                                                         )}
                                                         <button
-                                                            onClick={e => { e.stopPropagation(); isPaid ? handlePurchaseExam(exam) : handleJoinExam(exam); }}
+                                                            onClick={e => { e.stopPropagation(); isPurchased ? handleJoinExam(exam) : isPaid ? handlePurchaseExam(exam) : handleJoinExam(exam); }}
                                                             disabled={payingExam === exam.id}
-                                                            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all disabled:opacity-60 ${isPaid ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                                                            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all disabled:opacity-60 ${isPurchased ? 'bg-green-600 hover:bg-green-700 text-white' : isPaid ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                                                         >
-                                                            {payingExam === exam.id ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : isPaid ? '💳 Satın al' : 'Başla'}
+                                                            {payingExam === exam.id
+                                                                ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                                : isPurchased ? 'İmtahana Başla' : isPaid ? '💳 Satın al' : 'Başla'}
                                                             {payingExam !== exam.id && <HiOutlineArrowRight className="w-3.5 h-3.5" />}
                                                         </button>
                                                     </div>

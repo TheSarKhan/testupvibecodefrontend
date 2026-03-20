@@ -31,12 +31,30 @@ const ExamEntry = () => {
         fetchExamInfo();
     }, [shareLink]);
 
+    // Re-check purchase status when user logs in
+    useEffect(() => {
+        if (isAuthenticated && exam && exam.price != null && Number(exam.price) > 0) {
+            checkPurchaseStatus(exam);
+        }
+    }, [isAuthenticated]);
+
+    const checkPurchaseStatus = async (examData) => {
+        if (!isAuthenticated) return;
+        try {
+            const { data } = await api.get(`/exams/${examData.shareLink}/my-status`);
+            setHasPurchased(data.hasUnusedPurchase);
+        } catch {}
+    };
+
     const fetchExamInfo = async () => {
         try {
             const { data } = await api.get(`/exams/${shareLink}`);
             setExam(data);
-            if (data.price == null || data.price === 0 || data.price === '0') {
+            const isFree = data.price == null || Number(data.price) === 0;
+            if (isFree) {
                 setHasPurchased(true);
+            } else if (isAuthenticated) {
+                await checkPurchaseStatus(data);
             }
         } catch (error) {
             toast.error("İmtahan tapılmadı və ya aktiv deyil");

@@ -9,6 +9,7 @@ const PaymentSuccess = () => {
     const navigate = useNavigate();
     const { refreshSubscription, loading: authLoading } = useAuth();
     const [status, setStatus] = useState('verifying'); // verifying | success | pending | failed
+    const [examShareLink, setExamShareLink] = useState(null);
     const verified = useRef(false);
 
     // Wait for auth to initialize before verifying — so refreshSubscription works
@@ -35,7 +36,11 @@ const PaymentSuccess = () => {
             if (data.status === 'NOT_FOUND') {
                 setStatus('failed');
             } else if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status) || data.alreadyProcessed) {
-                await refreshSubscription();
+                if (data.examShareLink) {
+                    setExamShareLink(data.examShareLink);
+                } else {
+                    await refreshSubscription();
+                }
                 setStatus('success');
             } else {
                 setStatus('pending');
@@ -64,13 +69,27 @@ const PaymentSuccess = () => {
                         <HiCheckCircle className="w-10 h-10 text-green-500" />
                     </div>
                     <h1 className="text-2xl font-extrabold text-gray-900 mb-3">Ödəniş uğurlu oldu!</h1>
-                    <p className="text-gray-500 mb-8">Abunəliyiniz aktivləşdirildi. Bütün imkanlardan istifadə edə bilərsiniz.</p>
-                    <button
-                        onClick={() => navigate('/imtahanlar')}
-                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors"
-                    >
-                        İmtahanlara keç <HiOutlineArrowRight className="w-4 h-4" />
-                    </button>
+                    {examShareLink ? (
+                        <>
+                            <p className="text-gray-500 mb-8">İmtahan alındı. İstədiyiniz vaxt başlaya bilərsiniz.</p>
+                            <button
+                                onClick={() => navigate(`/imtahan/${examShareLink}`)}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors"
+                            >
+                                İmtahana Başla <HiOutlineArrowRight className="w-4 h-4" />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-gray-500 mb-8">Abunəliyiniz aktivləşdirildi. Bütün imkanlardan istifadə edə bilərsiniz.</p>
+                            <button
+                                onClick={() => navigate('/imtahanlar')}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors"
+                            >
+                                İmtahanlara keç <HiOutlineArrowRight className="w-4 h-4" />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         );

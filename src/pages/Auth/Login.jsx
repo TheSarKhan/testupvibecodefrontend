@@ -15,9 +15,9 @@ import ForgotPasswordModal from '../../components/ui/ForgotPasswordModal';
 import logo from '../../assets/logo.png';
 
 const FEATURES = [
-    { icon: HiOutlineBookOpen,    title: '10,000+ Sual bazası',  desc: 'Hər fənn üzrə zəngin sual kitabxanası'         },
-    { icon: HiOutlineChartBar,    title: 'Real-vaxt analitika',  desc: 'Nəticələri anında izləyin və qiymətləndirin'   },
-    { icon: HiOutlineLightningBolt, title: 'Sürətli & güvənli', desc: 'Yüksək performanslı bulud altyapısı'           },
+    { icon: HiOutlineBookOpen,      title: 'Hazır sual bazası',   desc: 'Hər fənn üçün minlərlə sual bir yerdə'        },
+    { icon: HiOutlineChartBar,      title: 'Anlıq statistika',    desc: 'Hər cavab verildikcə nəticə yenilənir'        },
+    { icon: HiOutlineLightningBolt, title: 'Etibarlı & sürətli',  desc: 'İmtahanınız heç vaxt sizi geri qoymaz'        },
 ];
 
 const Login = () => {
@@ -96,10 +96,10 @@ const Login = () => {
                         <h1 className="text-[1.9rem] xl:text-[2.5rem] font-extrabold text-white leading-snug mb-3 xl:mb-4">
                             Azərbaycanın<br />
                             <span className="text-indigo-200">ən müasir</span><br />
-                            test platformu
+                            imtahan platformu
                         </h1>
                         <p className="text-indigo-200/90 text-sm xl:text-base leading-relaxed mb-8 xl:mb-10">
-                            Müəllimlər imtahan yaradır, şagirdlər nəticəni anında görür.
+                            Müəllimlik bir az daha asanlaşır. Hər gün.
                         </p>
                         <div className="space-y-4 xl:space-y-5">
                             {FEATURES.map(({ icon: Icon, title, desc }) => (
@@ -130,9 +130,9 @@ const Login = () => {
 
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
                             <div className="mb-6">
-                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Xoş gəldiniz</h2>
+                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Yenidən xoş gəldiniz</h2>
                                 <p className="mt-1 text-sm text-gray-500">
-                                    Hesabınıza daxil olmaq üçün məlumatlarınızı daxil edin
+                                    Davam etmək üçün hesabınıza daxil olun
                                 </p>
                             </div>
 

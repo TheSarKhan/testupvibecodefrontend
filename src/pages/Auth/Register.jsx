@@ -36,9 +36,9 @@ const STRENGTH_META = [
 
 // ── Left panel features ───────────────────────────────────────────────────────
 const FEATURES = [
-    { icon: HiOutlineUserGroup,     title: '5,000+ Müəllim',    desc: 'Azərbaycan müəllimləri bizimlə'    },
-    { icon: HiOutlineChartBar,      title: 'Ətraflı statistika', desc: 'Hər şagirdin inkişafını izləyin'   },
-    { icon: HiOutlineLightningBolt, title: 'AI köməkçi',         desc: 'Sualları süni intellekt ilə yarat' },
+    { icon: HiOutlineUserGroup,     title: '5,000+ Müəllim',     desc: 'Azərbaycanlı müəllimlərin seçimi'          },
+    { icon: HiOutlineChartBar,      title: 'Dərin statistika',    desc: 'Hər şagirdin nəticəsini ayrıca izləyin'    },
+    { icon: HiOutlineLightningBolt, title: 'AI sual yaratma',     desc: 'Saniyələr içində hazır, keyfiyyətli suallar' },
 ];
 
 // ── Step indicator ────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ const WelcomeGiftModal = ({ onClose }) => (
                     <span className="text-4xl">🎁</span>
                 </div>
                 <h2 className="text-2xl font-extrabold text-white mb-1">Xoş gəldiniz!</h2>
-                <p className="text-indigo-200 text-sm">testup.az ailəsinə qoşulduğunuz üçün təşəkkür edirik</p>
+                <p className="text-indigo-200 text-sm">testup.az ilə imtahan hazırlığında yeni bir səhifə açıldı</p>
             </div>
             <div className="p-6 text-center">
                 <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-bold px-4 py-2 rounded-full mb-4">
@@ -174,8 +174,8 @@ const Register = () => {
         <div>
             <StepDots current={0} total={3} />
             <div className="text-center mb-8">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Siz kiminiz?</h2>
-                <p className="mt-1.5 text-sm text-gray-500">Rol seçin — daha sonra dəyişə bilərsiniz</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Necə tanıyım sizi?</h2>
+                <p className="mt-1.5 text-sm text-gray-500">Rolunuzu seçin — istəsəniz sonra dəyişə bilərsiniz</p>
             </div>
 
             <div className="space-y-3">
@@ -190,7 +190,7 @@ const Register = () => {
                     </div>
                     <div className="flex-1">
                         <p className="font-semibold text-gray-900">Şagird</p>
-                        <p className="text-sm text-gray-500 mt-0.5">Sınavlara giriş et, nəticələrini izlə</p>
+                        <p className="text-sm text-gray-500 mt-0.5">İmtahanlara qoşul, nəticəni anında gör</p>
                     </div>
                     <HiOutlineArrowRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors" />
                 </button>
@@ -208,10 +208,10 @@ const Register = () => {
                         <div className="flex items-center gap-2">
                             <p className="font-semibold text-gray-900">Müəllim</p>
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                                <HiOutlineSparkles className="w-3 h-3" /> 3 ay pulsuz
+                                <HiOutlineSparkles className="w-3 h-3" /> 3 ay hədiyyə
                             </span>
                         </div>
-                        <p className="text-sm text-gray-500 mt-0.5">Sınav hazırla, şagirdlərini idarə et</p>
+                        <p className="text-sm text-gray-500 mt-0.5">İmtahan hazırla, nəticəni real vaxtda izlə</p>
                     </div>
                     <HiOutlineArrowRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors" />
                 </button>
@@ -333,7 +333,7 @@ const Register = () => {
                     Geri
                 </button>
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Şifrə yaradın</h2>
-                <p className="mt-1 text-sm text-gray-500">Hesabınızı qorumaq üçün güclü şifrə seçin</p>
+                <p className="mt-1 text-sm text-gray-500">Güclü şifrə — güvənli hesab</p>
             </div>
 
             <div className="space-y-4">
@@ -482,13 +482,13 @@ const Register = () => {
 
                     <div className="relative z-10">
                         <h1 className="text-[1.9rem] xl:text-[2.5rem] font-extrabold text-white leading-snug mb-3 xl:mb-4">
-                            Bizimlə<br />
-                            <span className="text-indigo-200">böyük işlər</span><br />
-                            başlayır
+                            Müasir müəllim<br />
+                            <span className="text-indigo-200">müasir alətlə</span><br />
+                            işləyir
                         </h1>
                         <p className="text-indigo-200/90 text-sm xl:text-base leading-relaxed mb-7 xl:mb-10">
-                            Müəllim kimi qeydiyyatdan keçin,{' '}
-                            <strong className="text-white">3 aylıq Basic plan</strong> hədiyyə alın.
+                            Müəllim kimi qeydiyyatdan keçin —{' '}
+                            <strong className="text-white">3 aylıq Basic plan</strong> sizindir. Pulsuz.
                         </p>
 
                         <div className="space-y-4 xl:space-y-5">
@@ -511,7 +511,7 @@ const Register = () => {
                                 <div>
                                     <p className="text-white font-bold text-sm">Müəllim hədiyyəsi</p>
                                     <p className="text-indigo-200 text-xs mt-0.5">
-                                        Müəllim kimi qeydiyyat keçin — 3 aylıq Basic plan tamamilə pulsuz!
+                                        Müəllim hesabına xüsusi hədiyyə — 3 ay Basic plan, büsbütün pulsuz.
                                     </p>
                                 </div>
                             </div>

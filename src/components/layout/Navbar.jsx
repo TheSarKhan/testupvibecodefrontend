@@ -38,6 +38,7 @@ const Navbar = () => {
         { to: '/', label: 'Ana Səhifə', end: true },
         { to: '/haqqimizda', label: 'Haqqımızda' },
         { to: '/imtahanlar', label: isTeacher ? 'İmtahanlarım' : 'İmtahanlar' },
+        ...(isStudent ? [{ to: '/imtahanlarim', label: 'İmtahanlarım' }] : []),
         ...(isTeacher && !isAdmin && hasCollaborative ? [{ to: '/birge-imtahanlari', label: 'Birgə İmtahanlar' }] : []),
         ...(isTeacher && !isAdmin ? [{ to: '/sual-bazasi', label: 'Sual Bazası' }] : []),
         ...(!isStudent ? [{ to: '/planlar', label: 'Planlar' }] : []),

@@ -43,6 +43,7 @@ const Pricing = ({ isEmbedded = false }) => {
 
     useEffect(() => {
         fetchPlans();
+        refreshSubscription();
     }, []);
 
     const fetchPlans = async () => {
@@ -100,6 +101,28 @@ const Pricing = ({ isEmbedded = false }) => {
         setConfirmModal({ plan, action, wallet, isFreeSwitch });
     };
 
+    const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
+
+    // When user returns to this tab after paying in Payriff tab — auto-verify
+    useEffect(() => {
+        if (!paymentWindowOpen) return;
+        const onFocus = async () => {
+            const orderId = localStorage.getItem('pendingPayriffOrderId');
+            if (!orderId) return;
+            try {
+                const { data } = await api.post('/payment/verify', { orderId });
+                if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status) || data.alreadyProcessed) {
+                    localStorage.removeItem('pendingPayriffOrderId');
+                    setPaymentWindowOpen(false);
+                    await refreshSubscription();
+                    toast.success('Abunəlik aktivləşdirildi! 🎉');
+                }
+            } catch {}
+        };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+    }, [paymentWindowOpen]);
+
     const handleSubscribe = async (planId) => {
         setConfirmModal(null);
         setPaying(planId);
@@ -111,10 +134,12 @@ const Pricing = ({ isEmbedded = false }) => {
                 return;
             }
             localStorage.setItem('pendingPayriffOrderId', data.orderId);
-            localStorage.setItem('paymentReturnUrl', window.location.pathname);
-            window.location.href = data.paymentUrl;
+            window.open(data.paymentUrl, '_blank', 'noopener');
+            setPaymentWindowOpen(true);
+            toast('Ödəniş pəncərəsi açıldı. Ödənişi tamamlayıb bu səhifəyə qayıdın.', { icon: '💳', duration: 6000 });
         } catch (err) {
             toast.error(err.response?.data?.message || 'Ödəniş başladılarkən xəta baş verdi');
+        } finally {
             setPaying(null);
         }
     };

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import api from '../api/axios';
 
@@ -108,6 +108,21 @@ export const AuthProvider = ({ children }) => {
             setSubscription(null);
         }
     }, [user?.id, user?.role]);
+
+    // Cross-tab sync: when PaymentSuccess sets 'paymentCompleted' in another tab,
+    // refresh subscription in this tab automatically.
+    // Use a ref so the listener always calls the latest refreshSubscription closure.
+    const refreshSubscriptionRef = useRef(refreshSubscription);
+    refreshSubscriptionRef.current = refreshSubscription;
+    useEffect(() => {
+        const onStorage = (e) => {
+            if (e.key === 'paymentCompleted') {
+                refreshSubscriptionRef.current();
+            }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
 
     const login = async (email, password) => {
         const { data } = await api.post('/auth/login', { email, password });

@@ -151,11 +151,12 @@ const Register = () => {
                 role: formData.role,
                 termsAccepted: formData.termsAccepted,
             });
+            loginWithTokens(data);
             toast.success('Qeydiyyat uğurla tamamlandı!');
             if (data?.giftPlanAssigned) {
                 setShowGiftModal(true);
             } else {
-                navigate('/login');
+                navigate('/');
             }
         } catch (error) {
             toast.error(error.response?.data?.message || 'Xəta baş verdi');
@@ -463,7 +464,7 @@ const Register = () => {
 
     return (
         <>
-            {showGiftModal && <WelcomeGiftModal onClose={() => navigate('/login')} />}
+            {showGiftModal && <WelcomeGiftModal onClose={() => navigate('/')} />}
 
             <div className="flex flex-col min-h-screen">
             <Navbar />

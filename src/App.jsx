@@ -7,7 +7,7 @@ import router from './routes';
 
 function App() {
   return (
-    <GoogleOAuthProvider clientId="407408718192.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId="149927371809-rad3p8b4in4vjp42rkf09h0dj6l5ojmn.apps.googleusercontent.com">
     <HelmetProvider>
     <AuthProvider>
       <RouterProvider router={router} />

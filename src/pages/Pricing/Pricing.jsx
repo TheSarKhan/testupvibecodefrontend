@@ -245,31 +245,50 @@ const Pricing = ({ isEmbedded = false }) => {
                                         {plan.price > 0 ? (
                                             <>
                                                 <div className="flex items-baseline gap-1">
-                                                    <span className="text-4xl font-extrabold text-gray-900">{displayPrice}</span>
-                                                    <span className="text-lg font-semibold text-gray-500">AZN</span>
-                                                    <span className="text-sm text-gray-400 ml-1">/ ay</span>
-                                                    {hasDiscount && (
-                                                        <span className="text-sm text-gray-400 line-through ml-1">{plan.price}</span>
+                                                    {action === 'switch' && wallet.creditAzn > 0 && !isFreeSwitch ? (
+                                                        <>
+                                                            <span className="text-4xl font-extrabold text-gray-900">{wallet.chargeAmount.toFixed(2)}</span>
+                                                            <span className="text-lg font-semibold text-gray-500">AZN</span>
+                                                            <span className="text-sm text-gray-400 line-through ml-1">{totalPrice} AZN</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span className="text-4xl font-extrabold text-gray-900">{isFreeSwitch ? '0' : displayPrice}</span>
+                                                            <span className="text-lg font-semibold text-gray-500">AZN</span>
+                                                            {!isFreeSwitch && <span className="text-sm text-gray-400 ml-1">/ ay</span>}
+                                                            {hasDiscount && !isFreeSwitch && (
+                                                                <span className="text-sm text-gray-400 line-through ml-1">{plan.price}</span>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
-                                                {action === 'switch' && isFreeSwitch && (
-                                                    <div className="mt-2 p-2 bg-green-50 rounded-lg">
-                                                        <p className="text-xs font-bold text-green-700">Ödənişsiz keçid — kredit kifayət edir</p>
-                                                        {bonusDays > 0 && (
-                                                            <p className="text-xs text-green-600 mt-0.5">+{bonusDays} əlavə gün alırsınız</p>
-                                                        )}
+
+                                                {/* Credit breakdown box */}
+                                                {action === 'switch' && wallet.creditAzn > 0 && (
+                                                    <div className={`mt-3 p-3 rounded-xl border ${isFreeSwitch ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                                                        <div className="space-y-1 text-xs">
+                                                            <div className="flex justify-between text-gray-600">
+                                                                <span>Plan qiyməti</span>
+                                                                <span>{totalPrice.toFixed(2)} AZN</span>
+                                                            </div>
+                                                            <div className={`flex justify-between font-semibold ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                                <span>Cari plan krediti</span>
+                                                                <span>−{wallet.creditAzn.toFixed(2)} AZN</span>
+                                                            </div>
+                                                            <div className={`flex justify-between font-bold pt-1 border-t ${isFreeSwitch ? 'border-emerald-200 text-emerald-800' : 'border-amber-200 text-gray-900'}`}>
+                                                                <span>Ödəniləcək</span>
+                                                                <span>{isFreeSwitch ? 'Pulsuz' : wallet.chargeAmount.toFixed(2) + ' AZN'}</span>
+                                                            </div>
+                                                            {wallet.durationDays !== selectedMonths * 30 && (
+                                                                <div className={`flex justify-between font-semibold pt-0.5 ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                                    <span>Müddət</span>
+                                                                    <span>{wallet.durationDays} gün</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
-                                                {action === 'switch' && !isFreeSwitch && bonusDays > 0 && (
-                                                    <div className="mt-2 p-2 bg-green-50 rounded-lg">
-                                                        <p className="text-xs text-green-700 font-medium">
-                                                            Cari planınızın krediti ilə <span className="font-bold">+{bonusDays} gün</span> əlavə olunacaq
-                                                        </p>
-                                                        <p className="text-xs text-green-600 mt-0.5">
-                                                            Ödəniləcək: <span className="font-bold">{wallet.chargeAmount.toFixed(2)} AZN</span>
-                                                        </p>
-                                                    </div>
-                                                )}
+
                                                 {action !== 'switch' && selectedMonths > 1 && (
                                                     <p className="text-xs text-gray-400 mt-1">
                                                         Cəmi: <span className="font-semibold text-gray-700">{totalPrice} AZN</span> / {selectedMonths} ay
@@ -304,7 +323,7 @@ const Pricing = ({ isEmbedded = false }) => {
                                         {paying === plan.id ? 'İşlənir...'
                                             : plan.price === 0 ? 'Aktiv Plan'
                                             : action === 'renew' ? <><HiOutlineCreditCard className="w-4 h-4" /> Uzat</>
-                                            : isFreeSwitch ? 'Ödənişsiz Keçid Et'
+                                            : isFreeSwitch ? '✓ Ödənişsiz Keçid Et'
                                             : action === 'switch' ? <><HiOutlineCreditCard className="w-4 h-4" /> Plana Keçid Et</>
                                             : <><HiOutlineCreditCard className="w-4 h-4" /> Abunə Ol</>
                                         }
@@ -312,11 +331,6 @@ const Pricing = ({ isEmbedded = false }) => {
 
                                     {action === 'renew' && (
                                         <p className="text-xs text-gray-400 text-center mt-2">Bitmə tarixi uzadılacaq</p>
-                                    )}
-                                    {action === 'switch' && !isFreeSwitch && wallet.chargeAmount < plan.price * selectedMonths && (
-                                        <p className="text-xs text-green-600 text-center mt-2">
-                                            Kredit tətbiq edilib: -{(plan.price * selectedMonths - wallet.chargeAmount).toFixed(2)} AZN
-                                        </p>
                                     )}
                                 </div>
 

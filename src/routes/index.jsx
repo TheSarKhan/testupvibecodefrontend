@@ -49,6 +49,10 @@ import PaymentDecline from '../pages/Payment/PaymentDecline';
 import ProtectedRoute from './ProtectedRoute';
 
 const router = createBrowserRouter([
+    // ── Auth pages (no Navbar / Footer) ──
+    { path: '/login',    element: <Login />    },
+    { path: '/register', element: <Register /> },
+
     // ── Main site (with Navbar + Footer) ──
     {
         path: '/',
@@ -57,8 +61,6 @@ const router = createBrowserRouter([
             { index: true, element: <Home /> },
             { path: 'haqqimizda', element: <About /> },
             { path: 'elaqe', element: <Contact /> },
-            { path: 'login', element: <Login /> },
-            { path: 'register', element: <Register /> },
             { path: 'imtahanlar', element: <ExamList /> },
             { path: 'birge-imtahanlari', element: <CollaborativeAssignments /> },
             { path: 'imtahanlar/:examId/neticeler', element: <ExamResults /> },

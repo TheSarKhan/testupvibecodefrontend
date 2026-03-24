@@ -43,7 +43,7 @@ const Contact = () => {
     const faqs = [
         { q: 'Qeydiyyat pulludur?', a: 'Xeyr, qeydiyyat tamamilə pulsuz. İmtahan yaratmaq da pulsuz.' },
         { q: 'Şagirdlər qeydiyyatdan keçməlidir?', a: 'Xeyr. Şagirdlər yalnız linki açıb adlarını daxil edərək imtahana qoşulur.' },
-        { q: 'Riyazi formullar dəstəklənir?', a: 'Bəli. LaTeX əsaslı MathQuill klaviaturası ilə mürəkkəb formullar yazılır.' },
+        { q: 'Riyazi simvollar dəstəklənir?', a: 'Bəli. Xüsusi riyazi klaviatura ilə kəsrlər, inteqrallar, kvadrat kökləri asanlıqla daxil edilir.' },
         { q: 'Sual bazasını necə istifadə edim?', a: '"Sual Bazası" bölməsindən fənn yaradın, suallarınızı əlavə edin. İmtahan yaradarkən bazadan seçin.' },
     ];
 

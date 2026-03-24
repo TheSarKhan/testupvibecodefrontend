@@ -38,6 +38,7 @@ const Navbar = () => {
         { to: '/', label: 'Ana Səhifə', end: true },
         { to: '/haqqimizda', label: 'Haqqımızda' },
         { to: '/imtahanlar', label: isTeacher ? 'İmtahanlarım' : 'İmtahanlar' },
+        ...(isStudent ? [{ to: '/imtahanlarim', label: 'İmtahanlarım' }] : []),
         ...(isTeacher && !isAdmin && hasCollaborative ? [{ to: '/birge-imtahanlari', label: 'Birgə İmtahanlar' }] : []),
         ...(isTeacher && !isAdmin ? [{ to: '/sual-bazasi', label: 'Sual Bazası' }] : []),
         ...(!isStudent ? [{ to: '/planlar', label: 'Planlar' }] : []),
@@ -198,7 +199,7 @@ const Navbar = () => {
         return (
             <div className={`${cls} rounded-full overflow-hidden flex-shrink-0 ring-2 ring-indigo-100`}>
                 {profilePicture
-                    ? <img src={profilePicture} alt={user?.fullName} className="h-full w-full object-cover" />
+                    ? <img src={profilePicture} alt={user?.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                     : <div className="h-full w-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
                         {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
                     </div>

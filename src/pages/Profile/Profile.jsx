@@ -94,7 +94,7 @@ const Avatar = ({ name, picture, defaultAvatar, onUpload, onUploadGlobal }) => {
         <div className="relative group shrink-0">
             <div className="h-24 w-24 rounded-full overflow-hidden shadow-xl ring-4 ring-white">
                 {src
-                    ? <img src={src} alt={name} className="h-full w-full object-cover" />
+                    ? <img src={src} alt={name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                     : <div className="h-full w-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-3xl">
                         {name?.charAt(0)?.toUpperCase() || 'U'}
                     </div>

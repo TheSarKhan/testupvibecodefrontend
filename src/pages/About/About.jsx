@@ -38,48 +38,48 @@ const About = () => {
     const innovations = [
         {
             icon: HiOutlineSparkles, iconColor: 'text-violet-600', bg: 'bg-violet-50',
-            title: 'AI ilə Sual Yaratma',
-            desc: 'Fənn, mövzu və çətinlik seçin — LLaMA əsaslı AI sistemi sualları LaTeX formullarla birlikdə avtomatik hazırlayır.',
+            title: 'AI ilə sual yaratma — saniyələr içində',
+            desc: 'Fənn, mövzu, çətinlik seçin — AI sistemi sualları riyazi simvollarla birlikdə hazırlayır. Müəllim yalnız yoxlayır, təsdiqləyir.',
         },
         {
             icon: HiOutlineUserGroup, iconColor: 'text-blue-600', bg: 'bg-blue-50',
-            title: 'Birgə İmtahan (Collaborative)',
-            desc: 'Admin imtahanı fənlər üzrə müəllimlərə bölür. Hər müəllim öz hissəsini hazırlar, admin təsdiqləyir.',
+            title: 'Birgə imtahan — komanda işi',
+            desc: 'Admin imtahanı fənlər üzrə müəllimlərə bölür. Hər müəllim öz sahəsini hazırlayır. Yekun imtahan bir yerdə birləşir, admin təsdiqləyir.',
         },
         {
             icon: HiOutlineCalculator, iconColor: 'text-indigo-600', bg: 'bg-indigo-50',
-            title: 'Riyaziyyat Klaviaturası (LaTeX)',
-            desc: 'Kəsrlər, kvadrat köklər, inteqrallar MathQuill klaviaturası ilə daxil edilir. KaTeX ilə real vaxtda göstərilir.',
+            title: 'Riyazi simvollar klaviaturası',
+            desc: 'Kəsrlər, inteqrallar, kvadrat kökləri — xüsusi klaviatura ilə asanlıqla daxil edilir, real vaxtda göstərilir. Heç bir texniki bilik tələb olunmur.',
         },
         {
             icon: HiOutlineClipboardCheck, iconColor: 'text-purple-600', bg: 'bg-purple-50',
-            title: 'Açıq Suallar + Əl ilə Yoxlama',
-            desc: 'Esse tipli suallar müəllim tərəfindən nəzərdən keçirilir. Avtomatik sistemin yetmədiyi yerdə insan dəqiqliyi qorunur.',
+            title: 'Açıq suallar + insan dəqiqliyi',
+            desc: 'Sistem bacardığını görür, müəllim qalan hissəni. Esse tipli cavablar şagird tərəfindən yazılır, müəllim tərəfindən qiymətləndirilir.',
         },
         {
             icon: HiOutlineChartBar, iconColor: 'text-cyan-600', bg: 'bg-cyan-50',
-            title: '4 Kateqoriyalı Nəticə Analizi',
-            desc: 'Doğru, Yanlış, Boş, Yoxlanılmamış — hər cavab kateqoriyası ayrı rənglə qrafikdə göstərilir.',
+            title: '4 kateqoriyalı nəticə analizi',
+            desc: 'Doğru, Yanlış, Boş, Yoxlanılmamış — hər cavab rənglənir, qrafikə çevrilir. Müəllim güclü və zəif nöqtələri bir baxışda görür.',
         },
         {
             icon: HiOutlinePencilAlt, iconColor: 'text-pink-600', bg: 'bg-pink-50',
-            title: '7 Sual Tipi',
-            desc: 'MCQ, Çoxseçimli, D/Y, Açıq (Avto), Açıq (Müəllim), Boşluqdoldurma, Uyğunlaşdırma — hər fənn üçün uyğun format.',
+            title: '7 sual tipi — bir interfeysdə',
+            desc: 'MCQ, çoxseçimli, doğru/yanlış, açıq, boşluqdoldurma, uyğunlaşdırma — hansı fənn olursa olsun, uyğun format platformada var.',
         },
         {
             icon: HiOutlineEye, iconColor: 'text-orange-600', bg: 'bg-orange-50',
-            title: 'Link & Giriş Kodu ilə Paylaşım',
-            desc: 'Unikal link və ya vaxt məhdudiyyətli giriş kodu. Şagirdlər qeydiyyatsız, yalnız ad daxil edərək qoşulur.',
+            title: 'Linklə paylaşım — qeydiyyatsız giriş',
+            desc: 'Şagird nə profilə ehtiyac duyur, nə şifrəyə. Linki açır, adını yazır, imtahana başlayır. Bu qədər sadə.',
         },
         {
             icon: HiOutlineDuplicate, iconColor: 'text-teal-600', bg: 'bg-teal-50',
-            title: 'Klonlama & Şablonlar',
-            desc: 'Mövcud imtahanı bir klikdə kopyala. Şablonlarla hər dəfə yenidən qurmadan hazır struktura başla.',
+            title: 'Klonlama & şablonlar',
+            desc: 'Keçən ilin imtahanını kopyala, yenilə, yayımla. Ya da şablondan başla — hər dəfə sıfırdan qurmaq artıq keçmişdə qaldı.',
         },
         {
             icon: HiOutlineChip, iconColor: 'text-amber-600', bg: 'bg-amber-50',
-            title: 'Avtomatik Qiymətləndirmə',
-            desc: 'Qapalı suallar dərhal yoxlanılır, bal hesablanır. Müəllim vaxtını sual hazırlığına yönəldə bilər.',
+            title: 'Avtomatik qiymətləndirmə',
+            desc: 'İmtahan bitən kimi ballar hazır olur. Qapalı suallar üçün müəllimin yoxlamağa qayıtmasına ehtiyac yoxdur — sistem hər şeyi görmüşdür.',
         },
     ];
 
@@ -105,9 +105,8 @@ const About = () => {
                         Haqqımızda
                     </h1>
                     <p className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
-                        <strong className="text-gray-900">testup.az</strong> — AI dəstəkli sual yaratma, birgə imtahan,
-                        7 sual tipi və ətraflı statistika ilə müəllimlərə güclü, şagirdlərə isə
-                        ədalətli qiymətləndirmə mühiti yaradan Azərbaycanın müasir onlayn imtahan platformasıdır.
+                        <strong className="text-gray-900">testup.az</strong> — müəllimin hər imtahan hazırlığında yanında olan,
+                        sualdan nəticəyə qədər hər addımı sadələşdirən, Azərbaycan tədris sisteminə uyğun qurulmuş onlayn platforma.
                     </p>
                 </div>
             </section>
@@ -119,23 +118,23 @@ const About = () => {
                         <div>
                             <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Missiyamız</p>
                             <h2 className="text-3xl font-extrabold text-gray-900 mb-6 leading-tight">
-                                Tədris prosesini<br />daha səmərəli edək
+                                Müəllimin vaxtı<br />ən dəyərli resursdur
                             </h2>
                             <div className="space-y-4 text-gray-600 text-[15px] leading-relaxed">
                                 <p>
-                                    Ənənəvi kağız-qələm imtahanlarının yaratdığı vaxt itkisini, çap xərclərini və yoxlama çətinliklərini
-                                    aradan qaldıraraq müəllimlərə həqiqətən faydalı bir alət təqdim etmək istəyirik.
+                                    Kağız çap xərcləri, əl ilə yoxlama, cavab vərəqləri — bu proseslərin hamısı müəllimin ən dəyərli resursunu aparır: vaxtını.
+                                    <strong className="text-gray-800"> testup.az bu vaxtı geri qaytarmaq üçün yarandı.</strong>
                                 </p>
                                 <p>
-                                    Platformamız Azərbaycan tədris sisteminə uyğun hazırlanıb — riyaziyyat formullarından mürəkkəb
-                                    uyğunlaşdırma suallarına qədər hər şey dəstəklənir.
+                                    Platformamız Azərbaycan tədris sisteminə uyğun hazırlanıb — riyaziyyat düsturlarından tutmuş
+                                    uyğunlaşdırma suallarına qədər hər format dəstəklənir.
                                 </p>
                                 <p>
-                                    İstər açıq sınaq imtahanları, istərsə gizli qiymətləndirmə — ikisi də eyni sadə interfeysdə mümkündür.
+                                    Açıq imtahanmı, yoxsa gizli qiymətləndirməmi? İkisi də eyni sadə interfeysdə mümkündür — fərq yalnız bir klikdədir.
                                 </p>
                             </div>
                             <div className="mt-8 flex flex-wrap gap-3">
-                                {['Pulsuz qeydiyyat', 'AI sual yaratma', 'LaTeX dəstəyi', 'Birgə imtahan', 'Avtomatik yoxlama'].map(t => (
+                                {['Pulsuz qeydiyyat', 'AI sual yaratma', 'Riyazi simvollar', 'Birgə imtahan', 'Avtomatik yoxlama'].map(t => (
                                     <span key={t} className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
                                         <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-500" /> {t}
                                     </span>
@@ -146,26 +145,26 @@ const About = () => {
                         <div className="grid gap-4">
                             <ValueCard
                                 icon={HiOutlineAcademicCap}
-                                title="Təhsilin inkişafı"
-                                desc="Texnologiya vasitəsilə tədris prosesinin keyfiyyətini yüksəltmək — müəllimlərə daha çox vaxt, şagirdlərə daha ədalətli qiymət."
+                                title="Müəllimin vaxtı geri qaytarılır"
+                                desc="Yoxlama, bal hesablama, nəticə cədvəli — bunların hamısını sistem öz üzərinə götürür. Müəllim yalnız öyrətməyə fokuslanır."
                                 from="from-indigo-50" to="to-blue-50"
                             />
                             <ValueCard
                                 icon={HiOutlineSparkles}
-                                title="İnnovativ yanaşma"
-                                desc="Riyazi düsturlardan tutmuş uyğunlaşdırma suallarına qədər — müasir tədrisin tələb etdiyi hər format platformamızda mövcuddur."
+                                title="Hər fənn üçün uyğun format"
+                                desc="Riyazi düsturlardan dinləmə tapşırıqlarına, uyğunlaşdırmadan açıq suallara — müasir tədrisin tələb etdiyi hər format platformada mövcuddur."
                                 from="from-purple-50" to="to-pink-50"
                             />
                             <ValueCard
                                 icon={HiOutlineShieldCheck}
-                                title="Etibarlılıq"
-                                desc="Məlumatların təhlükəsizliyi və nəticələrin obyektiv hesablanması — şagirdlərə ədalətli qiymətləndirmə, müəllimlərə rahatlıq."
+                                title="Nəticə heç vaxt subyektiv deyil"
+                                desc="Qapalı suallar sistem tərəfindən ani yoxlanılır. Açıq suallar müəllim tərəfindən nəzərdən keçirilir. Qiymət ədalətli, şəffaf, izahatlıdır."
                                 from="from-green-50" to="to-emerald-50"
                             />
                             <ValueCard
                                 icon={HiOutlineGlobe}
-                                title="Azərbaycana xas"
-                                desc="Dil, məzmun, tədris sistemi — platforma Azərbaycan müəllimlərinin ehtiyaclarına uyğun qurulub."
+                                title="Azərbaycan üçün, azərbaycanca"
+                                desc="Dil, məzmun, istifadə təcrübəsi — hər şey Azərbaycan müəlliminin gündəlik həyatı nəzərə alınaraq hazırlanıb."
                                 from="from-amber-50" to="to-orange-50"
                             />
                         </div>
@@ -177,10 +176,10 @@ const About = () => {
             <section className="py-20 bg-gray-50/60">
                 <div className="container-main">
                     <div className="text-center max-w-2xl mx-auto mb-12">
-                        <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Texniki üstünlüklər</p>
-                        <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Platformanı fərqləndirən xüsusiyyətlər</h2>
+                        <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Fərqi yaradan xüsusiyyətlər</p>
+                        <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Hər funksionallıq bir ehtiyacdan doğub</h2>
                         <p className="text-sm text-gray-500 leading-relaxed">
-                            Sadə görünsə də — hər detalı müəllimin həyatını asanlaşdırmaq üçün düşünülüb.
+                            Sadə görünsə də — arxasında real müəllim rəyləri, real sinif otağı problemləri var.
                         </p>
                     </div>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -194,15 +193,15 @@ const About = () => {
                 <div className="container-main max-w-3xl mx-auto text-center">
                     <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Komanda</p>
                     <h2 className="text-3xl font-extrabold text-gray-900 mb-6 leading-tight">
-                        Azərbaycanlı komanda tərəfindən yaradıldı
+                        Yerli problem. Yerli həll.
                     </h2>
                     <p className="text-[15px] text-gray-600 leading-relaxed mb-6">
-                        testup.az yerli tədrisin problemlərini birbaşa yaşamış, öyrənmiş insanlar tərəfindən qurulub.
-                        Hər funksionallıq real müəllim rəyləri əsasında inkişaf etdirilir.
+                        testup.az, yerli tədrisin problemlərini özü yaşamış insanlar tərəfindən qurulub.
+                        Buradakı hər funksionallıq — bir müəllimin üzləşdiyi real sualın cavabıdır.
                     </p>
                     <p className="text-[15px] text-gray-600 leading-relaxed">
-                        Məqsədimiz birdəfəlik deyil — platformanı daim inkişaf etdirməyi, müəllimlər üçün ən faydalı alət olmağa
-                        davam etməyi hədəfləyirik.
+                        Məqsədimiz tək dəfəlik deyil. Platformamızı daim inkişaf etdiririk —
+                        hər yenilik müəllim rəyinə əsaslanır, hər güncəlləmə daha yaxşı bir alət üçündür.
                     </p>
                 </div>
             </section>
@@ -215,10 +214,10 @@ const About = () => {
                 <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
                 <div className="container-main relative z-10 text-center max-w-xl mx-auto">
                     <h2 className="text-3xl font-extrabold text-white mb-4 leading-tight">
-                        Bizimlə birgə təhsilə töhfə verin
+                        Müasir müəllim müasir alətlə işləyir
                     </h2>
                     <p className="text-indigo-200 text-sm mb-8 leading-relaxed">
-                        Qeydiyyat pulsuz, ilk imtahanı yaratmaq isə 5 dəqiqə çəkir.
+                        Qeydiyyat pulsuz. İlk imtahanı yaratmaq 5 dəqiqə çəkir. Fərqi isə şagirdləriniz görəcək.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                         {!isAuthenticated ? (
@@ -227,7 +226,7 @@ const About = () => {
                                     to="/register"
                                     className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 bg-white text-indigo-700 font-bold rounded-xl shadow-xl hover:bg-indigo-50 transition-colors text-sm"
                                 >
-                                    Pulsuz qeydiyyat <HiOutlineArrowRight className="w-4 h-4" />
+                                    Pulsuz başlayın <HiOutlineArrowRight className="w-4 h-4" />
                                 </Link>
                                 <Link
                                     to="/elaqe"

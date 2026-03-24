@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiCheckCircle, HiXCircle, HiOutlineCreditCard } from 'react-icons/hi';
+import { HiCheckCircle, HiXCircle, HiOutlineCreditCard, HiOutlineX } from 'react-icons/hi';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -37,51 +37,14 @@ const Pricing = ({ isEmbedded = false }) => {
     const [loading, setLoading] = useState(true);
     const [selectedMonths, setSelectedMonths] = useState(1);
     const [paying, setPaying] = useState(null);
-    const [verifying, setVerifying] = useState(false);
-    const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
+    const [confirmModal, setConfirmModal] = useState(null); // { plan, wallet, isFreeSwitch, action }
     const { user, subscription, refreshSubscription } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
         fetchPlans();
+        refreshSubscription();
     }, []);
-
-    // Auto-check on tab focus while payment window is open
-    useEffect(() => {
-        if (!paymentWindowOpen) return;
-        const onFocus = () => checkPendingOrder(false, true);
-        window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
-    }, [paymentWindowOpen]);
-
-    const checkPendingOrder = async (manual = false, silent = false) => {
-        const pendingOrderId = localStorage.getItem('pendingPayriffOrderId');
-        if (!pendingOrderId) return;
-        if (manual) setVerifying(true);
-        try {
-            const { data } = await api.post('/payment/verify', { orderId: pendingOrderId });
-            if (data.status === 'NOT_FOUND') {
-                localStorage.removeItem('pendingPayriffOrderId');
-                setPaymentWindowOpen(false);
-                if (manual) toast.error('Ödəniş tapılmadı. Yenidən cəhd edin.');
-            } else if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status)) {
-                localStorage.removeItem('pendingPayriffOrderId');
-                setPaymentWindowOpen(false);
-                await refreshSubscription();
-                toast.success('Ödəniş təsdiqləndi! Abunəliyiniz aktivləşdirildi.');
-            } else if (manual) {
-                toast('Ödəniş hələ təsdiqlənməyib. Bir az gözləyin.', { icon: '⏳' });
-            }
-        } catch {
-            if (!silent) {
-                localStorage.removeItem('pendingPayriffOrderId');
-                setPaymentWindowOpen(false);
-            }
-            if (manual) toast.error('Yoxlama zamanı xəta baş verdi.');
-        } finally {
-            if (manual) setVerifying(false);
-        }
-    };
 
     const fetchPlans = async () => {
         try {
@@ -129,14 +92,39 @@ const Pricing = ({ isEmbedded = false }) => {
         return 'switch';
     };
 
-    const handleSubscribe = async (planId, planPrice) => {
+    const openConfirm = (plan, action, wallet, isFreeSwitch) => {
         if (!user) {
             toast('Davam etmək üçün sistemə daxil olun', { icon: '🔒' });
             navigate('/login', { state: { returnUrl: '/planlar' } });
             return;
         }
-        if (planPrice <= 0) return;
+        setConfirmModal({ plan, action, wallet, isFreeSwitch });
+    };
 
+    const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
+
+    // When user returns to this tab after paying in Payriff tab — auto-verify
+    useEffect(() => {
+        if (!paymentWindowOpen) return;
+        const onFocus = async () => {
+            const orderId = localStorage.getItem('pendingPayriffOrderId');
+            if (!orderId) return;
+            try {
+                const { data } = await api.post('/payment/verify', { orderId });
+                if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status) || data.alreadyProcessed) {
+                    localStorage.removeItem('pendingPayriffOrderId');
+                    setPaymentWindowOpen(false);
+                    await refreshSubscription();
+                    toast.success('Abunəlik aktivləşdirildi! 🎉');
+                }
+            } catch {}
+        };
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+    }, [paymentWindowOpen]);
+
+    const handleSubscribe = async (planId) => {
+        setConfirmModal(null);
         setPaying(planId);
         try {
             const { data } = await api.post('/payment/initiate', { planId, months: selectedMonths });
@@ -166,6 +154,77 @@ const Pricing = ({ isEmbedded = false }) => {
 
     return (
         <div className={`bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 sm:px-6 lg:px-8 ${isEmbedded ? 'py-20' : 'min-h-screen py-20'}`}>
+
+        {/* ── Confirmation Modal ── */}
+        {confirmModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                    <button onClick={() => setConfirmModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                        <HiOutlineX className="w-5 h-5" />
+                    </button>
+                    <div className="p-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            {confirmModal.action === 'renew' ? 'Planı uzat' : confirmModal.isFreeSwitch ? 'Ödənişsiz keçid' : 'Plana keçid'}
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-5">
+                            <span className="font-semibold text-gray-800">{confirmModal.plan.name}</span> planına keçmək istədiyinizdən əminsiniz?
+                        </p>
+
+                        {/* Credit breakdown */}
+                        {confirmModal.action === 'switch' && confirmModal.wallet.creditAzn > 0 ? (
+                            <div className={`rounded-xl p-4 mb-5 text-sm space-y-2 ${confirmModal.isFreeSwitch ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Plan qiyməti ({selectedMonths} ay)</span>
+                                    <span>{(confirmModal.plan.price * selectedMonths).toFixed(2)} AZN</span>
+                                </div>
+                                <div className={`flex justify-between font-semibold ${confirmModal.isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                    <span>Cari plan krediti</span>
+                                    <span>−{confirmModal.wallet.creditAzn.toFixed(2)} AZN</span>
+                                </div>
+                                <div className={`flex justify-between font-bold pt-2 border-t ${confirmModal.isFreeSwitch ? 'border-emerald-200 text-emerald-800' : 'border-amber-200 text-gray-900'}`}>
+                                    <span>Ödəniləcək</span>
+                                    <span>{confirmModal.isFreeSwitch ? 'Pulsuz 🎉' : confirmModal.wallet.chargeAmount.toFixed(2) + ' AZN'}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600 pt-1">
+                                    <span>Müddət</span>
+                                    <span>{confirmModal.wallet.durationDays} gün</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-gray-50 rounded-xl p-4 mb-5 text-sm">
+                                <div className="flex justify-between font-semibold text-gray-800">
+                                    <span>Ödəniləcək məbləğ</span>
+                                    <span>{(confirmModal.plan.price * selectedMonths).toFixed(2)} AZN</span>
+                                </div>
+                                <div className="flex justify-between text-gray-500 mt-1">
+                                    <span>Müddət</span>
+                                    <span>{selectedMonths * 30} gün</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmModal(null)}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                            >
+                                Ləğv et
+                            </button>
+                            <button
+                                onClick={() => handleSubscribe(confirmModal.plan.id)}
+                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-colors ${
+                                    confirmModal.isFreeSwitch
+                                        ? 'bg-emerald-500 hover:bg-emerald-600'
+                                        : 'bg-indigo-600 hover:bg-indigo-700'
+                                }`}
+                            >
+                                {confirmModal.isFreeSwitch ? 'Keçid Et' : 'Ödənişə Keç'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
             <div className="max-w-7xl mx-auto">
                 <div className="text-center max-w-3xl mx-auto mb-10 space-y-4">
                     <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 tracking-tight">
@@ -210,8 +269,7 @@ const Pricing = ({ isEmbedded = false }) => {
                         const totalPrice = +(displayPrice * selectedMonths).toFixed(2);
                         const hasDiscount = plan.price > 0 && displayPrice < plan.price;
                         const action = getPlanAction(plan);
-                        const wallet = action === 'switch' ? getWalletInfo(plan) : { bonusDays: 0, isFree: false, chargeAmount: plan.price * selectedMonths };
-                        const bonusDays = wallet.bonusDays;
+                        const wallet = action === 'switch' ? getWalletInfo(plan) : { creditAzn: 0, isFree: false, chargeAmount: plan.price * selectedMonths, durationDays: selectedMonths * 30 };
                         const isFreeSwitch = action === 'switch' && wallet.isFree;
                         const remainingDays = isCurrentPlan && subscription?.endDate
                             ? Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000))
@@ -245,31 +303,50 @@ const Pricing = ({ isEmbedded = false }) => {
                                         {plan.price > 0 ? (
                                             <>
                                                 <div className="flex items-baseline gap-1">
-                                                    <span className="text-4xl font-extrabold text-gray-900">{displayPrice}</span>
-                                                    <span className="text-lg font-semibold text-gray-500">AZN</span>
-                                                    <span className="text-sm text-gray-400 ml-1">/ ay</span>
-                                                    {hasDiscount && (
-                                                        <span className="text-sm text-gray-400 line-through ml-1">{plan.price}</span>
+                                                    {action === 'switch' && wallet.creditAzn > 0 && !isFreeSwitch ? (
+                                                        <>
+                                                            <span className="text-4xl font-extrabold text-gray-900">{wallet.chargeAmount.toFixed(2)}</span>
+                                                            <span className="text-lg font-semibold text-gray-500">AZN</span>
+                                                            <span className="text-sm text-gray-400 line-through ml-1">{totalPrice} AZN</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span className="text-4xl font-extrabold text-gray-900">{isFreeSwitch ? '0' : displayPrice}</span>
+                                                            <span className="text-lg font-semibold text-gray-500">AZN</span>
+                                                            {!isFreeSwitch && <span className="text-sm text-gray-400 ml-1">/ ay</span>}
+                                                            {hasDiscount && !isFreeSwitch && (
+                                                                <span className="text-sm text-gray-400 line-through ml-1">{plan.price}</span>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
-                                                {action === 'switch' && isFreeSwitch && (
-                                                    <div className="mt-2 p-2 bg-green-50 rounded-lg">
-                                                        <p className="text-xs font-bold text-green-700">Ödənişsiz keçid — kredit kifayət edir</p>
-                                                        {bonusDays > 0 && (
-                                                            <p className="text-xs text-green-600 mt-0.5">+{bonusDays} əlavə gün alırsınız</p>
-                                                        )}
+
+                                                {/* Credit breakdown box */}
+                                                {action === 'switch' && wallet.creditAzn > 0 && (
+                                                    <div className={`mt-3 p-3 rounded-xl border ${isFreeSwitch ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                                                        <div className="space-y-1 text-xs">
+                                                            <div className="flex justify-between text-gray-600">
+                                                                <span>Plan qiyməti</span>
+                                                                <span>{totalPrice.toFixed(2)} AZN</span>
+                                                            </div>
+                                                            <div className={`flex justify-between font-semibold ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                                <span>Cari plan krediti</span>
+                                                                <span>−{wallet.creditAzn.toFixed(2)} AZN</span>
+                                                            </div>
+                                                            <div className={`flex justify-between font-bold pt-1 border-t ${isFreeSwitch ? 'border-emerald-200 text-emerald-800' : 'border-amber-200 text-gray-900'}`}>
+                                                                <span>Ödəniləcək</span>
+                                                                <span>{isFreeSwitch ? 'Pulsuz' : wallet.chargeAmount.toFixed(2) + ' AZN'}</span>
+                                                            </div>
+                                                            {wallet.durationDays !== selectedMonths * 30 && (
+                                                                <div className={`flex justify-between font-semibold pt-0.5 ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                                    <span>Müddət</span>
+                                                                    <span>{wallet.durationDays} gün</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
-                                                {action === 'switch' && !isFreeSwitch && bonusDays > 0 && (
-                                                    <div className="mt-2 p-2 bg-green-50 rounded-lg">
-                                                        <p className="text-xs text-green-700 font-medium">
-                                                            Cari planınızın krediti ilə <span className="font-bold">+{bonusDays} gün</span> əlavə olunacaq
-                                                        </p>
-                                                        <p className="text-xs text-green-600 mt-0.5">
-                                                            Ödəniləcək: <span className="font-bold">{wallet.chargeAmount.toFixed(2)} AZN</span>
-                                                        </p>
-                                                    </div>
-                                                )}
+
                                                 {action !== 'switch' && selectedMonths > 1 && (
                                                     <p className="text-xs text-gray-400 mt-1">
                                                         Cəmi: <span className="font-semibold text-gray-700">{totalPrice} AZN</span> / {selectedMonths} ay
@@ -280,43 +357,42 @@ const Pricing = ({ isEmbedded = false }) => {
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-4xl font-extrabold text-gray-900">0</span>
                                                 <span className="text-lg font-semibold text-gray-500">AZN</span>
+                                                <span className="text-sm text-gray-400 ml-1">/ həmişə</span>
                                             </div>
                                         )}
                                     </div>
 
+                                    {plan.price === 0 ? (
+                                        <div className="w-full py-3 px-4 rounded-xl bg-gray-50 border border-gray-200 text-center text-sm text-gray-400 font-medium">
+                                            Baza plan — hər zaman mövcuddur
+                                        </div>
+                                    ) : (
                                     <button
-                                        onClick={() => plan.price > 0 ? handleSubscribe(plan.id, plan.price) : null}
-                                        disabled={paying === plan.id || plan.price === 0}
+                                        onClick={() => openConfirm(plan, action, wallet, isFreeSwitch)}
+                                        disabled={paying === plan.id}
                                         className={`w-full py-3.5 px-4 rounded-xl font-bold text-center transition-all duration-200 flex items-center justify-center gap-2 ${
                                             paying === plan.id
                                                 ? 'bg-indigo-400 text-white cursor-wait'
-                                                : plan.price === 0
-                                                    ? 'bg-gray-100 text-gray-500 cursor-default'
-                                                    : action === 'renew'
-                                                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                                                        : isFreeSwitch
-                                                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                                            : isMostPopular
-                                                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200'
-                                                                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
+                                                : action === 'renew'
+                                                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                                                    : isFreeSwitch
+                                                        ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                                        : isMostPopular
+                                                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200'
+                                                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
                                         }`}
                                     >
                                         {paying === plan.id ? 'İşlənir...'
-                                            : plan.price === 0 ? 'Aktiv Plan'
                                             : action === 'renew' ? <><HiOutlineCreditCard className="w-4 h-4" /> Uzat</>
-                                            : isFreeSwitch ? 'Ödənişsiz Keçid Et'
+                                            : isFreeSwitch ? '✓ Ödənişsiz Keçid Et'
                                             : action === 'switch' ? <><HiOutlineCreditCard className="w-4 h-4" /> Plana Keçid Et</>
                                             : <><HiOutlineCreditCard className="w-4 h-4" /> Abunə Ol</>
                                         }
                                     </button>
+                                    )}
 
                                     {action === 'renew' && (
                                         <p className="text-xs text-gray-400 text-center mt-2">Bitmə tarixi uzadılacaq</p>
-                                    )}
-                                    {action === 'switch' && !isFreeSwitch && wallet.chargeAmount < plan.price * selectedMonths && (
-                                        <p className="text-xs text-green-600 text-center mt-2">
-                                            Kredit tətbiq edilib: -{(plan.price * selectedMonths - wallet.chargeAmount).toFixed(2)} AZN
-                                        </p>
                                     )}
                                 </div>
 

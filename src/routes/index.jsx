@@ -44,11 +44,16 @@ import AdminRevenue from '../pages/Admin/AdminRevenue';
 import CollaborativeAssignments from '../pages/Teacher/CollaborativeAssignments';
 import PaymentSuccess from '../pages/Payment/PaymentSuccess';
 import PaymentDecline from '../pages/Payment/PaymentDecline';
+import StudentDashboard from '../pages/Student/StudentDashboard';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
 
 const router = createBrowserRouter([
+    // ── Auth pages (no Navbar / Footer) ──
+    { path: '/login',    element: <Login />    },
+    { path: '/register', element: <Register /> },
+
     // ── Main site (with Navbar + Footer) ──
     {
         path: '/',
@@ -57,8 +62,6 @@ const router = createBrowserRouter([
             { index: true, element: <Home /> },
             { path: 'haqqimizda', element: <About /> },
             { path: 'elaqe', element: <Contact /> },
-            { path: 'login', element: <Login /> },
-            { path: 'register', element: <Register /> },
             { path: 'imtahanlar', element: <ExamList /> },
             { path: 'birge-imtahanlari', element: <CollaborativeAssignments /> },
             { path: 'imtahanlar/:examId/neticeler', element: <ExamResults /> },
@@ -75,6 +78,14 @@ const router = createBrowserRouter([
             { path: 'odenis/ugurlu', element: <PaymentSuccess /> },
             { path: 'odenis/legv', element: <PaymentDecline /> },
             { path: 'odenis/red', element: <PaymentDecline /> },
+            {
+                path: 'imtahanlarim',
+                element: (
+                    <ProtectedRoute roles={['STUDENT']}>
+                        <StudentDashboard />
+                    </ProtectedRoute>
+                ),
+            },
             {
                 path: 'sual-bazasi',
                 element: (

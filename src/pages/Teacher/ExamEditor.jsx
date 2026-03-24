@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle, HiLockClosed, HiOutlineUserGroup, HiOutlinePaperAirplane, HiOutlineCheckCircle } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle, HiLockClosed, HiOutlineUserGroup, HiOutlinePaperAirplane, HiOutlineCheckCircle, HiOutlineSparkles } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import BankPickerModal from '../../components/ui/BankPickerModal';
 import { useAuth } from '../../context/AuthContext';
@@ -122,6 +122,13 @@ const ExamEditor = () => {
     // Bank picker state
     const [bankPicker, setBankPicker] = useState(null); // null | { section, replaceId, filterType }
 
+    // AI question generation state
+    const [aiModal, setAiModal] = useState(null); // null | { section }
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiForm, setAiForm] = useState({ topic: '', difficulty: 'MEDIUM', questionType: 'MCQ' });
+    const [aiTopics, setAiTopics] = useState([]);
+    const [aiTopicsLoading, setAiTopicsLoading] = useState(false);
+
     const bankQuestionToEditorFormat = (bq) => ({
         id: Date.now().toString(),
         type: TYPE_TO_FRONTEND[bq.questionType] || 'MULTIPLE_CHOICE',
@@ -166,6 +173,51 @@ const ExamEditor = () => {
             const newQ = { ...bankQuestionToEditorFormat(bq), subjectGroup: isMain ? null : section };
             setQuestions(prev => [...prev, newQ]);
             toast.success('Sual bazadan əlavə edildi');
+        }
+    };
+
+    const handleAiGenerate = async () => {
+        if (!aiModal) return;
+        if (!aiForm.topic.trim()) { toast.error('Mövzu daxil edin'); return; }
+        setAiLoading(true);
+        try {
+            const { data } = await api.post('/ai/generate-questions', {
+                subjectName: aiModal.section,
+                topicName: aiForm.topic.trim(),
+                difficulty: aiForm.difficulty,
+                questionType: aiForm.questionType,
+                count: 1,
+            });
+            const q = data[0];
+            if (!q) { toast.error('Sual yaradılmadı'); return; }
+            const frontendType =
+                q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
+                q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
+                q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
+                q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'MULTIPLE_CHOICE';
+            const isMain = !aiModal.section || aiModal.section === examConfig.subject;
+            const newQ = {
+                id: Date.now().toString(),
+                type: frontendType,
+                text: q.content || '',
+                points: q.points ?? 1,
+                orderIndex: nextOrderIndex(),
+                subjectGroup: isMain ? null : aiModal.section,
+                options: (q.options || []).map((o, oi) => ({
+                    id: Date.now() + oi + 1,
+                    text: o.content || '',
+                    isCorrect: !!o.isCorrect,
+                })),
+                matchingPairs: [],
+                sampleAnswer: q.correctAnswer || '',
+            };
+            setQuestions(prev => [...prev, newQ]);
+            setAiModal(null);
+            toast.success('AI sual əlavə edildi');
+        } catch {
+            toast.error('AI sual yaradılmadı. Yenidən cəhd edin.');
+        } finally {
+            setAiLoading(false);
         }
     };
 
@@ -912,6 +964,22 @@ const ExamEditor = () => {
                                         {!hasPermission('useQuestionBank') ? <HiLockClosed className="w-4 h-4"/> : <HiOutlineBookOpen className="w-4 h-4" />}
                                         Bazadan əlavə et
                                     </button>
+                                    <button
+                                        onClick={async () => {
+                                            setAiForm({ topic: '', difficulty: 'MEDIUM', questionType: 'MCQ' });
+                                            setAiTopics([]);
+                                            setAiModal({ section: sectionSubject });
+                                            setAiTopicsLoading(true);
+                                            try {
+                                                const { data } = await api.get('/subjects/topics', { params: { name: sectionSubject } });
+                                                setAiTopics(data);
+                                            } catch { setAiTopics([]); } finally { setAiTopicsLoading(false); }
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-violet-200 hover:border-violet-400 hover:bg-violet-50 bg-white text-violet-700 font-semibold rounded-xl transition-colors text-sm"
+                                    >
+                                        <HiOutlineSparkles className="w-4 h-4" />
+                                        AI ilə sual yarat
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -960,6 +1028,101 @@ const ExamEditor = () => {
                     </div>
                 )}
             </div>
+
+            {/* AI Question Generation Modal */}
+            {aiModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full">
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
+                                <HiOutlineSparkles className="w-5 h-5 text-violet-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 leading-tight">AI ilə sual yarat</h3>
+                                <p className="text-xs text-gray-400">Fənn: <span className="font-semibold text-gray-600">{aiModal.section}</span></p>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Mövzu *</label>
+                                {aiTopicsLoading ? (
+                                    <div className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-400 flex items-center gap-2">
+                                        <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-violet-500 rounded-full animate-spin" />
+                                        Mövzular yüklənir...
+                                    </div>
+                                ) : aiTopics.length > 0 ? (
+                                    <select
+                                        value={aiForm.topic}
+                                        onChange={e => setAiForm(f => ({ ...f, topic: e.target.value }))}
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none text-sm bg-white"
+                                        autoFocus
+                                    >
+                                        <option value="">Mövzu seçin...</option>
+                                        {aiTopics.map(t => (
+                                            <option key={t.id} value={t.name}>{t.name}{t.gradeLevel ? ` (${t.gradeLevel})` : ''}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        value={aiForm.topic}
+                                        onChange={e => setAiForm(f => ({ ...f, topic: e.target.value }))}
+                                        placeholder="məs. Kvadrat tənliklər, Past Simple..."
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none text-sm"
+                                        autoFocus
+                                    />
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Çətinlik</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[['EASY', 'Asan'], ['MEDIUM', 'Orta'], ['HARD', 'Çətin']].map(([val, label]) => (
+                                        <button
+                                            key={val}
+                                            onClick={() => setAiForm(f => ({ ...f, difficulty: val }))}
+                                            className={`py-2 rounded-xl text-xs font-bold border-2 transition-colors ${
+                                                aiForm.difficulty === val
+                                                    ? 'border-violet-500 bg-violet-50 text-violet-700'
+                                                    : 'border-gray-200 text-gray-500 hover:border-violet-300'
+                                            }`}
+                                        >{label}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Sual tipi</label>
+                                <select
+                                    value={aiForm.questionType}
+                                    onChange={e => setAiForm(f => ({ ...f, questionType: e.target.value }))}
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none text-sm bg-white"
+                                >
+                                    <option value="MCQ">Çoxvariantlı (tək cavab)</option>
+                                    <option value="MULTI_SELECT">Çoxvariantlı (çox cavab)</option>
+                                    <option value="OPEN_AUTO">Açıq sual (avtomatik yoxlama)</option>
+                                    <option value="FILL_IN_THE_BLANK">Boşluq doldurma</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setAiModal(null)}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                            >Ləğv et</button>
+                            <button
+                                onClick={handleAiGenerate}
+                                disabled={aiLoading || !aiForm.topic.trim()}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition-colors disabled:opacity-60"
+                            >
+                                {aiLoading ? (
+                                    <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Yaradılır...</>
+                                ) : (
+                                    <><HiOutlineSparkles className="w-4 h-4" /> Yarat</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Passage Type Selection Modal */}
             {showPassageTypeModal && (

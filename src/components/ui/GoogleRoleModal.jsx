@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { HiOutlineX, HiOutlineSparkles } from 'react-icons/hi';
 import api from '../../api/axios';
-import { jwtDecode } from 'jwt-decode';
 import toast from 'react-hot-toast';
 
-const GoogleRoleModal = ({ googleToken, userInfo, onSuccess, onClose }) => {
+const GoogleRoleModal = ({ accessToken, userInfo, onSuccess, onClose }) => {
     const [role, setRole] = useState('STUDENT');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
 
@@ -15,11 +15,16 @@ const GoogleRoleModal = ({ googleToken, userInfo, onSuccess, onClose }) => {
             toast.error('İstifadə şərtlərini qəbul etməlisiniz');
             return;
         }
+        if (!phoneNumber.trim()) {
+            toast.error('Telefon nömrəsi daxil edin');
+            return;
+        }
         setLoading(true);
         try {
             const { data } = await api.post('/auth/google/complete', {
-                googleToken,
+                accessToken,
                 role,
+                phoneNumber: phoneNumber.trim(),
                 termsAccepted,
             });
             onSuccess(data);
@@ -50,7 +55,7 @@ const GoogleRoleModal = ({ googleToken, userInfo, onSuccess, onClose }) => {
                 {/* Body */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
                     <p className="text-sm text-gray-600 text-center">
-                        Google hesabınızla ilk dəfə daxil olursunuz. Zəhmət olmasa rolunuzu seçin.
+                        Google hesabınızla ilk dəfə daxil olursunuz. Zəhmət olmasa məlumatları doldurun.
                     </p>
 
                     <div>
@@ -81,6 +86,18 @@ const GoogleRoleModal = ({ googleToken, userInfo, onSuccess, onClose }) => {
                                 Müəllim kimi qeydiyyat keçin — 3 aylıq Basic plan hədiyyəsi alın!
                             </p>
                         )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Telefon nömrəsi</label>
+                        <input
+                            type="tel"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            required
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-sm"
+                            placeholder="+994 50 000 00 00"
+                        />
                     </div>
 
                     <div>

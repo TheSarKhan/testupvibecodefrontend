@@ -92,10 +92,10 @@ const ExamEditor = () => {
             id: Date.now().toString(), type: 'MULTIPLE_CHOICE', text: '', points: 1,
             orderIndex: 0, subjectGroup: null,
             options: [
-                { id: Date.now() + 1, text: 'A', isCorrect: false },
-                { id: Date.now() + 2, text: 'B', isCorrect: false },
-                { id: Date.now() + 3, text: 'C', isCorrect: false },
-                { id: Date.now() + 4, text: 'D', isCorrect: false },
+                { id: Date.now() + 1, text: '', isCorrect: false },
+                { id: Date.now() + 2, text: '', isCorrect: false },
+                { id: Date.now() + 3, text: '', isCorrect: false },
+                { id: Date.now() + 4, text: '', isCorrect: false },
             ],
             matchingPairs: [], sampleAnswer: ''
         }];
@@ -389,11 +389,11 @@ const ExamEditor = () => {
             orderIndex: startIdx + idx,
             subjectGroup: isMain ? null : batchPdfSection,
             options: [
-                { id: `opt-a-${Date.now()}-${idx}`, text: 'A', isCorrect: false },
-                { id: `opt-b-${Date.now()}-${idx}`, text: 'B', isCorrect: false },
-                { id: `opt-c-${Date.now()}-${idx}`, text: 'C', isCorrect: false },
-                { id: `opt-d-${Date.now()}-${idx}`, text: 'D', isCorrect: false },
-                { id: `opt-e-${Date.now()}-${idx}`, text: 'E', isCorrect: false },
+                { id: `opt-a-${Date.now()}-${idx}`, text: '', isCorrect: false },
+                { id: `opt-b-${Date.now()}-${idx}`, text: '', isCorrect: false },
+                { id: `opt-c-${Date.now()}-${idx}`, text: '', isCorrect: false },
+                { id: `opt-d-${Date.now()}-${idx}`, text: '', isCorrect: false },
+                { id: `opt-e-${Date.now()}-${idx}`, text: '', isCorrect: false },
             ]
         }));
         setQuestions([...questions, ...newQuestions]);

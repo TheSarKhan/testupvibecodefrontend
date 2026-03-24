@@ -24,7 +24,9 @@ const INITIAL_FORM = {
     selectExamDuration: false,
     useQuestionBank: false,
     createQuestionBank: false,
-    importQuestionsFromPdf: false
+    importQuestionsFromPdf: false,
+    monthlyAiQuestionLimit: 'disabled',
+    useAiExamGeneration: false
 };
 
 const featureLabels = [
@@ -40,7 +42,8 @@ const featureLabels = [
     { key: 'selectExamDuration', label: 'İmtahan müddətini seçmək' },
     { key: 'useQuestionBank', label: 'Sual bazasından istifadə' },
     { key: 'createQuestionBank', label: 'Sual bazası hazırlamaq' },
-    { key: 'importQuestionsFromPdf', label: 'PDF-dən çoxlu sual əlavə etmək' }
+    { key: 'importQuestionsFromPdf', label: 'PDF-dən çoxlu sual əlavə etmək' },
+    { key: 'useAiExamGeneration', label: 'AI ilə imtahan yaratmaq' }
 ];
 
 const AdminSubscriptionPlans = () => {
@@ -71,10 +74,15 @@ const AdminSubscriptionPlans = () => {
 
     const handleOpenModal = (plan = null) => {
         if (plan) {
-            setForm({ ...plan });
+            const aiLimit = plan.monthlyAiQuestionLimit;
+            setForm({
+                ...plan,
+                level: plan.level ?? 0,
+                monthlyAiQuestionLimit: aiLimit === -1 ? 'unlimited' : aiLimit > 0 ? String(aiLimit) : 'disabled',
+            });
             setEditingId(plan.id);
         } else {
-            setForm(INITIAL_FORM);
+            setForm({ ...INITIAL_FORM, monthlyAiQuestionLimit: 'disabled' });
             setEditingId(null);
         }
         setIsModalOpen(true);
@@ -90,24 +98,29 @@ const AdminSubscriptionPlans = () => {
         const { name, value, type, checked } = e.target;
         setForm(prev => ({
             ...prev,
-            [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value
+            [name]: type === 'checkbox' ? checked : name === 'monthlyAiQuestionLimit' ? value : type === 'number' ? Number(value) : value
         }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
+        const aiLimit = form.monthlyAiQuestionLimit;
+        const payload = {
+            ...form,
+            level: form.level ?? 0,
+            monthlyAiQuestionLimit: aiLimit === 'unlimited' ? -1 : aiLimit === 'disabled' ? 0 : (parseInt(aiLimit, 10) || 0),
+        };
         try {
             if (editingId) {
-                await api.put(`/subscription-plans/${editingId}`, form);
-
+                const { data } = await api.put(`/subscription-plans/${editingId}`, payload);
+                setPlans(prev => prev.map(p => p.id === editingId ? data : p));
                 toast.success('Plan uğurla yeniləndi');
             } else {
-                await api.post('/subscription-plans', form);
-
+                const { data } = await api.post('/subscription-plans', payload);
+                setPlans(prev => [...prev, data].sort((a, b) => a.price - b.price));
                 toast.success('Yeni plan əlavə edildi');
             }
-            fetchPlans();
             handleCloseModal();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Xəta baş verdi');
@@ -206,6 +219,10 @@ const AdminSubscriptionPlans = () => {
                                     <span className="text-gray-600">İştirakçı:</span>
                                     <span className="font-semibold text-gray-900">{plan.maxParticipantsPerExam === -1 ? 'Limitsiz' : plan.maxParticipantsPerExam}</span>
                                 </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Aylıq AI Sual:</span>
+                                    <span className="font-semibold text-gray-900">{plan.monthlyAiQuestionLimit === -1 ? 'Limitsiz' : plan.monthlyAiQuestionLimit > 0 ? plan.monthlyAiQuestionLimit : 'Deaktiv'}</span>
+                                </div>
                                 
                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-4 mb-2">Populyar Xüsusiyyətlər</h4>
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -299,6 +316,42 @@ const AdminSubscriptionPlans = () => {
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-700 mb-1">Max İştirakçı *</label>
                                             <input type="number" required name="maxParticipantsPerExam" value={form.maxParticipantsPerExam} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400" />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-semibold text-gray-700 mb-2">Aylıq AI Sual Limiti</label>
+                                            <div className="flex gap-2 mb-2">
+                                                {[
+                                                    { value: 'disabled', label: 'Deaktiv' },
+                                                    { value: 'limited', label: 'Limit qoy' },
+                                                    { value: 'unlimited', label: 'Limitsiz' },
+                                                ].map(opt => {
+                                                    const isLimited = form.monthlyAiQuestionLimit !== 'disabled' && form.monthlyAiQuestionLimit !== 'unlimited';
+                                                    const isActive = opt.value === 'limited' ? isLimited : form.monthlyAiQuestionLimit === opt.value;
+                                                    return (
+                                                        <button
+                                                            key={opt.value}
+                                                            type="button"
+                                                            onClick={() => setForm(prev => ({
+                                                                ...prev,
+                                                                monthlyAiQuestionLimit: opt.value === 'limited' ? '10' : opt.value
+                                                            }))}
+                                                            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border-2 transition-colors ${isActive ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            {form.monthlyAiQuestionLimit !== 'disabled' && form.monthlyAiQuestionLimit !== 'unlimited' && (
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={form.monthlyAiQuestionLimit}
+                                                    onChange={e => setForm(prev => ({ ...prev, monthlyAiQuestionLimit: e.target.value }))}
+                                                    className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400"
+                                                    placeholder="Məs: 30"
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 </div>

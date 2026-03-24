@@ -109,7 +109,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     ref={setEditorRef(`option-${opt.id}`)}
                                     value={opt.text}
                                     onChange={(val) => updateOption(opt.id, 'text', val)}
-                                    placeholder={`Variant ${i + 1}`}
+                                    placeholder={`${String.fromCharCode(65 + i)} variantı`}
                                     className={`flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[40px] ${opt.isCorrect ? 'bg-indigo-50/30' : 'bg-transparent'}`}
                                 />
                                 {/* Image / PDF Button */}

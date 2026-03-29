@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
 import {
     HiOutlineEye, HiOutlineEyeOff,
-    HiOutlineMail, HiOutlineLockClosed, HiOutlineUser,
+    HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlinePhone,
     HiOutlineAcademicCap, HiOutlineBookOpen,
     HiOutlineSparkles, HiOutlineX, HiOutlineCheckCircle,
     HiOutlineArrowLeft, HiOutlineArrowRight,
@@ -263,8 +263,9 @@ const Register = () => {
     const InfoStep = () => {
         const handleNext = (e) => {
             e.preventDefault();
-            if (!formData.fullName.trim()) { toast.error('Ad, Soyad daxil edin'); return; }
-            if (!formData.email.trim())    { toast.error('E-poçt daxil edin');    return; }
+            if (!formData.fullName.trim())    { toast.error('Ad, Soyad daxil edin');       return; }
+            if (!formData.email.trim())       { toast.error('E-poçt daxil edin');          return; }
+            if (!formData.phoneNumber.trim()) { toast.error('Telefon nömrəsi daxil edin'); return; }
             setStep(2);
         };
         return (
@@ -312,6 +313,21 @@ const Register = () => {
                                 autoComplete="email"
                                 className="w-full pl-11 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
                                 placeholder="email@nümunə.az"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefon nömrəsi</label>
+                        <div className="relative">
+                            <HiOutlinePhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+                            <input
+                                type="tel"
+                                value={formData.phoneNumber}
+                                onChange={(e) => set('phoneNumber', e.target.value)}
+                                autoComplete="tel"
+                                className="w-full pl-11 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
+                                placeholder="+994 50 000 00 00"
                             />
                         </div>
                     </div>

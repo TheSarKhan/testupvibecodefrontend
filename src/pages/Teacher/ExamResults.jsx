@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineClock, HiOutlineStar, HiOutlineUsers, HiOutlineTrendingUp, HiOutlineCheckCircle } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineClock, HiOutlineStar, HiOutlineUsers, HiOutlineTrendingUp, HiOutlineCheckCircle, HiOutlineDownload } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import DataTable from 'react-data-table-component';
 
 const StarDisplay = ({ value }) => {
     const fullStars = Math.round(value || 0);
@@ -22,6 +24,7 @@ const ExamResults = () => {
     const [submissions, setSubmissions] = useState([]);
     const [statistics, setStatistics] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [filterText, setFilterText] = useState('');
 
     useEffect(() => {
         const fetchAll = async () => {
@@ -50,6 +53,186 @@ const ExamResults = () => {
         return `${m}dk ${s}sn`;
     };
 
+    const isPaid = isAdmin && statistics?.examPrice != null && statistics.examPrice > 0;
+
+    const filteredSubmissions = useMemo(() =>
+        filterText
+            ? submissions.filter(r => r.studentName?.toLowerCase().includes(filterText.toLowerCase()))
+            : submissions,
+        [submissions, filterText]
+    );
+
+    const columns = useMemo(() => {
+        const cols = [
+            {
+                name: 'İştirakçı',
+                selector: r => r.studentName,
+                sortable: true,
+                cell: r => <span className="font-semibold text-gray-900 text-sm py-2">{r.studentName}</span>,
+                minWidth: '160px',
+            },
+            {
+                name: 'Başlayıb',
+                selector: r => r.startedAt,
+                sortable: true,
+                cell: r => <span className="text-xs text-gray-500">{r.startedAt ? new Date(r.startedAt).toLocaleString('az-AZ') : '–'}</span>,
+                minWidth: '160px',
+            },
+            {
+                name: 'Vaxt',
+                selector: r => r.startedAt && r.submittedAt
+                    ? Math.abs(new Date(r.submittedAt) - new Date(r.startedAt)) / 1000
+                    : 0,
+                sortable: true,
+                cell: r => <span className="text-xs font-mono text-gray-600">{formatDuration(r.startedAt, r.submittedAt)}</span>,
+                minWidth: '90px',
+            },
+            {
+                name: 'Bal',
+                selector: r => r.totalScore ?? 0,
+                sortable: true,
+                cell: r => (
+                    <span className="text-sm font-bold text-indigo-600">
+                        {r.submittedAt
+                            ? r.templateScorePercent != null
+                                ? `${r.templateScorePercent?.toFixed(1)}%`
+                                : `${r.totalScore} / ${r.maxScore}`
+                            : '–'}
+                    </span>
+                ),
+                minWidth: '100px',
+            },
+            {
+                name: 'Reytinq',
+                selector: r => r.rating ?? 0,
+                sortable: true,
+                cell: r => r.rating ? <StarDisplay value={r.rating} /> : <span className="text-gray-300 text-sm">–</span>,
+                minWidth: '110px',
+            },
+        ];
+
+        if (isPaid) {
+            cols.push({
+                name: 'Ödəniş',
+                selector: r => r.hasPaid ? 1 : 0,
+                sortable: true,
+                cell: r => r.hasPaid === true ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                        ✓ {r.amountPaid != null ? `${Number(r.amountPaid).toFixed(2)} ₼` : 'Ödənib'}
+                    </span>
+                ) : r.hasPaid === false ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                        ✗ Ödənilməyib
+                    </span>
+                ) : <span className="text-gray-300 text-xs">–</span>,
+                minWidth: '130px',
+            });
+        }
+
+        cols.push(
+            {
+                name: 'Status',
+                selector: r => r.isFullyGraded ? 2 : r.submittedAt ? 1 : 0,
+                sortable: true,
+                cell: r => (
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        r.submittedAt
+                            ? r.isFullyGraded ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                            : 'bg-blue-50 text-blue-700'
+                    }`}>
+                        {!r.submittedAt ? '⏳ Davam edir' : r.isFullyGraded ? <><HiOutlineCheckCircle className="w-3 h-3" /> Tam Yoxlanılıb</> : '⏳ Yoxlanılır'}
+                    </span>
+                ),
+                minWidth: '140px',
+            },
+            {
+                name: '',
+                cell: r => r.submittedAt ? (
+                    <button
+                        onClick={() => navigate(`/test/review/${r.id}`)}
+                        className="text-indigo-600 hover:text-indigo-800 font-medium text-xs whitespace-nowrap transition-colors"
+                    >
+                        Bax 👁️
+                    </button>
+                ) : null,
+                width: '70px',
+                ignoreRowClick: true,
+            }
+        );
+
+        return cols;
+    }, [isPaid, statistics]);
+
+    const customStyles = {
+        headRow: { style: { backgroundColor: '#f9fafb', borderBottom: '1px solid #f3f4f6' } },
+        headCells: { style: { fontSize: '11px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', paddingLeft: '16px', paddingRight: '16px' } },
+        cells: { style: { paddingLeft: '16px', paddingRight: '16px' } },
+        rows: { style: { '&:not(:last-of-type)': { borderBottom: '1px solid #f9fafb' } }, highlightOnHoverStyle: { backgroundColor: '#f9fafb', transition: 'background-color 0.1s' } },
+        pagination: { style: { borderTop: '1px solid #f3f4f6', fontSize: '13px', color: '#6b7280' } },
+    };
+
+    const exportToExcel = () => {
+        const examTitle = statistics?.examTitle || 'Imtahan';
+        const isPaid = isAdmin && statistics?.examPrice != null && statistics.examPrice > 0;
+
+        // Sheet 1: Summary statistics
+        const statsData = [
+            ['İmtahan Adı', examTitle],
+            ['İmtahan ID', examId],
+            ['Ümumi İştirakçı', statistics?.totalParticipants ?? ''],
+            ['Orta Bal', statistics?.averageScore != null ? statistics.averageScore.toFixed(2) : ''],
+            ['Maksimum Bal', statistics?.maximumScore ?? ''],
+            ['Orta Vaxt (dəq)', statistics?.averageDurationMinutes ?? ''],
+            ['Orta Reytinq', statistics?.averageRating > 0 ? statistics.averageRating.toFixed(2) : '–'],
+        ];
+        const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
+        statsSheet['!cols'] = [{ wch: 22 }, { wch: 30 }];
+
+        // Sheet 2: All participants
+        const headers = ['#', 'İştirakçı', 'Başlayıb', 'Xərclənən Vaxt', 'Bal', 'Maks. Bal', 'Reytinq', 'Status'];
+        if (isPaid) headers.splice(7, 0, 'Ödəniş');
+
+        const rows = submissions.map((r, idx) => {
+            const score = r.submittedAt
+                ? r.templateScorePercent != null
+                    ? `${r.templateScorePercent?.toFixed(1)}%`
+                    : r.totalScore
+                : '';
+            const maxScore = r.templateScorePercent != null ? '100%' : (r.maxScore ?? '');
+            const status = !r.submittedAt ? 'Davam edir' : r.isFullyGraded ? 'Tam Yoxlanılıb' : 'Yoxlanılır';
+            const rating = r.rating ? `${r.rating}/5` : '–';
+            const row = [
+                idx + 1,
+                r.studentName,
+                r.startedAt ? new Date(r.startedAt).toLocaleString('az-AZ') : '–',
+                formatDuration(r.startedAt, r.submittedAt),
+                score,
+                maxScore,
+                rating,
+                status,
+            ];
+            if (isPaid) {
+                const paymentText = r.hasPaid === true
+                    ? r.amountPaid != null ? `Ödənib (${Number(r.amountPaid).toFixed(2)} ₼)` : 'Ödənib'
+                    : r.hasPaid === false ? 'Ödənilməyib' : '–';
+                row.splice(7, 0, paymentText);
+            }
+            return row;
+        });
+
+        const participantsSheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        const colWidths = [{ wch: 4 }, { wch: 24 }, { wch: 20 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 16 }];
+        if (isPaid) colWidths.splice(7, 0, { wch: 20 });
+        participantsSheet['!cols'] = colWidths;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, statsSheet, 'Statistika');
+        XLSX.utils.book_append_sheet(wb, participantsSheet, 'İştirakçılar');
+
+        const fileName = `${examTitle.replace(/[^\w\s]/g, '').trim()}_neticeler.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
@@ -69,7 +252,7 @@ const ExamResults = () => {
                     >
                         <HiOutlineArrowLeft className="w-6 h-6" />
                     </button>
-                    <div>
+                    <div className="flex-1">
                         <h1 className="text-xl font-bold text-gray-900">{statistics?.examTitle || 'İmtahan Nəticələri'}</h1>
                         <div className="flex items-center gap-2 mt-0.5">
                             <p className="text-xs text-gray-500">İmtahan ID: {examId}</p>
@@ -86,6 +269,15 @@ const ExamResults = () => {
                             )}
                         </div>
                     </div>
+                    {submissions.length > 0 && (
+                        <button
+                            onClick={exportToExcel}
+                            className="ml-auto flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors flex-shrink-0"
+                        >
+                            <HiOutlineDownload className="w-4 h-4" />
+                            Excel
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -133,126 +325,67 @@ const ExamResults = () => {
                     </div>
                 )}
 
-                {/* Top Students Podium */}
+                {/* Top 5 Students — compact inline leaderboard */}
                 {statistics?.topStudents?.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                        <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
-                            🏆 Ən Yaxşı Şagirdlər
-                        </h2>
-                        <div className="space-y-3">
-                            {statistics.topStudents.map((student, idx) => (
-                                <div key={idx} className={`flex items-center gap-4 p-4 rounded-xl ${idx === 0 ? 'bg-yellow-50 border border-yellow-100' : idx === 1 ? 'bg-gray-50 border border-gray-100' : 'bg-orange-50 border border-orange-100'}`}>
-                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-500' : 'text-orange-500'}`}>
-                                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">🏆 Top 5 Şagird</p>
+                        <div className="flex flex-col divide-y divide-gray-50">
+                            {statistics.topStudents.map((student, idx) => {
+                                const medals = ['🥇','🥈','🥉'];
+                                return (
+                                    <div key={idx} className="flex items-center gap-3 py-2">
+                                        <span className="text-base w-6 text-center flex-shrink-0">
+                                            {medals[idx] ?? <span className="text-xs font-bold text-gray-400">{idx + 1}</span>}
+                                        </span>
+                                        <span className="flex-1 text-sm font-semibold text-gray-800 truncate">{student.name}</span>
+                                        <span className="text-xs text-gray-400 font-mono flex-shrink-0">{student.timeSpent}</span>
+                                        <span className="text-sm font-black text-indigo-600 flex-shrink-0 w-16 text-right">{student.score} bal</span>
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-gray-900">{student.name}</p>
-                                        <p className="text-xs text-gray-500">Vaxt: {student.timeSpent}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-black text-indigo-600 text-xl">{student.score}</p>
-                                        <p className="text-xs text-gray-400">bal</p>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}
 
-                {/* Full Participant Table */}
+                {/* Full Participant Table — DataTable */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100">
-                        <h2 className="font-bold text-gray-900">Bütün İştirakçılar</h2>
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <h2 className="font-bold text-gray-900">Bütün İştirakçılar</h2>
+                            {submissions.length > 0 && (
+                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{submissions.length}</span>
+                            )}
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Ad ilə axtar..."
+                            value={filterText}
+                            onChange={e => setFilterText(e.target.value)}
+                            className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-44"
+                        />
                     </div>
-                    {submissions.length === 0 ? (
-                        <div className="p-12 text-center text-gray-500">
-                            Hələ heç bir iştirakçı bu imtahanı verməyib.
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                        <tr className="bg-gray-50 border-b border-gray-100 text-sm text-gray-600">
-                                            <th className="p-4 py-3 font-semibold">İştirakçı</th>
-                                            <th className="p-4 py-3 font-semibold">Başlayıb</th>
-                                            <th className="p-4 py-3 font-semibold">Xərclənən Vaxt</th>
-                                            <th className="p-4 py-3 font-semibold">Bal</th>
-                                            <th className="p-4 py-3 font-semibold">Reytinq</th>
-                                            {isAdmin && statistics?.examPrice != null && statistics.examPrice > 0 && (
-                                                <th className="p-4 py-3 font-semibold">Ödəniş</th>
-                                            )}
-                                            <th className="p-4 py-3 font-semibold">Status</th>
-                                            <th className="p-4 py-3 font-semibold">Əməliyyat</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {submissions.map((r) => (
-                                            <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="p-4">
-                                                    <p className="font-semibold text-gray-900">{r.studentName}</p>
-                                                </td>
-                                                <td className="p-4 text-sm text-gray-600">
-                                                    {r.startedAt ? new Date(r.startedAt).toLocaleString('az-AZ') : '–'}
-                                                </td>
-                                                <td className="p-4 text-sm font-mono text-gray-700">
-                                                    {formatDuration(r.startedAt, r.submittedAt)}
-                                                </td>
-                                                <td className="p-4 text-sm font-bold text-indigo-600">
-                                                    {r.submittedAt
-                                                        ? r.templateScorePercent != null
-                                                            ? `${r.templateScorePercent?.toFixed(1)}%`
-                                                            : `${r.totalScore} / ${r.maxScore}`
-                                                        : '–'}
-                                                </td>
-                                                <td className="p-4">
-                                                    {r.rating ? (
-                                                        <StarDisplay value={r.rating} />
-                                                    ) : (
-                                                        <span className="text-gray-300 text-sm">–</span>
-                                                    )}
-                                                </td>
-                                                {isAdmin && statistics?.examPrice != null && statistics.examPrice > 0 && (
-                                                    <td className="p-4">
-                                                        {r.hasPaid === true ? (
-                                                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-                                                                ✓ {r.amountPaid != null ? `${Number(r.amountPaid).toFixed(2)} ₼` : 'Ödənib'}
-                                                            </span>
-                                                        ) : r.hasPaid === false ? (
-                                                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
-                                                                ✗ Ödənilməyib
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-gray-300 text-xs">–</span>
-                                                        )}
-                                                    </td>
-                                                )}
-                                                <td className="p-4">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                                                        r.submittedAt
-                                                            ? r.isFullyGraded
-                                                                ? 'bg-green-50 text-green-700'
-                                                                : 'bg-yellow-50 text-yellow-700'
-                                                            : 'bg-blue-50 text-blue-700'
-                                                    }`}>
-                                                        {!r.submittedAt ? '⏳ Davam edir' : r.isFullyGraded ? <><HiOutlineCheckCircle className="w-3.5 h-3.5"/> Tam Yoxlanılıb</> : '⏳ Yoxlanılır...'}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4">
-                                                    {r.submittedAt && (
-                                                        <button
-                                                            onClick={() => navigate(`/test/review/${r.id}`)}
-                                                            className="text-indigo-600 hover:text-indigo-800 font-medium text-sm flex items-center gap-1 transition-colors"
-                                                        >
-                                                            Bax 👁️
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                    <DataTable
+                        columns={columns}
+                        data={filteredSubmissions}
+                        pagination
+                        paginationPerPage={20}
+                        paginationRowsPerPageOptions={[10, 20, 50, 100]}
+                        paginationComponentOptions={{
+                            rowsPerPageText: 'Sətir sayı:',
+                            rangeSeparatorText: '/',
+                            noRowsPerPage: false,
+                            selectAllRowsItem: false,
+                        }}
+                        noDataComponent={
+                            <div className="py-16 text-center text-gray-400 text-sm">
+                                {filterText ? 'Axtarışa uyğun nəticə tapılmadı.' : 'Hələ heç bir iştirakçı bu imtahanı verməyib.'}
+                            </div>
+                        }
+                        customStyles={customStyles}
+                        highlightOnHover
+                        responsive
+                        defaultSortFieldId={1}
+                    />
                 </div>
             </div>
         </div>

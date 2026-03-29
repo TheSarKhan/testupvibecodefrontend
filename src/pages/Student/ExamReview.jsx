@@ -479,25 +479,48 @@ const ExamReview = () => {
                                             <span className="bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full uppercase">
                                                 Sual {questionNumber} • {q.points} Bal
                                             </span>
-                                            {q.isGraded ? (
-                                                q.awardedScore === q.points ? (
-                                                    <span className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full">
-                                                        <HiOutlineCheckCircle className="w-5 h-5" /> Düzdür
-                                                    </span>
-                                                ) : q.awardedScore > 0 ? (
-                                                    <span className="flex items-center gap-1.5 text-yellow-600 font-bold text-sm bg-yellow-50 px-3 py-1 rounded-full">
-                                                        Qismən • {fmtScore(q.awardedScore)}/{q.points}
-                                                    </span>
-                                                ) : (
+                                            {(() => {
+                                                const hasAnswer = (
+                                                    q.studentSelectedOptionId != null ||
+                                                    (q.studentSelectedOptionIds && q.studentSelectedOptionIds.length > 0) ||
+                                                    q.studentAnswerText?.trim() ||
+                                                    q.studentAnswerImage ||
+                                                    q.studentMatchingAnswerJson
+                                                );
+                                                if (!q.isGraded) {
+                                                    return (
+                                                        <span className="text-yellow-600 font-bold text-sm bg-yellow-50 px-3 py-1 rounded-full">
+                                                            ⏳ Yoxlanılır...
+                                                        </span>
+                                                    );
+                                                }
+                                                if (!hasAnswer) {
+                                                    return (
+                                                        <span className="text-gray-400 font-bold text-sm bg-gray-100 px-3 py-1 rounded-full">
+                                                            Boş buraxıldı
+                                                        </span>
+                                                    );
+                                                }
+                                                if (q.awardedScore === q.points) {
+                                                    return (
+                                                        <span className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full">
+                                                            <HiOutlineCheckCircle className="w-5 h-5" /> Düzdür
+                                                        </span>
+                                                    );
+                                                }
+                                                if (q.awardedScore > 0) {
+                                                    return (
+                                                        <span className="flex items-center gap-1.5 text-yellow-600 font-bold text-sm bg-yellow-50 px-3 py-1 rounded-full">
+                                                            Qismən • {fmtScore(q.awardedScore)}/{q.points}
+                                                        </span>
+                                                    );
+                                                }
+                                                return (
                                                     <span className="flex items-center gap-1.5 text-red-600 font-bold text-sm bg-red-50 px-3 py-1 rounded-full">
                                                         <HiOutlineXCircle className="w-5 h-5" /> Səhvdir
                                                     </span>
-                                                )
-                                            ) : (
-                                                <span className="text-yellow-600 font-bold text-sm bg-yellow-50 px-3 py-1 rounded-full">
-                                                    ⏳ Yoxlanılır...
-                                                </span>
-                                            )}
+                                                );
+                                            })()}
                                         </div>
 
                                         <div className="text-lg text-gray-800 font-medium mb-6 leading-relaxed">

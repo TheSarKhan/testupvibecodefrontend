@@ -5,8 +5,6 @@ import {
     HiOutlineClock,
     HiOutlineShoppingBag,
     HiOutlineArrowRight,
-    HiOutlineCheckCircle,
-    HiOutlineXCircle,
     HiOutlineCalendar,
     HiOutlineAcademicCap,
     HiOutlineDocumentText,
@@ -44,7 +42,7 @@ const StudentDashboard = () => {
         if (!iso) return '';
         const d = new Date(iso);
         if (isNaN(d.getTime())) return '';
-        return d.toLocaleDateString('az-AZ', { day: '2-digit', month: 'short', year: 'numeric' });
+        return d.toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
     return (
@@ -177,15 +175,7 @@ const StudentDashboard = () => {
                                             {/* Status badges + percent */}
                                             <div className="flex items-start justify-between gap-3 mb-3">
                                                 <div className="flex flex-wrap items-center gap-1.5">
-                                                    {r.isFullyGraded ? (
-                                                        passed
-                                                            ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-md">
-                                                                <HiOutlineCheckCircle className="w-3 h-3" /> Keçdi
-                                                              </span>
-                                                            : <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md">
-                                                                <HiOutlineXCircle className="w-3 h-3" /> Keçmədi
-                                                              </span>
-                                                    ) : (
+                                                    {!r.isFullyGraded && (
                                                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
                                                             <HiOutlineClock className="w-3 h-3" /> Qiymətləndirilir
                                                         </span>

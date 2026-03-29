@@ -775,7 +775,7 @@ const ExamList = () => {
                 ) : (
                     <>
                         {/* Student view */}
-                        {isStudent ? (
+                        {(isStudent || (!isTeacher && !isAdmin)) ? (
                             filteredExams.length === 0 ? (
                                 <EmptyState activeFilterCount={activeFilterCount} onClear={clearFilters} isStudent />
                             ) : (
@@ -784,24 +784,42 @@ const ExamList = () => {
                                         const isSaved = savedExamLinks.has(exam.shareLink);
                                         const isPaid = exam.price != null && Number(exam.price) > 0;
                                         const isPurchased = isPaid && purchasedExams.has(exam.shareLink);
-                                        const subjectName = (exam.subjects || []).join(', ') || exam.subject || '';
+                                        const subjects = exam.subjects?.length ? exam.subjects : (exam.subject ? [exam.subject] : []);
+                                        const tags = exam.tags || [];
+                                        const questionCount = (exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0);
+                                        const avgRating = exam.averageRating ? Math.round(exam.averageRating * 10) / 10 : null;
+                                        const ratingCount = exam.ratingCount || 0;
                                         const canStart = !isPaid || isPurchased;
+                                        const accentClass = isPurchased ? 'bg-green-500' : isPaid ? 'bg-amber-400' : 'bg-indigo-500';
                                         return (
-                                            <div key={exam.id} onClick={() => canStart && handleJoinExam(exam)} className={`group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col overflow-hidden ${canStart ? 'cursor-pointer' : 'cursor-default'}`}>
-                                                <div className={`h-1 w-full ${isPurchased ? 'bg-green-500' : isPaid ? 'bg-amber-400' : 'bg-indigo-500'}`} />
+                                            <div
+                                                key={exam.id}
+                                                onClick={() => canStart && handleJoinExam(exam)}
+                                                className={`group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col overflow-hidden ${canStart ? 'cursor-pointer' : 'cursor-default'}`}
+                                            >
+                                                {/* Accent bar */}
+                                                <div className={`h-1 w-full ${accentClass}`} />
+
                                                 <div className="p-5 flex flex-col flex-1">
+                                                    {/* Top row: subjects + bookmark */}
                                                     <div className="flex items-start justify-between gap-2 mb-3">
-                                                        {subjectName && (
-                                                            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full shrink-0 truncate max-w-[160px]">
-                                                                {subjectName}
-                                                            </span>
-                                                        )}
+                                                        <div className="flex flex-wrap gap-1 min-w-0">
+                                                            {subjects.slice(0, 2).map((s, i) => (
+                                                                <span key={i} className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 truncate max-w-[120px]">
+                                                                    {s}
+                                                                </span>
+                                                            ))}
+                                                            {exam.visibility === 'PRIVATE' && (
+                                                                <span className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                                                    <HiOutlineLockClosed className="w-3 h-3" /> Gizli
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <button
                                                             onClick={e => { e.stopPropagation(); handleToggleDepot(exam); }}
-
                                                             disabled={savingLink === exam.shareLink}
                                                             title={isSaved ? 'Depodan çıxar' : 'Depoya əlavə et'}
-                                                            className={`p-1.5 rounded-xl transition-all disabled:opacity-50 shrink-0 ml-auto ${isSaved ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'text-gray-300 hover:text-indigo-500 hover:bg-indigo-50'}`}
+                                                            className={`p-1.5 rounded-xl transition-all disabled:opacity-50 shrink-0 ${isSaved ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'text-gray-300 hover:text-indigo-500 hover:bg-indigo-50'}`}
                                                         >
                                                             {savingLink === exam.shareLink
                                                                 ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -809,45 +827,77 @@ const ExamList = () => {
                                                             }
                                                         </button>
                                                     </div>
-                                                    <h3 className="font-bold text-gray-900 text-base leading-snug mb-1.5 group-hover:text-indigo-700 transition-colors line-clamp-2">
+
+                                                    {/* Title */}
+                                                    <h3 className="font-bold text-gray-900 text-base leading-snug mb-1 group-hover:text-indigo-700 transition-colors line-clamp-2">
                                                         {exam.title}
                                                     </h3>
-                                                    {exam.description && (
-                                                        <p className="text-gray-400 text-xs leading-relaxed line-clamp-2 mb-3">{exam.description}</p>
+
+                                                    {/* Teacher + Rating */}
+                                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                                        {exam.teacherName && (
+                                                            <p className="text-xs text-gray-400 truncate">{exam.teacherName}</p>
+                                                        )}
+                                                        {avgRating !== null && (
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <span className="text-yellow-400 text-sm leading-none">★</span>
+                                                                <span className="text-xs font-bold text-gray-700">{avgRating.toFixed(1)}</span>
+                                                                {ratingCount > 0 && <span className="text-[11px] text-gray-400">({ratingCount})</span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Tags */}
+                                                    {tags.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mb-3">
+                                                            {tags.slice(0, 3).map((tag, i) => (
+                                                                <span key={i} className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+                                                                    #{tag}
+                                                                </span>
+                                                            ))}
+                                                            {tags.length > 3 && (
+                                                                <span className="text-[11px] text-gray-400 px-1 font-medium">+{tags.length - 3}</span>
+                                                            )}
+                                                        </div>
                                                     )}
+
+                                                    {/* Meta stats */}
                                                     <div className="flex items-center gap-3 text-xs text-gray-400 mt-auto mb-4">
-                                                        <span className="flex items-center gap-1">
+                                                        <span className="flex items-center gap-1 font-medium">
                                                             <HiOutlineQuestionMarkCircle className="w-3.5 h-3.5" />
-                                                            {(exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0)} sual
+                                                            {questionCount} sual
                                                         </span>
-                                                        {exam.durationMinutes && (
-                                                            <span className="flex items-center gap-1">
+                                                        {exam.durationMinutes > 0 && (
+                                                            <span className="flex items-center gap-1 font-medium">
                                                                 <HiOutlineClock className="w-3.5 h-3.5" />
                                                                 {exam.durationMinutes} dəq
                                                             </span>
                                                         )}
-                                                        {exam.visibility === 'PRIVATE' && (
-                                                            <span className="flex items-center gap-1">
-                                                                <HiOutlineLockClosed className="w-3.5 h-3.5" /> Gizli
-                                                            </span>
-                                                        )}
                                                     </div>
-                                                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-50">
+
+                                                    {/* Footer: price + CTA */}
+                                                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
                                                         {isPurchased ? (
                                                             <span className="text-xs font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">Alınıb</span>
                                                         ) : isPaid ? (
                                                             <span className="text-sm font-black text-amber-600">{Number(exam.price).toFixed(2)} ₼</span>
                                                         ) : (
-                                                            <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">Pulsuz</span>
+                                                            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">Pulsuz</span>
                                                         )}
                                                         <button
                                                             onClick={e => { e.stopPropagation(); isPurchased ? handleJoinExam(exam) : isPaid ? handlePurchaseExam(exam) : handleJoinExam(exam); }}
                                                             disabled={payingExam === exam.id}
-                                                            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl transition-all disabled:opacity-60 ${isPurchased ? 'bg-green-600 hover:bg-green-700 text-white' : isPaid ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                                                            className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all disabled:opacity-60 shadow-sm ${
+                                                                isPurchased
+                                                                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-100'
+                                                                    : isPaid
+                                                                        ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-100'
+                                                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100'
+                                                            }`}
                                                         >
                                                             {payingExam === exam.id
                                                                 ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                                : isPurchased ? 'İmtahana Başla' : isPaid ? '💳 Satın al' : 'Başla'}
+                                                                : isPurchased ? 'Başla' : isPaid ? 'Satın al' : 'Başla'}
                                                             {payingExam !== exam.id && <HiOutlineArrowRight className="w-3.5 h-3.5" />}
                                                         </button>
                                                     </div>

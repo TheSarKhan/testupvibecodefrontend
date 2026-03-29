@@ -401,11 +401,8 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* ── Inline Banners ── */}
-            <BannerStrip banners={banners} position="INLINE" />
-
-            {/* ── For teachers / students ── */}
-            <section className="py-20 bg-gray-50/60">
+            {/* ── For teachers / students (guests only) ── */}
+            {!isAuthenticated && <section className="py-20 bg-gray-50/60">
                 <div className="container-main">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Teacher */}
@@ -468,7 +465,10 @@ const Home = () => {
                         </div>
                     </div>
                 </div>
-            </section>
+            </section>}
+
+            {/* ── Inline Banners (authenticated users see these instead of the guest section) ── */}
+            <BannerStrip banners={banners} position="INLINE" />
 
             {/* ── Trust ── */}
             <section className="py-16 bg-white border-y border-gray-100">

@@ -184,8 +184,10 @@ const Navbar = () => {
 
     const fmtTime = (iso) => {
         if (!iso) return '';
-        const normalized = /[Zz]|[+-]\d{2}:\d{2}$/.test(iso) ? iso : iso + 'Z';
-        const d = new Date(normalized);
+        // Backend sends LocalDateTime without timezone (e.g. "2026-03-25T18:30:00").
+        // Parse as-is (browser treats it as local time). If it has timezone info, use it directly.
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
         const now = new Date();
         const diff = Math.floor((now - d) / 60000);
         if (diff < 1) return 'İndicə';

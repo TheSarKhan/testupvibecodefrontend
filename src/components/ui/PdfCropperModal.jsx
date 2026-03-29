@@ -92,7 +92,8 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                     <div className="flex-1 min-w-0 flex flex-col gap-3">
 
                         {/* PDF Viewer — flex-1 takes all remaining height */}
-                        <div className="flex-1 min-h-0 bg-gray-100 rounded-xl border border-gray-200 overflow-auto flex justify-center p-3">
+                        <div className="flex-1 min-h-0 bg-gray-100 rounded-xl border border-gray-200 overflow-auto p-3">
+                          <div className="w-fit mx-auto">
                             <ReactCrop
                                 crop={crop}
                                 onChange={c => setCrop(c)}
@@ -115,6 +116,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                     </Document>
                                 </div>
                             </ReactCrop>
+                          </div>
                         </div>
 
                         {/* Controls Bar — always visible, never overflows */}

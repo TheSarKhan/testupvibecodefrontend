@@ -66,7 +66,7 @@ const ExamEditor = () => {
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAdmin, hasPermission } = useAuth();
+    const { isAdmin, hasPermission, subscription } = useAuth();
     const isEditMode = !!id;
     const backPath = isAdmin ? '/admin/oz-imtahanlar' : '/imtahanlar';
     const initialLocationState = location.state || { subject: 'Seçilməyib', type: 'free' };
@@ -128,6 +128,7 @@ const ExamEditor = () => {
     const [aiForm, setAiForm] = useState({ topic: '', difficulty: 'MEDIUM', questionType: 'MCQ' });
     const [aiTopics, setAiTopics] = useState([]);
     const [aiTopicsLoading, setAiTopicsLoading] = useState(false);
+    const [aiUsage, setAiUsage] = useState(null); // { limit, used, remaining }
 
     const bankQuestionToEditorFormat = (bq) => ({
         id: Date.now().toString(),
@@ -212,10 +213,16 @@ const ExamEditor = () => {
                 sampleAnswer: q.correctAnswer || '',
             };
             setQuestions(prev => [...prev, newQ]);
+            // Update usage after successful generation
+            try {
+                const { data: usageData } = await api.get('/ai/usage');
+                setAiUsage(usageData);
+            } catch {}
             setAiModal(null);
             toast.success('AI sual əlavə edildi');
-        } catch {
-            toast.error('AI sual yaradılmadı. Yenidən cəhd edin.');
+        } catch (err) {
+            const errMsg = err.response?.data?.error || 'AI sual yaradılmadı. Yenidən cəhd edin.';
+            toast.error(errMsg);
         } finally {
             setAiLoading(false);
         }
@@ -594,19 +601,13 @@ const ExamEditor = () => {
         }
     };
 
-    const handlePublish = async () => {
-        // Validate required settings first — open settings modal if something is wrong
-        if (!examConfig.title) {
-            toast.error('İmtahanın adını qeyd edin');
-            setIsSettingsOpen(true);
-            return;
-        }
+    // Step 1: validate questions, then open settings modal
+    const handlePublish = () => {
         if (questions.length === 0 && passages.length === 0) {
             toast.error('İmtahana ən azı bir sual əlavə edilməlidir');
             return;
         }
 
-        // Validate that every auto-graded question has a correct answer defined
         const allQs = [
             ...questions,
             ...passages.flatMap(p => p.questions || [])
@@ -640,12 +641,23 @@ const ExamEditor = () => {
             }
         }
 
-        // If plan doesn't allow duration, silently strip it before publishing
-        let configToSend = examConfig;
-        if (!hasPermission('selectExamDuration') && examConfig.duration) {
-            configToSend = { ...examConfig, duration: 0 };
-            setExamConfig(configToSend);
+        // Open settings modal so user can review/edit params before publishing
+        setIsSettingsOpen(true);
+    };
+
+    // Step 2: called from settings modal "Yayımla" button with final config
+    const handlePublishConfirm = async (configFromModal) => {
+        if (!configFromModal.title) {
+            toast.error('İmtahanın adını qeyd edin');
+            setIsSettingsOpen(true);
+            return;
         }
+
+        let configToSend = configFromModal;
+        if (!hasPermission('selectExamDuration') && configFromModal.duration) {
+            configToSend = { ...configFromModal, duration: 0 };
+        }
+        setExamConfig(configToSend);
 
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         const currentId = createdIdRef.current;
@@ -966,18 +978,31 @@ const ExamEditor = () => {
                                     </button>
                                     <button
                                         onClick={async () => {
+                                            const aiAllowed = hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0);
+                                            if (!aiAllowed && !isAdmin) return;
                                             setAiForm({ topic: '', difficulty: 'MEDIUM', questionType: 'MCQ' });
                                             setAiTopics([]);
+                                            setAiUsage(null);
                                             setAiModal({ section: sectionSubject });
                                             setAiTopicsLoading(true);
                                             try {
-                                                const { data } = await api.get('/subjects/topics', { params: { name: sectionSubject } });
-                                                setAiTopics(data);
+                                                const [topicsRes, usageRes] = await Promise.all([
+                                                    api.get('/subjects/topics', { params: { name: sectionSubject } }),
+                                                    api.get('/ai/usage'),
+                                                ]);
+                                                setAiTopics(topicsRes.data);
+                                                setAiUsage(usageRes.data);
                                             } catch { setAiTopics([]); } finally { setAiTopicsLoading(false); }
                                         }}
-                                        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-violet-200 hover:border-violet-400 hover:bg-violet-50 bg-white text-violet-700 font-semibold rounded-xl transition-colors text-sm"
+                                        className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-xl transition-colors text-sm ${
+                                            (hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0) || isAdmin)
+                                                ? 'border-violet-200 hover:border-violet-400 hover:bg-violet-50 bg-white text-violet-700'
+                                                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                        }`}
                                     >
-                                        <HiOutlineSparkles className="w-4 h-4" />
+                                        {!(hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0) || isAdmin)
+                                            ? <HiLockClosed className="w-4 h-4" />
+                                            : <HiOutlineSparkles className="w-4 h-4" />}
                                         AI ilə sual yarat
                                     </button>
                                 </div>
@@ -1037,10 +1062,23 @@ const ExamEditor = () => {
                             <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
                                 <HiOutlineSparkles className="w-5 h-5 text-violet-600" />
                             </div>
-                            <div>
+                            <div className="flex-1">
                                 <h3 className="text-lg font-bold text-gray-900 leading-tight">AI ilə sual yarat</h3>
                                 <p className="text-xs text-gray-400">Fənn: <span className="font-semibold text-gray-600">{aiModal.section}</span></p>
                             </div>
+                            {aiUsage && (
+                                <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                    aiUsage.remaining === -1
+                                        ? 'bg-green-100 text-green-700'
+                                        : aiUsage.remaining > 5
+                                            ? 'bg-violet-100 text-violet-700'
+                                            : aiUsage.remaining > 0
+                                                ? 'bg-amber-100 text-amber-700'
+                                                : 'bg-red-100 text-red-700'
+                                }`}>
+                                    {aiUsage.remaining === -1 ? '∞' : `${aiUsage.remaining} qaldı`}
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-4">
                             <div>
@@ -1110,10 +1148,12 @@ const ExamEditor = () => {
                             >Ləğv et</button>
                             <button
                                 onClick={handleAiGenerate}
-                                disabled={aiLoading || !aiForm.topic.trim()}
+                                disabled={aiLoading || !aiForm.topic.trim() || (aiUsage && aiUsage.remaining === 0)}
                                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition-colors disabled:opacity-60"
                             >
-                                {aiLoading ? (
+                                {aiUsage && aiUsage.remaining === 0 ? (
+                                    <>Aylıq limit bitdi</>
+                                ) : aiLoading ? (
                                     <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Yaradılır...</>
                                 ) : (
                                     <><HiOutlineSparkles className="w-4 h-4" /> Yarat</>
@@ -1156,6 +1196,7 @@ const ExamEditor = () => {
             <ExamSettingsModal
                 isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)}
                 examConfig={examConfig} onSave={setExamConfig}
+                onPublish={handlePublishConfirm}
             />
 
             {/* Bank Picker Modal */}

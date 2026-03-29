@@ -1,42 +1,69 @@
-import { useState, useEffect } from 'react';
-import { HiOutlineDocumentText, HiOutlineClock, HiOutlineEye, HiOutlineBookOpen, HiLockClosed } from 'react-icons/hi';
+import { useState, useEffect, useRef } from 'react';
+import { HiOutlineDocumentText, HiOutlineClock, HiOutlineEye, HiOutlineBookOpen, HiLockClosed, HiOutlineX } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 
-const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
+const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) => {
     const { hasPermission } = useAuth();
     const [formData, setFormData] = useState(examConfig);
     const [tagInput, setTagInput] = useState('');
     const [subjects, setSubjects] = useState([]);
+    const [allTags, setAllTags] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const tagInputRef = useRef(null);
+    const suggestionsRef = useRef(null);
 
-    // Fetch subjects once on mount
+    // Fetch subjects and tags once on mount
     useEffect(() => {
         api.get('/subjects').then(res => setSubjects(res.data)).catch(() => {});
+        api.get('/tags').then(res => setAllTags(res.data)).catch(() => {});
     }, []);
 
-    // Sync when modal opens
+    // Sync formData only when examConfig actually changes (after external save), not on every open
+    useEffect(() => {
+        setFormData(examConfig);
+    }, [examConfig]);
+
+    // Reset only input helpers when modal opens/closes
     useEffect(() => {
         if (isOpen) {
-            setFormData(examConfig);
             setTagInput('');
+            setShowSuggestions(false);
         }
-    }, [isOpen, examConfig]);
+    }, [isOpen]);
+
+    // Close suggestions on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (!tagInputRef.current?.contains(e.target) && !suggestionsRef.current?.contains(e.target)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const filteredSuggestions = tagInput.trim()
+        ? allTags.filter(t =>
+            t.toLowerCase().includes(tagInput.trim().toLowerCase()) &&
+            !formData.tags.includes(t)
+          )
+        : allTags.filter(t => !formData.tags.includes(t));
+
+    const addTag = (tag) => {
+        const clean = tag.trim().replace(/^#/, '');
+        if (clean && !formData.tags.includes(clean) && formData.tags.length < 5) {
+            setFormData(prev => ({ ...prev, tags: [...prev.tags, clean] }));
+        }
+        setTagInput('');
+        setShowSuggestions(false);
+        tagInputRef.current?.focus();
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleAddTag = (e) => {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            const newTag = tagInput.trim().replace(/^#/, '');
-            if (newTag && !formData.tags.includes(newTag) && formData.tags.length < 5) {
-                setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag] }));
-                setTagInput('');
-            }
-        }
     };
 
     const removeTag = (tagToRemove) => {
@@ -47,6 +74,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
         e.preventDefault();
         onSave(formData);
         onClose();
+        if (onPublish) onPublish(formData);
     };
 
     return (
@@ -172,37 +200,75 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave }) => {
 
                 {/* Tags */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Etiketlər (Taglər)
-                    </label>
-                    <p className="text-xs text-gray-500 mb-2">İmtahanı asan tapmaq üçün taglər əlavə edin (Vergül və ya Enter ilə fərqləndirin, maks 5 ədəd).</p>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        {formData.tags.map((tag) => (
-                            <span key={tag} className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-800">
-                                #{tag}
-                                <button type="button" onClick={() => removeTag(tag)} className="ml-1.5 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 focus:outline-none">
-                                    &times;
-                                </button>
-                            </span>
-                        ))}
+                    <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-medium text-gray-700">Etiketlər</label>
+                        <span className="text-xs text-gray-400">{formData.tags.length}/5</span>
                     </div>
-                    <input
-                        type="text"
-                        value={tagInput}
-                        onChange={(e) => setTagInput(e.target.value)}
-                        onKeyDown={handleAddTag}
-                        disabled={formData.tags.length >= 5}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-50 disabled:text-gray-400"
-                        placeholder={formData.tags.length >= 5 ? "Maksimum 5 tag əlavə edildi" : "Tag yazın..."}
-                    />
+
+                    {/* Selected tags */}
+                    {formData.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                            {formData.tags.map(tag => (
+                                <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                    #{tag}
+                                    <button type="button" onClick={() => removeTag(tag)} className="text-indigo-400 hover:text-indigo-600 focus:outline-none">
+                                        <HiOutlineX className="w-3 h-3" />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Autocomplete input */}
+                    {formData.tags.length < 5 && (
+                        <div className="relative">
+                            <input
+                                ref={tagInputRef}
+                                type="text"
+                                value={tagInput}
+                                onChange={e => { setTagInput(e.target.value); setShowSuggestions(true); }}
+                                onFocus={() => setShowSuggestions(true)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Escape') { setShowSuggestions(false); }
+                                }}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 sm:text-sm outline-none"
+                                placeholder="Teq axtar və seç..."
+                                autoComplete="off"
+                            />
+
+                            {showSuggestions && filteredSuggestions.length > 0 && (
+                                <div
+                                    ref={suggestionsRef}
+                                    className="absolute z-20 w-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg max-h-44 overflow-y-auto"
+                                >
+                                    {filteredSuggestions.map(tag => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onMouseDown={e => { e.preventDefault(); addTag(tag); }}
+                                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                                        >
+                                            #{tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {showSuggestions && tagInput.trim() && filteredSuggestions.length === 0 && (
+                                <div className="absolute z-20 w-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg px-3 py-2 text-xs text-gray-400">
+                                    Uyğun teq tapılmadı
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
                     <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:outline-none">
                         Ləğv et
                     </button>
-                    <button type="submit" className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-xl hover:bg-indigo-700 focus:outline-none shadow-sm shadow-indigo-200">
-                        Yadda Saxla
+                    <button type="submit" className={`px-6 py-2 text-sm font-medium text-white border border-transparent rounded-xl focus:outline-none shadow-sm ${onPublish ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}>
+                        {onPublish ? 'Yayımla' : 'Yadda Saxla'}
                     </button>
                 </div>
             </form>

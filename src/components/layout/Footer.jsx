@@ -28,12 +28,14 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Contact */}
+                    {/* Legal */}
                     <div>
-                        <h3 className="text-white text-sm font-semibold mb-3">Əlaqə</h3>
+                        <h3 className="text-white text-sm font-semibold mb-3">Hüquqi</h3>
                         <ul className="space-y-2 text-sm">
-                            <li>info@testup.az</li>
-                            <li>Bakı, Azərbaycan</li>
+                            <li><Link to="/istifade-sertleri" onClick={scrollTop} className="hover:text-white transition-colors">İstifadə Şərtləri</Link></li>
+                            <li><Link to="/gizlilik-siyaseti" onClick={scrollTop} className="hover:text-white transition-colors">Gizlilik Siyasəti</Link></li>
+                            <li><Link to="/elaqe" onClick={scrollTop} className="hover:text-white transition-colors">Əlaqə</Link></li>
+                            <li className="text-xs pt-1">info@testup.az</li>
                         </ul>
                     </div>
                 </div>

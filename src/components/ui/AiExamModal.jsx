@@ -33,17 +33,20 @@ const AiExamModal = ({ onClose, onGenerate }) => {
     const [loading, setLoading] = useState(false);
     const [loadingMsg, setLoadingMsg] = useState('');
     const [loadingSubjects, setLoadingSubjects] = useState(true);
+    const [aiUsage, setAiUsage] = useState(null); // { limit, used, remaining }
 
     useEffect(() => {
         setLoadingSubjects(true);
-        api.get('/subjects')
-            .then(res => {
-                const names = res.data || [];
-                setSubjects(names);
-                if (names.length > 0) setSelectedSubject(names[0]);
-            })
-            .catch(() => toast.error('Fənlər yüklənərkən xəta baş verdi'))
-            .finally(() => setLoadingSubjects(false));
+        Promise.all([
+            api.get('/subjects'),
+            api.get('/ai/usage'),
+        ]).then(([subjectsRes, usageRes]) => {
+            const names = subjectsRes.data || [];
+            setSubjects(names);
+            if (names.length > 0) setSelectedSubject(names[0]);
+            setAiUsage(usageRes.data);
+        }).catch(() => toast.error('Fənlər yüklənərkən xəta baş verdi'))
+          .finally(() => setLoadingSubjects(false));
     }, []);
 
     useEffect(() => {
@@ -107,12 +110,25 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
                                 <HiOutlineSparkles className="w-5 h-5" />
                             </div>
-                            <div>
+                            <div className="flex-1">
                                 <h2 className="text-lg font-extrabold leading-tight">AI ilə İmtahan Yarat</h2>
                                 <p className="text-xs text-indigo-200 mt-0.5">
                                     Groq LLaMA 3.3{selectedSubject ? ` · ${selectedSubject}` : ''}
                                 </p>
                             </div>
+                            {aiUsage && (
+                                <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                    aiUsage.remaining === -1
+                                        ? 'bg-white/20 text-white'
+                                        : aiUsage.remaining > 5
+                                            ? 'bg-white/20 text-white'
+                                            : aiUsage.remaining > 0
+                                                ? 'bg-amber-400/30 text-amber-100'
+                                                : 'bg-red-400/30 text-red-100'
+                                }`}>
+                                    {aiUsage.remaining === -1 ? '∞ limitsiz' : `${aiUsage.remaining}/${aiUsage.limit} qaldı`}
+                                </div>
+                            )}
                         </div>
                         <button
                             onClick={onClose}
@@ -243,15 +259,18 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                     </button>
                     <button
                         onClick={handleGenerate}
-                        disabled={loading || totalCount === 0 || !selectedSubject}
+                        disabled={loading || totalCount === 0 || !selectedSubject || (aiUsage && aiUsage.remaining === 0) || (aiUsage && aiUsage.remaining !== -1 && totalCount > aiUsage.remaining)}
                         className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md shadow-indigo-200/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                        {loading ? (
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        {aiUsage && aiUsage.remaining === 0 ? (
+                            <>Aylıq limit bitdi</>
+                        ) : aiUsage && aiUsage.remaining !== -1 && totalCount > aiUsage.remaining ? (
+                            <>{aiUsage.remaining} sual qaldı, azaldın</>
+                        ) : loading ? (
+                            <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Yaradılır...</>
                         ) : (
-                            <HiOutlineSparkles className="w-4 h-4" />
+                            <><HiOutlineSparkles className="w-4 h-4" /> Yarat</>
                         )}
-                        {loading ? 'Yaradılır...' : 'Yarat'}
                     </button>
                 </div>
             </div>

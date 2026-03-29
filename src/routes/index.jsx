@@ -15,6 +15,8 @@ import ExamEditor from '../pages/Teacher/ExamEditor';
 import Profile from '../pages/Profile/Profile';
 import Pricing from '../pages/Pricing/Pricing';
 import NotFound from '../pages/NotFound';
+import TermsOfService from '../pages/Legal/TermsOfService';
+import PrivacyPolicy from '../pages/Legal/PrivacyPolicy';
 
 import ExamEntry from '../pages/Student/ExamEntry';
 import ExamSession from '../pages/Student/ExamSession';
@@ -41,6 +43,7 @@ import AdminCollaborativeExams from '../pages/Admin/AdminCollaborativeExams';
 import AdminLogs from '../pages/Admin/AdminLogs';
 import AdminContactMessages from '../pages/Admin/AdminContactMessages';
 import AdminRevenue from '../pages/Admin/AdminRevenue';
+import AdminTags from '../pages/Admin/AdminTags';
 import CollaborativeAssignments from '../pages/Teacher/CollaborativeAssignments';
 import PaymentSuccess from '../pages/Payment/PaymentSuccess';
 import PaymentDecline from '../pages/Payment/PaymentDecline';
@@ -62,6 +65,8 @@ const router = createBrowserRouter([
             { index: true, element: <Home /> },
             { path: 'haqqimizda', element: <About /> },
             { path: 'elaqe', element: <Contact /> },
+            { path: 'istifade-sertleri', element: <TermsOfService /> },
+            { path: 'gizlilik-siyaseti', element: <PrivacyPolicy /> },
             { path: 'imtahanlar', element: <ExamList /> },
             { path: 'birge-imtahanlari', element: <CollaborativeAssignments /> },
             { path: 'imtahanlar/:examId/neticeler', element: <ExamResults /> },
@@ -140,6 +145,7 @@ const router = createBrowserRouter([
             { path: 'bildirişlər', element: <AdminNotifications /> },
             { path: 'loglar', element: <AdminLogs /> },
             { path: 'qazanc', element: <AdminRevenue /> },
+            { path: 'teqler', element: <AdminTags /> },
         ],
     },
 ]);

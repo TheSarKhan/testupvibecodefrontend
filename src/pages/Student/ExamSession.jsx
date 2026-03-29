@@ -298,21 +298,13 @@ const ExamSession = () => {
 
             {/* Navigation Footer - fixed bottom */}
             <div className="fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-                <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center gap-2">
-                    <button
-                        onClick={() => setCurrentSectionIndex(prev => Math.max(0, prev - 1))}
-                        disabled={currentSectionIndex === 0}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors flex-shrink-0"
-                    >
-                        <HiOutlineChevronLeft className="w-5 h-5" />
-                        Əvvəlki
-                    </button>
-
-                    <div className="hidden sm:flex items-center gap-x-1 gap-y-1.5 flex-wrap justify-center overflow-y-auto max-h-20">
+                <div className="max-w-4xl mx-auto px-2 sm:px-4">
+                    {/* Question navigation — scrollable on mobile */}
+                    <div className="overflow-x-auto py-2 flex items-center gap-x-1 scrollbar-none">
                         {navGroups.map((group, gi) => (
-                            <div key={gi} className="flex items-center gap-1 flex-wrap">
+                            <div key={gi} className="flex items-center gap-1 flex-shrink-0">
                                 {group.label && (
-                                    <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 whitespace-nowrap">
+                                    <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 whitespace-nowrap flex-shrink-0">
                                         {group.label}
                                     </span>
                                 )}
@@ -325,7 +317,7 @@ const ExamSession = () => {
                                             key={idx}
                                             onClick={() => setCurrentSectionIndex(idx)}
                                             title={isPassage ? (section.data.title || (section.data.passageType === 'TEXT' ? 'Mətn' : 'Dinləmə')) : `Sual ${idx + 1}`}
-                                            className={`flex items-center justify-center font-bold text-sm transition-colors rounded-lg ${
+                                            className={`flex-shrink-0 flex items-center justify-center font-bold text-sm transition-colors rounded-lg ${
                                                 isPassage ? 'w-12 h-9 px-1' : 'w-9 h-9'
                                             } ${
                                                 currentSectionIndex === idx
@@ -346,20 +338,34 @@ const ExamSession = () => {
                                     );
                                 })}
                                 {gi < navGroups.length - 1 && (
-                                    <div className="w-px h-7 bg-gray-300 mx-1 self-center" />
+                                    <div className="w-px h-7 bg-gray-300 mx-1 self-center flex-shrink-0" />
                                 )}
                             </div>
                         ))}
                     </div>
 
-                    <button
-                        onClick={() => setCurrentSectionIndex(prev => Math.min(sections.length - 1, prev + 1))}
-                        disabled={currentSectionIndex === sections.length - 1}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors flex-shrink-0"
-                    >
-                        Növbəti
-                        <HiOutlineChevronRight className="w-5 h-5" />
-                    </button>
+                    {/* Prev / Next */}
+                    <div className="flex justify-between items-center border-t border-gray-100 py-2">
+                        <button
+                            onClick={() => setCurrentSectionIndex(prev => Math.max(0, prev - 1))}
+                            disabled={currentSectionIndex === 0}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors text-sm"
+                        >
+                            <HiOutlineChevronLeft className="w-5 h-5" />
+                            Əvvəlki
+                        </button>
+                        <span className="text-xs text-gray-400 font-medium">
+                            {currentSectionIndex + 1} / {sections.length}
+                        </span>
+                        <button
+                            onClick={() => setCurrentSectionIndex(prev => Math.min(sections.length - 1, prev + 1))}
+                            disabled={currentSectionIndex === sections.length - 1}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors text-sm"
+                        >
+                            Növbəti
+                            <HiOutlineChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

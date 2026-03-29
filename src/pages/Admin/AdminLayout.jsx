@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineMenu, HiOutlineX, HiOutlineMail, HiOutlineTrendingUp } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineMenu, HiOutlineX, HiOutlineMail, HiOutlineTrendingUp, HiOutlineTag } from 'react-icons/hi';
 import api from '../../api/axios';
 
 const navGroups = [
@@ -21,6 +21,7 @@ const navGroups = [
             { to: '/admin/birge-imtahanlar', label: 'Birgə İmtahanlar', icon: HiOutlineUserGroup },
             { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
             { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
+            { to: '/admin/teqler', label: 'Teqlər', icon: HiOutlineTag },
             { to: '/admin/sablonlar', label: 'Şablonlar', icon: HiOutlineTemplate },
             { to: '/admin/sual-bazasi', label: 'Sual Bazası', icon: HiOutlineBookOpen },
         ],

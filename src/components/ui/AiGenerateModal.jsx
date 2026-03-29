@@ -88,11 +88,14 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
     const [saving, setSaving] = useState(false);
     const [generated, setGenerated] = useState(null); // null | []
     const [error, setError] = useState('');
+    const [aiUsage, setAiUsage] = useState(null); // { limit, used, remaining }
 
     useEffect(() => {
         if (!isOpen) {
             setGenerated(null);
             setError('');
+        } else {
+            api.get('/ai/usage').then(res => setAiUsage(res.data)).catch(() => {});
         }
     }, [isOpen]);
 
@@ -153,10 +156,23 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md">
                     <HiOutlineSparkles className="w-5 h-5 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                     <h2 className="text-lg font-bold text-gray-900">AI ilə Sual Yarat</h2>
                     <p className="text-xs text-gray-400">Gemini 2.0 Flash · {subjectName}</p>
                 </div>
+                {aiUsage && (
+                    <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                        aiUsage.remaining === -1
+                            ? 'bg-green-100 text-green-700'
+                            : aiUsage.remaining > 5
+                                ? 'bg-violet-100 text-violet-700'
+                                : aiUsage.remaining > 0
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-red-100 text-red-700'
+                    }`}>
+                        {aiUsage.remaining === -1 ? '∞ limitsiz' : `${aiUsage.remaining}/${aiUsage.limit} qaldı`}
+                    </div>
+                )}
             </div>
 
             {/* Config row */}
@@ -282,10 +298,14 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                 <button
                     onClick={handleGenerate}
-                    disabled={generating}
+                    disabled={generating || (aiUsage && aiUsage.remaining === 0) || (aiUsage && aiUsage.remaining !== -1 && count > aiUsage.remaining)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                    {generating ? (
+                    {aiUsage && aiUsage.remaining === 0 ? (
+                        <>Aylıq limit bitdi</>
+                    ) : aiUsage && aiUsage.remaining !== -1 && count > aiUsage.remaining ? (
+                        <>{aiUsage.remaining} sual qaldı</>
+                    ) : generating ? (
                         <>
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             Generasiya olunur...

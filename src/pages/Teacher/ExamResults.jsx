@@ -4,7 +4,7 @@ import { HiOutlineArrowLeft, HiOutlineClock, HiOutlineStar, HiOutlineUsers, HiOu
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import DataTable from 'react-data-table-component';
 
 const StarDisplay = ({ value }) => {
@@ -171,32 +171,42 @@ const ExamResults = () => {
         pagination: { style: { borderTop: '1px solid #f3f4f6', fontSize: '13px', color: '#6b7280' } },
     };
 
-    const exportToExcel = () => {
+    const exportToExcel = async () => {
         const examTitle = statistics?.examTitle || 'Imtahan';
-        const isPaid = isAdmin && statistics?.examPrice != null && statistics.examPrice > 0;
+        const wb = new ExcelJS.Workbook();
 
-        // Sheet 1: Summary statistics
-        const statsData = [
+        // Sheet 1: Statistics
+        const statsSheet = wb.addWorksheet('Statistika');
+        statsSheet.columns = [{ width: 24 }, { width: 32 }];
+        const statsRows = [
             ['İmtahan Adı', examTitle],
-            ['İmtahan ID', examId],
+            ['İmtahan ID', String(examId)],
             ['Ümumi İştirakçı', statistics?.totalParticipants ?? ''],
-            ['Orta Bal', statistics?.averageScore != null ? statistics.averageScore.toFixed(2) : ''],
+            ['Orta Bal', statistics?.averageScore != null ? Number(statistics.averageScore.toFixed(2)) : ''],
             ['Maksimum Bal', statistics?.maximumScore ?? ''],
             ['Orta Vaxt (dəq)', statistics?.averageDurationMinutes ?? ''],
-            ['Orta Reytinq', statistics?.averageRating > 0 ? statistics.averageRating.toFixed(2) : '–'],
+            ['Orta Reytinq', statistics?.averageRating > 0 ? Number(statistics.averageRating.toFixed(2)) : '–'],
         ];
-        const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
-        statsSheet['!cols'] = [{ wch: 22 }, { wch: 30 }];
+        statsRows.forEach(([label, value]) => {
+            const row = statsSheet.addRow([label, value]);
+            row.getCell(1).font = { bold: true };
+        });
 
-        // Sheet 2: All participants
+        // Sheet 2: Participants
+        const partSheet = wb.addWorksheet('İştirakçılar');
         const headers = ['#', 'İştirakçı', 'Başlayıb', 'Xərclənən Vaxt', 'Bal', 'Maks. Bal', 'Reytinq', 'Status'];
         if (isPaid) headers.splice(7, 0, 'Ödəniş');
+        partSheet.addRow(headers).eachCell(cell => {
+            cell.font = { bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EAED' } };
+        });
+        const colWidths = [4, 26, 20, 14, 10, 10, 10, 18];
+        if (isPaid) colWidths.splice(7, 0, 20);
+        partSheet.columns = colWidths.map(w => ({ width: w }));
 
-        const rows = submissions.map((r, idx) => {
+        submissions.forEach((r, idx) => {
             const score = r.submittedAt
-                ? r.templateScorePercent != null
-                    ? `${r.templateScorePercent?.toFixed(1)}%`
-                    : r.totalScore
+                ? r.templateScorePercent != null ? `${r.templateScorePercent?.toFixed(1)}%` : r.totalScore
                 : '';
             const maxScore = r.templateScorePercent != null ? '100%' : (r.maxScore ?? '');
             const status = !r.submittedAt ? 'Davam edir' : r.isFullyGraded ? 'Tam Yoxlanılıb' : 'Yoxlanılır';
@@ -217,20 +227,18 @@ const ExamResults = () => {
                     : r.hasPaid === false ? 'Ödənilməyib' : '–';
                 row.splice(7, 0, paymentText);
             }
-            return row;
+            partSheet.addRow(row);
         });
 
-        const participantsSheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-        const colWidths = [{ wch: 4 }, { wch: 24 }, { wch: 20 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 16 }];
-        if (isPaid) colWidths.splice(7, 0, { wch: 20 });
-        participantsSheet['!cols'] = colWidths;
-
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, statsSheet, 'Statistika');
-        XLSX.utils.book_append_sheet(wb, participantsSheet, 'İştirakçılar');
-
         const fileName = `${examTitle.replace(/[^\w\s]/g, '').trim()}_neticeler.xlsx`;
-        XLSX.writeFile(wb, fileName);
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     if (loading) {

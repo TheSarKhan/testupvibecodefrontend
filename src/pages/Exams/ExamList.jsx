@@ -961,6 +961,8 @@ const ExamList = () => {
                                                     onClone={handleClone}
                                                     onShare={exam.status !== 'DRAFT' ? handleShare : undefined}
                                                     onToggleStatus={exam.status !== 'DRAFT' ? handleToggleStatus : undefined}
+                                                    onDownloadPdf={exam.status !== 'DRAFT' ? handleDownloadPdf : undefined}
+                                                    canDownloadPdf={hasPermission('downloadAsPdf')}
                                                     canEdit={hasPermission('examEditing')}
                                                     onTagClick={handleTagClick}
                                                 />

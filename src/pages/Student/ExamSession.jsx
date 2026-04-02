@@ -72,7 +72,7 @@ const ExamSession = () => {
                 }
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || "Sessiya tapılmadı");
+            if (!error._handled) toast.error(error.response?.data?.message || "Sessiya tapılmadı");
             navigate('/imtahanlar');
         } finally {
             setLoading(false);
@@ -168,7 +168,7 @@ const ExamSession = () => {
             toast.success("İmtahan uğurla təhvil verildi!");
             navigate(`/test/result/${sessionId}`, { state: { submission: data } });
         } catch (error) {
-            toast.error(error.response?.data?.message || "Təhvil verərkən xəta baş verdi");
+            if (!error._handled) toast.error(error.response?.data?.message || 'İmtahan təhvil verilmədi');
             setIsSubmitting(false);
         }
     };

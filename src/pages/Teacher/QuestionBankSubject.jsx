@@ -357,7 +357,7 @@ const QuestionBankSubject = () => {
                 await api.delete(`/bank/questions/${q._bankId}`);
                 toast.success('Sual silindi');
             } catch {
-                toast.error('Xəta baş verdi');
+                toast.error('Əməliyyat uğursuz oldu');
                 return;
             }
         }

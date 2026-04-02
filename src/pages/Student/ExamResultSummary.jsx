@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 const MOTIVATION = {
     excellent: {
         emojis: ['🏆', '🌟', '🎯'],
-        headline: ['Möhtəşəm nəticə!', 'Ustadsan!', 'Fantastik!'],
+        headline: ['Möhtəşəm nəticə!', 'Üstadsan!', 'Fantastik!'],
         messages: [
             'Sən bu imtahana hazırlaşmaq üçün çox əmək sərf etmisən — bu nəticə ona layiqdir. Davam et!',
             'Bu cür nəticə hər kəsin əlinə keçmir. Sənin əzmkarlığın bunu mümkün etdi.',
@@ -18,7 +18,7 @@ const MOTIVATION = {
     },
     good: {
         emojis: ['👏', '💪', '⭐'],
-        headline: ['Yaxşı iş çıxardın!', 'Əla gedişat!', 'Gözəl nəticə!'],
+        headline: ['Yaxşı iş çıxartdın!', 'Əla gedişat!', 'Gözəl nəticə!'],
         messages: [
             'Biliklərin möhkəmdir. Bir az daha çalışsaq, növbəti dəfə zirvəyə çatacaqsan!',
             'Bu nəticə sənin potensialının yalnız bir hissəsidir. Daha yüksəyə!',
@@ -186,7 +186,7 @@ const ExamResultSummary = () => {
             setRated(true);
             toast.success('Reytinqiniz qeydə alındı!');
         } catch {
-            toast.error('Reytinq saxlanılarkən xəta baş verdi');
+            toast.error('Reytinq qeydə alınmadı');
         } finally {
             setIsRating(false);
         }

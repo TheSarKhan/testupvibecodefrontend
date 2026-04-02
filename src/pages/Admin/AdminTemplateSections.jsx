@@ -300,7 +300,7 @@ const AdminTemplateSections = () => {
                 setSections(prev => [...prev, data]);
                 setEditingIdx(null);
                 toast.success('Fənn əlavə edildi');
-            } catch { toast.error('Xəta baş verdi'); }
+            } catch { toast.error('Əməliyyat uğursuz oldu'); }
             finally { setSavingIdx(null); }
         } else {
             const sectionId = sections[editingIdx].id;
@@ -310,7 +310,7 @@ const AdminTemplateSections = () => {
                 setSections(prev => prev.map((s, i) => i === editingIdx ? data : s));
                 setEditingIdx(null);
                 toast.success('Fənn yeniləndi');
-            } catch { toast.error('Xəta baş verdi'); }
+            } catch { toast.error('Əməliyyat uğursuz oldu'); }
             finally { setSavingIdx(null); }
         }
     };
@@ -322,7 +322,7 @@ const AdminTemplateSections = () => {
             await api.delete(`/admin/sections/${section.id}`);
             setSections(prev => prev.filter((_, i) => i !== idx));
             toast.success('Fənn silindi');
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     return (

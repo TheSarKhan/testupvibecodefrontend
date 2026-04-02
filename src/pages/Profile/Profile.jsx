@@ -65,7 +65,7 @@ const Avatar = ({ name, picture, defaultAvatar, onUpload, onUploadGlobal }) => {
                 onUploadGlobal?.(base64);
                 toast.success('Profil şəkli yeniləndi');
             } catch {
-                toast.error('Şəkil yüklənərkən xəta baş verdi');
+                toast.error('Şəkil yüklənmədi');
             } finally {
                 setUploading(false);
             }
@@ -82,7 +82,7 @@ const Avatar = ({ name, picture, defaultAvatar, onUpload, onUploadGlobal }) => {
             onUploadGlobal?.('');
             toast.success('Profil şəkli silindi');
         } catch {
-            toast.error('Silinərkən xəta baş verdi');
+            toast.error('Şəkil silinmədi');
         } finally {
             setDeleting(false);
         }
@@ -179,7 +179,7 @@ const ChangePasswordModal = ({ onClose }) => {
             toast.success('Şifrə uğurla dəyişdirildi');
             onClose();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Şifrə dəyişdirilmədi');
         } finally {
             setSaving(false);
         }
@@ -296,7 +296,7 @@ const StudentProfile = ({ user }) => {
                 setProfilePicture(meData.data?.profilePicture || '');
                 setDepot(depotData.data || []);
             } catch {
-                toast.error('Nəticələri yükləyərkən xəta baş verdi');
+                toast.error('Profil məlumatları yüklənmədi');
             } finally {
                 setLoading(false);
             }
@@ -311,7 +311,7 @@ const StudentProfile = ({ user }) => {
             setDepot(prev => prev.filter(e => e.shareLink !== shareLink));
             toast.success('Depodan silindi');
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Depotdan silinmədi');
         } finally {
             setRemovingDepot(null);
         }
@@ -649,7 +649,7 @@ const TeacherProfile = ({ user }) => {
             setPending(prev => prev.filter(s => s.examId !== examId));
             toast.success('İmtahan silindi');
         } catch {
-            toast.error('Silinərkən xəta baş verdi');
+            toast.error('Şəkil silinmədi');
         } finally {
             setConfirmDelete(null);
         }
@@ -667,7 +667,7 @@ const TeacherProfile = ({ user }) => {
                 setProfilePicture(meData.data?.profilePicture || '');
                 setPending(pendingData.data || []);
             } catch {
-                toast.error('İmtahanlar yüklənərkən xəta baş verdi');
+                toast.error('İmtahanlar yüklənmədi');
             } finally {
                 setLoading(false);
             }

@@ -88,7 +88,7 @@ const AdminSubjects = () => {
             setSelectedId(data.id);
             toast.success(`"${data.name}" əlavə edildi`);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setAdding(false);
         }
@@ -109,7 +109,7 @@ const AdminSubjects = () => {
             }
             toast.success(`"${subject.name}" silindi`);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Əməliyyat uğursuz oldu');
         }
     };
 
@@ -130,7 +130,7 @@ const AdminSubjects = () => {
             setNewTopicGrade('');
             toast.success('Mövzu əlavə edildi');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setAddingTopic(false);
         }
@@ -146,7 +146,7 @@ const AdminSubjects = () => {
             }));
             toast.success('Mövzu silindi');
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         }
     };
 
@@ -161,7 +161,7 @@ const AdminSubjects = () => {
             setSubjects(prev => prev.map(s => s.id === selectedId ? { ...s, ...data } : s));
             toast.success('Metadata yadda saxlanıldı');
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         } finally {
             setSavingMeta(false);
         }

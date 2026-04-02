@@ -1,112 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlinePencilAlt, HiOutlineClock, HiOutlineDocumentText, HiOutlineCheckCircle, HiOutlineLockClosed, HiOutlineRefresh } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlinePencilAlt, HiOutlineClock, HiOutlineDocumentText, HiOutlineCheckCircle } from 'react-icons/hi';
+import { useState } from 'react';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 
-
-const fmtExpiry = (iso) => {
-    if (!iso) return null;
-    const d = new Date(iso);
-    const now = new Date();
-    if (d < now) return null; // expired
-    const diffMs = d - now;
-    const diffH = Math.floor(diffMs / 3600000);
-    const diffM = Math.floor((diffMs % 3600000) / 60000);
-    if (diffH > 0) return `${diffH} saat ${diffM} dəq qalıb`;
-    return `${diffM} dəq qalıb`;
-};
-
-const AccessCodeCard = ({ exam, onCodeGenerated }) => {
-    const [generating, setGenerating] = useState(false);
-    const [copied, setCopied] = useState(false);
-    const [remaining, setRemaining] = useState(() => {
-        const active = exam.accessCode && exam.accessCodeExpiresAt && new Date(exam.accessCodeExpiresAt) > new Date();
-        return active ? fmtExpiry(exam.accessCodeExpiresAt) : null;
-    });
-
-    const isActive = exam.accessCode && exam.accessCodeExpiresAt && new Date(exam.accessCodeExpiresAt) > new Date();
-
-    useEffect(() => {
-        if (!exam.accessCodeExpiresAt) return;
-        const tick = () => {
-            const val = fmtExpiry(exam.accessCodeExpiresAt);
-            setRemaining(val);
-        };
-        tick();
-        const id = setInterval(tick, 30000);
-        return () => clearInterval(id);
-    }, [exam.accessCodeExpiresAt]);
-
-    const generateCode = async () => {
-        setGenerating(true);
-        try {
-            const { data } = await api.post(`/exams/${exam.id}/generate-code`);
-            onCodeGenerated(data);
-            toast.success('Yeni kod yaradıldı');
-        } catch {
-            toast.error('Kod yaradılarkən xəta baş verdi');
-        } finally {
-            setGenerating(false);
-        }
-    };
-
-    const copyCode = () => {
-        if (!exam.accessCode) return;
-        if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(exam.accessCode);
-        } else {
-            const el = document.createElement('textarea');
-            el.value = exam.accessCode;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-        }
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-        <div className={`bg-white p-5 rounded-2xl border shadow-sm ${isActive ? 'border-indigo-200' : 'border-gray-100'}`}>
-            <div className="flex items-center gap-3 mb-4">
-                <div className={`p-3 rounded-xl ${isActive ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-50 text-gray-400'}`}>
-                    <HiOutlineLockClosed className="w-6 h-6" />
-                </div>
-                <div>
-                    <p className="text-sm font-semibold text-gray-700">Giriş Kodu</p>
-                    {isActive
-                        ? <p className="text-xs text-indigo-500 font-medium">{remaining}</p>
-                        : <p className="text-xs text-gray-400">Aktiv kod yoxdur</p>
-                    }
-                </div>
-            </div>
-
-            {isActive && (
-                <div
-                    onClick={copyCode}
-                    className="mb-4 flex items-center justify-center gap-3 bg-indigo-50 border border-indigo-100 rounded-xl py-3 cursor-pointer hover:bg-indigo-100 transition-colors"
-                    title="Kopyalamaq üçün klikləyin"
-                >
-                    <span className="text-3xl font-black tracking-[0.3em] text-indigo-700 font-mono">
-                        {exam.accessCode}
-                    </span>
-                    <span className="text-xs text-indigo-400">{copied ? '✓ Kopyalandı' : 'Kopyala'}</span>
-                </div>
-            )}
-
-            <button
-                onClick={generateCode}
-                disabled={generating}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-colors"
-            >
-                <HiOutlineRefresh className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-                {generating ? 'Yaradılır...' : isActive ? 'Yeni Kod Yarat' : 'Kod Yarat'}
-            </button>
-            <p className="text-xs text-gray-400 text-center mt-2">Kod 12 saat ərzində keçərli olur</p>
-        </div>
-    );
+const STATUS_LABELS = {
+    PUBLISHED: 'Aktiv',
+    CANCELLED: 'Bağlı',
+    DRAFT: 'Qaralama',
 };
 
 const ExamView = () => {
@@ -124,15 +27,14 @@ const ExamView = () => {
             const { data } = await api.get(`/exams/${id}/details`);
             setExam(data);
         } catch (error) {
-            toast.error("İmtahan məlumatlarını yükləyərkən xəta baş verdi");
+            const msg = error.response?.status === 404
+                ? 'Belə bir imtahan tapılmadı'
+                : (error.response?.data?.message || 'İmtahan yüklənmədi');
+            toast.error(msg);
             navigate('/imtahanlar');
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleCodeGenerated = ({ accessCode, expiresAt }) => {
-        setExam(prev => ({ ...prev, accessCode, accessCodeExpiresAt: expiresAt }));
     };
 
     if (loading) {
@@ -182,7 +84,7 @@ const ExamView = () => {
 
             <div className="container-main mt-8">
                 {/* Exam Summary Info */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
                         <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                             <HiOutlineClock className="w-6 h-6" />
@@ -207,14 +109,9 @@ const ExamView = () => {
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Status</p>
-                            <p className="text-lg font-bold text-gray-900">{exam.status}</p>
+                            <p className="text-lg font-bold text-gray-900">{STATUS_LABELS[exam.status] ?? exam.status}</p>
                         </div>
                     </div>
-
-                    {/* Access code card — only for PRIVATE exams */}
-                    {exam.visibility === 'PRIVATE' && (
-                        <AccessCodeCard exam={exam} onCodeGenerated={handleCodeGenerated} />
-                    )}
                 </div>
 
                 {/* Questions List */}

@@ -105,7 +105,7 @@ const AdminContactMessages = () => {
             setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: true } : m));
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         }
     };
 

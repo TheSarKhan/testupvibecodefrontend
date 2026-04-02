@@ -302,7 +302,7 @@ const AdminBanners = () => {
                 toast.success('Banner əlavə edildi');
             }
             fetchBanners();
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     const handleDelete = async (id) => {
@@ -320,7 +320,7 @@ const AdminBanners = () => {
             await api.put(`/admin/banners/${banner.id}`, { isActive: !banner.isActive });
             toast.success(banner.isActive ? 'Banner gizlədildi' : 'Banner aktivləşdirildi');
             fetchBanners();
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     const positionLabel = (pos) => POSITIONS.find(p => p.value === pos)?.label || pos;

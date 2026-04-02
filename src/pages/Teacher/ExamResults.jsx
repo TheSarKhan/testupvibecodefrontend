@@ -36,7 +36,10 @@ const ExamResults = () => {
                 setSubmissions(subsRes.data);
                 setStatistics(statsRes.data);
             } catch (error) {
-                toast.error("Məlumatlar yüklənərkən xəta baş verdi");
+                const msg = error.response?.status === 404
+                    ? 'Belə bir imtahan tapılmadı'
+                    : (error.response?.data?.message || 'Nəticələr yüklənmədi');
+                toast.error(msg);
                 navigate('/imtahanlar');
             } finally {
                 setLoading(false);

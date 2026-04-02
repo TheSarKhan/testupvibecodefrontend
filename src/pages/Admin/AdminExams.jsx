@@ -72,7 +72,7 @@ const AdminExams = () => {
             toast.success(data.sitePublished ? 'Saytda paylaşıldı' : 'Saytdan silindi');
         } catch {
             setExams(exams.map(e => e.id === examId ? { ...e, sitePublished: prev } : e));
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         }
     };
 
@@ -107,7 +107,7 @@ const AdminExams = () => {
             setExams(exams.filter(e => e.id !== examId));
             toast.success('İmtahan silindi');
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         }
     };
 

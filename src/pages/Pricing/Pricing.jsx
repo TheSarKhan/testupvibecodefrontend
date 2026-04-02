@@ -138,7 +138,7 @@ const Pricing = ({ isEmbedded = false }) => {
             setPaymentWindowOpen(true);
             toast('Ödəniş pəncərəsi açıldı. Ödənişi tamamlayıb bu səhifəyə qayıdın.', { icon: '💳', duration: 6000 });
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Ödəniş başladılarkən xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Ödəniş başladılarkən xəta baş verdi');
         } finally {
             setPaying(null);
         }

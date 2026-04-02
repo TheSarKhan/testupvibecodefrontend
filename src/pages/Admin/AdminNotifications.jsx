@@ -369,7 +369,7 @@ const AdminNotifications = () => {
             setSelectedUserIds([]);
             setAttachment(null);
         } catch (e) {
-            toast.error(e.response?.data?.message || 'Göndərmə zamanı xəta baş verdi');
+            if (!e._handled) toast.error(e.response?.data?.message || 'Göndərmə zamanı xəta baş verdi');
         } finally {
             setSending(false);
         }

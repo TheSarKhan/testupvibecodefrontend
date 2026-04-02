@@ -36,7 +36,7 @@ const AdminTags = () => {
             inputRef.current?.focus();
             toast.success(`"${data.name}" teqi əlavə edildi`);
         } catch (err) {
-            toast.error(err.response?.data?.error || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.error || 'Əməliyyat uğursuz oldu');
         } finally {
             setAdding(false);
         }
@@ -49,7 +49,7 @@ const AdminTags = () => {
             setTags(prev => prev.filter(t => t.id !== tag.id));
             toast.success('Teq silindi');
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         }
     };
 

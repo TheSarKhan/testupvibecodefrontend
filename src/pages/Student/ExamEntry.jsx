@@ -71,7 +71,7 @@ const ExamEntry = () => {
             toast.success('Uğurla daxil oldunuz!');
             setShowLoginForm(false);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Giriş mümkün olmadı');
         } finally {
             setIsLoggingIn(false);
         }
@@ -94,7 +94,7 @@ const ExamEntry = () => {
             localStorage.setItem('pendingPayriffOrderId', data.orderId);
             window.open(data.paymentUrl, '_blank', 'noopener');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');
         } finally {
             setIsPurchasing(false);
         }
@@ -121,7 +121,7 @@ const ExamEntry = () => {
             });
             navigate(`/test/take/${data.id}`);
         } catch (error) {
-            toast.error(error.response?.data?.message || "İmtahana başlamaq mümkün olmadı");
+            if (!error._handled) toast.error(error.response?.data?.message || "İmtahana başlamaq mümkün olmadı");
         } finally {
             setIsJoining(false);
         }

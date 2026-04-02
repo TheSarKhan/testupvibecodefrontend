@@ -41,7 +41,7 @@ const AdminSubtitles = () => {
             setSubtitles(prev => [...prev, data]);
             setNewSubtitle(''); setCreating(false);
             toast.success('Altbaşlıq yaradıldı');
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     const handleUpdate = async (id) => {
@@ -51,7 +51,7 @@ const AdminSubtitles = () => {
             setSubtitles(prev => prev.map(s => s.id === id ? data : s));
             setEditingId(null);
             toast.success('Yeniləndi');
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     const handleDelete = async (id, name) => {
@@ -60,7 +60,7 @@ const AdminSubtitles = () => {
             await api.delete(`/admin/subtitles/${id}`);
             setSubtitles(prev => prev.filter(s => s.id !== id));
             toast.success('Altbaşlıq silindi');
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     return (

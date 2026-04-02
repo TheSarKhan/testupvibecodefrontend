@@ -69,7 +69,7 @@ const AdminRevenue = () => {
                 toast(`Payriff statusu: ${data.payriffStatus || 'UNKNOWN'} — ödəniş tamamlanmayıb`, { icon: '⚠️' });
             }
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         } finally {
             setVerifying(null);
         }
@@ -85,7 +85,7 @@ const AdminRevenue = () => {
                 fetchStats();
             }
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         } finally {
             setVerifying(null);
         }
@@ -99,7 +99,7 @@ const AdminRevenue = () => {
             toast.success('Order ləğv edildi');
             fetchStats();
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         } finally {
             setVerifying(null);
         }

@@ -34,7 +34,7 @@ const Contact = () => {
             toast.success('Mesajınız göndərildi. Tezliklə geri dönəcəyik!');
             setFormData({ name: '', email: '', subject: '', message: '' });
         } catch {
-            toast.error('Xəta baş verdi. Yenidən cəhd edin.');
+            toast.error('Mesaj göndərilmədi. Yenidən cəhd edin.');
         } finally {
             setSending(false);
         }

@@ -31,7 +31,7 @@ const ForgotPasswordModal = ({ onClose }) => {
             setStep(2);
             toast.success('Kod e-poçtunuza göndərildi');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setLoading(false);
         }
@@ -52,7 +52,7 @@ const ForgotPasswordModal = ({ onClose }) => {
             await api.post('/auth/reset-password', { email, otp, newPassword });
             setDone(true);
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setLoading(false);
         }
@@ -178,7 +178,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                                             setLoading(true);
                                             api.post('/auth/forgot-password', { email })
                                                 .then(() => toast.success('Kod yenidən göndərildi'))
-                                                .catch(() => toast.error('Xəta baş verdi'))
+                                                .catch(() => toast.error('Əməliyyat uğursuz oldu'))
                                                 .finally(() => setLoading(false));
                                         }}
                                         className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors"

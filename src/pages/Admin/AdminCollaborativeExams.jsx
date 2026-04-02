@@ -159,7 +159,7 @@ const CreateModal = ({ onClose, onCreated }) => {
             onCreated(data);
             onClose();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setLoading(false);
         }
@@ -498,7 +498,7 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
             onAction();
             onClose();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setActioning(false);
         }
@@ -512,7 +512,7 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
             onAction();
             onClose();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setActioning(false);
         }

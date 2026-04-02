@@ -244,7 +244,7 @@ const ExamList = () => {
             setExams(prev => prev.map(e => e.id === id ? { ...e, status: data.status } : e));
             toast.success(data.status === 'PUBLISHED' ? 'İmtahan açıldı' : 'İmtahan bağlandı');
         } catch (err) {
-            toast.error(err.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.message || 'Əməliyyat uğursuz oldu');
         }
     };
 
@@ -329,7 +329,7 @@ const ExamList = () => {
             setExamPaymentWindowOpen(true);
             toast('Ödəniş pəncərəsi açıldı. Ödənişi tamamlayıb bu səhifəyə qayıdın.', { icon: '💳', duration: 6000 });
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');
         } finally {
             setPayingExam(null);
         }
@@ -362,7 +362,7 @@ const ExamList = () => {
                 navigate('/profil', { state: { tab: 'depot' } });
             }
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         } finally {
             setSavingLink(null);
         }

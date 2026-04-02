@@ -20,7 +20,7 @@ const TypeBadge = ({ label, color }) => (
 );
 
 const FeatureCard = ({ icon: Icon, title, desc, color }) => (
-    <div className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+    <div className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer">
         <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${color}`}>
             <Icon className="w-5 h-5" />
         </div>
@@ -92,7 +92,9 @@ const Stat = ({ value, label }) => (
 );
 
 // ── Banner Strip ──────────────────────────────────────────────────────────────
-const BannerStrip = ({ banners, position }) => {
+const AUTH_ONLY_PATHS = ['/register', '/login', '/giris', '/qeydiyyat'];
+
+const BannerStrip = ({ banners, position, isAuthenticated }) => {
     const filtered = banners.filter(b => b.position === position);
     if (!filtered.length) return null;
     return (
@@ -100,6 +102,9 @@ const BannerStrip = ({ banners, position }) => {
             <div className="container-main space-y-4">
                 {filtered.map(b => {
                     const grad = b.bgGradient || 'from-indigo-600 to-purple-600';
+                    // Hide auth-specific CTA buttons for logged-in users
+                    const isAuthLink = b.linkUrl && AUTH_ONLY_PATHS.some(p => b.linkUrl === p || b.linkUrl.startsWith(p + '?'));
+                    const showCta = b.linkUrl && !(isAuthenticated && isAuthLink);
                     const inner = (
                         <div className={`bg-gradient-to-r ${grad} rounded-2xl p-6 flex items-center gap-6 relative overflow-hidden group`}>
                             <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors rounded-2xl" />
@@ -110,15 +115,16 @@ const BannerStrip = ({ banners, position }) => {
                                 <p className="font-extrabold text-white text-lg leading-tight">{b.title}</p>
                                 {b.subtitle && <p className="text-white/80 text-sm mt-1 line-clamp-2">{b.subtitle}</p>}
                             </div>
-                            {b.linkUrl && (
+                            {showCta && (
                                 <span className="relative z-10 shrink-0 inline-flex items-center px-5 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-bold rounded-xl border border-white/30 backdrop-blur-sm transition-colors whitespace-nowrap">
                                     {b.linkText || 'Ətraflı bax'} →
                                 </span>
                             )}
                         </div>
                     );
-                    return b.linkUrl ? (
-                        <a key={b.id} href={b.linkUrl} target={b.linkUrl.startsWith('http') ? '_blank' : '_self'} rel="noreferrer" className="block">
+                    const effectiveUrl = showCta ? b.linkUrl : null;
+                    return effectiveUrl ? (
+                        <a key={b.id} href={effectiveUrl} target={effectiveUrl.startsWith('http') ? '_blank' : '_self'} rel="noreferrer" className="block">
                             {inner}
                         </a>
                     ) : (
@@ -277,7 +283,7 @@ const Home = () => {
             </section>
 
             {/* ── Hero Banners ── */}
-            <BannerStrip banners={banners} position="HERO" />
+            <BannerStrip banners={banners} position="HERO" isAuthenticated={isAuthenticated} />
 
             {/* ── Stats ── */}
             <section className="py-12 border-y border-gray-100 bg-white">
@@ -468,7 +474,7 @@ const Home = () => {
             </section>}
 
             {/* ── Inline Banners (authenticated users see these instead of the guest section) ── */}
-            <BannerStrip banners={banners} position="INLINE" />
+            <BannerStrip banners={banners} position="INLINE" isAuthenticated={isAuthenticated} />
 
             {/* ── Trust ── */}
             <section className="py-16 bg-white border-y border-gray-100">
@@ -494,7 +500,7 @@ const Home = () => {
             </section>
 
             {/* ── Bottom Banners ── */}
-            <BannerStrip banners={banners} position="BOTTOM" />
+            <BannerStrip banners={banners} position="BOTTOM" isAuthenticated={isAuthenticated} />
 
             {/* ── Pricing ── */}
             <Pricing isEmbedded={true} />

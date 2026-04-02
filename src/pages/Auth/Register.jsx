@@ -130,7 +130,7 @@ const Register = () => {
                 setGooglePending({ accessToken: tokenResponse.access_token, userInfo: data });
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Google ilə qeydiyyat xətası');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Google ilə qeydiyyat xətası');
         }
     };
 
@@ -166,7 +166,7 @@ const Register = () => {
                 navigate('/');
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Qeydiyyat uğursuz oldu');
         } finally {
             setLoading(false);
         }

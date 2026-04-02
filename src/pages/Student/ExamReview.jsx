@@ -226,7 +226,7 @@ const GradingPanel = ({ question, submissionId, onGraded }) => {
             toast.success('Bal qeydə alındı');
             onGraded(question.id, fraction * question.points, feedback.trim(), data);
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Bal qeydə alınmadı');
         } finally {
             setSaving(false);
         }
@@ -293,7 +293,10 @@ const ExamReview = () => {
                 // Default: teacher/admin sees only ungraded if there are any; students always see all
                 if (data.ungradedCount > 0 && canGrade) setShowOnlyUngraded(true);
             } catch (error) {
-                toast.error("İmtahan nəticələrini yükləyərkən xəta baş verdi");
+                const msg = error.response?.status === 404
+                    ? 'Belə bir imtahan nəticəsi tapılmadı'
+                    : (error.response?.data?.message || 'Nəticələr yüklənmədi');
+                toast.error(msg);
                 navigate(isTeacher ? '/imtahanlar' : '/profil');
             } finally {
                 setLoading(false);

@@ -40,7 +40,7 @@ const Login = () => {
             toast.success('Uğurla daxil oldunuz!');
             navigate(decoded.role === 'ADMIN' ? '/admin' : '/');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Giriş uğursuz oldu');
         } finally {
             setLoading(false);
         }
@@ -57,7 +57,7 @@ const Login = () => {
                 setGooglePending({ accessToken: tokenResponse.access_token, userInfo: data });
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Google ilə giriş xətası');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Google ilə giriş xətası');
         }
     };
 

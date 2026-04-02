@@ -44,7 +44,7 @@ const AdminQuestionBank = () => {
             setAdding(false);
             toast.success('Fənn əlavə edildi');
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         }
     };
 
@@ -55,7 +55,7 @@ const AdminQuestionBank = () => {
             setSubjects(prev => prev.map(s => s.id === id ? data : s));
             setEditId(null);
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         }
     };
 
@@ -66,7 +66,7 @@ const AdminQuestionBank = () => {
             setSubjects(prev => prev.filter(s => s.id !== id));
             toast.success('Fənn silindi');
         } catch {
-            toast.error('Xəta baş verdi');
+            toast.error('Əməliyyat uğursuz oldu');
         }
     };
 

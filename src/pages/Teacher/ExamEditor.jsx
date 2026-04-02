@@ -597,7 +597,7 @@ const ExamEditor = () => {
                 toast.success('Qaralama saxlanıldı', { id: loadId });
             }
         } catch (error) {
-            toast.error(error.message || 'Xəta baş verdi', { id: loadId });
+            if (!error._handled) toast.error(error.message || 'Əməliyyat uğursuz oldu', { id: loadId });
         }
     };
 
@@ -673,7 +673,7 @@ const ExamEditor = () => {
             }
             navigate(backPath);
         } catch (error) {
-            toast.error(error.response?.data?.message || error.message || 'Xəta baş verdi', { id: loadId });
+            if (!error._handled) toast.error(error.response?.data?.message || error.message || 'Əməliyyat uğursuz oldu', { id: loadId });
         }
     };
 
@@ -694,7 +694,7 @@ const ExamEditor = () => {
             toast.success('Suallarınız admin-ə göndərildi!', { id: loadId });
             navigate('/imtahanlar');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi', { id: loadId });
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu', { id: loadId });
         }
     };
 

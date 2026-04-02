@@ -9,26 +9,39 @@ import {
 import api from '../../api/axios';
 
 const ACTION_LABELS = {
+    // Auth
     USER_LOGIN: 'Giriş',
     USER_LOGIN_FAILED: 'Giriş uğursuz',
     USER_REGISTERED: 'Qeydiyyat',
+    PASSWORD_CHANGED: 'Şifrə dəyişdirildi',
+    // User management
     USER_ROLE_CHANGED: 'Rol dəyişdirildi',
     USER_DELETED: 'İstifadəçi silindi',
     USER_TOGGLED: 'Status dəyişdi',
     USER_EXAM_ASSIGNED: 'İmtahan təyin edildi',
+    // Exam lifecycle
     EXAM_CREATED: 'İmtahan yaradıldı',
+    EXAM_UPDATED: 'İmtahan yeniləndi',
     EXAM_DELETED: 'İmtahan silindi',
+    EXAM_STATUS_CHANGED: 'İmtahan statusu dəyişdi',
     EXAM_SITE_PUBLISHED: 'Saytda paylaşıldı',
     EXAM_SITE_UNPUBLISHED: 'Saytdan çıxarıldı',
+    // Exam session
+    EXAM_STARTED: 'İmtahan başlandı',
+    EXAM_SUBMITTED: 'İmtahan təhvil verildi',
+    // Subject/Content
     SUBJECT_ADDED: 'Fənn əlavə edildi',
     SUBJECT_DELETED: 'Fənn silindi',
     TOPIC_ADDED: 'Mövzu əlavə edildi',
     TOPIC_DELETED: 'Mövzu silindi',
+    // Notification
     NOTIFICATION_SENT: 'Bildiriş göndərildi',
+    // Payment / Subscription
     SUBSCRIPTION_PURCHASED: 'Abunəlik alındı',
     SUBSCRIPTION_SWITCHED: 'Plan dəyişdirildi',
     SUBSCRIPTION_ASSIGNED_MANUAL: 'Plan əl ilə təyin edildi',
     SUBSCRIPTION_CANCELLED: 'Abunəlik ləğv edildi',
+    // System
     SYSTEM_ERROR: 'Sistem xətası',
 };
 

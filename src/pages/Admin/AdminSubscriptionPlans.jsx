@@ -123,7 +123,7 @@ const AdminSubscriptionPlans = () => {
             }
             handleCloseModal();
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setSaving(false);
         }
@@ -138,7 +138,7 @@ const AdminSubscriptionPlans = () => {
             toast.success('Plan silindi');
             setPlans(prev => prev.filter(p => p.id !== id));
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Silinərkən xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Silinmədi');
         } finally {
             setSubmittingDelete(null);
         }

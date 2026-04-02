@@ -42,7 +42,7 @@ const CollaborativeAssignments = () => {
             const { data } = await api.post(`/collaborative-exams/${collaboratorId}/open-draft`);
             navigate(`/imtahanlar/edit/${data.draftExamId}`);
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setOpeningDraft(null);
         }

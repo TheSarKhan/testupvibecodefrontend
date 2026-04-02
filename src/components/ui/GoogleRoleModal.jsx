@@ -29,7 +29,7 @@ const GoogleRoleModal = ({ accessToken, userInfo, onSuccess, onClose }) => {
             });
             onSuccess(data);
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Qeydiyyat uğursuz oldu');
         } finally {
             setLoading(false);
         }

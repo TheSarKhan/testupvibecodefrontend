@@ -49,19 +49,22 @@ api.interceptors.response.use(
 
         // Network error (no response at all)
         if (!error.response) {
+            error._handled = true;
             toast.error('Şəbəkə bağlantısı xətası. Zəhmət olmasa yenidən cəhd edin.');
             return Promise.reject(error);
         }
 
         // 403 Forbidden — always show globally
         if (status === 403) {
-            toast.error(error.message || 'Bu əməliyyat üçün icazəniz yoxdur');
+            error._handled = true;
+            toast.error(error.response?.data?.message || 'Bu əməliyyat üçün icazəniz yoxdur');
             return Promise.reject(error);
         }
 
         // 5xx Server errors — always show globally
         if (status >= 500) {
-            toast.error(error.message || 'Server xətası baş verdi. Zəhmət olmasa bir az sonra yenidən cəhd edin.');
+            error._handled = true;
+            toast.error(error.response?.data?.message || 'Server xətası baş verdi. Zəhmət olmasa bir az sonra yenidən cəhd edin.');
             return Promise.reject(error);
         }
 

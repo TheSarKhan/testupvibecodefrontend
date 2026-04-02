@@ -1,7 +1,101 @@
-import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed, HiOutlineDownload, HiOutlineDuplicate, HiOutlineClipboardCheck } from 'react-icons/hi';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { HiOutlineClock, HiOutlineDocumentText, HiOutlineEye, HiOutlineEyeOff, HiOutlineShare, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineChartBar, HiOutlineAcademicCap, HiLockClosed, HiOutlineDownload, HiOutlineDuplicate, HiOutlineClipboardCheck, HiOutlineKey, HiOutlineX } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
+import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
 const EXAM_TYPE_LABELS = { FREE: 'Sərbəst', TEMPLATE: 'Şablon' };
+
+const AccessCodeModal = ({ code, onClose }) => {
+    const [copied, setCopied] = useState(false);
+
+    const copy = () => {
+        navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return createPortal(
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+        >
+            <div
+                className="bg-white rounded-2xl shadow-xl p-6 mx-4 w-full max-w-sm"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 bg-indigo-50 rounded-xl">
+                            <HiOutlineKey className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-gray-800">Tələbə Giriş Kodu</p>
+                            <p className="text-xs text-gray-400">Tələbəyə göndər</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                        <HiOutlineX className="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div
+                    onClick={copy}
+                    className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-4 cursor-pointer hover:bg-indigo-100 transition-colors mb-3"
+                >
+                    <span className="text-3xl font-black tracking-[0.4em] text-indigo-700 font-mono">{code}</span>
+                    <span className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${copied ? 'bg-green-100 text-green-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                        {copied ? '✓ Kopyalandı' : 'Kopyala'}
+                    </span>
+                </div>
+
+                <p className="text-xs text-gray-400 text-center mb-4">Bu kod yalnız <b>1 dəfə</b> istifadə edilə bilər · <b>12 saat</b> keçərlidir</p>
+
+                <button
+                    onClick={onClose}
+                    className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+                >
+                    Bağla
+                </button>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
+const AccessCodeButton = ({ examId }) => {
+    const [generating, setGenerating] = useState(false);
+    const [modalCode, setModalCode] = useState(null);
+
+    const generate = async (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setGenerating(true);
+        try {
+            const { data } = await api.post(`/exams/${examId}/generate-code`);
+            setModalCode(data.accessCode);
+        } catch {
+            toast.error('Kod yaradılmadı');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    return (
+        <>
+            <button
+                onClick={generate}
+                disabled={generating}
+                className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-60 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-100 transition-colors"
+            >
+                <HiOutlineKey className={`w-3.5 h-3.5 ${generating ? 'animate-pulse' : ''}`} />
+                {generating ? 'Yaradılır...' : 'Tələbə Kodu Yarat'}
+            </button>
+            {modalCode && <AccessCodeModal code={modalCode} onClose={() => setModalCode(null)} />}
+        </>
+    );
+};
 
 const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onClone, onTagClick, canEdit = true, canDownloadPdf = true }) => {
 
@@ -90,6 +184,13 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-50 border border-orange-100 mb-3">
                         <HiOutlineClipboardCheck className="w-4 h-4 text-orange-500 shrink-0" />
                         <span className="text-xs font-semibold text-orange-700">{exam.pendingManualCount} yoxlanılmağı gözləyir</span>
+                    </div>
+                )}
+
+                {/* Access code widget for PRIVATE non-draft exams */}
+                {exam.visibility === 'PRIVATE' && !isDraft && (
+                    <div className="mb-3">
+                        <AccessCodeButton examId={exam.id} />
                     </div>
                 )}
 

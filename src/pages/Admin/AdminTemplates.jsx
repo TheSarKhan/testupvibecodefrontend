@@ -34,7 +34,7 @@ const AdminTemplates = () => {
             setTemplates(prev => [data, ...prev]);
             setNewTitle(''); setCreating(false);
             toast.success('Şablon yaradıldı');
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     const handleUpdate = async (id) => {
@@ -44,7 +44,7 @@ const AdminTemplates = () => {
             setTemplates(prev => prev.map(t => t.id === id ? data : t));
             setEditingId(null);
             toast.success('Yeniləndi');
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     const handleDelete = async (id, title) => {
@@ -53,7 +53,7 @@ const AdminTemplates = () => {
             await api.delete(`/admin/templates/${id}`);
             setTemplates(prev => prev.filter(t => t.id !== id));
             toast.success('Şablon silindi');
-        } catch { toast.error('Xəta baş verdi'); }
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     return (

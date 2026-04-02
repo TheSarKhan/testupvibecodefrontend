@@ -118,7 +118,7 @@ const AdminUsers = () => {
             toast.success(data.enabled ? 'Hesab aktivləşdirildi' : 'Hesab deaktiv edildi');
         } catch (err) {
             setUsers(prev => prev.map(u => u.id === userId ? { ...u, enabled: user.enabled } : u));
-            toast.error(err.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.message || 'Əməliyyat uğursuz oldu');
         }
     };
 
@@ -132,7 +132,7 @@ const AdminUsers = () => {
             setRoleCounts(c => ({ ...c, [prev]: c[prev] - 1, [newRole]: c[newRole] + 1 }));
         } catch (err) {
             setUsers(u => u.map(x => x.id === userId ? { ...x, role: prev } : x));
-            toast.error(err.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.message || 'Əməliyyat uğursuz oldu');
         }
     };
 
@@ -145,7 +145,7 @@ const AdminUsers = () => {
             setRoleCounts(c => ({ ...c, [user.role]: c[user.role] - 1 }));
             toast.success('İstifadəçi silindi');
         } catch (err) {
-            toast.error(err.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setConfirmDelete(null);
         }
@@ -166,7 +166,7 @@ const AdminUsers = () => {
             fetchUsers();
 
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Plan təyin edərkən xəta baş verdi');
+            if (!error._handled) toast.error(error.response?.data?.message || 'Plan təyin edərkən xəta baş verdi');
         } finally {
             setAssigningPlan(false);
         }
@@ -211,7 +211,7 @@ const AdminUsers = () => {
             setAssignedExamIds(prev => new Set([...prev, examId]));
             toast.success('İmtahan şagirdin deposuna əlavə edildi');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Xəta baş verdi');
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         } finally {
             setAssigningExam(null);
         }
@@ -338,6 +338,9 @@ const AdminUsers = () => {
                                                         <div className="min-w-0">
                                                             <p className={`font-semibold truncate ${!user.enabled ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{user.fullName}</p>
                                                             <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                                            {user.phoneNumber && (
+                                                                <p className="text-xs text-gray-400 truncate">{user.phoneNumber}</p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </td>

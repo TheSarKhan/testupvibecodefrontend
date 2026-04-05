@@ -20,6 +20,7 @@ const ExamSession = () => {
     // listenCounts: { [passageId]: number }
     const [listenCounts, setListenCounts] = useState({});
     const [zoomImage, setZoomImage] = useState(null);
+    const autoSubmitRef = useRef(false);
 
     useEffect(() => { fetchSessionDetails(); }, [sessionId]);
 
@@ -153,6 +154,8 @@ const ExamSession = () => {
     }, [answers.map(a => a.textAnswer).join('|')]);
 
     const handleAutoSubmit = () => {
+        if (autoSubmitRef.current) return;
+        autoSubmitRef.current = true;
         toast.error("Vaxt bitdi! İmtahan avtomatik təhvil verilir.");
         submitExam(answers);
     };
@@ -272,6 +275,7 @@ const ExamSession = () => {
                 {/* Current Section */}
                 {currentSection?.kind === 'question' && (
                     <QuestionCard
+                        key={currentSection.data.id}
                         question={currentSection.data}
                         answer={answers.find(a => a.questionId === currentSection.data.id)}
                         onAnswerChange={handleAnswerChange}
@@ -540,6 +544,7 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
 
                     {question.questionType === 'FILL_IN_THE_BLANK' && (
                         <FillInTheBlankInput
+                            key={question.id}
                             question={question}
                             answer={answer}
                             onAnswerChange={onAnswerChange}
@@ -567,16 +572,20 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
     const parts = (question.content || '').split('___');
     const blankCount = parts.length - 1;
 
-    const [chipPool] = useState(() => {
+    const [chipPool, setChipPool] = useState([]);
+    const [dragOver, setDragOver] = useState(null);
+    const [selectedBlankIdx, setSelectedBlankIdx] = useState(null);
+
+    useEffect(() => {
         const chips = (question.options || []).map(o => ({ id: String(o.id), text: o.content }));
         for (let i = chips.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [chips[i], chips[j]] = [chips[j], chips[i]];
         }
-        return chips;
-    });
-
-    const [dragOver, setDragOver] = useState(null);
+        setChipPool(chips);
+        setSelectedBlankIdx(null);
+        setDragOver(null);
+    }, [question.id]);
 
     let blanks = [];
     try { blanks = JSON.parse(answer.textAnswer || '[]'); } catch (e) {}
@@ -599,8 +608,15 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
 
     const handleChipClick = (chipText) => {
         if (usedTexts.has(chipText)) return;
-        const firstEmpty = blanks.findIndex(b => !b);
-        if (firstEmpty !== -1) placeChip(firstEmpty, chipText);
+        // Əgər seçilmiş blank varsa, ora yerləşdir
+        if (selectedBlankIdx !== null) {
+            placeChip(selectedBlankIdx, chipText);
+            setSelectedBlankIdx(null);
+        } else {
+            // Heç bir blank seçilməmişsə, ilk boş blanka yerləşdir
+            const firstEmpty = blanks.findIndex(b => !b);
+            if (firstEmpty !== -1) placeChip(firstEmpty, chipText);
+        }
     };
 
     return (
@@ -620,18 +636,27 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
                                     const chipText = e.dataTransfer.getData('chipText');
                                     if (chipText) placeChip(i, chipText);
                                 }}
-                                onClick={() => blanks[i] && removeFromBlank(i)}
+                                onClick={() => {
+                                    if (blanks[i]) {
+                                        removeFromBlank(i);
+                                        setSelectedBlankIdx(null);
+                                    } else {
+                                        setSelectedBlankIdx(selectedBlankIdx === i ? null : i);
+                                    }
+                                }}
                                 className={`inline-flex items-center justify-center mx-2 min-w-[110px] h-9 px-3 rounded-xl border-2 align-middle transition-all cursor-pointer
                                     ${blanks[i]
                                         ? 'bg-indigo-100 border-indigo-400 text-indigo-800 font-semibold'
-                                        : dragOver === i
-                                            ? 'bg-blue-100 border-blue-400 border-solid scale-105'
-                                            : 'bg-gray-50 border-dashed border-gray-300 text-gray-400'
+                                        : selectedBlankIdx === i
+                                            ? 'bg-yellow-100 border-yellow-500 border-solid ring-2 ring-yellow-300'
+                                            : dragOver === i
+                                                ? 'bg-blue-100 border-blue-400 border-solid scale-105'
+                                                : 'bg-gray-50 border-dashed border-gray-300 text-gray-400'
                                     }`}
                             >
                                 {blanks[i]
                                     ? <span className="flex items-center gap-1.5 text-base">{blanks[i]} <span className="text-xs text-indigo-400">✕</span></span>
-                                    : <span className="text-sm">{i + 1}</span>
+                                    : <span className="text-sm font-semibold">{i + 1}</span>
                                 }
                             </span>
                         )}

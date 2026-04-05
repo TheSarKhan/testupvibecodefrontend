@@ -9,6 +9,7 @@ import { QuestionEditor, LatexPreview, AiGenerateModal } from '../../components/
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { validateLatexSyntax, getLatexErrorMessage } from '../../utils/latexValidator';
 
 // ── Type config ──────────────────────────────────────────────────────────────
 const BACKEND_TO_FRONTEND = {
@@ -318,6 +319,34 @@ const QuestionBankSubject = () => {
 
     const handleSave = async (localQuestion) => {
         if (!localQuestion.text.trim()) { toast.error('Sualın mətni boş ola bilməz'); return; }
+
+        // LaTeX validation for content
+        const contentValidation = validateLatexSyntax(localQuestion.text);
+        if (!contentValidation.valid) {
+            toast.error(`LaTeX xətası sualda:\n${getLatexErrorMessage(contentValidation.errors)}`);
+            return;
+        }
+
+        // LaTeX validation for options
+        if (localQuestion.options) {
+            for (const opt of localQuestion.options) {
+                const optValidation = validateLatexSyntax(opt.text);
+                if (!optValidation.valid) {
+                    toast.error(`LaTeX xətası variantda:\n${getLatexErrorMessage(optValidation.errors)}`);
+                    return;
+                }
+            }
+        }
+
+        // LaTeX validation for answer
+        if (localQuestion.sampleAnswer) {
+            const answerValidation = validateLatexSyntax(localQuestion.sampleAnswer);
+            if (!answerValidation.valid) {
+                toast.error(`LaTeX xətası cavabda:\n${getLatexErrorMessage(answerValidation.errors)}`);
+                return;
+            }
+        }
+
         const needsCorrect = ['MULTIPLE_CHOICE', 'MULTI_SELECT'].includes(localQuestion.type);
         const needsAnswer = ['OPEN_AUTO', 'FILL_IN_THE_BLANK'].includes(localQuestion.type);
         if (needsCorrect && !localQuestion.options?.some(o => o.isCorrect)) {

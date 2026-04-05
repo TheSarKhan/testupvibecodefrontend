@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { validateLatexSyntax, getLatexErrorMessage } from '../../utils/latexValidator';
 import {
     HiOutlineSparkles, HiOutlineRefresh, HiOutlineCheck, HiOutlineX,
     HiOutlineChevronDown, HiOutlineExclamation, HiOutlineLightningBolt
@@ -131,6 +132,33 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
 
     const handleSave = async () => {
         if (!generated || generated.length === 0) return;
+
+        // Validate LaTeX syntax in all generated questions
+        for (let i = 0; i < generated.length; i++) {
+            const q = generated[i];
+            const contentValidation = validateLatexSyntax(q.content);
+            if (!contentValidation.valid) {
+                toast.error(`Sual ${i + 1}-də LaTeX xətası:\n${getLatexErrorMessage(contentValidation.errors)}`);
+                return;
+            }
+            if (q.options) {
+                for (const opt of q.options) {
+                    const optValidation = validateLatexSyntax(opt.content);
+                    if (!optValidation.valid) {
+                        toast.error(`Sual ${i + 1} variantda LaTeX xətası:\n${getLatexErrorMessage(optValidation.errors)}`);
+                        return;
+                    }
+                }
+            }
+            if (q.correctAnswer) {
+                const answerValidation = validateLatexSyntax(q.correctAnswer);
+                if (!answerValidation.valid) {
+                    toast.error(`Sual ${i + 1} cavabda LaTeX xətası:\n${getLatexErrorMessage(answerValidation.errors)}`);
+                    return;
+                }
+            }
+        }
+
         setSaving(true);
         let saved = 0;
         for (const q of generated) {

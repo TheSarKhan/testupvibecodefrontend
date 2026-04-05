@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { HiOutlineDocumentText, HiOutlineClock, HiOutlineEye } from 'react-icons/hi';
 import api from '../../api/axios';
@@ -60,7 +60,7 @@ const getLevel = (pct) => {
 
 const pick = (arr, seed) => arr[seed % arr.length];
 
-const StarRating = ({ value, onChange }) => {
+const StarRating = ({ value, onChange, disabled = false }) => {
     const [hovered, setHovered] = useState(0);
     return (
         <div className="flex gap-1 justify-center">
@@ -68,10 +68,11 @@ const StarRating = ({ value, onChange }) => {
                 <button
                     key={star}
                     type="button"
-                    onClick={() => onChange(star)}
-                    onMouseEnter={() => setHovered(star)}
-                    onMouseLeave={() => setHovered(0)}
-                    className="text-4xl transition-transform hover:scale-110 focus:outline-none"
+                    onClick={() => !disabled && onChange(star)}
+                    onMouseEnter={() => !disabled && setHovered(star)}
+                    onMouseLeave={() => !disabled && setHovered(0)}
+                    disabled={disabled}
+                    className={`text-4xl transition-transform focus:outline-none ${disabled ? 'cursor-not-allowed opacity-60' : 'hover:scale-110'}`}
                 >
                     <span className={(hovered || value) >= star ? 'text-yellow-400' : 'text-gray-200'}>
                         ★
@@ -174,9 +175,30 @@ const ExamResultSummary = () => {
 
     const submission = location.state?.submission || null;
 
-    const [rating, setRating] = useState(0);
-    const [rated, setRated] = useState(false);
+    const [rating, setRating] = useState(() => submission?.rating || 0);
+    const [rated, setRated] = useState(() => submission?.rating != null);
     const [isRating, setIsRating] = useState(false);
+    const [submissionData, setSubmissionData] = useState(submission || null);
+    const [loading, setLoading] = useState(!submission);
+
+    useEffect(() => {
+        if (!submission && sessionId) {
+            setLoading(true);
+            api.get(`/submissions/${sessionId}`)
+                .then(res => {
+                    setSubmissionData(res.data);
+                    setRating(res.data.rating || 0);
+                    setRated(res.data.rating != null);
+                })
+                .catch(err => {
+                    console.error('Failed to fetch submission:', err);
+                    toast.error('Nəticə yüklənə bilmədi');
+                })
+                .finally(() => setLoading(false));
+        }
+    }, [sessionId, submission]);
+
+    const displaySubmission = submissionData || submission;
 
     const handleRate = async (starValue) => {
         setRating(starValue);
@@ -192,11 +214,11 @@ const ExamResultSummary = () => {
         }
     };
 
-    const isTemplateExam = submission?.templateScorePercent != null;
+    const isTemplateExam = displaySubmission?.templateScorePercent != null;
     const scorePercent = isTemplateExam
-        ? Math.round(submission.templateScorePercent)
-        : submission?.maxScore > 0
-            ? Math.round((submission.totalScore / submission.maxScore) * 100)
+        ? Math.round(displaySubmission.templateScorePercent)
+        : displaySubmission?.maxScore > 0
+            ? Math.round((displaySubmission.totalScore / displaySubmission.maxScore) * 100)
             : null;
 
     // Deterministic pick so it doesn't change on re-render
@@ -232,14 +254,27 @@ const ExamResultSummary = () => {
     };
 
     const timeTaken = (() => {
-        if (!submission?.startedAt || !submission?.submittedAt) return null;
+        if (!displaySubmission?.startedAt || !displaySubmission?.submittedAt) return null;
         const diffSec = Math.round(
-            (new Date(submission.submittedAt) - new Date(submission.startedAt)) / 1000
+            (new Date(displaySubmission.submittedAt) - new Date(displaySubmission.startedAt)) / 1000
         );
         return formatDuration(diffSec);
     })();
 
     const badge = scorePercent !== null ? getBadge(scorePercent) : null;
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex flex-col justify-center items-center py-12 px-4">
+                <div className="bg-white w-full max-w-xl rounded-3xl shadow-xl border border-gray-100 overflow-hidden p-8">
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+                        <p className="text-gray-600 font-medium">Nəticə yüklənir...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex flex-col justify-center items-center py-12 px-4">
@@ -252,7 +287,7 @@ const ExamResultSummary = () => {
                     </div>
                     <h1 className="text-2xl font-bold">{headline}</h1>
                     <p className="mt-1 text-white/75 text-sm">
-                        {submission?.examTitle || 'İmtahan'} tamamlandı
+                        {displaySubmission?.examTitle || 'İmtahan'} tamamlandı
                     </p>
                 </div>
 
@@ -260,26 +295,26 @@ const ExamResultSummary = () => {
                 <div className="px-8 py-8 flex flex-col items-center border-b border-gray-100">
                     {scorePercent !== null ? (
                         <>
-                            {submission?.correctCount != null ? (
+                            {displaySubmission?.correctCount != null ? (
                                 <MultiDonutChart
-                                    correct={submission.correctCount}
-                                    wrong={submission.wrongCount}
-                                    skipped={submission.skippedCount}
-                                    pending={submission.pendingManualCount}
-                                    total={(submission.correctCount || 0) + (submission.wrongCount || 0) + (submission.skippedCount || 0) + (submission.pendingManualCount || 0)}
+                                    correct={displaySubmission.correctCount}
+                                    wrong={displaySubmission.wrongCount}
+                                    skipped={displaySubmission.skippedCount}
+                                    pending={displaySubmission.pendingManualCount}
+                                    total={(displaySubmission.correctCount || 0) + (displaySubmission.wrongCount || 0) + (displaySubmission.skippedCount || 0) + (displaySubmission.pendingManualCount || 0)}
                                     percent={scorePercent}
                                 />
                             ) : (
                                 <DonutChart percent={scorePercent} color={getDonutColor(scorePercent)} />
                             )}
 
-                            {submission?.correctCount != null && (
+                            {displaySubmission?.correctCount != null && (
                                 <div className="mt-5 grid grid-cols-2 gap-2 w-full max-w-xs">
                                     {[
-                                        { label: 'Doğru',           count: submission.correctCount,      color: 'bg-green-500' },
-                                        { label: 'Yanlış',          count: submission.wrongCount,        color: 'bg-red-500' },
-                                        { label: 'Yoxlanılmamış',   count: submission.pendingManualCount, color: 'bg-amber-400' },
-                                        { label: 'Boş buraxılmış',  count: submission.skippedCount,      color: 'bg-gray-300' },
+                                        { label: 'Doğru',           count: displaySubmission.correctCount,      color: 'bg-green-500' },
+                                        { label: 'Yanlış',          count: displaySubmission.wrongCount,        color: 'bg-red-500' },
+                                        { label: 'Yoxlanılmamış',   count: displaySubmission.pendingManualCount, color: 'bg-amber-400' },
+                                        { label: 'Boş buraxılmış',  count: displaySubmission.skippedCount,      color: 'bg-gray-300' },
                                     ].map(item => (
                                         <div key={item.label} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
                                             <span className={`w-3 h-3 rounded-full shrink-0 ${item.color}`} />
@@ -293,15 +328,15 @@ const ExamResultSummary = () => {
                             <div className="mt-4 text-center">
                                 {isTemplateExam ? (
                                     <p className="text-gray-700 text-lg font-semibold">
-                                        <span className="font-black text-gray-900">{submission.templateScorePercent?.toFixed(1)}</span>
+                                        <span className="font-black text-gray-900">{displaySubmission.templateScorePercent?.toFixed(1)}</span>
                                         <span className="text-gray-400">%</span>
                                         <span className="ml-2 text-sm text-indigo-600 font-medium">Şablon nəticəsi</span>
                                     </p>
                                 ) : (
                                     <p className="text-gray-700 text-lg font-semibold">
-                                        <span className="font-black text-gray-900">{submission.totalScore?.toFixed(1)}</span>
+                                        <span className="font-black text-gray-900">{displaySubmission.totalScore?.toFixed(1)}</span>
                                         <span className="text-gray-400"> / </span>
-                                        <span>{submission.maxScore} bal</span>
+                                        <span>{displaySubmission.maxScore} bal</span>
                                     </p>
                                 )}
                                 <div className="mt-3 flex items-center gap-2 justify-center flex-wrap">
@@ -311,11 +346,11 @@ const ExamResultSummary = () => {
                                         </span>
                                     )}
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                        submission.isFullyGraded
+                                        displaySubmission.isFullyGraded
                                             ? 'bg-green-100 text-green-700'
                                             : 'bg-yellow-100 text-yellow-700'
                                     }`}>
-                                        {submission.isFullyGraded ? '✓ Tam Yoxlanılıb' : '⏳ Açıq suallar gözləyir'}
+                                        {displaySubmission.isFullyGraded ? '✓ Tam Yoxlanılıb' : '⏳ Açıq suallar gözləyir'}
                                     </span>
                                 </div>
                             </div>
@@ -350,7 +385,7 @@ const ExamResultSummary = () => {
                 )}
 
                 {/* Stat Cards */}
-                {(timeTaken || submission?.durationMinutes) && (
+                {(timeTaken || displaySubmission?.durationMinutes) && (
                     <div className="px-8 pb-6 border-b border-gray-100">
                         <div className="grid grid-cols-2 gap-3">
                             {timeTaken && (
@@ -361,11 +396,11 @@ const ExamResultSummary = () => {
                                     colorClass="bg-indigo-50"
                                 />
                             )}
-                            {submission?.durationMinutes && (
+                            {displaySubmission?.durationMinutes && (
                                 <StatCard
-                                    icon={<HiOutlineDocumentText className="w-5 h-5 text-purple-600" />}
+                                    icon={<HiOutlineClock className="w-5 h-5 text-purple-600" />}
                                     label="Ayrılan Vaxt"
-                                    value={`${submission.durationMinutes} dəqiqə`}
+                                    value={`${displaySubmission.durationMinutes} dəqiqə`}
                                     colorClass="bg-purple-50"
                                 />
                             )}
@@ -387,16 +422,18 @@ const ExamResultSummary = () => {
                 {/* Rating */}
                 <div className="px-8 py-6 text-center border-b border-gray-100">
                     <p className="font-semibold text-gray-800 mb-1">Bu imtahanı qiymətləndirin</p>
-                    <p className="text-sm text-gray-400 mb-4">Müəllimə rəy bildirin</p>
-                    {rated ? (
-                        <div>
-                            <p className="text-yellow-400 text-3xl mb-1">{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</p>
+                    <p className="text-sm text-gray-400 mb-4">{rated ? 'Sizin reytinqiniz' : 'Müəllimə rəy bildirin'}</p>
+                    <div>
+                        <p className="text-yellow-400 text-3xl mb-1">{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</p>
+                        {rated ? (
                             <p className="text-sm text-green-600 font-medium">Reytinqiniz qeydə alındı, sağ olun!</p>
-                        </div>
-                    ) : (
-                        <StarRating value={rating} onChange={handleRate} />
-                    )}
-                    {isRating && <p className="text-sm text-gray-400 mt-2">Göndərilir...</p>}
+                        ) : (
+                            <>
+                                <StarRating value={rating} onChange={handleRate} disabled={false} />
+                                {isRating && <p className="text-sm text-gray-400 mt-2">Göndərilir...</p>}
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {/* Navigation Buttons */}

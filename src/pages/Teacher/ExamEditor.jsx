@@ -439,16 +439,17 @@ const ExamEditor = () => {
         setQuestions(questions.filter(q => q.id !== qId));
     };
 
-    const handleBatchPdfComplete = (base64Images, withOptions = false) => {
+    const handleBatchPdfComplete = (base64Images, withOptions = false, optionCount = 4) => {
         const startIdx = nextOrderIndex();
         const isMain = !batchPdfSection || batchPdfSection === examConfig.subject;
-        const optionLabels = ['A', 'B', 'C', 'D', 'E'];
+        const allLabels = ['A', 'B', 'C', 'D', 'E'];
+        const labels = allLabels.slice(0, optionCount);
         const newQuestions = base64Images.map((img, idx) => ({
             id: `batch-${Date.now()}-${idx}`, type: 'MULTIPLE_CHOICE',
             text: 'Şəkilə əsasən cavabı qeyd edin', points: 1, attachedImage: img,
             orderIndex: startIdx + idx,
             subjectGroup: isMain ? null : batchPdfSection,
-            options: optionLabels.map((label, i) => ({
+            options: labels.map((label) => ({
                 id: `opt-${label.toLowerCase()}-${Date.now()}-${idx}`,
                 text: withOptions ? `${label} variantı` : '',
                 isCorrect: false,

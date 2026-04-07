@@ -20,6 +20,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
     const [completedCrop, setCompletedCrop] = useState(null);
     const pageRef = useRef(null);
     const [editingCrop, setEditingCrop] = useState(null); // { index, image }
+    const [optionCount, setOptionCount] = useState(4);
 
     const onDocumentLoadSuccess = ({ numPages }) => {
         setNumPages(numPages);
@@ -67,7 +68,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
     };
 
     const handleBatchFinish = (withOptions = false) => {
-        onCropComplete(crops, withOptions);
+        onCropComplete(crops, withOptions, optionCount);
         onClose();
         setCrops([]);
     };
@@ -221,6 +222,25 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                         className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white rounded-xl font-bold text-sm transition-all">
                                         Sualları Yarat ({crops.length})
                                     </button>
+                                    {/* Variant count selector */}
+                                    <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1">
+                                        <span className="text-[10px] text-gray-500 font-semibold whitespace-nowrap">Variant sayı:</span>
+                                        <div className="flex gap-0.5 ml-auto">
+                                            {[2, 3, 4, 5].map(n => (
+                                                <button
+                                                    key={n}
+                                                    onClick={() => setOptionCount(n)}
+                                                    className={`w-6 h-6 rounded-lg text-xs font-bold transition-all ${
+                                                        optionCount === n
+                                                            ? 'bg-emerald-600 text-white shadow'
+                                                            : 'bg-white border border-gray-200 text-gray-600 hover:border-emerald-400'
+                                                    }`}
+                                                >
+                                                    {n}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <button onClick={() => handleBatchFinish(true)} disabled={crops.length === 0}
                                         className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white rounded-xl font-bold text-sm transition-all">
                                         Variantla Yarat ({crops.length})

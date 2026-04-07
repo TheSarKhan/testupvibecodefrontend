@@ -5,6 +5,8 @@ import 'react-image-crop/dist/ReactCrop.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineX, HiOutlinePlus, HiOutlineMinus, HiOutlineScissors } from 'react-icons/hi';
+import { TbPencil } from 'react-icons/tb';
+import ImageEditorModal from './ImageEditorModal';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -17,6 +19,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
     const [crop, setCrop] = useState();
     const [completedCrop, setCompletedCrop] = useState(null);
     const pageRef = useRef(null);
+    const [editingCrop, setEditingCrop] = useState(null); // { index, image }
 
     const onDocumentLoadSuccess = ({ numPages }) => {
         setNumPages(numPages);
@@ -63,8 +66,8 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
         }
     };
 
-    const handleBatchFinish = () => {
-        onCropComplete(crops);
+    const handleBatchFinish = (withOptions = false) => {
+        onCropComplete(crops, withOptions);
         onClose();
         setCrops([]);
     };
@@ -198,6 +201,14 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                             <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 rounded-md font-mono pointer-events-none">
                                                 Sual {idx + 1}
                                             </div>
+                                            {/* Edit button */}
+                                            <button
+                                                onClick={() => setEditingCrop({ index: idx, image: src })}
+                                                className="absolute top-1 right-6 bg-indigo-600 text-white p-0.5 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                title="Redaktə et"
+                                            >
+                                                <TbPencil className="w-3 h-3" />
+                                            </button>
                                             <button onClick={() => setCrops(prev => prev.filter((_, i) => i !== idx))}
                                                 className="absolute -top-2 -right-2 bg-red-500 text-white p-0.5 rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                                 <HiOutlineX className="w-3 h-3" />
@@ -206,9 +217,13 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                     ))}
                                 </div>
                                 <div className="p-2 bg-white border-t border-gray-200 space-y-1.5 shrink-0">
-                                    <button onClick={handleBatchFinish} disabled={crops.length === 0}
+                                    <button onClick={() => handleBatchFinish(false)} disabled={crops.length === 0}
                                         className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white rounded-xl font-bold text-sm transition-all">
                                         Sualları Yarat ({crops.length})
+                                    </button>
+                                    <button onClick={() => handleBatchFinish(true)} disabled={crops.length === 0}
+                                        className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white rounded-xl font-bold text-sm transition-all">
+                                        Variantla Yarat ({crops.length})
                                     </button>
                                     <button onClick={onClose}
                                         className="w-full py-1.5 border border-gray-200 text-gray-500 rounded-xl text-xs font-semibold hover:bg-gray-50 transition-colors">
@@ -220,6 +235,17 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                     )}
                 </div>
             </div>
+
+            {/* Image Editor Modal */}
+            <ImageEditorModal
+                isOpen={!!editingCrop}
+                imageBase64={editingCrop?.image}
+                onSave={(editedBase64) => {
+                    setCrops(prev => prev.map((img, i) => i === editingCrop.index ? editedBase64 : img));
+                    setEditingCrop(null);
+                }}
+                onClose={() => setEditingCrop(null)}
+            />
 
             {/* Enlarged Preview */}
             {previewImage && (

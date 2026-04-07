@@ -439,21 +439,20 @@ const ExamEditor = () => {
         setQuestions(questions.filter(q => q.id !== qId));
     };
 
-    const handleBatchPdfComplete = (base64Images) => {
+    const handleBatchPdfComplete = (base64Images, withOptions = false) => {
         const startIdx = nextOrderIndex();
         const isMain = !batchPdfSection || batchPdfSection === examConfig.subject;
+        const optionLabels = ['A', 'B', 'C', 'D', 'E'];
         const newQuestions = base64Images.map((img, idx) => ({
             id: `batch-${Date.now()}-${idx}`, type: 'MULTIPLE_CHOICE',
             text: 'Şəkilə əsasən cavabı qeyd edin', points: 1, attachedImage: img,
             orderIndex: startIdx + idx,
             subjectGroup: isMain ? null : batchPdfSection,
-            options: [
-                { id: `opt-a-${Date.now()}-${idx}`, text: '', isCorrect: false },
-                { id: `opt-b-${Date.now()}-${idx}`, text: '', isCorrect: false },
-                { id: `opt-c-${Date.now()}-${idx}`, text: '', isCorrect: false },
-                { id: `opt-d-${Date.now()}-${idx}`, text: '', isCorrect: false },
-                { id: `opt-e-${Date.now()}-${idx}`, text: '', isCorrect: false },
-            ]
+            options: optionLabels.map((label, i) => ({
+                id: `opt-${label.toLowerCase()}-${Date.now()}-${idx}`,
+                text: withOptions ? `${label} variantı` : '',
+                isCorrect: false,
+            }))
         }));
         setQuestions([...questions, ...newQuestions]);
         setBatchPdfSection(null);

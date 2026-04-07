@@ -340,7 +340,7 @@ const StudentProfile = ({ user }) => {
     const achievements = [
         totalExams >= 1  && { icon: '🎯', label: 'İlk İmtahan', desc: 'İlk imtahanı tamamladı' },
         totalExams >= 5  && { icon: '📚', label: 'Dəyişməz', desc: '5 imtahan tamamladı' },
-        totalExams >= 10 && { icon: '🏆', label: 'Çempiyon', desc: '10 imtahan tamamladı' },
+        totalExams >= 10 && { icon: '🏆', label: 'Çempion', desc: '10 imtahan tamamladı' },
         bestPct >= 90    && { icon: '⭐', label: 'Əla Nəticə', desc: '90%+ bal qazandı' },
         bestPct === 100  && { icon: '💎', label: 'Mükəmməl', desc: '100% bal qazandı' },
         avgPct >= 75     && { icon: '🔥', label: 'Yüksək Orta', desc: 'Orta balı 75%+' },

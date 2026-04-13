@@ -502,8 +502,8 @@ const Home = () => {
             {/* ── Bottom Banners ── */}
             <BannerStrip banners={banners} position="BOTTOM" isAuthenticated={isAuthenticated} />
 
-            {/* ── Pricing ── */}
-            <Pricing isEmbedded={true} />
+            {/* ── Pricing (müəllim və qonaqlar üçün) ── */}
+            {(!isAuthenticated || isTeacher) && <Pricing isEmbedded={true} />}
 
             {/* ── Final CTA ── */}
             <section className="py-24 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 relative overflow-hidden">

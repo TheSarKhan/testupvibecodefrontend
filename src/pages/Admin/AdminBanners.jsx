@@ -23,6 +23,13 @@ const GRADIENTS = [
     { value: 'from-gray-800 to-gray-900', label: 'Tünd Boz', preview: 'bg-gradient-to-r from-gray-800 to-gray-900' },
 ];
 
+const AUDIENCES = [
+    { value: 'ALL',     label: 'Hamısı',              desc: 'Bütün istifadəçilər görür',         color: 'bg-gray-100 text-gray-700' },
+    { value: 'GUEST',   label: 'Loginsiz ziyarətçi',  desc: 'Yalnız giriş etməmiş istifadəçilər', color: 'bg-blue-100 text-blue-700' },
+    { value: 'TEACHER', label: 'Müəllim',              desc: 'Yalnız müəllim rolunda olanlar',     color: 'bg-indigo-100 text-indigo-700' },
+    { value: 'STUDENT', label: 'Şagird',               desc: 'Yalnız şagird rolunda olanlar',      color: 'bg-emerald-100 text-emerald-700' },
+];
+
 const emptyForm = {
     title: '',
     subtitle: '',
@@ -33,6 +40,7 @@ const emptyForm = {
     position: 'INLINE',
     bgGradient: 'from-indigo-600 to-purple-600',
     orderIndex: 0,
+    targetAudience: 'ALL',
 };
 
 const BannerPreview = ({ form }) => {
@@ -130,13 +138,27 @@ const Modal = ({ banner, onClose, onSave }) => {
                         {/* Link URL */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Link URL</label>
-                            <input
-                                type="text"
-                                value={form.linkUrl}
-                                onChange={e => set('linkUrl', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                                placeholder="/planlar və ya https://..."
-                            />
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={form.linkUrl}
+                                    onChange={e => set('linkUrl', e.target.value)}
+                                    className="w-full px-3 py-2 pr-24 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                    placeholder="https://... və ya /planlar"
+                                />
+                                {form.linkUrl && (
+                                    <span className={`absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                        /^https?:\/\//i.test(form.linkUrl)
+                                            ? 'bg-orange-100 text-orange-700'
+                                            : 'bg-indigo-100 text-indigo-700'
+                                    }`}>
+                                        {/^https?:\/\//i.test(form.linkUrl) ? '↗ Xarici' : '→ Daxili'}
+                                    </span>
+                                )}
+                            </div>
+                            {form.linkUrl && /^https?:\/\//i.test(form.linkUrl) && (
+                                <p className="mt-1 text-[11px] text-orange-600">Yeni sekmədə açılacaq</p>
+                            )}
                         </div>
 
                         {/* Link Text */}
@@ -228,6 +250,28 @@ const Modal = ({ banner, onClose, onSave }) => {
                                     <option key={p.value} value={p.value}>{p.label}</option>
                                 ))}
                             </select>
+                        </div>
+
+                        {/* Target Audience */}
+                        <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Hədəf auditoriya</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {AUDIENCES.map(a => (
+                                    <button
+                                        key={a.value}
+                                        type="button"
+                                        onClick={() => set('targetAudience', a.value)}
+                                        className={`relative flex flex-col items-start px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
+                                            form.targetAudience === a.value
+                                                ? 'border-indigo-500 bg-indigo-50'
+                                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                                        }`}
+                                    >
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full mb-1 ${a.color}`}>{a.label}</span>
+                                        <span className="text-[11px] text-gray-400 leading-tight">{a.desc}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Order + Active */}
@@ -351,13 +395,16 @@ const AdminBanners = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
                 {[
-                    { label: 'Ümumi Banner', value: banners.length, color: 'text-gray-900' },
+                    { label: 'Ümumi', value: banners.length, color: 'text-gray-900' },
                     { label: 'Aktiv', value: banners.filter(b => b.isActive).length, color: 'text-green-600' },
                     { label: 'Gizli', value: banners.filter(b => !b.isActive).length, color: 'text-gray-400' },
+                    { label: 'Hamısı', value: banners.filter(b => !b.targetAudience || b.targetAudience === 'ALL').length, color: 'text-gray-600' },
+                    { label: 'Müəllim', value: banners.filter(b => b.targetAudience === 'TEACHER').length, color: 'text-indigo-600' },
+                    { label: 'Şagird', value: banners.filter(b => b.targetAudience === 'STUDENT').length, color: 'text-emerald-600' },
                 ].map(s => (
-                    <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+                    <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
                         <p className={`text-2xl font-extrabold ${s.color}`}>{s.value}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
                     </div>
@@ -411,12 +458,26 @@ const AdminBanners = () => {
                                                 <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-semibold">
                                                     {positionLabel(banner.position)}
                                                 </span>
+                                                {(() => {
+                                                    const a = AUDIENCES.find(x => x.value === (banner.targetAudience || 'ALL'));
+                                                    return a ? (
+                                                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${a.color}`}>
+                                                            {a.label}
+                                                        </span>
+                                                    ) : null;
+                                                })()}
                                             </div>
                                             {banner.subtitle && (
                                                 <p className="text-xs text-gray-400 truncate">{banner.subtitle}</p>
                                             )}
                                             {banner.linkUrl && (
-                                                <p className="text-xs text-indigo-400 truncate mt-0.5">{banner.linkUrl}</p>
+                                                <p className="text-xs text-indigo-400 truncate mt-0.5 flex items-center gap-1">
+                                                    {/^https?:\/\//i.test(banner.linkUrl)
+                                                        ? <span className="shrink-0 text-[10px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">↗ Xarici</span>
+                                                        : <span className="shrink-0 text-[10px] font-bold bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">→ Daxili</span>
+                                                    }
+                                                    {banner.linkUrl}
+                                                </p>
                                             )}
                                         </div>
 

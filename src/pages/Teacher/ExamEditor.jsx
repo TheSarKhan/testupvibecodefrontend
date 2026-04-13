@@ -62,6 +62,50 @@ const buildQuestionsFromTypeCounts = (typeCounts) => {
     return questions;
 };
 
+// Build questions with point values assigned from pointGroups JSON (olimpiyada mode).
+// pointGroupsJson: '[{"from":1,"to":15,"points":1.0},{"from":16,"to":20,"points":1.5}]'
+// startOrderIdx: global orderIndex offset (for multi-section exams)
+const buildQuestionsWithPointGroups = (typeCounts, pointGroupsJson, startOrderIdx = 0) => {
+    let pointGroups = [];
+    try { pointGroups = JSON.parse(pointGroupsJson || '[]'); } catch {}
+
+    const getPointsForSectionIndex = (sectionIdx) => {
+        // sectionIdx is 0-based within section; pointGroups use 1-based from/to
+        const qNum = sectionIdx + 1;
+        const group = pointGroups.find(g => qNum >= g.from && qNum <= g.to);
+        return group ? group.points : 1.0;
+    };
+
+    const questions = [];
+    let globalOrderIdx = startOrderIdx;
+    let sectionIdx = 0;
+    typeCounts.forEach(({ questionType, count }) => {
+        const frontendType = TYPE_TO_FRONTEND[questionType] || 'MULTIPLE_CHOICE';
+        const isChoice = frontendType === 'MULTIPLE_CHOICE' || frontendType === 'MULTI_SELECT';
+        for (let i = 0; i < count; i++) {
+            const ts = Date.now();
+            questions.push({
+                id: `new-${ts}-${globalOrderIdx}`,
+                type: frontendType,
+                text: '',
+                points: getPointsForSectionIndex(sectionIdx),
+                orderIndex: globalOrderIdx++,
+                subjectGroup: null,
+                options: isChoice ? [
+                    { id: `o1-${ts}-${globalOrderIdx}`, text: '', isCorrect: false },
+                    { id: `o2-${ts}-${globalOrderIdx}`, text: '', isCorrect: false },
+                    { id: `o3-${ts}-${globalOrderIdx}`, text: '', isCorrect: false },
+                    { id: `o4-${ts}-${globalOrderIdx}`, text: '', isCorrect: false },
+                ] : [],
+                matchingPairs: [],
+                sampleAnswer: ''
+            });
+            sectionIdx++;
+        }
+    });
+    return questions;
+};
+
 const ExamEditor = () => {
     const { id } = useParams();
     const location = useLocation();
@@ -87,7 +131,7 @@ const ExamEditor = () => {
     const [questions, setQuestions] = useState(() => {
         if (isEditMode) return [];
         const state = location.state || {};
-        if (state.type === 'template') return []; // pre-populated via useEffect
+        if (state.type === 'template' || state.type === 'olimpiyada') return []; // pre-populated via useEffect
         return [{
             id: Date.now().toString(), type: 'MULTIPLE_CHOICE', text: '', points: 1,
             orderIndex: 0, subjectGroup: null,
@@ -118,17 +162,24 @@ const ExamEditor = () => {
     // Template mode state
     const [templateInfo, setTemplateInfo] = useState(null); // { templateTitle, templateSubtitle, subjectName, questionCount, formula, typeCounts }
     const [selectedSectionId, setSelectedSectionId] = useState(null);
+    // Multi-section template state
+    const [templateSections, setTemplateSections] = useState([]); // array of section info objects
+    const [selectedSectionIds, setSelectedSectionIds] = useState([]); // array of section IDs
 
     // Bank picker state
     const [bankPicker, setBankPicker] = useState(null); // null | { section, replaceId, filterType }
 
     // AI question generation state
-    const [aiModal, setAiModal] = useState(null); // null | { section }
+    const [aiModal, setAiModal] = useState(null); // null | { section, replaceId?, lockedQuestionType? }
     const [aiLoading, setAiLoading] = useState(false);
     const [aiForm, setAiForm] = useState({ topic: '', difficulty: 'MEDIUM', questionType: 'MCQ' });
     const [aiTopics, setAiTopics] = useState([]);
     const [aiTopicsLoading, setAiTopicsLoading] = useState(false);
     const [aiUsage, setAiUsage] = useState(null); // { limit, used, remaining }
+
+    // Template section adder (for adding more sections to an existing template exam)
+    const [addSectionModal, setAddSectionModal] = useState(null);
+    // null | { tab: 'subject'|'template', step: 1|2|3, templates: [], selectedTemplate: null, subtitles: [], selectedSubtitle: null, loadingTemplates: false, loadingSubtitles: false }
 
     const bankQuestionToEditorFormat = (bq) => ({
         id: Date.now().toString(),
@@ -196,30 +247,51 @@ const ExamEditor = () => {
                 q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
                 q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
                 q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'MULTIPLE_CHOICE';
-            const isMain = !aiModal.section || aiModal.section === examConfig.subject;
-            const newQ = {
-                id: Date.now().toString(),
-                type: frontendType,
-                text: q.content || '',
-                points: q.points ?? 1,
-                orderIndex: nextOrderIndex(),
-                subjectGroup: isMain ? null : aiModal.section,
-                options: (q.options || []).map((o, oi) => ({
-                    id: Date.now() + oi + 1,
-                    text: o.content || '',
-                    isCorrect: !!o.isCorrect,
-                })),
-                matchingPairs: [],
-                sampleAnswer: q.correctAnswer || '',
-            };
-            setQuestions(prev => [...prev, newQ]);
+
+            if (aiModal.replaceId) {
+                // Template mode: fill into existing question slot, keep id/orderIndex/subjectGroup/points
+                setQuestions(prev => prev.map(existing => {
+                    if (existing.id !== aiModal.replaceId) return existing;
+                    const sameType = frontendType === existing.type;
+                    return {
+                        ...existing,
+                        text: q.content || '',
+                        sampleAnswer: q.correctAnswer || '',
+                        options: sameType ? (q.options || []).map((o, oi) => ({
+                            id: Date.now() + oi + 1,
+                            text: o.content || '',
+                            isCorrect: !!o.isCorrect,
+                        })) : existing.options,
+                    };
+                }));
+                toast.success('Sual AI ilə dolduruldu');
+            } else {
+                // Free mode: add as new question
+                const isMain = !aiModal.section || aiModal.section === examConfig.subject;
+                const newQ = {
+                    id: Date.now().toString(),
+                    type: frontendType,
+                    text: q.content || '',
+                    points: q.points ?? 1,
+                    orderIndex: nextOrderIndex(),
+                    subjectGroup: isMain ? null : aiModal.section,
+                    options: (q.options || []).map((o, oi) => ({
+                        id: Date.now() + oi + 1,
+                        text: o.content || '',
+                        isCorrect: !!o.isCorrect,
+                    })),
+                    matchingPairs: [],
+                    sampleAnswer: q.correctAnswer || '',
+                };
+                setQuestions(prev => [...prev, newQ]);
+                toast.success('AI sual əlavə edildi');
+            }
             // Update usage after successful generation
             try {
                 const { data: usageData } = await api.get('/ai/usage');
                 setAiUsage(usageData);
             } catch {}
             setAiModal(null);
-            toast.success('AI sual əlavə edildi');
         } catch (err) {
             const errMsg = err.response?.data?.error || 'AI sual yaradılmadı. Yenidən cəhd edin.';
             toast.error(errMsg);
@@ -242,16 +314,95 @@ const ExamEditor = () => {
 
     // On new template exam: load section data from navigation state
     useEffect(() => {
-        if (!isEditMode && initialLocationState.type === 'template' && initialLocationState.sectionData) {
-            const sd = initialLocationState.sectionData;
-            setTemplateInfo(sd);
-            setSelectedSectionId(sd.id);
-            setQuestions(buildQuestionsFromTypeCounts(sd.typeCounts || []));
-            // Auto-set title so auto-save can proceed without user input
-            setExamConfig(prev => ({
-                ...prev,
-                title: prev.title || `${sd.subjectName || 'Şablon'} - ${sd.subtitleName || sd.name || 'İmtahan'}`
-            }));
+        if (!isEditMode && initialLocationState.type === 'template') {
+            const sds = initialLocationState.sectionsData;
+            if (sds && sds.length >= 2) {
+                // Multi-section template exam
+                setTemplateSections(sds);
+                setSelectedSectionIds(sds.map(s => s.id));
+                // Build questions per section, each tagged with subjectGroup
+                const allQuestions = sds.flatMap(sd =>
+                    buildQuestionsFromTypeCounts(sd.typeCounts || []).map(q => ({
+                        ...q,
+                        id: `new-${Date.now()}-${Math.random()}`,
+                        subjectGroup: sd.subjectName,
+                    }))
+                );
+                setQuestions(allQuestions);
+                setExamConfig(prev => ({
+                    ...prev,
+                    subject: sds[0].subjectName,
+                    extraSubjects: sds.slice(1).map(s => s.subjectName),
+                    title: prev.title || `${sds.map(s => s.subjectName).join(' + ')} - İmtahan`,
+                }));
+            } else if (initialLocationState.sectionData) {
+                // Single-section template exam (existing behavior)
+                const sd = initialLocationState.sectionData;
+                setTemplateInfo(sd);
+                setSelectedSectionId(sd.id);
+                setSelectedSectionIds([sd.id]);
+                setQuestions(buildQuestionsFromTypeCounts(sd.typeCounts || []));
+                setExamConfig(prev => ({
+                    ...prev,
+                    title: prev.title || `${sd.subjectName || 'Şablon'} - ${sd.subtitleName || sd.name || 'İmtahan'}`,
+                }));
+            } else if (sds && sds.length === 1) {
+                // sectionsData with single item — treat as single-section
+                const sd = sds[0];
+                setTemplateInfo(sd);
+                setSelectedSectionId(sd.id);
+                setSelectedSectionIds([sd.id]);
+                setQuestions(buildQuestionsFromTypeCounts(sd.typeCounts || []));
+                setExamConfig(prev => ({
+                    ...prev,
+                    title: prev.title || `${sd.subjectName || 'Şablon'} - İmtahan`,
+                }));
+            }
+        }
+    }, []);
+
+    // On new olimpiyada exam: load section data and assign points from pointGroups
+    useEffect(() => {
+        if (!isEditMode && initialLocationState.type === 'olimpiyada') {
+            const sds = initialLocationState.sectionsData;
+            if (sds && sds.length >= 2) {
+                // Multi-section olimpiyada exam
+                setTemplateSections(sds);
+                setSelectedSectionIds(sds.map(s => s.id));
+                let globalOrderIdx = 0;
+                const allQuestions = sds.flatMap(sd => {
+                    const qs = buildQuestionsWithPointGroups(sd.typeCounts || [], sd.pointGroups, globalOrderIdx);
+                    globalOrderIdx += qs.length;
+                    return qs.map(q => ({ ...q, subjectGroup: sd.subjectName }));
+                });
+                setQuestions(allQuestions);
+                setExamConfig(prev => ({
+                    ...prev,
+                    subject: sds[0].subjectName,
+                    extraSubjects: sds.slice(1).map(s => s.subjectName),
+                    title: prev.title || `${sds.map(s => s.subjectName).join(' + ')} - Olimpiyada`,
+                }));
+            } else if (initialLocationState.sectionData) {
+                const sd = initialLocationState.sectionData;
+                setTemplateInfo(sd);
+                setSelectedSectionId(sd.id);
+                setSelectedSectionIds([sd.id]);
+                setQuestions(buildQuestionsWithPointGroups(sd.typeCounts || [], sd.pointGroups));
+                setExamConfig(prev => ({
+                    ...prev,
+                    title: prev.title || `${sd.subjectName || 'Olimpiyada'} - İmtahan`,
+                }));
+            } else if (sds && sds.length === 1) {
+                const sd = sds[0];
+                setTemplateInfo(sd);
+                setSelectedSectionId(sd.id);
+                setSelectedSectionIds([sd.id]);
+                setQuestions(buildQuestionsWithPointGroups(sd.typeCounts || [], sd.pointGroups));
+                setExamConfig(prev => ({
+                    ...prev,
+                    title: prev.title || `${sd.subjectName || 'Olimpiyada'} - İmtahan`,
+                }));
+            }
         }
     }, []);
 
@@ -293,7 +444,7 @@ const ExamEditor = () => {
         if (loading) return;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(async () => {
-            if (type !== 'template' && (!examConfig.title || !examConfig.title.trim())) return;
+            if (type !== 'template' && type !== 'olimpiyada' && (!examConfig.title || !examConfig.title.trim())) return;
             const payload = buildPayload(examStatus);
             setAutoSaveStatus('saving');
             try {
@@ -323,7 +474,7 @@ const ExamEditor = () => {
                 duration: data.durationMinutes, visibility: data.visibility,
                 tags: data.tags || [], description: data.description || ''
             });
-            setType(data.examType.toLowerCase());
+            setType(data.examType === 'OLIMPIYADA' ? 'olimpiyada' : data.examType.toLowerCase());
             setExamStatus(data.status || 'DRAFT');
             if (data.collaborativeParentId) {
                 setCollaborativeParentId(data.collaborativeParentId);
@@ -334,7 +485,22 @@ const ExamEditor = () => {
                 setIsCollaborativeParent(true);
             }
             if (data.templateSectionId) setSelectedSectionId(data.templateSectionId);
-            if (data.templateSectionId) {
+            if (data.templateSectionIds?.length >= 2) {
+                // Multi-section template: load all sections
+                setSelectedSectionIds(data.templateSectionIds);
+                Promise.all(data.templateSectionIds.map(sid => api.get(`/templates/sections/${sid}`).then(r => r.data)))
+                    .then(secs => {
+                        setTemplateSections(secs.map(sec => ({
+                            id: sec.id,
+                            templateTitle: sec.templateTitle,
+                            templateSubtitle: sec.subtitleName,
+                            subjectName: sec.subjectName,
+                            questionCount: sec.questionCount,
+                            formula: sec.formula,
+                            typeCounts: sec.typeCounts || [],
+                        })));
+                    }).catch(() => {});
+            } else if (data.templateSectionId) {
                 api.get(`/templates/sections/${data.templateSectionId}`).then(({ data: sec }) => {
                     setTemplateInfo({
                         ...sec,
@@ -408,8 +574,51 @@ const ExamEditor = () => {
         setShowSectionPicker(false);
     };
 
+    const handleAddTemplateSectionFromPicker = async (section) => {
+        // section: TemplateSectionResponse from API
+        const { id: secId, subjectName, pointGroups, typeCounts, formula } = section;
+        if ((examConfig.extraSubjects || []).includes(subjectName) || subjectName === examConfig.subject) {
+            toast.error(`${subjectName} artıq əlavədir`);
+            return;
+        }
+        // Build questions with pointGroups (olimpiyada) or default points (template)
+        const isOlimp = type === 'olimpiyada';
+        const startIdx = questions.length > 0 ? Math.max(...questions.map(q => q.orderIndex ?? 0)) + 1 : 0;
+        const newQs = isOlimp
+            ? buildQuestionsWithPointGroups(typeCounts || [], pointGroups, startIdx).map(q => ({ ...q, subjectGroup: subjectName }))
+            : buildQuestionsFromTypeCounts(typeCounts || []).map((q, i) => ({ ...q, orderIndex: startIdx + i, subjectGroup: subjectName }));
+
+        const secInfo = {
+            id: secId,
+            templateTitle: section.templateTitle || '',
+            templateSubtitle: section.subtitleName || '',
+            subjectName,
+            questionCount: section.questionCount,
+            formula,
+            typeCounts: typeCounts || [],
+            pointGroups: pointGroups || null,
+        };
+        setTemplateSections(prev => [...prev, secInfo]);
+        setSelectedSectionIds(prev => [...prev, secId]);
+        setQuestions(prev => [...prev, ...newQs]);
+        setExamConfig(prev => ({ ...prev, extraSubjects: [...(prev.extraSubjects || []), subjectName] }));
+        setAddSectionModal(null);
+        toast.success(`${subjectName} bölməsi əlavə edildi`);
+    };
+
     const handleRemoveSection = (subjectName) => {
-        setQuestions(prev => prev.map(q => q.subjectGroup === subjectName ? { ...q, subjectGroup: null } : q));
+        if (type === 'template' || type === 'olimpiyada') {
+            // In template/olimpiyada mode: delete questions and update template section lists
+            setQuestions(prev => prev.filter(q => q.subjectGroup !== subjectName));
+            setTemplateSections(prev => prev.filter(s => s.subjectName !== subjectName));
+            setSelectedSectionIds(prev => {
+                const sec = templateSections.find(s => s.subjectName === subjectName);
+                return sec ? prev.filter(id => id !== sec.id) : prev;
+            });
+        } else {
+            // In free mode: move questions back to main section
+            setQuestions(prev => prev.map(q => q.subjectGroup === subjectName ? { ...q, subjectGroup: null } : q));
+        }
         setExamConfig(prev => ({ ...prev, extraSubjects: (prev.extraSubjects || []).filter(s => s !== subjectName) }));
     };
 
@@ -439,25 +648,92 @@ const ExamEditor = () => {
         setQuestions(questions.filter(q => q.id !== qId));
     };
 
-    const handleBatchPdfComplete = (base64Images) => {
-        const startIdx = nextOrderIndex();
+    const handleBatchPdfComplete = (payload) => {
         const isMain = !batchPdfSection || batchPdfSection === examConfig.subject;
-        const newQuestions = base64Images.map((img, idx) => ({
+        const _isLocked = (type === 'template' || type === 'olimpiyada') && (templateInfo !== null || templateSections.length >= 2);
+
+        // Payload shape: { crops: [{id, questionImage, options:[{label,image}]}], optionCount: 4|5, cropMode: 'simple'|'advanced' }
+        // Backward compat: plain string[] (single-image old format)
+        const isNewFormat = payload && typeof payload === 'object' && !Array.isArray(payload) && 'crops' in payload;
+        const crops = isNewFormat ? payload.crops : (Array.isArray(payload) ? payload.map(img => ({ questionImage: img, options: [] })) : []);
+        const optionCount = isNewFormat ? (payload.optionCount || 5) : 5;
+        const cropMode = isNewFormat ? (payload.cropMode || 'simple') : 'simple';
+        const optionTextMode = isNewFormat ? (payload.optionTextMode || 'label') : 'label';
+
+        const ALL_OPT = ['A', 'B', 'C', 'D', 'E'];
+        const activeLabels = ALL_OPT.slice(0, optionCount);
+
+        const buildOptions = (optionCrops, existingOptions) => {
+            if (cropMode === 'advanced' && optionCrops && optionCrops.length > 0) {
+                // Advanced: use cropped images; fill missing slots with text fallback
+                const base = existingOptions && existingOptions.length >= optionCount
+                    ? existingOptions.slice(0, optionCount).map(o => ({ ...o }))
+                    : activeLabels.map((lbl, i) => ({
+                        id: `opt-${lbl}-${Date.now()}-${i}`,
+                        text: optionTextMode === 'label' ? lbl + ' variantı' : '', isCorrect: false, attachedImage: null
+                    }));
+                optionCrops.forEach(({ label, image }) => {
+                    const i = activeLabels.indexOf(label);
+                    if (i !== -1 && base[i]) base[i] = { ...base[i], attachedImage: image };
+                });
+                return base;
+            }
+            // Simple mode: text-only options; preserve existing if already present and sized correctly
+            if (existingOptions && existingOptions.length >= optionCount) {
+                return existingOptions.slice(0, optionCount).map(o => ({ ...o }));
+            }
+            return activeLabels.map((lbl, i) => ({
+                id: `opt-${lbl}-${Date.now()}-${i}`,
+                text: optionTextMode === 'label' ? lbl + ' variantı' : '', isCorrect: false, attachedImage: null,
+            }));
+        };
+
+        if (_isLocked) {
+            // Template mode: fill into empty question slots starting from first empty in section
+            const emptySlots = questions.filter(q => {
+                const inSection = isMain
+                    ? (q.subjectGroup == null || q.subjectGroup === batchPdfSection)
+                    : q.subjectGroup === batchPdfSection;
+                return inSection && !q.text?.trim() && !q.attachedImage;
+            });
+            const toFill = Math.min(crops.length, emptySlots.length);
+            if (toFill === 0) {
+                toast.error('Bu bölmədə doldurulacaq boş sual yoxdur');
+                setBatchPdfSection(null);
+                return;
+            }
+            setQuestions(prev => {
+                const updated = [...prev];
+                for (let i = 0; i < toFill; i++) {
+                    const idx = updated.findIndex(q => q.id === emptySlots[i].id);
+                    if (idx !== -1) {
+                        updated[idx] = {
+                            ...updated[idx],
+                            text: 'Şəkilə əsasən cavabı qeyd edin',
+                            attachedImage: crops[i].questionImage,
+                            options: buildOptions(crops[i].options, updated[idx].options),
+                        };
+                    }
+                }
+                return updated;
+            });
+            setBatchPdfSection(null);
+            toast.success(`${toFill} sual dolduruldu${crops.length > emptySlots.length ? ` (${crops.length - toFill} artıq idi)` : ''}`);
+            return;
+        }
+        // Free mode: add as new questions
+        const startIdx = nextOrderIndex();
+        const newQuestions = crops.map((crop, idx) => ({
             id: `batch-${Date.now()}-${idx}`, type: 'MULTIPLE_CHOICE',
-            text: 'Şəkilə əsasən cavabı qeyd edin', points: 1, attachedImage: img,
+            text: 'Şəkilə əsasən cavabı qeyd edin', points: 1,
+            attachedImage: crop.questionImage,
             orderIndex: startIdx + idx,
             subjectGroup: isMain ? null : batchPdfSection,
-            options: [
-                { id: `opt-a-${Date.now()}-${idx}`, text: '', isCorrect: false },
-                { id: `opt-b-${Date.now()}-${idx}`, text: '', isCorrect: false },
-                { id: `opt-c-${Date.now()}-${idx}`, text: '', isCorrect: false },
-                { id: `opt-d-${Date.now()}-${idx}`, text: '', isCorrect: false },
-                { id: `opt-e-${Date.now()}-${idx}`, text: '', isCorrect: false },
-            ]
+            options: buildOptions(crop.options, null),
         }));
         setQuestions([...questions, ...newQuestions]);
         setBatchPdfSection(null);
-        toast.success(`${base64Images.length} yeni sual əlavə edildi`);
+        toast.success(`${crops.length} yeni sual əlavə edildi`);
     };
 
     // ---------- Passage handlers ----------
@@ -561,11 +837,12 @@ const ExamEditor = () => {
             description: cfg.description || '',
             subjects: cfg.subject ? [cfg.subject, ...(cfg.extraSubjects || [])] : [],
             visibility: cfg.visibility || 'PUBLIC',
-            examType: type === 'free' ? 'FREE' : 'TEMPLATE',
+            examType: type === 'free' ? 'FREE' : type === 'olimpiyada' ? 'OLIMPIYADA' : 'TEMPLATE',
             status,
             durationMinutes: duration,
             tags: cfg.tags || [],
-            templateSectionId: type === 'template' ? (selectedSectionId || null) : null,
+            templateSectionId: (type === 'template' || type === 'olimpiyada') ? (selectedSectionId || (selectedSectionIds.length > 0 ? selectedSectionIds[0] : null)) : null,
+            templateSectionIds: (type === 'template' || type === 'olimpiyada') && selectedSectionIds.length > 1 ? selectedSectionIds : null,
             questions: questions.map((q) => mapQuestion(q, q.orderIndex ?? 0)),
             passages: passages.map((p) => ({
                 id: isNewId(p.id) ? null : p.id,
@@ -707,7 +984,9 @@ const ExamEditor = () => {
     }
 
     const isTemplateMode = type === 'template';
-    const isQuestionCountLocked = isTemplateMode && templateInfo !== null;
+    const isOlimpiyadaMode = type === 'olimpiyada';
+    const isMultiSectionTemplate = templateSections.length >= 2;
+    const isQuestionCountLocked = (isTemplateMode || isOlimpiyadaMode) && (templateInfo !== null || isMultiSectionTemplate);
 
     // Pre-compute global question offset for each section so numbering continues across sections
     const _sectionSubjectsList = [examConfig.subject, ...(examConfig.extraSubjects || [])];
@@ -738,7 +1017,7 @@ const ExamEditor = () => {
                                 {examConfig.title || (isEditMode ? 'İmtahan Redaktə Edilir' : 'Yeni İmtahan Yaradılır')}
                             </h1>
                             <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-semibold">{{ free: 'Sərbəst', template: 'Şablon' }[type] || type}</span>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isOlimpiyadaMode ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{{ free: 'Sərbəst', template: 'Şablon', olimpiyada: 'Olimpiyada' }[type] || type}</span>
                                 <span>•</span>
                                 <span>{examConfig.subject}</span>
                                 {examConfig.duration && <><span>•</span><span>{examConfig.duration} dəq</span></>}
@@ -825,8 +1104,30 @@ const ExamEditor = () => {
                     </div>
                 )}
 
-                {/* Template info banner (read-only) */}
-                {isTemplateMode && templateInfo && (
+                {/* Template info banner — multi-section */}
+                {isTemplateMode && isMultiSectionTemplate && (
+                    <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-2xl px-6 py-4">
+                        <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wide mb-3">
+                            {templateSections[0]?.templateTitle} · {templateSections[0]?.templateSubtitle} · Çox Fənli Şablon
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            {templateSections.map(sec => (
+                                <div key={sec.id} className="flex flex-wrap items-center justify-between gap-2 bg-white/60 rounded-xl px-3 py-2">
+                                    <span className="font-bold text-indigo-800 text-sm">{sec.subjectName}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">
+                                            {sec.questionCount} sual (sabit)
+                                        </span>
+                                        <code className="text-xs font-mono text-indigo-600 bg-white border border-indigo-200 px-2 py-0.5 rounded-lg">{sec.formula}</code>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Template info banner — single section (read-only) */}
+                {isTemplateMode && templateInfo && !isMultiSectionTemplate && (
                     <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wide">
@@ -840,6 +1141,48 @@ const ExamEditor = () => {
                                 {templateInfo.questionCount} sual (sabit)
                             </span>
                             <code className="text-xs font-mono text-indigo-600 bg-white border border-indigo-200 px-2.5 py-1 rounded-lg">{templateInfo.formula}</code>
+                        </div>
+                    </div>
+                )}
+
+                {/* Olimpiyada info banner — multi-section */}
+                {isOlimpiyadaMode && isMultiSectionTemplate && (
+                    <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4">
+                        <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide mb-3">
+                            {templateSections[0]?.templateTitle} · {templateSections[0]?.templateSubtitle} · Olimpiyada Şablonu
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            {templateSections.map(sec => (
+                                <div key={sec.id} className="flex flex-wrap items-center justify-between gap-2 bg-white/60 rounded-xl px-3 py-2">
+                                    <span className="font-bold text-amber-800 text-sm">{sec.subjectName}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                                            {sec.questionCount} sual (sabit)
+                                        </span>
+                                        <code className="text-xs font-mono text-amber-600 bg-white border border-amber-200 px-2 py-0.5 rounded-lg">{sec.formula}</code>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-xs text-amber-600 mt-3">Hər sualın balı şablon tərəfindən avtomatik təyin edilib (dəyişdirilə bilməz)</p>
+                    </div>
+                )}
+
+                {/* Olimpiyada info banner — single section */}
+                {isOlimpiyadaMode && templateInfo && !isMultiSectionTemplate && (
+                    <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
+                                {templateInfo.templateTitle} · {templateInfo.templateSubtitle} · Olimpiyada
+                            </div>
+                            <div className="mt-0.5 font-bold text-amber-800 text-base">{templateInfo.subjectName}</div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                            <span className="flex items-center gap-1 text-amber-700 font-semibold bg-amber-100 px-3 py-1 rounded-full">
+                                <HiOutlineInformationCircle className="w-4 h-4" />
+                                {templateInfo.questionCount} sual (sabit)
+                            </span>
+                            <code className="text-xs font-mono text-amber-600 bg-white border border-amber-200 px-2.5 py-1 rounded-lg">{templateInfo.formula}</code>
                         </div>
                     </div>
                 )}
@@ -868,7 +1211,7 @@ const ExamEditor = () => {
                                     <span className="font-bold text-sm">{sectionSubject}</span>
                                 </div>
                                 <div className="flex-1 h-px bg-gray-200" />
-                                {!isMain && !isTemplateMode && !isCollaborativeMode && (
+                                {!isMain && !isCollaborativeMode && (
                                     <button
                                         onClick={() => handleRemoveSection(sectionSubject)}
                                         className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -896,16 +1239,48 @@ const ExamEditor = () => {
                                                             onDelete={handleDeleteQuestion}
                                                             hidePoints={isTemplateMode}
                                                             hideDelete={isQuestionCountLocked}
+                                                            pointsReadOnly={isOlimpiyadaMode}
                                                         />
                                                         {isQuestionCountLocked && (
-                                                            <div className="mt-2 flex justify-end">
+                                                            <div className="mt-2 flex justify-end gap-2">
                                                                 <button
                                                                     onClick={() => setBankPicker({ section: sectionSubject, replaceId: item.data.id, filterType: item.data.type })}
-                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600 font-semibold rounded-lg transition-colors text-xs"
+                                                                    className={`flex items-center gap-1.5 px-3 py-1.5 bg-white font-semibold rounded-lg transition-colors text-xs ${
+                                                                        isOlimpiyadaMode
+                                                                            ? 'border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-600'
+                                                                            : 'border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600'
+                                                                    }`}
                                                                 >
                                                                     <HiOutlineBookOpen className="w-3.5 h-3.5" />
                                                                     Bazadan seç
                                                                 </button>
+                                                                {(hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0) || isAdmin) && (
+                                                                    <button
+                                                                        onClick={async () => {
+                                                                            const qType = item.data.type === 'MULTIPLE_CHOICE' ? 'MCQ' :
+                                                                                item.data.type === 'MULTI_SELECT' ? 'MULTI_SELECT' :
+                                                                                item.data.type === 'OPEN_AUTO' ? 'OPEN_AUTO' :
+                                                                                item.data.type === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'MCQ';
+                                                                            setAiForm({ topic: '', difficulty: 'MEDIUM', questionType: qType });
+                                                                            setAiTopics([]);
+                                                                            setAiUsage(null);
+                                                                            setAiModal({ section: sectionSubject, replaceId: item.data.id, lockedQuestionType: qType });
+                                                                            setAiTopicsLoading(true);
+                                                                            try {
+                                                                                const [topicsRes, usageRes] = await Promise.all([
+                                                                                    api.get('/subjects/topics', { params: { name: sectionSubject } }),
+                                                                                    api.get('/ai/usage'),
+                                                                                ]);
+                                                                                setAiTopics(topicsRes.data);
+                                                                                setAiUsage(usageRes.data);
+                                                                            } catch { setAiTopics([]); } finally { setAiTopicsLoading(false); }
+                                                                        }}
+                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-violet-200 hover:border-violet-400 hover:bg-violet-50 text-violet-600 font-semibold rounded-lg transition-colors text-xs"
+                                                                    >
+                                                                        <HiOutlineSparkles className="w-3.5 h-3.5" />
+                                                                        AI ilə doldur
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -929,6 +1304,21 @@ const ExamEditor = () => {
                                             }
                                         });
                                     })()}
+                                </div>
+                            )}
+
+                            {/* Template mode: single PDF fill button at section bottom */}
+                            {isQuestionCountLocked && (
+                                <div className="mt-2 mb-2">
+                                    <div className="relative inline-block">
+                                        <input type="file" accept="application/pdf"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfSection(sectionSubject); setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
+                                        <button className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 text-gray-600 hover:text-indigo-700 font-semibold rounded-xl transition-colors text-sm">
+                                            <HiOutlineDocumentText className="w-4 h-4" />
+                                            PDF-dən doldur
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
@@ -1012,8 +1402,8 @@ const ExamEditor = () => {
                 })}
 
 
-                {/* Add new subject section */}
-                {!isTemplateMode && !isCollaborativeMode && (
+                {/* Add new subject / template section — available in both free and template modes */}
+                {!isCollaborativeMode && (
                     <div className="mt-4 mb-8">
                         {showSectionPicker ? (
                             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
@@ -1027,10 +1417,7 @@ const ExamEditor = () => {
                                                 onClick={() => handleAddSection(s.name)}
                                                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
                                             >
-                                                <span
-                                                    className="w-3 h-3 rounded-full shrink-0"
-                                                    style={{ backgroundColor: s.color || '#6366f1' }}
-                                                />
+                                                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.color || '#6366f1' }} />
                                                 <span className="truncate">{s.name}</span>
                                             </button>
                                         ))}
@@ -1038,17 +1425,37 @@ const ExamEditor = () => {
                                 <button onClick={() => setShowSectionPicker(false)} className="text-sm text-gray-400 hover:text-gray-600">Ləğv et</button>
                             </div>
                         ) : (
-                            <button
-                                onClick={() => hasPermission('multipleSubjects') ? setShowSectionPicker(true) : null}
-                                className={`w-full flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed font-semibold rounded-2xl transition-colors ${
-                                    hasPermission('multipleSubjects') 
-                                        ? 'bg-white border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700' 
-                                        : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
-                                }`}
-                            >
-                                {!hasPermission('multipleSubjects') ? <HiLockClosed className="w-5 h-5"/> : <HiOutlinePlus className="w-5 h-5" />}
-                                Yeni fənn əlavə et {!hasPermission('multipleSubjects') && <span className="text-xs font-normal ml-2">(Pro plan tələb olunur)</span>}
-                            </button>
+                            <div className={`flex ${isQuestionCountLocked ? 'gap-3' : ''}`}>
+                                <button
+                                    onClick={() => hasPermission('multipleSubjects') ? setShowSectionPicker(true) : null}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed font-semibold rounded-2xl transition-colors ${
+                                        hasPermission('multipleSubjects')
+                                            ? 'bg-white border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700'
+                                            : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    {!hasPermission('multipleSubjects') ? <HiLockClosed className="w-5 h-5"/> : <HiOutlinePlus className="w-5 h-5" />}
+                                    Yeni fənn əlavə et {!hasPermission('multipleSubjects') && <span className="text-xs font-normal ml-2">(Pro plan tələb olunur)</span>}
+                                </button>
+                                {isQuestionCountLocked && (
+                                    <button
+                                        onClick={async () => {
+                                            const endpoint = isOlimpiyadaMode ? '/templates/olimpiyada' : '/templates';
+                                            setAddSectionModal({ tab: 'template', step: 1, templates: [], selectedTemplate: null, subtitles: [], selectedSubtitle: null, loadingTemplates: true, loadingSubtitles: false });
+                                            try {
+                                                const { data } = await api.get(endpoint);
+                                                setAddSectionModal(prev => ({ ...prev, templates: data, loadingTemplates: false }));
+                                            } catch {
+                                                setAddSectionModal(prev => ({ ...prev, loadingTemplates: false }));
+                                            }
+                                        }}
+                                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed font-semibold rounded-2xl transition-colors bg-white border-teal-300 hover:border-teal-500 hover:bg-teal-50 text-teal-700"
+                                    >
+                                        <HiOutlineBookOpen className="w-5 h-5" />
+                                        Şablondan bölmə əlavə et
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </div>
                 )}
@@ -1063,7 +1470,7 @@ const ExamEditor = () => {
                                 <HiOutlineSparkles className="w-5 h-5 text-violet-600" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-lg font-bold text-gray-900 leading-tight">AI ilə sual yarat</h3>
+                                <h3 className="text-lg font-bold text-gray-900 leading-tight">{aiModal.replaceId ? 'AI ilə doldur' : 'AI ilə sual yarat'}</h3>
                                 <p className="text-xs text-gray-400">Fənn: <span className="font-semibold text-gray-600">{aiModal.section}</span></p>
                             </div>
                             {aiUsage && (
@@ -1129,16 +1536,23 @@ const ExamEditor = () => {
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Sual tipi</label>
-                                <select
-                                    value={aiForm.questionType}
-                                    onChange={e => setAiForm(f => ({ ...f, questionType: e.target.value }))}
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none text-sm bg-white"
-                                >
-                                    <option value="MCQ">Çoxvariantlı (tək cavab)</option>
-                                    <option value="MULTI_SELECT">Çoxvariantlı (çox cavab)</option>
-                                    <option value="OPEN_AUTO">Açıq sual (avtomatik yoxlama)</option>
-                                    <option value="FILL_IN_THE_BLANK">Boşluq doldurma</option>
-                                </select>
+                                {aiModal.lockedQuestionType ? (
+                                    <div className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-600 font-medium">
+                                        {{ MCQ: 'Çoxvariantlı (tək cavab)', MULTI_SELECT: 'Çoxvariantlı (çox cavab)', OPEN_AUTO: 'Açıq sual (avtomatik yoxlama)', FILL_IN_THE_BLANK: 'Boşluq doldurma' }[aiModal.lockedQuestionType] || aiModal.lockedQuestionType}
+                                        <span className="ml-2 text-xs text-gray-400">(şablon tərəfindən müəyyən edilib)</span>
+                                    </div>
+                                ) : (
+                                    <select
+                                        value={aiForm.questionType}
+                                        onChange={e => setAiForm(f => ({ ...f, questionType: e.target.value }))}
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none text-sm bg-white"
+                                    >
+                                        <option value="MCQ">Çoxvariantlı (tək cavab)</option>
+                                        <option value="MULTI_SELECT">Çoxvariantlı (çox cavab)</option>
+                                        <option value="OPEN_AUTO">Açıq sual (avtomatik yoxlama)</option>
+                                        <option value="FILL_IN_THE_BLANK">Boşluq doldurma</option>
+                                    </select>
+                                )}
                             </div>
                         </div>
                         <div className="flex gap-3 mt-6">
@@ -1191,6 +1605,17 @@ const ExamEditor = () => {
                 isOpen={isBatchPdfOpen} isBatchMode={true} file={batchPdfFile}
                 onClose={() => { setIsBatchPdfOpen(false); setBatchPdfFile(null); }}
                 onCropComplete={handleBatchPdfComplete}
+                maxCrops={(() => {
+                    const _locked = (type === 'template' || type === 'olimpiyada') && (templateInfo !== null || templateSections.length >= 2);
+                    if (!_locked) return null; // unlimited in free mode
+                    const isMain = !batchPdfSection || batchPdfSection === examConfig.subject;
+                    return questions.filter(q => {
+                        const inSection = isMain
+                            ? (q.subjectGroup == null || q.subjectGroup === batchPdfSection)
+                            : q.subjectGroup === batchPdfSection;
+                        return inSection && !q.text?.trim() && !q.attachedImage;
+                    }).length;
+                })()}
             />
 
             <ExamSettingsModal
@@ -1206,6 +1631,111 @@ const ExamEditor = () => {
                     onSelect={handleBankSelect}
                     onClose={() => setBankPicker(null)}
                 />
+            )}
+
+            {/* Add Template Section Modal */}
+            {addSectionModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[80vh]">
+                        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
+                            <h3 className="text-base font-bold text-gray-900">
+                                {addSectionModal.step === 1 ? 'Şablon seçin' : addSectionModal.step === 2 ? 'Alt başlıq seçin' : 'Bölmə seçin'}
+                            </h3>
+                            <button onClick={() => setAddSectionModal(null)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                                <HiOutlineX className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="overflow-y-auto flex-1 p-4">
+                            {addSectionModal.step === 1 && (
+                                addSectionModal.loadingTemplates ? (
+                                    <div className="flex items-center justify-center py-10 text-gray-400 text-sm">Yüklənir...</div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {addSectionModal.templates.map(t => (
+                                            <button
+                                                key={t.id}
+                                                onClick={async () => {
+                                                    setAddSectionModal(prev => ({ ...prev, selectedTemplate: t, step: 2, subtitles: [], loadingSubtitles: true }));
+                                                    try {
+                                                        const { data } = await api.get(`/templates/${t.id}/subtitles`);
+                                                        setAddSectionModal(prev => ({ ...prev, subtitles: data, loadingSubtitles: false }));
+                                                    } catch {
+                                                        setAddSectionModal(prev => ({ ...prev, loadingSubtitles: false }));
+                                                    }
+                                                }}
+                                                className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                                            >
+                                                <p className="font-semibold text-gray-800 text-sm">{t.title}</p>
+                                            </button>
+                                        ))}
+                                        {addSectionModal.templates.length === 0 && (
+                                            <p className="text-sm text-gray-400 text-center py-8">Şablon tapılmadı</p>
+                                        )}
+                                    </div>
+                                )
+                            )}
+
+                            {addSectionModal.step === 2 && (
+                                addSectionModal.loadingSubtitles ? (
+                                    <div className="flex items-center justify-center py-10 text-gray-400 text-sm">Yüklənir...</div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {addSectionModal.subtitles.map(sub => (
+                                            <button
+                                                key={sub.id}
+                                                onClick={() => setAddSectionModal(prev => ({ ...prev, selectedSubtitle: sub, step: 3 }))}
+                                                className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                                            >
+                                                <p className="font-semibold text-gray-800 text-sm">{sub.subtitle}</p>
+                                                <p className="text-xs text-gray-400 mt-0.5">{sub.sections?.length || 0} bölmə</p>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )
+                            )}
+
+                            {addSectionModal.step === 3 && (
+                                <div className="space-y-2">
+                                    {(addSectionModal.selectedSubtitle?.sections || []).map(sec => {
+                                        const alreadyAdded = sec.subjectName === examConfig.subject || (examConfig.extraSubjects || []).includes(sec.subjectName);
+                                        return (
+                                            <button
+                                                key={sec.id}
+                                                disabled={alreadyAdded}
+                                                onClick={() => handleAddTemplateSectionFromPicker(sec)}
+                                                className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                                                    alreadyAdded
+                                                        ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
+                                                        : 'border-gray-200 hover:border-teal-400 hover:bg-teal-50'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="font-semibold text-gray-800 text-sm">{sec.subjectName}</p>
+                                                        <p className="text-xs text-gray-500 mt-0.5">{sec.questionCount} sual · <code className="font-mono">{sec.formula}</code></p>
+                                                    </div>
+                                                    {alreadyAdded && <span className="text-xs text-gray-400 shrink-0">Əlavədir</span>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {addSectionModal.step > 1 && (
+                            <div className="px-6 py-4 border-t border-gray-100">
+                                <button
+                                    onClick={() => setAddSectionModal(prev => ({ ...prev, step: prev.step - 1 }))}
+                                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
+                                >
+                                    <HiOutlineArrowLeft className="w-4 h-4" /> Geri
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
 
             {/* Floating Publish / Submit Button */}

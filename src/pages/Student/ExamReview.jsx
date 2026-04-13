@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter, HiOutlineX } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
@@ -201,10 +201,11 @@ const MatchingReview = ({ q }) => {
 };
 
 // ---- GradingPanel ----
-const GradingPanel = ({ question, submissionId, onGraded }) => {
-    const [fraction, setFraction] = useState(null);
-    const [feedback, setFeedback] = useState('');
+const GradingPanel = ({ question, submissionId, onGraded, initialFraction = null, initialFeedback = '' }) => {
+    const [fraction, setFraction] = useState(initialFraction);
+    const [feedback, setFeedback] = useState(initialFeedback);
     const [saving, setSaving] = useState(false);
+    const isRegrading = initialFraction !== null;
 
     const fractions = [
         { value: 0, label: '0 bal' },
@@ -233,9 +234,10 @@ const GradingPanel = ({ question, submissionId, onGraded }) => {
     };
 
     return (
-        <div className="mt-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-3">
-            <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide flex items-center gap-1">
-                <HiOutlinePencil className="w-4 h-4" /> Bal ver ({question.points} bal)
+        <div className={`mt-4 p-4 rounded-2xl border space-y-3 ${isRegrading ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-100'}`}>
+            <p className={`text-xs font-bold uppercase tracking-wide flex items-center gap-1 ${isRegrading ? 'text-amber-600' : 'text-indigo-500'}`}>
+                <HiOutlinePencil className="w-4 h-4" />
+                {isRegrading ? `Balı dəyişdir (${question.points} bal)` : `Bal ver (${question.points} bal)`}
             </p>
             <div className="flex flex-wrap gap-2">
                 {fractions.map(f => (
@@ -245,14 +247,18 @@ const GradingPanel = ({ question, submissionId, onGraded }) => {
                         onClick={() => setFraction(f.value)}
                         className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
                             fraction === f.value
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                                : 'bg-white text-indigo-700 border-indigo-200 hover:border-indigo-400'
+                                ? isRegrading
+                                    ? 'bg-amber-500 text-white border-amber-500 shadow-md'
+                                    : 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                                : isRegrading
+                                    ? 'bg-white text-amber-700 border-amber-200 hover:border-amber-400'
+                                    : 'bg-white text-indigo-700 border-indigo-200 hover:border-indigo-400'
                         }`}
                     >
                         {f.label}
-                        {fraction === f.value && <span className="ml-1 text-xs opacity-75">
-                            ({fmtScore(f.value * question.points)})
-                        </span>}
+                        {fraction === f.value && (
+                            <span className="ml-1 text-xs opacity-75">({fmtScore(f.value * question.points)})</span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -260,15 +266,15 @@ const GradingPanel = ({ question, submissionId, onGraded }) => {
                 value={feedback}
                 onChange={e => setFeedback(e.target.value)}
                 placeholder="Şagirdə rəy (istəyə bağlı)..."
-                className="w-full px-3 py-2 border border-indigo-200 rounded-xl text-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none"
+                className={`w-full px-3 py-2 border rounded-xl text-sm resize-none ${isRegrading ? 'border-amber-200 focus:border-amber-500' : 'border-indigo-200 focus:border-indigo-500'}`}
                 rows={2}
             />
             <button
                 onClick={handleSave}
                 disabled={saving || fraction === null}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50"
+                className={`px-5 py-2 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 ${isRegrading ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}
             >
-                {saving ? 'Saxlanılır...' : 'Balı Qeydə Al'}
+                {saving ? 'Saxlanılır...' : isRegrading ? 'Balı Yenilə' : 'Balı Qeydə Al'}
             </button>
         </div>
     );
@@ -278,6 +284,8 @@ const GradingPanel = ({ question, submissionId, onGraded }) => {
 const ExamReview = () => {
     const { sessionId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const fromResult = location.state?.fromResult === true;
     const { isTeacher, isAdmin } = useAuth();
     const canGrade = isTeacher || isAdmin;
     const [review, setReview] = useState(null);
@@ -309,7 +317,7 @@ const ExamReview = () => {
         setReview(prev => {
             const updatedQuestions = prev.questions.map(q =>
                 q.id === questionId
-                    ? { ...q, isGraded: true, awardedScore, feedback: feedbackText || q.feedback }
+                    ? { ...q, isGraded: true, awardedScore, feedback: feedbackText || q.feedback, points: q.points }
                     : q
             );
             const newUngradedCount = updatedQuestions.filter(q => !q.isGraded).length;
@@ -368,10 +376,14 @@ const ExamReview = () => {
             <div className="bg-white border-b sticky top-0 z-30">
                 <div className="container-main py-4 flex items-center justify-between">
                     <button
-                        onClick={() => canGrade ? navigate(`/imtahanlar/${review.examId}/statistika`) : navigate('/profil')}
+                        onClick={() => {
+                            if (canGrade) navigate(`/imtahanlar/${review.examId}/statistika`);
+                            else if (fromResult) navigate(`/test/result/${sessionId}`);
+                            else navigate('/profil');
+                        }}
                         className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 font-medium transition-colors"
                     >
-                        <HiOutlineArrowLeft /> {canGrade ? 'Statistikaya Qayıt' : 'Profilə Qayıt'}
+                        <HiOutlineArrowLeft /> {canGrade ? 'Statistikaya Qayıt' : fromResult ? 'Nəticəyə Qayıt' : 'Profilə Qayıt'}
                     </button>
                     <div className="text-center">
                         <h1 className="text-xl font-bold text-gray-900">{review.examTitle}</h1>
@@ -616,14 +628,37 @@ const ExamReview = () => {
                                                     </div>
                                                 )}
 
-                                                {/* Teacher/Admin grading panel for ungraded OPEN_MANUAL */}
-                                                {canGrade && q.questionType === 'OPEN_MANUAL' && !q.isGraded && (
-                                                    <GradingPanel
-                                                        question={q}
-                                                        submissionId={sessionId}
-                                                        onGraded={handleGraded}
-                                                    />
-                                                )}
+                                                {/* Teacher/Admin grading panel for OPEN_MANUAL */}
+                                                {canGrade && q.questionType === 'OPEN_MANUAL' && (() => {
+                                                    const currentFraction = q.isGraded && q.points > 0
+                                                        ? Math.round((q.awardedScore / q.points) * 6) / 6 // snap to nearest 1/6
+                                                        : null;
+                                                    // Find the closest fraction option
+                                                    const fracOptions = [0, 1/3, 1/2, 2/3, 1];
+                                                    const snappedFraction = currentFraction !== null
+                                                        ? fracOptions.reduce((best, f) => Math.abs(f - currentFraction) < Math.abs(best - currentFraction) ? f : best, fracOptions[0])
+                                                        : null;
+                                                    return (
+                                                        <>
+                                                            {q.isGraded && (
+                                                                <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 border border-green-200 rounded-2xl">
+                                                                    <HiOutlineCheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                                                                    <span className="text-sm text-green-700 font-semibold">
+                                                                        Verilmiş bal: {fmtScore(q.awardedScore)} / {q.points}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            <GradingPanel
+                                                                key={`${q.id}-${q.awardedScore}`}
+                                                                question={q}
+                                                                submissionId={sessionId}
+                                                                onGraded={handleGraded}
+                                                                initialFraction={snappedFraction}
+                                                                initialFeedback={q.feedback || ''}
+                                                            />
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         )}
 

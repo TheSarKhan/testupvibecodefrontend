@@ -304,12 +304,24 @@ const ExamView = () => {
                                     })()}
 
                                     {/* Open Ended */}
-                                    {(q.questionType === 'OPEN_AUTO' || q.questionType === 'OPEN_MANUAL') && (
+                                    {q.questionType === 'OPEN_AUTO' && (
                                         <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
                                             <p className="text-sm text-indigo-700 font-semibold mb-2">Nümunəvi Cavab:</p>
                                             <div className="text-gray-800">
                                                 <LatexPreview content={q.correctAnswer} />
                                             </div>
+                                        </div>
+                                    )}
+                                    {q.questionType === 'OPEN_MANUAL' && (
+                                        <div className="mt-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                                            <p className="text-sm text-amber-700 font-semibold mb-2">Müəllim tərəfindən yoxlanılır</p>
+                                            {q.correctAnswer ? (
+                                                <div className="text-gray-800">
+                                                    <LatexPreview content={q.correctAnswer} />
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-amber-600 italic">Nümunəvi cavab göstərilməyib</p>
+                                            )}
                                         </div>
                                     )}
                                 </div>

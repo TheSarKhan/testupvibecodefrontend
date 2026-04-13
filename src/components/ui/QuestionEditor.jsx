@@ -15,7 +15,7 @@ const QUESTION_TYPES = {
     FILL_IN_THE_BLANK: 'Boşluq Doldurma'
 };
 
-const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false }) => {
+const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false, pointsReadOnly = false }) => {
     const { hasPermission } = useAuth();
     const [mathModalField, setMathModalField] = useState(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
@@ -801,14 +801,18 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     {!hidePoints && (
                         <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
                             <label className="text-sm text-gray-600 font-medium">Bal:</label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="100"
-                                value={question.points}
-                                onChange={(e) => handleChange('points', Math.min(100, Math.max(1, parseFloat(e.target.value) || 1)))}
-                                className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-indigo-700"
-                            />
+                            {pointsReadOnly ? (
+                                <span className="w-16 text-sm font-bold text-amber-700">{question.points}</span>
+                            ) : (
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    value={question.points}
+                                    onChange={(e) => handleChange('points', Math.min(100, Math.max(1, parseFloat(e.target.value) || 1)))}
+                                    className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-indigo-700"
+                                />
+                            )}
                         </div>
                     )}
                     {!hideDelete && (

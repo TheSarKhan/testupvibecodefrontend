@@ -25,6 +25,8 @@ const FORMULA_VARS = [
     { v: 'l', label: 'Açıq (müəllim) düzgün' },     { v: 'm', label: 'Açıq (müəllim) yanlış' },
     { v: 'h', label: 'Boşluq düzgün' },             { v: 'i', label: 'Boşluq yanlış' },
     { v: 'j', label: 'Uyğunlaşdırma düzgün' },      { v: 'k', label: 'Uyğunlaşdırma yanlış' },
+    { v: 's', label: 'Düzgün MCQ balları cəmi' },
+    { v: 'w', label: 'Yanlış MCQ balları cəmi' },
     { v: 'n', label: 'Ümumi sual sayı' },
 ];
 
@@ -52,6 +54,11 @@ function buildGroups(typeCounts) {
 }
 
 // ─── Section Form ──────────────────────────────────────────────────────────────
+const parsePointGroups = (json) => {
+    if (!json) return [];
+    try { return JSON.parse(json); } catch { return []; }
+};
+
 const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
     const [subjectName, setSubjectName] = useState(initial?.subjectName || '');
     const [formula, setFormula] = useState(initial?.formula || '');
@@ -59,6 +66,13 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
     const [groups, setGroups] = useState(() => buildGroups(initial?.typeCounts));
     const [showGroupMenu, setShowGroupMenu] = useState(false);
     const menuRef = useRef(null);
+
+    // Point groups state
+    const [pgEnabled, setPgEnabled] = useState(() => !!initial?.pointGroups);
+    const [pgList, setPgList] = useState(() => {
+        const parsed = parsePointGroups(initial?.pointGroups);
+        return parsed.length ? parsed : [{ from: 1, to: 10, points: 1.0 }];
+    });
 
     useEffect(() => {
         const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowGroupMenu(false); };
@@ -93,6 +107,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
             typeCounts: groups.flatMap(g =>
                 g.rows.map(r => ({ questionType: r.questionType, count: parseInt(r.count), passageType: g.passageType || null }))
             ),
+            pointGroups: pgEnabled ? JSON.stringify(pgList) : null,
         });
     };
 
@@ -229,6 +244,49 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all resize-none" />
             </div>
 
+            {/* Bal qrupları */}
+            <div className="p-5 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Bal Qrupları</label>
+                    <button type="button" onClick={() => setPgEnabled(v => !v)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${pgEnabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${pgEnabled ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                    </button>
+                </div>
+                {pgEnabled && (
+                    <div className="space-y-2">
+                        <p className="text-xs text-gray-400">Hər sualın 1-əsaslı sıra nömrəsinə görə bal təyin et (olimpiyada üçün)</p>
+                        {pgList.map((pg, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500 w-6">{i + 1}.</span>
+                                <input type="number" min={1} value={pg.from}
+                                    onChange={e => setPgList(prev => prev.map((p, j) => j === i ? { ...p, from: parseInt(e.target.value) || 1 } : p))}
+                                    className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-indigo-400" placeholder="başlanğıc" />
+                                <span className="text-xs text-gray-400">—</span>
+                                <input type="number" min={1} value={pg.to}
+                                    onChange={e => setPgList(prev => prev.map((p, j) => j === i ? { ...p, to: parseInt(e.target.value) || 1 } : p))}
+                                    className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-indigo-400" placeholder="son" />
+                                <span className="text-xs text-gray-400">→</span>
+                                <input type="number" min={0} step={0.5} value={pg.points}
+                                    onChange={e => setPgList(prev => prev.map((p, j) => j === i ? { ...p, points: parseFloat(e.target.value) || 0 } : p))}
+                                    className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-indigo-400" placeholder="bal" />
+                                <span className="text-xs text-gray-400">bal</span>
+                                {pgList.length > 1 && (
+                                    <button type="button" onClick={() => setPgList(prev => prev.filter((_, j) => j !== i))}
+                                        className="p-1 text-gray-300 hover:text-red-500 transition-colors">
+                                        <HiOutlineTrash className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                        <button type="button" onClick={() => setPgList(prev => [...prev, { from: (prev[prev.length-1]?.to || 0) + 1, to: (prev[prev.length-1]?.to || 0) + 5, points: 1.5 }])}
+                            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-semibold mt-1 transition-colors">
+                            <HiOutlinePlus className="w-3.5 h-3.5" /> Qrup əlavə et
+                        </button>
+                    </div>
+                )}
+            </div>
+
             {/* Actions */}
             <div className="px-5 py-3 bg-gray-50 flex items-center justify-between">
                 <button onClick={onCancel}
@@ -291,6 +349,7 @@ const AdminTemplateSections = () => {
             subjectName: formData.subjectName,
             formula: formData.formula,
             typeCounts: formData.typeCounts.map(tc => ({ questionType: tc.questionType, count: parseInt(tc.count) })),
+            pointGroups: formData.pointGroups || null,
         };
 
         if (editingIdx === -1) {

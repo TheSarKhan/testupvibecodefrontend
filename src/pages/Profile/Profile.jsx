@@ -282,6 +282,15 @@ const StudentProfile = ({ user }) => {
     const [profilePicture, setProfilePicture] = useState('');
     const [removingDepot, setRemovingDepot] = useState(null);
 
+    const refreshResults = async (silent = false) => {
+        try {
+            const { data } = await api.get('/submissions/my-results');
+            setResults(data);
+        } catch {
+            if (!silent) toast.error('Nəticələr yenilənmədi');
+        }
+    };
+
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -302,6 +311,11 @@ const StudentProfile = ({ user }) => {
             }
         };
         loadData();
+
+        // Re-fetch results silently when user returns to this tab
+        const onFocus = () => refreshResults(true);
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
     }, []);
 
     const handleRemoveFromDepot = async (shareLink) => {
@@ -317,17 +331,21 @@ const StudentProfile = ({ user }) => {
         }
     };
 
-    const filtered = results.filter(r =>
-        r.examTitle?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = results
+        .filter(r => r.examTitle?.toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+
+    const resultPct = (r) => r.templateScorePercent != null
+        ? Math.round(r.templateScorePercent)
+        : pct(r.totalScore, r.maxScore);
 
     const completed = results.filter(r => r.submittedAt);
     const totalExams = completed.length;
     const avgPct = totalExams > 0
-        ? Math.round(completed.reduce((s, r) => s + pct(r.totalScore, r.maxScore), 0) / totalExams)
+        ? Math.round(completed.reduce((s, r) => s + resultPct(r), 0) / totalExams)
         : 0;
     const bestPct = totalExams > 0
-        ? Math.max(...completed.map(r => pct(r.totalScore, r.maxScore)))
+        ? Math.max(...completed.map(r => resultPct(r)))
         : 0;
     const pending = results.filter(r => !r.isFullyGraded && r.submittedAt).length;
 
@@ -410,7 +428,7 @@ const StudentProfile = ({ user }) => {
                                 {/* Bar chart — fixed px heights so % bars render correctly */}
                                 <div className="flex items-end gap-2" style={{ height: '90px' }}>
                                     {trendData.map((r, i) => {
-                                        const p = pct(r.totalScore, r.maxScore);
+                                        const p = resultPct(r);
                                         const barPx = Math.max(6, Math.round(p * 0.82)); // max ~82px at 100%
                                         return (
                                             <div key={i} className="flex-1 flex flex-col items-end group relative">
@@ -574,10 +592,11 @@ const StudentProfile = ({ user }) => {
                     ) : (
                         <div className="divide-y divide-gray-50">
                             {filtered.map(r => {
-                                const p = pct(r.totalScore, r.maxScore);
+                                const p = resultPct(r);
                                 const durActual = r.submittedAt && r.startedAt
                                     ? Math.round((new Date(r.submittedAt) - new Date(r.startedAt)) / 60000)
                                     : null;
+                                const showCount = r.correctCount != null && r.questionCount != null;
                                 return (
                                     <div key={r.id} className="px-6 py-5 hover:bg-gray-50/60 transition-colors">
                                         <div className="flex items-start justify-between gap-4">
@@ -591,9 +610,11 @@ const StudentProfile = ({ user }) => {
                                                         </div>
                                                         <span className={`text-xs font-bold ${pctTextColor(p)}`}>{p}%</span>
                                                     </div>
-                                                    <span className="text-sm text-gray-600 font-semibold">
-                                                        {fmtScore(r.totalScore)} / {fmtScore(r.maxScore)} bal
-                                                    </span>
+                                                    {showCount && (
+                                                        <span className="text-sm text-gray-600 font-semibold">
+                                                            {r.correctCount} / {r.questionCount} sual
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex flex-wrap gap-3 mt-2.5 text-xs text-gray-400">
                                                     <span className="flex items-center gap-1">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineClock, HiOutlineStar, HiOutlineUsers, HiOutlineTrendingUp, HiOutlineCheckCircle, HiOutlineDownload } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineClock, HiOutlineStar, HiOutlineUsers, HiOutlineTrendingUp, HiOutlineCheckCircle, HiOutlineDownload, HiOutlineTrash } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -25,6 +25,8 @@ const ExamResults = () => {
     const [statistics, setStatistics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [filterText, setFilterText] = useState('');
+    const [deletingId, setDeletingId] = useState(null);
+    const [confirmId, setConfirmId] = useState(null);
 
     useEffect(() => {
         const fetchAll = async () => {
@@ -54,6 +56,24 @@ const ExamResults = () => {
         const m = Math.floor(diffSec / 60);
         const s = Math.floor(diffSec % 60);
         return `${m}dk ${s}sn`;
+    };
+
+    const handleHide = async (id) => {
+        setDeletingId(id);
+        try {
+            await api.delete(`/submissions/${id}/teacher-hide`);
+            setSubmissions(prev => prev.filter(s => s.id !== id));
+            setStatistics(prev => prev ? {
+                ...prev,
+                totalParticipants: Math.max(0, (prev.totalParticipants || 1) - 1),
+            } : prev);
+            toast.success('Nəticə statistikadan silindi');
+        } catch {
+            toast.error('Əməliyyat uğursuz oldu');
+        } finally {
+            setDeletingId(null);
+            setConfirmId(null);
+        }
     };
 
     const isPaid = isAdmin && statistics?.examPrice != null && statistics.examPrice > 0;
@@ -150,21 +170,50 @@ const ExamResults = () => {
             },
             {
                 name: '',
-                cell: r => r.submittedAt ? (
-                    <button
-                        onClick={() => navigate(`/test/review/${r.id}`)}
-                        className="text-indigo-600 hover:text-indigo-800 font-medium text-xs whitespace-nowrap transition-colors"
-                    >
-                        Bax 👁️
-                    </button>
-                ) : null,
-                width: '70px',
+                cell: r => (
+                    <div className="flex items-center gap-1">
+                        {r.submittedAt && (
+                            <button
+                                onClick={() => navigate(`/test/review/${r.id}`)}
+                                className="text-indigo-600 hover:text-indigo-800 font-medium text-xs whitespace-nowrap transition-colors"
+                            >
+                                Bax 👁️
+                            </button>
+                        )}
+                        {confirmId === r.id ? (
+                            <div className="flex items-center gap-1 ml-1">
+                                <button
+                                    onClick={() => handleHide(r.id)}
+                                    disabled={deletingId === r.id}
+                                    className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                                >
+                                    {deletingId === r.id ? '...' : 'Sil'}
+                                </button>
+                                <button
+                                    onClick={() => setConfirmId(null)}
+                                    className="text-[11px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                >
+                                    Ləğv et
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setConfirmId(r.id)}
+                                className="ml-1 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                title="Statistikadan sil"
+                            >
+                                <HiOutlineTrash className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                ),
+                width: '160px',
                 ignoreRowClick: true,
             }
         );
 
         return cols;
-    }, [isPaid, statistics]);
+    }, [isPaid, statistics, confirmId, deletingId]);
 
     const customStyles = {
         headRow: { style: { backgroundColor: '#f9fafb', borderBottom: '1px solid #f3f4f6' } },

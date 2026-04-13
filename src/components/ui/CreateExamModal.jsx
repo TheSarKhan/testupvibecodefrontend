@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck } from 'react-icons/hi';
+import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck, HiOutlineStar } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -32,6 +32,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     const [subtitles, setSubtitles] = useState([]);
     const [loadingSubtitles, setLoadingSubtitles] = useState(false);
     const [selectedSubtitle, setSelectedSubtitle] = useState(null);
+    const [selectedSectionIds, setSelectedSectionIds] = useState(new Set()); // for multi-select in step 4
 
     useEffect(() => {
         api.get('/subjects/meta').then(res => setSubjects(res.data)).catch(() => {
@@ -48,13 +49,15 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         setSelectedSubtitle(null);
         setSubtitles([]);
         setTemplates([]);
+        setSelectedSectionIds(new Set());
     };
 
     const handleTypeSelect = (type) => {
         setExamType(type);
-        if (type === 'template') {
+        if (type === 'template' || type === 'olimpiyada') {
             setLoadingTemplates(true);
-            api.get('/templates')
+            const endpoint = type === 'olimpiyada' ? '/templates/olimpiyada' : '/templates';
+            api.get(endpoint)
                 .then(res => setTemplates(res.data))
                 .catch(() => {})
                 .finally(() => setLoadingTemplates(false));
@@ -77,24 +80,40 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         setStep(4);
     };
 
-    const handleSectionSelect = (section) => {
+    const toggleSectionId = (id) => {
+        setSelectedSectionIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleSectionsConfirm = () => {
+        const sections = (selectedSubtitle?.sections || []).filter(s => selectedSectionIds.has(s.id));
+        if (sections.length === 0) return;
         onClose();
         setTimeout(reset, 300);
+        const isOlimpiyada = examType === 'olimpiyada';
+        const sectionsData = sections.map(s => ({
+            id: s.id,
+            templateTitle: selectedTemplate.title,
+            templateSubtitle: selectedSubtitle.subtitle,
+            subjectName: s.subjectName,
+            questionCount: s.questionCount,
+            formula: s.formula,
+            typeCounts: s.typeCounts || [],
+            pointGroups: s.pointGroups || null,
+        }));
         navigate('/imtahanlar/yarat', {
             state: {
-                type: 'template',
-                subject: section.subjectName,
+                type: isOlimpiyada ? 'olimpiyada' : 'template',
+                subject: sections[0].subjectName,
                 templateId: selectedTemplate.id,
-                sectionId: section.id,
-                sectionData: {
-                    id: section.id,
-                    templateTitle: selectedTemplate.title,
-                    templateSubtitle: selectedSubtitle.subtitle,
-                    subjectName: section.subjectName,
-                    questionCount: section.questionCount,
-                    formula: section.formula,
-                    typeCounts: section.typeCounts || [],
-                },
+                sectionsData,
+                // backward compat for single-section
+                sectionId: sections.length === 1 ? sections[0].id : null,
+                sectionData: sections.length === 1 ? sectionsData[0] : null,
             },
         });
     };
@@ -141,6 +160,32 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                 <div>
                     <h4 className="text-lg font-bold text-gray-900">Şablon Əsasında</h4>
                     <p className="text-gray-500 text-sm mt-1">Əvvəlcədən təyin edilmiş struktura uyğun imtahan yaradın.</p>
+                    {!hasPermission('useTemplateExams') && (
+                        <p className="text-xs text-red-500 mt-2 font-medium">Bu funksiya üçün Pro plana keçin.</p>
+                    )}
+                </div>
+            </button>
+            <button onClick={() => hasPermission('useTemplateExams') ? handleTypeSelect('olimpiyada') : null}
+                className={`w-full text-left p-5 rounded-xl border-2 transition-all flex items-start gap-4 group relative ${
+                    hasPermission('useTemplateExams')
+                        ? 'border-amber-100 hover:border-amber-500 bg-white hover:bg-amber-50/50'
+                        : 'border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed'
+                }`}>
+                {!hasPermission('useTemplateExams') && (
+                    <div className="absolute top-3 right-3 text-gray-400">
+                        <HiLockClosed className="w-5 h-5" />
+                    </div>
+                )}
+                <div className={`p-3 rounded-lg transition-colors ${
+                    hasPermission('useTemplateExams')
+                        ? 'bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
+                        : 'bg-gray-200 text-gray-500'
+                }`}>
+                    <HiOutlineStar className="w-6 h-6" />
+                </div>
+                <div>
+                    <h4 className="text-lg font-bold text-gray-900">Olimpiyada Şablonu</h4>
+                    <p className="text-gray-500 text-sm mt-1">Olimpiyada formatında fərqli çəkili suallar və cəza formulalı imtahan yaradın.</p>
                     {!hasPermission('useTemplateExams') && (
                         <p className="text-xs text-red-500 mt-2 font-medium">Bu funksiya üçün Pro plana keçin.</p>
                     )}
@@ -279,69 +324,92 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         </div>
     );
 
-    // ── Step 4 (template): section select ─────────────────────────────────────
+    // ── Step 4 (template): section multi-select ───────────────────────────────
     const renderStep4Template = () => {
-        // Build a lookup for subject metadata
         const subjectMeta = {};
-        subjects.forEach(s => {
-            if (typeof s === 'object') subjectMeta[s.name] = s;
-        });
+        subjects.forEach(s => { if (typeof s === 'object') subjectMeta[s.name] = s; });
+        const allSections = selectedSubtitle?.sections || [];
 
         return (
             <div className="space-y-4">
-                <button onClick={() => setStep(3)} className="text-sm font-medium text-purple-600 hover:text-purple-800 inline-flex items-center gap-1">
+                <button onClick={() => { setStep(3); setSelectedSectionIds(new Set()); }}
+                    className="text-sm font-medium text-purple-600 hover:text-purple-800 inline-flex items-center gap-1">
                     <HiOutlineArrowLeft className="w-4 h-4" /> Geriyə qayıt
                 </button>
                 <div>
                     <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
                         {selectedTemplate?.title} · {selectedSubtitle?.subtitle}
                     </p>
-                    <p className="text-gray-700 font-medium mt-1">Fənn bölməsi seçin:</p>
+                    <p className="text-gray-700 font-medium mt-1">Fənn bölmələrini seçin:</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Bir və ya bir neçə fənn seçib davam edin</p>
                 </div>
-                {(selectedSubtitle?.sections || []).length === 0 ? (
+                {allSections.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
                         <p className="text-sm">Bu altbaşlıqda fənn yoxdur</p>
                     </div>
                 ) : (
-                    <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                        {(selectedSubtitle?.sections || []).map(section => {
-                            const meta = subjectMeta[section.subjectName];
-                            return (
-                                <button key={section.id} onClick={() => handleSectionSelect(section)}
-                                    className="w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2.5">
-                                            <span
-                                                className="w-8 h-8 rounded-lg shrink-0"
-                                                style={{ backgroundColor: meta?.color || '#e5e7eb' }}
-                                            />
-                                            <span className="font-bold text-gray-900">{section.subjectName}</span>
-                                        </div>
-                                        <span
-                                            className="text-sm font-bold px-2.5 py-0.5 rounded-full"
-                                            style={{ backgroundColor: meta?.color ? `${meta.color}18` : '#eef2ff', color: meta?.color || '#6366f1' }}
-                                        >
-                                            {section.questionCount} sual
-                                        </span>
-                                    </div>
-                                    {(section.typeCounts || []).length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2.5">
-                                            {section.typeCounts.map((tc, j) => (
-                                                <span key={j} className={`text-[11px] px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
-                                                    tc.passageType === 'LISTENING' ? 'bg-purple-100 text-purple-700' :
-                                                    tc.passageType === 'TEXT'      ? 'bg-teal-100 text-teal-700' :
-                                                    'bg-gray-100 text-gray-600'}`}>
-                                                    {tc.passageType && <HiOutlineVolumeUp className="w-3 h-3" />}
-                                                    {tc.passageType ? `${PASSAGE_LABELS[tc.passageType]} ` : ''}{QUESTION_TYPE_LABELS[tc.questionType] || tc.questionType}: {tc.count}
+                    <>
+                        <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                            {allSections.map(section => {
+                                const meta = subjectMeta[section.subjectName];
+                                const isSelected = selectedSectionIds.has(section.id);
+                                return (
+                                    <button key={section.id} onClick={() => toggleSectionId(section.id)}
+                                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                                            isSelected
+                                                ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
+                                                : 'border-gray-100 hover:border-indigo-300 hover:bg-indigo-50/20'
+                                        }`}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2.5">
+                                                <span
+                                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                                        isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300 bg-white'
+                                                    }`}
+                                                >
+                                                    {isSelected && <HiOutlineCheck className="w-3 h-3 text-white" />}
                                                 </span>
-                                            ))}
+                                                <span
+                                                    className="w-7 h-7 rounded-lg shrink-0"
+                                                    style={{ backgroundColor: meta?.color || '#e5e7eb' }}
+                                                />
+                                                <span className="font-bold text-gray-900">{section.subjectName}</span>
+                                            </div>
+                                            <span
+                                                className="text-sm font-bold px-2.5 py-0.5 rounded-full"
+                                                style={{ backgroundColor: meta?.color ? `${meta.color}18` : '#eef2ff', color: meta?.color || '#6366f1' }}
+                                            >
+                                                {section.questionCount} sual
+                                            </span>
                                         </div>
-                                    )}
-                                    <code className="mt-2 block text-xs font-mono text-indigo-400 group-hover:text-indigo-600">{section.formula}</code>
-                                </button>
-                            );
-                        })}
-                    </div>
+                                        {(section.typeCounts || []).length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2.5 pl-8">
+                                                {section.typeCounts.map((tc, j) => (
+                                                    <span key={j} className={`text-[11px] px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
+                                                        tc.passageType === 'LISTENING' ? 'bg-purple-100 text-purple-700' :
+                                                        tc.passageType === 'TEXT'      ? 'bg-teal-100 text-teal-700' :
+                                                        'bg-gray-100 text-gray-600'}`}>
+                                                        {tc.passageType && <HiOutlineVolumeUp className="w-3 h-3" />}
+                                                        {tc.passageType ? `${PASSAGE_LABELS[tc.passageType]} ` : ''}{QUESTION_TYPE_LABELS[tc.questionType] || tc.questionType}: {tc.count}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <code className="mt-1.5 pl-8 block text-xs font-mono text-indigo-400">{section.formula}</code>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                            <span className="text-sm text-gray-500">
+                                {selectedSectionIds.size > 0 ? `${selectedSectionIds.size} fənn seçildi` : 'Heç bir fənn seçilməyib'}
+                            </span>
+                            <button onClick={handleSectionsConfirm} disabled={selectedSectionIds.size === 0}
+                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-semibold transition-colors">
+                                Davam et <HiOutlineArrowRight className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </>
                 )}
             </div>
         );
@@ -350,6 +418,11 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     const getTitle = () => {
         if (step === 1) return 'Yeni İmtahan Növü';
         if (examType === 'free') return 'Fənn Seçimi';
+        if (examType === 'olimpiyada') {
+            if (step === 2) return 'Olimpiyada Şablonu';
+            if (step === 3) return 'Altbaşlıq Seçimi';
+            return 'Fənn Bölməsi';
+        }
         if (step === 2) return 'Şablon Seçimi';
         if (step === 3) return 'Altbaşlıq Seçimi';
         return 'Fənn Bölməsi';

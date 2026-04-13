@@ -278,7 +278,7 @@ const Pricing = ({ isEmbedded = false }) => {
                         return (
                             <div
                                 key={plan.id}
-                                className={`relative flex flex-col w-full max-w-sm rounded-3xl bg-white shadow-xl transition-transform duration-300 hover:-translate-y-2 border-2 ${isMostPopular ? 'border-indigo-500 shadow-indigo-200 z-10 scale-105 md:scale-110' : 'border-transparent shadow-gray-200'}`}
+                                className={`relative flex flex-col w-full max-w-sm rounded-3xl bg-white shadow-xl transition-transform duration-300 hover:-translate-y-2 cursor-pointer border-2 ${isMostPopular ? 'border-indigo-500 shadow-indigo-200 z-10 scale-105 md:scale-110' : 'border-transparent shadow-gray-200'}`}
                             >
                                 {isMostPopular && (
                                     <div className="absolute top-0 inset-x-0 flex justify-center -mt-4">

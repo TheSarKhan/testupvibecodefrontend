@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     HiOutlineMenu, HiOutlineX, HiOutlineChevronDown,
@@ -24,7 +24,10 @@ const Navbar = () => {
     const dropdownRef = useRef(null);
     const notifDesktopRef = useRef(null);
     const notifMobileRef = useRef(null);
+    const navContainerRef = useRef(null);
     const navigate = useNavigate();
+    const location = useLocation();
+    const [indicator, setIndicator] = useState({ left: 0, width: 0, opacity: 0 });
 
     useEffect(() => {
         if (isTeacher && !isAdmin) {
@@ -33,6 +36,36 @@ const Navbar = () => {
                 .catch(() => {});
         }
     }, [isTeacher, isAdmin]);
+
+    // Update sliding indicator position when route or links change
+    useEffect(() => {
+        const update = () => {
+            const container = navContainerRef.current;
+            if (!container) return;
+            const activeEl = container.querySelector('[data-active="true"]');
+            if (activeEl) {
+                setIndicator({
+                    left: activeEl.offsetLeft,
+                    width: activeEl.offsetWidth,
+                    opacity: 1,
+                });
+            } else {
+                setIndicator(prev => ({ ...prev, opacity: 0 }));
+            }
+        };
+        // Defer to next frame to ensure DOM is painted
+        const id = requestAnimationFrame(update);
+        window.addEventListener('resize', update);
+        return () => {
+            cancelAnimationFrame(id);
+            window.removeEventListener('resize', update);
+        };
+    }, [location.pathname, isStudent, isTeacher, isAdmin, hasCollaborative]);
+
+    const isLinkActive = (link) => {
+        if (link.end) return location.pathname === link.to;
+        return location.pathname === link.to || location.pathname.startsWith(link.to + '/');
+    };
 
     const navLinks = [
         { to: '/', label: 'Ana Səhifə', end: true },
@@ -210,32 +243,53 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100 sticky top-0 z-50">
+        <nav
+            className="sticky top-0 z-50 bg-white/75 backdrop-blur-xl border-b border-gray-200/60"
+            style={{ boxShadow: '0 1px 24px -8px rgba(15, 23, 42, 0.08)' }}
+        >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
+                <div className="flex justify-between items-center h-[78px]">
 
                     {/* Logo */}
-                    <Link to="/" className="flex items-center shrink-0">
-                        <img src={logo} alt="testup.az" className="h-11 w-auto" />
+                    <Link to="/" className="flex items-center shrink-0 group">
+                        <img
+                            src={logo}
+                            alt="testup.az"
+                            className="h-[60px] w-auto transition-transform duration-200 group-hover:scale-[1.03]"
+                        />
                     </Link>
 
-                    {/* Desktop nav links */}
-                    <div className="hidden md:flex items-center gap-1">
-                        {navLinks.map((link) => (
-                            <NavLink
-                                key={link.to}
-                                to={link.to}
-                                end={link.end}
-                                className={({ isActive }) =>
-                                    `px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                        ? 'text-indigo-600 bg-indigo-50'
-                                        : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
-                                    }`
-                                }
-                            >
-                                {link.label}
-                            </NavLink>
-                        ))}
+                    {/* Desktop nav links with sliding indicator */}
+                    <div
+                        ref={navContainerRef}
+                        className="hidden md:flex relative items-center gap-1 bg-gray-50/70 border border-gray-200/60 rounded-2xl p-1.5"
+                    >
+                        {/* Sliding active indicator */}
+                        <span
+                            aria-hidden="true"
+                            className="absolute top-1.5 bottom-1.5 bg-white rounded-xl shadow-sm ring-1 ring-indigo-100 pointer-events-none"
+                            style={{
+                                left: indicator.left,
+                                width: indicator.width,
+                                opacity: indicator.opacity,
+                                transition: 'left 350ms cubic-bezier(0.32, 0.72, 0, 1), width 350ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms ease-out',
+                            }}
+                        />
+                        {navLinks.map((link) => {
+                            const active = isLinkActive(link);
+                            return (
+                                <Link
+                                    key={link.to}
+                                    to={link.to}
+                                    data-active={active ? 'true' : 'false'}
+                                    className={`relative z-10 px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                                        active ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                                >
+                                    {link.label}
+                                </Link>
+                            );
+                        })}
                     </div>
 
                     {/* Right side */}
@@ -246,7 +300,7 @@ const Navbar = () => {
                                 <div className="relative" ref={notifDesktopRef}>
                                     <button
                                         onClick={openNotifications}
-                                        className="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                                        className="relative p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
                                     >
                                         <HiOutlineBell className="h-5 w-5" />
                                         {unreadCount > 0 && (
@@ -315,7 +369,7 @@ const Navbar = () => {
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => { setDropdownOpen(v => !v); setNotifOpen(false); }}
-                                        className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all"
+                                        className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all"
                                     >
                                         <UserAvatar size="sm" />
                                         <div className="text-left hidden lg:block">
@@ -386,13 +440,13 @@ const Navbar = () => {
                             <div className="flex items-center gap-2">
                                 <Link
                                     to="/login"
-                                    className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-indigo-600 rounded-lg transition-colors"
                                 >
                                     Daxil ol
                                 </Link>
                                 <Link
                                     to="/register"
-                                    className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
+                                    className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200/60"
                                 >
                                     Qeydiyyat
                                 </Link>

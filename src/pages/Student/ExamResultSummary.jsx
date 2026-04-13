@@ -18,6 +18,11 @@ const MOTIVATION = {
     pass: {
         emojis: ['📈', '🔥', '💡'],
         headline: ['Keçid balını aldın!', 'İrəliləyirsən!', 'Yaxşı başlanğıc!'],
+        messages: [
+            'Bəzi mövzularda boşluqlar var, amma bunları bağlamaq sənin əlindədir. Hər sual bir fürsətdir.',
+            'Bu nəticə hazırlığına dair bir siqnaldır. Zəif olduğun yerləri tap, üzərində işlə — fərq böyük olacaq.',
+            'Bu nəticə bir başlanğıcdır. Özünə inan, çalışmağa davam et — daha yaxşısını etmək sənin əlindədir.',
+        ],
         gradient: 'from-amber-500 to-orange-500',
     },
     fail: {

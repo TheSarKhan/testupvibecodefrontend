@@ -652,7 +652,7 @@ const ExamEditor = () => {
         const isMain = !batchPdfSection || batchPdfSection === examConfig.subject;
         const _isLocked = (type === 'template' || type === 'olimpiyada') && (templateInfo !== null || templateSections.length >= 2);
 
-        // Payload shape: { crops: [{id, questionImage, options:[{label,image}]}], optionCount: 4|5, cropMode: 'simple'|'advanced' }
+        // Payload shape: { crops: [{id, questionImage, options:[{label,image}]}], optionCount: 3|4|5, cropMode: 'simple'|'advanced', optionTextMode: 'label'|'empty' }
         // Backward compat: plain string[] (single-image old format)
         const isNewFormat = payload && typeof payload === 'object' && !Array.isArray(payload) && 'crops' in payload;
         const crops = isNewFormat ? payload.crops : (Array.isArray(payload) ? payload.map(img => ({ questionImage: img, options: [] })) : []);
@@ -665,7 +665,6 @@ const ExamEditor = () => {
 
         const buildOptions = (optionCrops, existingOptions) => {
             if (cropMode === 'advanced' && optionCrops && optionCrops.length > 0) {
-                // Advanced: use cropped images; fill missing slots with text fallback
                 const base = existingOptions && existingOptions.length >= optionCount
                     ? existingOptions.slice(0, optionCount).map(o => ({ ...o }))
                     : activeLabels.map((lbl, i) => ({
@@ -678,7 +677,6 @@ const ExamEditor = () => {
                 });
                 return base;
             }
-            // Simple mode: text-only options; preserve existing if already present and sized correctly
             if (existingOptions && existingOptions.length >= optionCount) {
                 return existingOptions.slice(0, optionCount).map(o => ({ ...o }));
             }
@@ -689,7 +687,6 @@ const ExamEditor = () => {
         };
 
         if (_isLocked) {
-            // Template mode: fill into empty question slots starting from first empty in section
             const emptySlots = questions.filter(q => {
                 const inSection = isMain
                     ? (q.subjectGroup == null || q.subjectGroup === batchPdfSection)
@@ -721,7 +718,6 @@ const ExamEditor = () => {
             toast.success(`${toFill} sual dolduruldu${crops.length > emptySlots.length ? ` (${crops.length - toFill} artıq idi)` : ''}`);
             return;
         }
-        // Free mode: add as new questions
         const startIdx = nextOrderIndex();
         const newQuestions = crops.map((crop, idx) => ({
             id: `batch-${Date.now()}-${idx}`, type: 'MULTIPLE_CHOICE',

@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import Pricing from '../Pricing/Pricing';
 
 const ValueCard = ({ icon: Icon, title, desc, from, to }) => (
-    <div className={`rounded-2xl p-6 bg-gradient-to-br ${from} ${to} flex gap-4`}>
+    <div className={`rounded-2xl p-6 bg-gradient-to-br ${from} ${to} flex gap-4 cursor-pointer`}>
         <div className="bg-white/70 p-2.5 rounded-xl h-fit shadow-sm shrink-0">
             <Icon className="w-5 h-5 text-gray-700" />
         </div>
@@ -23,7 +23,7 @@ const ValueCard = ({ icon: Icon, title, desc, from, to }) => (
 );
 
 const InnovCard = ({ icon: Icon, iconColor, bg, title, desc }) => (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
         <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-4`}>
             <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>

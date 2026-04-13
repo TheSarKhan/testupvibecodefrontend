@@ -13,7 +13,7 @@ const ALL_LABELS = ['A', 'B', 'C', 'D', 'E'];
 
 /**
  * onCropComplete receives:
- *   - batch mode → { crops: [{id, questionImage, options:[{label,image}]}], optionCount: 4|5, cropMode: 'simple'|'advanced' }
+ *   - batch mode → { crops: [{id, questionImage, options:[{label,image}]}], optionCount: 3|4|5, cropMode: 'simple'|'advanced', optionTextMode: 'label'|'empty' }
  *   - single mode → base64 string
  */
 const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = false, maxCrops = null }) => {
@@ -28,7 +28,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
 
     // Batch settings
     const [cropMode, setCropMode] = useState('simple');      // 'simple' | 'advanced'
-    const [optionCount, setOptionCount] = useState(5);       // 4 or 5
+    const [optionCount, setOptionCount] = useState(5);       // 3, 4 or 5
     const [optionTextMode, setOptionTextMode] = useState('label'); // 'label' | 'empty'
 
     // Which slot the next "Kəs" goes into: 'question' | 'A'...'E'
@@ -267,7 +267,6 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                                 key={n}
                                                 onClick={() => {
                                                     setOptionCount(n);
-                                                    // if current cropTarget is out of new range, reset
                                                     if (cropTarget !== 'question' && ALL_LABELS.indexOf(cropTarget) >= n) {
                                                         setCropTarget('question');
                                                     }
@@ -456,7 +455,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
 
                                             {/* Options grid — only in advanced mode */}
                                             {cropMode === 'advanced' && (
-                                                <div className={`px-1.5 pb-1.5 grid gap-1`} style={{ gridTemplateColumns: `repeat(${optionCount}, 1fr)` }}>
+                                                <div className="px-1.5 pb-1.5 grid gap-1" style={{ gridTemplateColumns: `repeat(${optionCount}, 1fr)` }}>
                                                     {activeLabels.map(label => {
                                                         const opt = q.options.find(o => o.label === label);
                                                         return (
@@ -504,10 +503,10 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                                 </div>
                                             )}
 
-                                            {/* Simple mode: show text preview of options that will be auto-generated */}
+                                            {/* Simple mode: show placeholder of options that will be auto-generated */}
                                             {cropMode === 'simple' && (
                                                 <div className="px-2 pb-2">
-                                                    <div className={`grid gap-1`} style={{ gridTemplateColumns: `repeat(${optionCount}, 1fr)` }}>
+                                                    <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${optionCount}, 1fr)` }}>
                                                         {activeLabels.map(lbl => (
                                                             <div key={lbl} className="bg-gray-50 border border-dashed border-gray-200 rounded text-center py-1 text-[9px] font-bold text-gray-400">
                                                                 {lbl}

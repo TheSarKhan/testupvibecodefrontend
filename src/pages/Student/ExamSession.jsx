@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineClock, HiOutlineChevronRight, HiOutlineChevronLeft, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineX, HiOutlinePlus } from 'react-icons/hi';
 import api from '../../api/axios';
@@ -21,6 +21,34 @@ const ExamSession = () => {
     const [listenCounts, setListenCounts] = useState({});
     const [zoomImage, setZoomImage] = useState(null);
     const autoSubmitRef = useRef(false);
+    const navScrollRef = useRef(null);
+
+    const navScrollCallbackRef = useCallback((el) => {
+        if (!el) return;
+        navScrollRef.current = el;
+
+        const onWheel = (e) => {
+            if (e.deltaY === 0) return;
+            e.preventDefault();
+            el.scrollLeft += e.deltaY;
+        };
+        el.addEventListener('wheel', onWheel, { passive: false });
+
+        let startX = 0, startLeft = 0;
+        const onMouseMove = (e) => { el.scrollLeft = startLeft - (e.clientX - startX); };
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+        const onMouseDown = (e) => {
+            if (e.button !== 0) return;
+            startX = e.clientX;
+            startLeft = el.scrollLeft;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        };
+        el.addEventListener('mousedown', onMouseDown);
+    }, []);
 
     useEffect(() => { fetchSessionDetails(); }, [sessionId]);
 
@@ -36,6 +64,22 @@ const ExamSession = () => {
     }, [timeLeft]);
 
     useEffect(() => { setActiveLeftId(null); }, [currentSectionIndex]);
+
+    useEffect(() => {
+        const el = navScrollRef.current;
+        if (!el) return;
+        const active = el.querySelector('[data-nav-active="true"]');
+        if (!active) return;
+        const containerLeft = el.scrollLeft;
+        const containerRight = containerLeft + el.clientWidth;
+        const btnLeft = active.offsetLeft;
+        const btnRight = btnLeft + active.offsetWidth;
+        if (btnLeft < containerLeft + 8) {
+            el.scrollTo({ left: btnLeft - 8, behavior: 'smooth' });
+        } else if (btnRight > containerRight - 8) {
+            el.scrollTo({ left: btnRight - el.clientWidth + 8, behavior: 'smooth' });
+        }
+    }, [currentSectionIndex]);
 
     const fetchSessionDetails = async () => {
         try {
@@ -80,15 +124,23 @@ const ExamSession = () => {
         }
     };
 
-    // Build sections: interleave standalone questions and passages by orderIndex
+    // Build sections: standalone questions are individual items, each passage is one item.
     const buildSections = (data) => {
         if (!data) return [];
-        const sectionList = [
-            ...(data.questions || []).map(q => ({ kind: 'question', data: q, orderIndex: q.orderIndex ?? 0, subjectGroup: q.subjectGroup || null })),
-            ...(data.passages || []).map(p => ({ kind: 'passage', data: p, orderIndex: p.orderIndex ?? 0, subjectGroup: p.subjectGroup || null }))
+        const items = [
+            ...(data.questions || []).map(q => ({
+                kind: 'question', data: q,
+                orderIndex: q.orderIndex ?? 0,
+                subjectGroup: q.subjectGroup || null,
+            })),
+            ...(data.passages || []).map(p => ({
+                kind: 'passage', data: p,
+                orderIndex: p.orderIndex ?? 0,
+                subjectGroup: p.subjectGroup || null,
+            })),
         ];
-        sectionList.sort((a, b) => a.orderIndex - b.orderIndex);
-        return sectionList;
+        items.sort((a, b) => a.orderIndex - b.orderIndex);
+        return items;
     };
 
     // Resolve display label for a subjectGroup (null = main section = subjects[0])
@@ -97,24 +149,53 @@ const ExamSession = () => {
         return sessionData?.subjects?.[0] || null;
     };
 
-    // Group sections by subjectGroup for navigation
-    const buildNavGroups = (sectionList) => {
+    // Flatten sections into nav items with global sequential numbers.
+    // Each passage emits: a passage-icon item + one passage-sub item per sub-question.
+    const computeNavItems = (sectionList) => {
+        let qNum = 0;
+        const result = [];
+        sectionList.forEach((section, sectionIdx) => {
+            const sg = section.subjectGroup;
+            if (section.kind === 'question') {
+                qNum++;
+                result.push({ type: 'question', section, sectionIdx, subjectGroup: sg, displayNum: qNum });
+            } else {
+                result.push({ type: 'passage-icon', section, sectionIdx, subjectGroup: sg });
+                (section.data.questions || []).forEach((q) => {
+                    qNum++;
+                    result.push({ type: 'passage-sub', section, sectionIdx, subjectGroup: sg, questionId: q.id, displayNum: qNum });
+                });
+            }
+        });
+        return result;
+    };
+
+    // Group nav items by subjectGroup
+    const buildNavGroups = (navItemList) => {
         const groups = [];
         let currentGroup = null;
-        sectionList.forEach((section, idx) => {
-            const sg = section.subjectGroup;
+        navItemList.forEach((item) => {
+            const sg = item.subjectGroup;
             if (!currentGroup || currentGroup.subjectGroup !== sg) {
                 currentGroup = { subjectGroup: sg, label: resolveSubjectLabel(sg), items: [] };
                 groups.push(currentGroup);
             }
-            currentGroup.items.push({ section, idx });
+            currentGroup.items.push(item);
         });
         return groups;
     };
 
     const sections = buildSections(sessionData);
     const currentSection = sections[currentSectionIndex];
-    const navGroups = buildNavGroups(sections);
+    const navItems = computeNavItems(sections);
+    // Map questionId → global display number (for passage sub-questions)
+    const questionNumMap = Object.fromEntries(
+        navItems
+            .filter(i => i.type === 'passage-sub' || i.type === 'question')
+            .map(i => [i.type === 'passage-sub' ? i.questionId : i.section.data.id, i.displayNum])
+    );
+    // Only icon + question items shown in nav (no passage-sub rows)
+    const navGroups = buildNavGroups(navItems.filter(i => i.type !== 'passage-sub'));
 
     const syncAnswer = async (questionId, answerData) => {
         try {
@@ -192,18 +273,16 @@ const ExamSession = () => {
         ans && (ans.optionIds?.length > 0 || ans.textAnswer?.trim() || ans.answerImage || ans.matchingPairs?.length > 0);
 
     const sectionHasAnswer = (section) => {
-        if (section.kind === 'question') {
+        if (section.kind === 'question')
             return answerHasContent(answers.find(a => a.questionId === section.data.id));
-        }
-        const passageQs = section.data.questions || [];
-        if (passageQs.length === 0) return false;
-        return passageQs.every(q => answerHasContent(answers.find(a => a.questionId === q.id)));
+        const qs = section.data.questions || [];
+        return qs.length > 0 && qs.every(q => answerHasContent(answers.find(a => a.questionId === q.id)));
     };
 
     const sectionPartialAnswer = (section) => {
         if (section.kind === 'question') return false;
-        const passageQs = section.data.questions || [];
-        return passageQs.some(q => answerHasContent(answers.find(a => a.questionId === q.id)));
+        const qs = section.data.questions || [];
+        return qs.some(q => answerHasContent(answers.find(a => a.questionId === q.id)));
     };
 
     if (loading) {
@@ -240,7 +319,7 @@ const ExamSession = () => {
                             {resolveSubjectLabel(currentSection?.subjectGroup) && (
                                 <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">{resolveSubjectLabel(currentSection?.subjectGroup)}</span>
                             )}
-                            Bölmə {currentSectionIndex + 1} / {sections.length}
+                            Sual {currentSectionIndex + 1} / {sections.length}
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -277,6 +356,7 @@ const ExamSession = () => {
                     <QuestionCard
                         key={currentSection.data.id}
                         question={currentSection.data}
+                        questionNumber={questionNumMap[currentSection.data.id]}
                         answer={answers.find(a => a.questionId === currentSection.data.id)}
                         onAnswerChange={handleAnswerChange}
                         activeLeftId={activeLeftId}
@@ -284,18 +364,27 @@ const ExamSession = () => {
                         onZoomImage={setZoomImage}
                     />
                 )}
-
                 {currentSection?.kind === 'passage' && (
-                    <PassageSection
-                        passage={currentSection.data}
-                        answers={answers}
-                        onAnswerChange={handleAnswerChange}
-                        activeLeftId={activeLeftId}
-                        setActiveLeftId={setActiveLeftId}
-                        listenCounts={listenCounts}
-                        setListenCounts={setListenCounts}
-                        onZoomImage={setZoomImage}
-                    />
+                    <div className="space-y-4">
+                        <PassageContentCard
+                            passage={currentSection.data}
+                            listenCounts={listenCounts}
+                            setListenCounts={setListenCounts}
+                            onZoomImage={setZoomImage}
+                        />
+                        {(currentSection.data.questions || []).map((q) => (
+                            <QuestionCard
+                                key={q.id}
+                                question={q}
+                                questionNumber={questionNumMap[q.id]}
+                                answer={answers.find(a => a.questionId === q.id)}
+                                onAnswerChange={handleAnswerChange}
+                                activeLeftId={activeLeftId}
+                                setActiveLeftId={setActiveLeftId}
+                                onZoomImage={setZoomImage}
+                            />
+                        ))}
+                    </div>
                 )}
 
             </div>
@@ -304,7 +393,10 @@ const ExamSession = () => {
             <div className="fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
                 <div className="max-w-4xl mx-auto px-2 sm:px-4">
                     {/* Question navigation — scrollable on mobile */}
-                    <div className="overflow-x-auto py-2 flex items-center gap-x-1 scrollbar-none">
+                    <div
+                        ref={navScrollCallbackRef}
+                        className="overflow-x-auto py-2 flex items-center gap-x-1 scrollbar-none select-none"
+                    >
                         {navGroups.map((group, gi) => (
                             <div key={gi} className="flex items-center gap-1 flex-shrink-0">
                                 {group.label && (
@@ -312,32 +404,46 @@ const ExamSession = () => {
                                         {group.label}
                                     </span>
                                 )}
-                                {group.items.map(({ section, idx }) => {
-                                    const hasAnswer = sectionHasAnswer(section);
-                                    const partialAnswer = sectionPartialAnswer(section);
-                                    const isPassage = section.kind === 'passage';
+                                {group.items.map((item) => {
+                                    const isActive = currentSectionIndex === item.sectionIdx;
+
+                                    if (item.type === 'passage-icon') {
+                                        const hasAll = sectionHasAnswer(item.section);
+                                        const hasPartial = sectionPartialAnswer(item.section);
+                                        const isText = item.section.data.passageType === 'TEXT';
+                                        return (
+                                            <button
+                                                key={`pi-${item.sectionIdx}`}
+                                                data-nav-active={isActive}
+                                                onClick={() => setCurrentSectionIndex(item.sectionIdx)}
+                                                title={isText ? 'Mətn' : 'Dinləmə'}
+                                                className={`flex-shrink-0 flex items-center justify-center rounded-lg w-8 h-9 transition-colors ${
+                                                    isActive ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 ring-offset-1'
+                                                    : hasAll ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
+                                                    : hasPartial ? 'bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200'
+                                                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {isText ? <HiOutlineDocumentText className="w-4 h-4" /> : <HiOutlineVolumeUp className="w-4 h-4" />}
+                                            </button>
+                                        );
+                                    }
+
+                                    // type === 'question'
+                                    const hasAnswer = sectionHasAnswer(item.section);
                                     return (
                                         <button
-                                            key={idx}
-                                            onClick={() => setCurrentSectionIndex(idx)}
-                                            title={isPassage ? (section.data.title || (section.data.passageType === 'TEXT' ? 'Mətn' : 'Dinləmə')) : `Sual ${idx + 1}`}
-                                            className={`flex-shrink-0 flex items-center justify-center font-bold text-sm transition-colors rounded-lg ${
-                                                isPassage ? 'w-12 h-9 px-1' : 'w-9 h-9'
-                                            } ${
-                                                currentSectionIndex === idx
-                                                    ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 ring-offset-1'
-                                                    : hasAnswer
-                                                        ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
-                                                        : partialAnswer
-                                                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200'
-                                                            : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'
+                                            key={`q-${item.sectionIdx}`}
+                                            data-nav-active={isActive}
+                                            onClick={() => setCurrentSectionIndex(item.sectionIdx)}
+                                            title={`Sual ${item.displayNum}`}
+                                            className={`flex-shrink-0 flex items-center justify-center font-bold text-sm rounded-lg w-9 h-9 transition-colors ${
+                                                isActive ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 ring-offset-1'
+                                                : hasAnswer ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
+                                                : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'
                                             }`}
                                         >
-                                            {isPassage
-                                                ? (section.data.passageType === 'TEXT'
-                                                    ? <HiOutlineDocumentText className="w-4 h-4" />
-                                                    : <HiOutlineVolumeUp className="w-4 h-4" />)
-                                                : idx + 1}
+                                            {item.displayNum}
                                         </button>
                                     );
                                 })}
@@ -361,6 +467,7 @@ const ExamSession = () => {
                         <span className="text-xs text-gray-400 font-medium">
                             {currentSectionIndex + 1} / {sections.length}
                         </span>
+
                         <button
                             onClick={() => setCurrentSectionIndex(prev => Math.min(sections.length - 1, prev + 1))}
                             disabled={currentSectionIndex === sections.length - 1}
@@ -376,19 +483,17 @@ const ExamSession = () => {
     );
 };
 
-// ---- PassageSection ----
-const PassageSection = ({ passage, answers, onAnswerChange, activeLeftId, setActiveLeftId, listenCounts, setListenCounts, onZoomImage }) => {
+// ---- PassageContentCard — shown above each passage question ----
+const PassageContentCard = ({ passage, listenCounts, setListenCounts, onZoomImage }) => {
     const audioRef = useRef(null);
+    const isText = passage.passageType === 'TEXT';
     const listenCount = listenCounts[passage.id] || 0;
     const isLimited = passage.listenLimit !== null && passage.listenLimit !== undefined;
     const limitReached = isLimited && listenCount >= passage.listenLimit;
 
     const handleAudioEnded = () => {
-        if (isLimited) {
-            setListenCounts(prev => ({ ...prev, [passage.id]: (prev[passage.id] || 0) + 1 }));
-        }
+        if (isLimited) setListenCounts(prev => ({ ...prev, [passage.id]: (prev[passage.id] || 0) + 1 }));
     };
-
     const handleAudioPlay = () => {
         if (limitReached && audioRef.current) {
             audioRef.current.pause();
@@ -398,88 +503,72 @@ const PassageSection = ({ passage, answers, onAnswerChange, activeLeftId, setAct
     };
 
     return (
-        <div className="space-y-4">
-            {/* Passage content card */}
-            <div className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden ${passage.passageType === 'TEXT' ? 'border-teal-200' : 'border-purple-200'}`}>
-                <div className={`px-6 py-3 flex items-center gap-3 ${passage.passageType === 'TEXT' ? 'bg-teal-50' : 'bg-purple-50'}`}>
-                    {passage.passageType === 'TEXT'
-                        ? <HiOutlineDocumentText className="w-5 h-5 text-teal-600" />
-                        : <HiOutlineVolumeUp className="w-5 h-5 text-purple-600" />}
-                    <span className={`font-bold text-sm ${passage.passageType === 'TEXT' ? 'text-teal-700' : 'text-purple-700'}`}>
-                        {passage.title || (passage.passageType === 'TEXT' ? 'Mətn Parçası' : 'Dinləmə')}
+        <div className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden ${isText ? 'border-teal-200' : 'border-purple-200'}`}>
+            <div className={`px-6 py-3 flex items-center gap-3 ${isText ? 'bg-teal-50' : 'bg-purple-50'}`}>
+                {isText
+                    ? <HiOutlineDocumentText className="w-5 h-5 text-teal-600" />
+                    : <HiOutlineVolumeUp className="w-5 h-5 text-purple-600" />}
+                <span className={`font-bold text-sm ${isText ? 'text-teal-700' : 'text-purple-700'}`}>
+                    {passage.title || (isText ? 'Mətn Parçası' : 'Dinləmə')}
+                </span>
+                {isLimited && (
+                    <span className={`ml-auto text-xs font-bold px-2 py-1 rounded-full ${limitReached ? 'bg-red-100 text-red-600' : 'bg-purple-100 text-purple-700'}`}>
+                        {limitReached ? 'Limit dolub' : `${listenCount} / ${passage.listenLimit} dinləmə`}
                     </span>
-                    {isLimited && (
-                        <span className={`ml-auto text-xs font-bold px-2 py-1 rounded-full ${limitReached ? 'bg-red-100 text-red-600' : 'bg-purple-100 text-purple-700'}`}>
-                            {limitReached ? 'Limit dolub' : `${listenCount} / ${passage.listenLimit} dinləmə`}
-                        </span>
-                    )}
-                </div>
-
-                <div className="p-6">
-                    {passage.passageType === 'TEXT' ? (
-                        <>
-                            {passage.textContent && (
-                                <div className="prose max-w-none text-gray-800 leading-relaxed mb-4 text-base">
-                                    <LatexPreview content={passage.textContent} />
-                                </div>
-                            )}
-                            {passage.attachedImage && (
-                                <img src={passage.attachedImage} alt="Mətn" className="max-w-full h-auto max-h-96 rounded-lg border border-gray-200 cursor-zoom-in"
-                                    onClick={() => onZoomImage?.(passage.attachedImage)} />
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            {passage.audioContent ? (
-                                <audio
-                                    ref={audioRef}
-                                    controls={!limitReached}
-                                    src={passage.audioContent}
-                                    className={`w-full rounded-lg ${limitReached ? 'opacity-50 pointer-events-none' : ''}`}
-                                    onEnded={handleAudioEnded}
-                                    onPlay={handleAudioPlay}
-                                />
-                            ) : (
-                                <div className="p-8 text-center text-gray-400 border-2 border-dashed rounded-xl">Audio fayl mövcud deyil</div>
-                            )}
-                            {limitReached && (
-                                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium text-center">
-                                    Dinləmə limiti ({passage.listenLimit} dəfə) dolub. Audio artıq əlçatan deyil.
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
+                )}
             </div>
-
-            {/* Questions for this passage */}
-            {(passage.questions || []).map((q, idx) => (
-                <QuestionCard
-                    key={q.id}
-                    question={q}
-                    answer={answers.find(a => a.questionId === q.id)}
-                    onAnswerChange={onAnswerChange}
-                    activeLeftId={activeLeftId}
-                    setActiveLeftId={setActiveLeftId}
-                    subIndex={idx + 1}
-                    onZoomImage={onZoomImage}
-                />
-            ))}
+            <div className="p-6">
+                {isText ? (
+                    <>
+                        {passage.textContent && (
+                            <div className="prose max-w-none text-gray-800 leading-relaxed mb-4 text-base">
+                                <LatexPreview content={passage.textContent} />
+                            </div>
+                        )}
+                        {passage.attachedImage && (
+                            <img src={passage.attachedImage} alt="Mətn" className="max-w-full h-auto max-h-96 rounded-lg border border-gray-200 cursor-zoom-in"
+                                onClick={() => onZoomImage?.(passage.attachedImage)} />
+                        )}
+                    </>
+                ) : (
+                    <>
+                        {passage.audioContent ? (
+                            <audio ref={audioRef} controls={!limitReached} src={passage.audioContent}
+                                className={`w-full rounded-lg ${limitReached ? 'opacity-50 pointer-events-none' : ''}`}
+                                onEnded={handleAudioEnded} onPlay={handleAudioPlay} />
+                        ) : (
+                            <div className="p-8 text-center text-gray-400 border-2 border-dashed rounded-xl">Audio fayl mövcud deyil</div>
+                        )}
+                        {limitReached && (
+                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium text-center">
+                                Dinləmə limiti ({passage.listenLimit} dəfə) dolub. Audio artıq əlçatan deyil.
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
         </div>
     );
 };
 
 // ---- QuestionCard ----
-const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiveLeftId, subIndex, onZoomImage }) => {
+const QuestionCard = ({ question, questionNumber, answer, onAnswerChange, activeLeftId, setActiveLeftId, onZoomImage }) => {
     if (!answer) return null;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-8">
                 <div className="flex justify-between items-start mb-6">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-50 text-indigo-700">
-                        {subIndex ? `${subIndex}. sual • ` : ''}{question.points} Bal
-                    </span>
+                    <div className="flex items-center gap-2">
+                        {questionNumber != null && (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-700">
+                                {questionNumber}
+                            </span>
+                        )}
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-50 text-indigo-700">
+                            {question.points} Bal
+                        </span>
+                    </div>
                     <span className="text-sm text-gray-400 font-mono">{question.questionType}</span>
                 </div>
 
@@ -499,7 +588,7 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                 <div className="mt-8">
                     {(question.questionType === 'MCQ' || question.questionType === 'TRUE_FALSE' || question.questionType === 'MULTI_SELECT') && (
                         <div className="space-y-3">
-                            {question.options?.map((opt) => {
+                            {question.options?.map((opt, optIdx) => {
                                 const isSelected = answer.optionIds?.includes(opt.id);
                                 return (
                                     <div
@@ -525,7 +614,7 @@ const QuestionCard = ({ question, answer, onAnswerChange, activeLeftId, setActiv
                                             )}
                                         </div>
                                         <div className="flex-1 text-lg">
-                                            <LatexPreview content={opt.content} />
+                                            <LatexPreview content={opt.content} placeholder={`${String.fromCharCode(65 + optIdx)} variantı`} />
                                             {opt.attachedImage && <img src={opt.attachedImage} className="mt-2 max-h-32 rounded border cursor-zoom-in" alt="Varyant" onClick={e => { e.stopPropagation(); onZoomImage?.(opt.attachedImage); }} />}
                                         </div>
                                     </div>

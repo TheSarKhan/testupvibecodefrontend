@@ -1,10 +1,11 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter, HiOutlineX, HiOutlineChevronUp } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
+import QuestionNav from '../../components/ui/QuestionNav';
 
 const fmtScore = (v) => {
     if (v === null || v === undefined) return '0';
@@ -286,12 +287,21 @@ const ExamReview = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const fromResult = location.state?.fromResult === true;
+    const scrollToQuestionId = location.state?.scrollToQuestionId ?? null;
     const { isTeacher, isAdmin } = useAuth();
     const canGrade = isTeacher || isAdmin;
     const [review, setReview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showOnlyUngraded, setShowOnlyUngraded] = useState(false);
     const [zoomImage, setZoomImage] = useState(null);
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    const questionRefs = useRef({});
+
+    useEffect(() => {
+        const onScroll = () => setShowScrollTop(window.scrollY > 400);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
 
     useEffect(() => {
         const fetchReview = async () => {
@@ -312,6 +322,12 @@ const ExamReview = () => {
         };
         fetchReview();
     }, [sessionId, navigate]);
+
+    useEffect(() => {
+        if (!scrollToQuestionId || loading) return;
+        const el = questionRefs.current[scrollToQuestionId];
+        if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+    }, [scrollToQuestionId, loading]);
 
     const handleGraded = (questionId, awardedScore, feedbackText, submissionResp) => {
         setReview(prev => {
@@ -353,12 +369,46 @@ const ExamReview = () => {
         ? sortedQuestions.filter(q => !q.isGraded)
         : sortedQuestions;
 
+    // Build subject group info: firstQuestionId → { label, start, end }
+    const subjectHeaderMap = (() => {
+        const map = new Map();
+        const groups = [];
+        let cur = null;
+        sortedQuestions.forEach((q, i) => {
+            const key = q.subjectGroup ?? '__main__';
+            if (!cur || cur.key !== key) {
+                cur = { key, label: q.subjectGroup || review.examSubject || null, start: i + 1, end: i + 1, firstId: q.id };
+                groups.push(cur);
+            } else {
+                cur.end = i + 1;
+            }
+        });
+        if (groups.length >= 2) {
+            groups.forEach(g => map.set(g.firstId, { label: g.label, range: `${g.start}–${g.end}` }));
+        }
+        return map;
+    })();
+
+    // Track which subject group we've shown a header for in displayedQuestions
+    const shownSubjectGroups = new Set();
+
     // Track which passageIds we've already shown a separator for
     const shownPassageIds = new Set();
     let questionNumber = 0;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
+            {/* Scroll to top */}
+            {showScrollTop && (
+                <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="fixed bottom-6 right-6 z-50 w-10 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all"
+                    title="Yuxarı qayıt"
+                >
+                    <HiOutlineChevronUp className="w-5 h-5" />
+                </button>
+            )}
+
             {/* Image Zoom Overlay */}
             {zoomImage && (
                 <div className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4 cursor-pointer"
@@ -410,13 +460,23 @@ const ExamReview = () => {
                         </div>
                     </div>
 
-                    <div className="flex-1 grid grid-cols-2 gap-6 w-full">
+                    <div className="flex-1 grid grid-cols-2 gap-4 w-full">
                         <div className="bg-indigo-50/50 p-4 rounded-2xl">
-                            <p className="text-xs text-indigo-400 font-bold uppercase mb-1">{isTemplateExam ? 'Şablon Nəticəsi' : 'Toplanan Bal'}</p>
-                            {isTemplateExam
-                                ? <p className="text-2xl font-black text-indigo-700">{review.templateScorePercent?.toFixed(1)}%</p>
-                                : <p className="text-2xl font-black text-indigo-700">{fmtScore(review.totalScore)} / {review.maxScore}</p>
-                            }
+                            <p className="text-xs text-indigo-400 font-bold uppercase mb-1">
+                                {isTemplateExam ? 'Uğur faizi' : 'Toplanan Bal'}
+                            </p>
+                            {isTemplateExam ? (
+                                <>
+                                    <p className="text-2xl font-black text-indigo-700">{review.templateScorePercent?.toFixed(1)}%</p>
+                                    {review.templateTotalMaxScore != null && (
+                                        <p className="text-sm font-semibold text-indigo-500 mt-0.5">
+                                            {fmtScore(review.templateTotalScore)} / {fmtScore(review.templateTotalMaxScore)} bal
+                                        </p>
+                                    )}
+                                </>
+                            ) : (
+                                <p className="text-2xl font-black text-indigo-700">{fmtScore(review.totalScore)} / {review.maxScore}</p>
+                            )}
                         </div>
                         <div className="bg-purple-50/50 p-4 rounded-2xl">
                             <p className="text-xs text-purple-400 font-bold uppercase mb-1">Tarix</p>
@@ -426,6 +486,17 @@ const ExamReview = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Question Navigation */}
+                <QuestionNav
+                    questions={sortedQuestions}
+                    examSubject={review.examSubject}
+                    onClickQ={(q) => {
+                        const el = questionRefs.current[q.id];
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    className="mb-6"
+                />
 
                 {/* Ungraded count banner (student) */}
                 {!canGrade && review.ungradedCount > 0 && (
@@ -477,8 +548,26 @@ const ExamReview = () => {
                         const showPassageSeparator = isPassageQuestion && !shownPassageIds.has(q.passageId);
                         if (showPassageSeparator) shownPassageIds.add(q.passageId);
 
+                        const subjectKey = q.subjectGroup ?? '__main__';
+                        const showSubjectHeader = subjectHeaderMap.has(q.id) && !shownSubjectGroups.has(subjectKey);
+                        if (showSubjectHeader) shownSubjectGroups.add(subjectKey);
+
                         return (
-                            <div key={q.id}>
+                            <div key={q.id} ref={el => { questionRefs.current[q.id] = el; }}>
+                                {/* Subject group header */}
+                                {showSubjectHeader && (() => {
+                                    const { label, range } = subjectHeaderMap.get(q.id);
+                                    return (
+                                        <div className="flex items-center gap-3 mt-4 mb-1 px-1">
+                                            <div className="flex-1 h-px bg-indigo-100" />
+                                            <span className="text-xs font-bold text-indigo-500 uppercase tracking-wider whitespace-nowrap">
+                                                {label} · {range}
+                                            </span>
+                                            <div className="flex-1 h-px bg-indigo-100" />
+                                        </div>
+                                    );
+                                })()}
+
                                 {/* Passage group separator */}
                                 {showPassageSeparator && (
                                     <div className="flex items-center gap-2 mt-6 mb-2 px-1">

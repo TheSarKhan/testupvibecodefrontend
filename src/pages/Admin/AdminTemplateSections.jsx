@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { HiOutlinePlus, HiOutlineTrash, HiOutlinePencilAlt, HiOutlineArrowLeft, HiOutlineCheck, HiOutlineInformationCircle, HiOutlineX, HiOutlineChevronUp, HiOutlineChevronDown, HiOutlineVolumeUp, HiOutlineDocumentText } from 'react-icons/hi';
 import api from '../../api/axios';
@@ -64,21 +64,18 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
     const [formula, setFormula] = useState(initial?.formula || '');
     const [showVars, setShowVars] = useState(false);
     const [groups, setGroups] = useState(() => buildGroups(initial?.typeCounts));
-    const [showGroupMenu, setShowGroupMenu] = useState(false);
-    const menuRef = useRef(null);
+
+
+    const [allowCustomPoints, setAllowCustomPoints] = useState(initial?.allowCustomPoints ?? true);
 
     // Point groups state
+    const [maxScore, setMaxScore] = useState(initial?.maxScore ?? '');
     const [pgEnabled, setPgEnabled] = useState(() => !!initial?.pointGroups);
     const [pgList, setPgList] = useState(() => {
         const parsed = parsePointGroups(initial?.pointGroups);
         return parsed.length ? parsed : [{ from: 1, to: 10, points: 1.0 }];
     });
 
-    useEffect(() => {
-        const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowGroupMenu(false); };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
 
     const total = groups.reduce((s, g) => s + g.rows.reduce((rs, r) => rs + (parseInt(r.count) || 0), 0), 0);
 
@@ -108,6 +105,8 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                 g.rows.map(r => ({ questionType: r.questionType, count: parseInt(r.count), passageType: g.passageType || null }))
             ),
             pointGroups: pgEnabled ? JSON.stringify(pgList) : null,
+            maxScore: maxScore !== '' ? parseFloat(maxScore) : null,
+            allowCustomPoints,
         });
     };
 
@@ -179,42 +178,41 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                                             </div>
                                         </div>
                                     ))}
-                                    <button type="button" onClick={() => addRow(gi)}
-                                        className={`w-full mt-1 py-2 text-xs font-semibold border border-dashed rounded-lg transition-colors ${
-                                            pt?.color === 'purple' ? 'border-purple-200 text-purple-600 hover:bg-purple-50' :
-                                            pt?.color === 'teal'   ? 'border-teal-200 text-teal-600 hover:bg-teal-50' :
-                                            'border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}>
-                                        {pt ? `+ ${pt.label}ə sual əlavə et` : '+ Sıra əlavə et'}
-                                    </button>
+                                    <div className="mt-1 flex flex-wrap gap-2">
+                                        <button type="button" onClick={() => addRow(gi)}
+                                            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-dashed rounded-lg transition-colors ${
+                                                pt?.color === 'purple' ? 'border-purple-200 text-purple-600 hover:bg-purple-50' :
+                                                pt?.color === 'teal'   ? 'border-teal-200 text-teal-600 hover:bg-teal-50' :
+                                                'border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}>
+                                            <HiOutlinePlus className="w-3 h-3" />
+                                            {pt ? `${pt.label}ə sual` : 'Normal sual'}
+                                        </button>
+                                        {!pt && (
+                                            <>
+                                                <button type="button" onClick={() => addGroup('TEXT')}
+                                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-dashed border-teal-200 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
+                                                    <HiOutlineDocumentText className="w-3 h-3" /> Mətn
+                                                </button>
+                                                <button type="button" onClick={() => addGroup('LISTENING')}
+                                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-dashed border-purple-200 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
+                                                    <HiOutlineVolumeUp className="w-3 h-3" /> Dinləmə
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
                     );
                 })}
 
-                {/* Add group */}
-                <div className="relative" ref={menuRef}>
-                    <button type="button" onClick={() => setShowGroupMenu(v => !v)}
+                {/* If no standalone group exists yet, offer to add one */}
+                {groups.length === 0 && (
+                    <button type="button" onClick={() => addGroup(null)}
                         className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
-                        <HiOutlinePlus className="w-4 h-4" /> Yeni sual tipi əlavə et
+                        <HiOutlinePlus className="w-4 h-4" /> Sual tipi əlavə et
                     </button>
-                    {showGroupMenu && (
-                        <div className="absolute top-full left-0 mt-1 z-10 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden min-w-[180px]">
-                            <button type="button" onClick={() => addGroup(null)}
-                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors font-medium text-gray-700">
-                                Adi suallar
-                            </button>
-                            <button type="button" onClick={() => addGroup('LISTENING')}
-                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 transition-colors font-medium text-purple-700 flex items-center gap-2">
-                                <HiOutlineVolumeUp className="w-4 h-4" /> Dinləmə
-                            </button>
-                            <button type="button" onClick={() => addGroup('TEXT')}
-                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-teal-50 transition-colors font-medium text-teal-700 flex items-center gap-2">
-                                <HiOutlineDocumentText className="w-4 h-4" /> Mətn
-                            </button>
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
 
             {/* Düstur */}
@@ -242,6 +240,22 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                     placeholder={'a*1.5 - b*0.5\n\n(a = birseçimli düzgün, b = yanlış...)'}
                     rows={4}
                     className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all resize-none" />
+            </div>
+
+            {/* Max bal */}
+            <div className="p-5 border-b border-gray-100">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                    Maksimum Bal <span className="text-gray-400 font-normal normal-case">(məs. DİM Az dili = 100)</span>
+                </label>
+                <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={maxScore}
+                    onChange={e => setMaxScore(e.target.value)}
+                    placeholder="Boş qoyulsa hesablanmaz"
+                    className="w-48 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                />
             </div>
 
             {/* Bal qrupları */}
@@ -285,6 +299,27 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                         </button>
                     </div>
                 )}
+            </div>
+
+            {/* Allow custom points toggle */}
+            <div className="px-5 py-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-semibold text-gray-700">Suallara fərdi bal təyin etmək</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {allowCustomPoints
+                                ? 'Müəllim hər suala ayrıca bal verə bilər'
+                                : 'Ballar yalnız düsturla hesablanır — bal sahəsi gizlənir'}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setAllowCustomPoints(v => !v)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${allowCustomPoints ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                    >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${allowCustomPoints ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Actions */}
@@ -348,8 +383,10 @@ const AdminTemplateSections = () => {
         const payload = {
             subjectName: formData.subjectName,
             formula: formData.formula,
-            typeCounts: formData.typeCounts.map(tc => ({ questionType: tc.questionType, count: parseInt(tc.count) })),
+            typeCounts: formData.typeCounts.map(tc => ({ questionType: tc.questionType, count: parseInt(tc.count), passageType: tc.passageType || null })),
             pointGroups: formData.pointGroups || null,
+            maxScore: formData.maxScore ?? null,
+            allowCustomPoints: formData.allowCustomPoints ?? true,
         };
 
         if (editingIdx === -1) {
@@ -423,7 +460,10 @@ const AdminTemplateSections = () => {
                                     initial={{
                                         subjectName: s.subjectName,
                                         formula: s.formula,
-                                        typeCounts: (s.typeCounts || []).map(tc => ({ questionType: tc.questionType, count: String(tc.count) })),
+                                        typeCounts: (s.typeCounts || []).map(tc => ({ questionType: tc.questionType, count: String(tc.count), passageType: tc.passageType || null })),
+                                        pointGroups: s.pointGroups || null,
+                                        maxScore: s.maxScore ?? null,
+                                        allowCustomPoints: s.allowCustomPoints ?? true,
                                     }}
                                     subjects={subjects}
                                     onSave={handleSave}

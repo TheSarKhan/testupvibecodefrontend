@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle, HiLockClosed, HiOutlineUserGroup, HiOutlinePaperAirplane, HiOutlineCheckCircle, HiOutlineSparkles } from 'react-icons/hi';
 import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
 import BankPickerModal from '../../components/ui/BankPickerModal';
+import MathTextEditor from '../../components/ui/MathTextEditor';
+import MathFormulaModal from '../../components/ui/MathFormulaModal';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -32,6 +34,66 @@ const toFrontendMatchingPairs = (pairs) => {
         leftVisualId: p.leftItem ? lvMap[p.leftItem] : null,
         rightVisualId: p.rightItem ? rvMap[p.rightItem] : null,
     }));
+};
+
+const makeQuestion = (questionType, orderIdx, subjectGroup, points = 0) => {
+    const frontendType = TYPE_TO_FRONTEND[questionType] || 'MULTIPLE_CHOICE';
+    const isChoice = frontendType === 'MULTIPLE_CHOICE' || frontendType === 'MULTI_SELECT';
+    const ts = Date.now() + Math.random();
+    return {
+        id: `new-${ts}-${orderIdx}`,
+        type: frontendType, text: '', points,
+        orderIndex: orderIdx,
+        subjectGroup: subjectGroup || null,
+        options: isChoice ? [
+            { id: `o1-${ts}`, text: '', isCorrect: false },
+            { id: `o2-${ts}`, text: '', isCorrect: false },
+            { id: `o3-${ts}`, text: '', isCorrect: false },
+            { id: `o4-${ts}`, text: '', isCorrect: false },
+        ] : [],
+        matchingPairs: [], sampleAnswer: '',
+    };
+};
+
+const makePassageQuestion = (questionType, idx) => {
+    const frontendType = TYPE_TO_FRONTEND[questionType] || 'MULTIPLE_CHOICE';
+    const isChoice = frontendType === 'MULTIPLE_CHOICE' || frontendType === 'MULTI_SELECT';
+    const ts = Date.now() + Math.random();
+    return {
+        id: `new-pq-${ts}-${idx}`,
+        type: frontendType, text: '', points: 0,
+        options: isChoice ? [
+            { id: `o1-${ts}`, text: '', isCorrect: false },
+            { id: `o2-${ts}`, text: '', isCorrect: false },
+            { id: `o3-${ts}`, text: '', isCorrect: false },
+            { id: `o4-${ts}`, text: '', isCorrect: false },
+        ] : [],
+        matchingPairs: [], sampleAnswer: '',
+    };
+};
+
+// Builds questions and passages from a section's typeCounts (handles passageType grouping).
+const buildFromTypeCounts = (typeCounts, subjectGroup = null, startOrderIdx = 0) => {
+    const standaloneTypes = typeCounts.filter(tc => !tc.passageType);
+    const passageTypeGroups = {};
+    typeCounts.filter(tc => tc.passageType).forEach(tc => {
+        if (!passageTypeGroups[tc.passageType]) passageTypeGroups[tc.passageType] = [];
+        passageTypeGroups[tc.passageType].push(tc);
+    });
+
+    let orderIdx = startOrderIdx;
+    const questions = standaloneTypes.flatMap(({ questionType, count }) =>
+        Array.from({ length: count }, (_, i) => makeQuestion(questionType, orderIdx++, subjectGroup))
+    );
+    const passages = Object.entries(passageTypeGroups).map(([passageType, tcs]) => ({
+        id: `new-passage-${Date.now()}-${Math.random()}`,
+        passageType, title: '', textContent: '', attachedImage: null, audioContent: null,
+        listenLimit: null, orderIndex: orderIdx++, subjectGroup,
+        questions: tcs.flatMap(({ questionType, count }, ti) =>
+            Array.from({ length: count }, (_, i) => makePassageQuestion(questionType, ti * 100 + i))
+        ),
+    }));
+    return { questions, passages };
 };
 
 const buildQuestionsFromTypeCounts = (typeCounts) => {
@@ -317,18 +379,18 @@ const ExamEditor = () => {
         if (!isEditMode && initialLocationState.type === 'template') {
             const sds = initialLocationState.sectionsData;
             if (sds && sds.length >= 2) {
-                // Multi-section template exam
                 setTemplateSections(sds);
                 setSelectedSectionIds(sds.map(s => s.id));
-                // Build questions per section, each tagged with subjectGroup
-                const allQuestions = sds.flatMap(sd =>
-                    buildQuestionsFromTypeCounts(sd.typeCounts || []).map(q => ({
-                        ...q,
-                        id: `new-${Date.now()}-${Math.random()}`,
-                        subjectGroup: sd.subjectName,
-                    }))
-                );
+                let orderIdx = 0;
+                const allQuestions = [], allPassages = [];
+                sds.forEach(sd => {
+                    const built = buildFromTypeCounts(sd.typeCounts || [], sd.subjectName, orderIdx);
+                    allQuestions.push(...built.questions);
+                    allPassages.push(...built.passages);
+                    orderIdx += built.questions.length + built.passages.length;
+                });
                 setQuestions(allQuestions);
+                setPassages(allPassages);
                 setExamConfig(prev => ({
                     ...prev,
                     subject: sds[0].subjectName,
@@ -336,23 +398,25 @@ const ExamEditor = () => {
                     title: prev.title || `${sds.map(s => s.subjectName).join(' + ')} - İmtahan`,
                 }));
             } else if (initialLocationState.sectionData) {
-                // Single-section template exam (existing behavior)
                 const sd = initialLocationState.sectionData;
                 setTemplateInfo(sd);
                 setSelectedSectionId(sd.id);
                 setSelectedSectionIds([sd.id]);
-                setQuestions(buildQuestionsFromTypeCounts(sd.typeCounts || []));
+                const built = buildFromTypeCounts(sd.typeCounts || []);
+                setQuestions(built.questions);
+                setPassages(built.passages);
                 setExamConfig(prev => ({
                     ...prev,
                     title: prev.title || `${sd.subjectName || 'Şablon'} - ${sd.subtitleName || sd.name || 'İmtahan'}`,
                 }));
             } else if (sds && sds.length === 1) {
-                // sectionsData with single item — treat as single-section
                 const sd = sds[0];
                 setTemplateInfo(sd);
                 setSelectedSectionId(sd.id);
                 setSelectedSectionIds([sd.id]);
-                setQuestions(buildQuestionsFromTypeCounts(sd.typeCounts || []));
+                const built = buildFromTypeCounts(sd.typeCounts || []);
+                setQuestions(built.questions);
+                setPassages(built.passages);
                 setExamConfig(prev => ({
                     ...prev,
                     title: prev.title || `${sd.subjectName || 'Şablon'} - İmtahan`,
@@ -366,16 +430,24 @@ const ExamEditor = () => {
         if (!isEditMode && initialLocationState.type === 'olimpiyada') {
             const sds = initialLocationState.sectionsData;
             if (sds && sds.length >= 2) {
-                // Multi-section olimpiyada exam
                 setTemplateSections(sds);
                 setSelectedSectionIds(sds.map(s => s.id));
                 let globalOrderIdx = 0;
-                const allQuestions = sds.flatMap(sd => {
-                    const qs = buildQuestionsWithPointGroups(sd.typeCounts || [], sd.pointGroups, globalOrderIdx);
+                const allQuestions = [], allPassages = [];
+                sds.forEach(sd => {
+                    const standaloneTypes = (sd.typeCounts || []).filter(tc => !tc.passageType);
+                    const qs = buildQuestionsWithPointGroups(standaloneTypes, sd.pointGroups, globalOrderIdx)
+                        .map(q => ({ ...q, subjectGroup: sd.subjectName }));
+                    allQuestions.push(...qs);
                     globalOrderIdx += qs.length;
-                    return qs.map(q => ({ ...q, subjectGroup: sd.subjectName }));
+                    const { passages: ps } = buildFromTypeCounts(
+                        (sd.typeCounts || []).filter(tc => tc.passageType), sd.subjectName, globalOrderIdx
+                    );
+                    allPassages.push(...ps);
+                    globalOrderIdx += ps.length;
                 });
                 setQuestions(allQuestions);
+                setPassages(allPassages);
                 setExamConfig(prev => ({
                     ...prev,
                     subject: sds[0].subjectName,
@@ -387,7 +459,11 @@ const ExamEditor = () => {
                 setTemplateInfo(sd);
                 setSelectedSectionId(sd.id);
                 setSelectedSectionIds([sd.id]);
-                setQuestions(buildQuestionsWithPointGroups(sd.typeCounts || [], sd.pointGroups));
+                const standaloneTypes = (sd.typeCounts || []).filter(tc => !tc.passageType);
+                const qs = buildQuestionsWithPointGroups(standaloneTypes, sd.pointGroups);
+                const { passages: ps } = buildFromTypeCounts((sd.typeCounts || []).filter(tc => tc.passageType), null, qs.length);
+                setQuestions(qs);
+                setPassages(ps);
                 setExamConfig(prev => ({
                     ...prev,
                     title: prev.title || `${sd.subjectName || 'Olimpiyada'} - İmtahan`,
@@ -397,7 +473,11 @@ const ExamEditor = () => {
                 setTemplateInfo(sd);
                 setSelectedSectionId(sd.id);
                 setSelectedSectionIds([sd.id]);
-                setQuestions(buildQuestionsWithPointGroups(sd.typeCounts || [], sd.pointGroups));
+                const standaloneTypes = (sd.typeCounts || []).filter(tc => !tc.passageType);
+                const qs = buildQuestionsWithPointGroups(standaloneTypes, sd.pointGroups);
+                const { passages: ps } = buildFromTypeCounts((sd.typeCounts || []).filter(tc => tc.passageType), null, qs.length);
+                setQuestions(qs);
+                setPassages(ps);
                 setExamConfig(prev => ({
                     ...prev,
                     title: prev.title || `${sd.subjectName || 'Olimpiyada'} - İmtahan`,
@@ -581,12 +661,26 @@ const ExamEditor = () => {
             toast.error(`${subjectName} artıq əlavədir`);
             return;
         }
-        // Build questions with pointGroups (olimpiyada) or default points (template)
         const isOlimp = type === 'olimpiyada';
-        const startIdx = questions.length > 0 ? Math.max(...questions.map(q => q.orderIndex ?? 0)) + 1 : 0;
-        const newQs = isOlimp
-            ? buildQuestionsWithPointGroups(typeCounts || [], pointGroups, startIdx).map(q => ({ ...q, subjectGroup: subjectName }))
-            : buildQuestionsFromTypeCounts(typeCounts || []).map((q, i) => ({ ...q, orderIndex: startIdx + i, subjectGroup: subjectName }));
+        const allOrderIndices = [
+            ...questions.map(q => q.orderIndex ?? 0),
+            ...passages.map(p => p.orderIndex ?? 0),
+        ];
+        const startIdx = allOrderIndices.length > 0 ? Math.max(...allOrderIndices) + 1 : 0;
+        let newQs, newPs;
+        if (isOlimp) {
+            const standaloneTypes = (typeCounts || []).filter(tc => !tc.passageType);
+            newQs = buildQuestionsWithPointGroups(standaloneTypes, pointGroups, startIdx)
+                .map(q => ({ ...q, subjectGroup: subjectName }));
+            const { passages: ps } = buildFromTypeCounts(
+                (typeCounts || []).filter(tc => tc.passageType), subjectName, startIdx + newQs.length
+            );
+            newPs = ps;
+        } else {
+            const built = buildFromTypeCounts(typeCounts || [], subjectName, startIdx);
+            newQs = built.questions;
+            newPs = built.passages;
+        }
 
         const secInfo = {
             id: secId,
@@ -601,6 +695,7 @@ const ExamEditor = () => {
         setTemplateSections(prev => [...prev, secInfo]);
         setSelectedSectionIds(prev => [...prev, secId]);
         setQuestions(prev => [...prev, ...newQs]);
+        setPassages(prev => [...prev, ...newPs]);
         setExamConfig(prev => ({ ...prev, extraSubjects: [...(prev.extraSubjects || []), subjectName] }));
         setAddSectionModal(null);
         toast.success(`${subjectName} bölməsi əlavə edildi`);
@@ -610,6 +705,7 @@ const ExamEditor = () => {
         if (type === 'template' || type === 'olimpiyada') {
             // In template/olimpiyada mode: delete questions and update template section lists
             setQuestions(prev => prev.filter(q => q.subjectGroup !== subjectName));
+            setPassages(prev => prev.filter(p => p.subjectGroup !== subjectName));
             setTemplateSections(prev => prev.filter(s => s.subjectName !== subjectName));
             setSelectedSectionIds(prev => {
                 const sec = templateSections.find(s => s.subjectName === subjectName);
@@ -618,6 +714,7 @@ const ExamEditor = () => {
         } else {
             // In free mode: move questions back to main section
             setQuestions(prev => prev.map(q => q.subjectGroup === subjectName ? { ...q, subjectGroup: null } : q));
+            setPassages(prev => prev.map(p => p.subjectGroup === subjectName ? { ...p, subjectGroup: null } : p));
         }
         setExamConfig(prev => ({ ...prev, extraSubjects: (prev.extraSubjects || []).filter(s => s !== subjectName) }));
     };
@@ -984,6 +1081,17 @@ const ExamEditor = () => {
     const isMultiSectionTemplate = templateSections.length >= 2;
     const isQuestionCountLocked = (isTemplateMode || isOlimpiyadaMode) && (templateInfo !== null || isMultiSectionTemplate);
 
+    // Returns true if point input should be hidden for questions in the given subject section
+    const sectionHidesPoints = (subjectName) => {
+        if (isOlimpiyadaMode) return false; // olimpiyada uses pointsReadOnly instead
+        if (!isTemplateMode) return false;
+        if (isMultiSectionTemplate) {
+            const sec = templateSections.find(s => s.subjectName === subjectName);
+            return sec ? sec.allowCustomPoints === false : false;
+        }
+        return templateInfo?.allowCustomPoints === false;
+    };
+
     // Pre-compute global question offset for each section so numbering continues across sections
     const _sectionSubjectsList = [examConfig.subject, ...(examConfig.extraSubjects || [])];
     let _gqc = 0;
@@ -1233,7 +1341,7 @@ const ExamEditor = () => {
                                                             question={item.data}
                                                             onChange={handleUpdateQuestion}
                                                             onDelete={handleDeleteQuestion}
-                                                            hidePoints={isTemplateMode}
+                                                            hidePoints={sectionHidesPoints(sectionSubject)}
                                                             hideDelete={isQuestionCountLocked}
                                                             pointsReadOnly={isOlimpiyadaMode}
                                                         />
@@ -1295,6 +1403,8 @@ const ExamEditor = () => {
                                                         onUpdateQuestion={handleUpdatePassageQuestion}
                                                         onDeleteQuestion={handleDeletePassageQuestion}
                                                         hasPermission={hasPermission}
+                                                        isQuestionCountLocked={isQuestionCountLocked}
+                                                        hidePoints={sectionHidesPoints(sectionSubject)}
                                                     />
                                                 );
                                             }
@@ -1778,9 +1888,11 @@ const ExamEditor = () => {
 };
 
 // ---------- PassageEditor component ----------
-const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQuestion, onDeleteQuestion, hasPermission, questionOffset = 0 }) => {
+const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQuestion, onDeleteQuestion, hasPermission, questionOffset = 0, isQuestionCountLocked = false, hidePoints = false }) => {
     const audioInputRef = useRef(null);
     const imageInputRef = useRef(null);
+    const textEditorRef = useRef(null);
+    const [mathModalOpen, setMathModalOpen] = useState(false);
 
     const handleAudioUpload = (e) => {
         const file = e.target.files[0];
@@ -1814,9 +1926,11 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                         {isText ? 'Mətn Parçası' : 'Dinləmə'}
                     </span>
                 </div>
-                <button onClick={() => onDelete(passage.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                    <HiOutlineX className="w-5 h-5" />
-                </button>
+                {!isQuestionCountLocked && (
+                    <button onClick={() => onDelete(passage.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <HiOutlineX className="w-5 h-5" />
+                    </button>
+                )}
             </div>
 
             <div className="bg-white p-6 space-y-4">
@@ -1832,12 +1946,31 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                 {isText ? (
                     <>
                         {/* Text content */}
-                        <textarea
-                            rows={6}
-                            value={passage.textContent}
-                            onChange={(e) => onChange(passage.id, { ...passage, textContent: e.target.value })}
-                            placeholder="Mətn parçasını bura daxil edin."
-                            className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-teal-400 resize-y font-mono"
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-xs font-medium text-gray-500">Mətn parçası</label>
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => setMathModalOpen(true)}
+                                    className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                >
+                                    fx Riyaziyyat
+                                </button>
+                            </div>
+                            <MathTextEditor
+                                ref={textEditorRef}
+                                value={passage.textContent || ''}
+                                onChange={(val) => onChange(passage.id, { ...passage, textContent: val })}
+                                placeholder="Mətn parçasını bura daxil edin."
+                                className="w-full px-4 py-3 text-sm min-h-[140px] bg-transparent"
+                                showToolbar={true}
+                            />
+                        </div>
+                        <MathFormulaModal
+                            isOpen={mathModalOpen}
+                            onClose={() => setMathModalOpen(false)}
+                            onInsert={(latex) => { textEditorRef.current?.insertMath(latex); setMathModalOpen(false); }}
                         />
                         {/* Image for text passage */}
                         <div className="flex items-center gap-3">
@@ -1913,22 +2046,26 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                                 question={q}
                                 onChange={(qId, updated) => onUpdateQuestion(passage.id, qId, updated)}
                                 onDelete={(qId) => onDeleteQuestion(passage.id, qId)}
+                                hideDelete={isQuestionCountLocked}
+                                hidePoints={hidePoints}
                             />
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Add question to this passage */}
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
-                <button
-                    onClick={() => onAddQuestion(passage.id)}
-                    className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-xl text-sm font-semibold transition-colors ${isText ? 'border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700' : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50 text-purple-700'}`}
-                >
-                    <HiOutlinePlus className="w-4 h-4" />
-                    Bu keçidə sual əlavə et
-                </button>
-            </div>
+            {/* Add question to this passage — hidden in template mode */}
+            {!isQuestionCountLocked && (
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                    <button
+                        onClick={() => onAddQuestion(passage.id)}
+                        className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-xl text-sm font-semibold transition-colors ${isText ? 'border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700' : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50 text-purple-700'}`}
+                    >
+                        <HiOutlinePlus className="w-4 h-4" />
+                        Bu keçidə sual əlavə et
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

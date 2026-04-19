@@ -169,7 +169,7 @@ const ExamView = () => {
                                                     </span>
                                                     <div className="flex-1">
                                                         <div className="flex flex-col gap-2">
-                                                            <LatexPreview content={opt.content} />
+                                                            <LatexPreview content={opt.content} placeholder={`${String.fromCharCode(65 + oIdx)} variantı`} />
                                                             {opt.attachedImage && (
                                                                 <div className="mt-1 rounded-lg overflow-hidden border border-gray-100 inline-block w-fit">
                                                                     <img src={opt.attachedImage} alt="Variant şəkli" className="max-h-48 object-contain" />

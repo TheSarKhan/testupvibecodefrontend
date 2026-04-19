@@ -904,7 +904,8 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     value={question.text}
                     onChange={(val) => handleChange('text', val)}
                     placeholder="Sualın mətnini buraya yazın... Müntəzəm mətn daxil edə, enterlə aşağı düşə bilərsiniz."
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-y min-h-[100px] text-gray-800 transition-colors"
+                    className="w-full px-4 py-3 bg-gray-50 text-gray-800"
+                    showToolbar={true}
                 />
 
                 {/* Attached Image Preview */}

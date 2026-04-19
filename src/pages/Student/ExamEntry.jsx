@@ -206,16 +206,48 @@ const ExamEntry = () => {
     if (!exam) return null;
 
     if (exam.status === 'CANCELLED' || exam.status === 'DRAFT') {
+        const totalQ = (exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0);
+        const subjects = exam.subjects?.filter(Boolean) || [];
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
                 <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                    <div className="bg-white py-10 px-8 shadow-xl sm:rounded-2xl border border-gray-100 text-center">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-5">
-                            <HiOutlineLockClosed className="w-8 h-8" />
+                    <div className="bg-white py-10 px-8 shadow-xl sm:rounded-2xl border border-gray-100">
+                        <div className="text-center mb-6">
+                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
+                                <HiOutlineLockClosed className="w-8 h-8" />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-900 mb-1">{exam.title}</h2>
+                            {subjects.length > 0 && (
+                                <p className="text-sm text-gray-500 mb-3">{subjects.join(' + ')}</p>
+                            )}
+                            <span className="inline-block bg-red-100 text-red-600 text-xs font-bold px-3 py-1 rounded-full">
+                                Bu imtahan hazırda bağlıdır
+                            </span>
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">{exam.title}</h2>
-                        <p className="text-gray-500 mb-1">Bu imtahan hazırda <strong className="text-red-500">bağlıdır</strong>.</p>
-                        <p className="text-gray-400 text-sm">Müəllimlə əlaqə saxlayın və ya sonra yenidən yoxlayın.</p>
+
+                        {/* Exam info grid */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                            {totalQ > 0 && (
+                                <div className="bg-gray-50 rounded-xl px-4 py-3 text-center">
+                                    <p className="text-lg font-bold text-gray-800">{totalQ}</p>
+                                    <p className="text-xs text-gray-400">Sual</p>
+                                </div>
+                            )}
+                            <div className="bg-gray-50 rounded-xl px-4 py-3 text-center">
+                                <p className="text-lg font-bold text-gray-800">
+                                    {exam.durationMinutes ? `${exam.durationMinutes}` : '∞'}
+                                </p>
+                                <p className="text-xs text-gray-400">{exam.durationMinutes ? 'Dəqiqə' : 'Sərbəst vaxt'}</p>
+                            </div>
+                            {exam.teacherName && (
+                                <div className="bg-gray-50 rounded-xl px-4 py-3 text-center col-span-2">
+                                    <p className="text-sm font-semibold text-gray-700">{exam.teacherName}</p>
+                                    <p className="text-xs text-gray-400">Müəllim</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <p className="text-center text-gray-400 text-sm">Müəllimlə əlaqə saxlayın və ya sonra yenidən yoxlayın.</p>
                     </div>
                 </div>
             </div>

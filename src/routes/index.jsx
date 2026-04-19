@@ -76,7 +76,6 @@ const router = createBrowserRouter([
             { path: 'imtahanlar/edit/:id', element: <ExamEditor /> },
             { path: 'imtahanlar/duzenle/:id', element: <ExamEditor /> },
             { path: 'imtahan/:shareLink', element: <ExamEntry /> },
-            { path: 'test/take/:sessionId', element: <ExamSession /> },
             { path: 'test/result/:sessionId', element: <ExamResultSummary /> },
             { path: 'test/review/:sessionId', element: <ExamReview /> },
             { path: 'planlar', element: <Pricing /> },
@@ -118,6 +117,9 @@ const router = createBrowserRouter([
             { path: '*', element: <NotFound /> },
         ],
     },
+
+    // ── Exam session (standalone, no Navbar) ──
+    { path: '/test/take/:sessionId', element: <ExamSession /> },
 
     // ── Admin panel (standalone, no site Navbar) ──
     {

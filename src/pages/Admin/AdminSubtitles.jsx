@@ -1,19 +1,59 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { HiOutlinePlus, HiOutlineTrash, HiOutlinePencilAlt, HiOutlineChevronRight, HiOutlineArrowLeft } from 'react-icons/hi';
+import {
+    HiOutlinePlus, HiOutlineTrash, HiOutlinePencilAlt,
+    HiOutlineChevronRight, HiOutlineArrowLeft, HiOutlineCheck, HiOutlineX,
+} from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+
+const TYPES = [
+    { value: 'STANDARD',  label: 'Standart (DİM)', color: 'indigo' },
+    { value: 'OLIMPIYADA', label: 'Olimpiyada',     color: 'amber'  },
+];
+const TYPE_LABEL = { STANDARD: 'Standart (DİM)', OLIMPIYADA: 'Olimpiyada' };
+const TYPE_COLOR = { STANDARD: 'indigo', OLIMPIYADA: 'amber' };
+
+const TypeSelector = ({ value, onChange }) => (
+    <div className="grid grid-cols-2 gap-2 mt-3">
+        {TYPES.map(t => (
+            <button key={t.value} type="button" onClick={() => onChange(t.value)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                    value === t.value
+                        ? t.color === 'indigo'
+                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                            : 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}>
+                <span className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${
+                    value === t.value
+                        ? t.color === 'indigo' ? 'border-indigo-500 bg-indigo-500' : 'border-amber-500 bg-amber-500'
+                        : 'border-gray-300'
+                }`} />
+                {t.label}
+            </button>
+        ))}
+    </div>
+);
 
 const AdminSubtitles = () => {
     const { templateId } = useParams();
     const navigate = useNavigate();
-    const [templateTitle, setTemplateTitle] = useState('');
+
+    const [template, setTemplate] = useState(null);
     const [subtitles, setSubtitles] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // subtitle create/edit
     const [creating, setCreating] = useState(false);
     const [newSubtitle, setNewSubtitle] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editValue, setEditValue] = useState('');
+
+    // template title + type inline edit
+    const [editingTitle, setEditingTitle] = useState(false);
+    const [titleDraft, setTitleDraft] = useState('');
+    const [typeDraft, setTypeDraft] = useState('STANDARD');
 
     useEffect(() => { fetchData(); }, [templateId]);
 
@@ -25,13 +65,26 @@ const AdminSubtitles = () => {
                 api.get(`/admin/templates/${templateId}/subtitles`),
             ]);
             const tmpl = templatesRes.data.find(t => String(t.id) === String(templateId));
-            if (tmpl) setTemplateTitle(tmpl.title);
+            if (tmpl) setTemplate(tmpl);
             setSubtitles(subtitlesRes.data);
         } catch {
             toast.error('Məlumatlar yüklənmədi');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleUpdateTemplate = async () => {
+        if (!titleDraft.trim()) { toast.error('Başlıq boş ola bilməz'); return; }
+        try {
+            const { data } = await api.put(`/admin/templates/${templateId}`, {
+                title: titleDraft.trim(),
+                templateType: typeDraft,
+            });
+            setTemplate(data);
+            setEditingTitle(false);
+            toast.success('Yeniləndi');
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
     const handleCreate = async () => {
@@ -63,20 +116,67 @@ const AdminSubtitles = () => {
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
+    const tColor = TYPE_COLOR[template?.templateType] || 'indigo';
+
     return (
         <div className="p-8 max-w-3xl">
-            {/* Breadcrumb */}
+            {/* Back */}
             <button onClick={() => navigate('/admin/sablonlar')}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6 font-medium">
                 <HiOutlineArrowLeft className="w-4 h-4" /> Şablonlara qayıt
             </button>
 
-            <div className="mb-6 flex items-start justify-between">
-                <div>
-                    <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">{templateTitle}</p>
-                    <h1 className="text-2xl font-bold text-gray-900">Altbaşlıqlar</h1>
-                    <p className="text-gray-500 mt-1 text-sm">Altbaşlıq yaradın, üzərinə klikləyin fənnləri idarə edin</p>
-                </div>
+            {/* Template header */}
+            <div className={`mb-6 p-5 rounded-2xl border-2 ${tColor === 'amber' ? 'border-amber-200 bg-amber-50' : 'border-indigo-100 bg-indigo-50'}`}>
+                {editingTitle ? (
+                    <div className="space-y-3">
+                        <input
+                            autoFocus
+                            value={titleDraft}
+                            onChange={e => setTitleDraft(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Escape') setEditingTitle(false); }}
+                            placeholder="Şablon adı"
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-400 bg-white"
+                        />
+                        <TypeSelector value={typeDraft} onChange={setTypeDraft} />
+                        <div className="flex items-center gap-2 pt-1">
+                            <button onClick={handleUpdateTemplate}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                                <HiOutlineCheck className="w-4 h-4" /> Saxla
+                            </button>
+                            <button onClick={() => setEditingTitle(false)}
+                                className="flex items-center gap-1.5 px-4 py-2 text-gray-500 border border-gray-200 rounded-xl hover:bg-white text-sm transition-colors">
+                                <HiOutlineX className="w-4 h-4" /> Ləğv et
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                                    tColor === 'amber' ? 'bg-amber-200 text-amber-800' : 'bg-indigo-200 text-indigo-800'
+                                }`}>
+                                    {TYPE_LABEL[template?.templateType] || 'Standart'}
+                                </span>
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-900">{template?.title || '...'}</h1>
+                            <p className="text-gray-500 mt-1 text-sm">Altbaşlıq yaradın, üzərinə klikləyin fənnləri idarə edin</p>
+                        </div>
+                        <button
+                            onClick={() => { setTitleDraft(template?.title || ''); setTypeDraft(template?.templateType || 'STANDARD'); setEditingTitle(true); }}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors flex-shrink-0"
+                            title="Başlığı redaktə et"
+                        >
+                            <HiOutlinePencilAlt className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Subtitles header */}
+            <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-800">Altbaşlıqlar</h2>
                 <button onClick={() => { setCreating(true); setNewSubtitle(''); }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">
                     <HiOutlinePlus className="w-4 h-4" /> Yeni Altbaşlıq

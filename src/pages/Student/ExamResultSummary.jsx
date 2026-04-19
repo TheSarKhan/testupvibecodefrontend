@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { HiOutlineEye, HiOutlineClock } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import QuestionNav from '../../components/ui/QuestionNav';
 
 const MOTIVATION = {
     excellent: {
@@ -182,6 +183,11 @@ const SubjectDonut = ({ stat, colorIndex }) => {
                     </span>
                 ))}
             </div>
+            {stat.sectionMaxScore != null ? (
+                <p className="text-[11px] font-bold text-gray-600">
+                    {stat.sectionScore != null ? stat.sectionScore.toFixed(1) : '–'} / {stat.sectionMaxScore} bal
+                </p>
+            ) : null}
             <p className="text-[10px] text-gray-400">{total} sual</p>
         </div>
     );
@@ -199,6 +205,8 @@ const ExamResultSummary = () => {
     const [isRating, setIsRating] = useState(false);
     const [submissionData, setSubmissionData] = useState(submission || null);
     const [loading, setLoading] = useState(!submission);
+    const [reviewQuestions, setReviewQuestions] = useState(null);
+    const [reviewExamSubject, setReviewExamSubject] = useState(null);
 
     useEffect(() => {
         if (!sessionId) return;
@@ -240,6 +248,17 @@ const ExamResultSummary = () => {
         });
 
         return () => { if (interval) clearInterval(interval); };
+    }, [sessionId]);
+
+    useEffect(() => {
+        if (!sessionId) return;
+        api.get(`/submissions/${sessionId}/review`)
+            .then(res => {
+                const sorted = [...res.data.questions].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+                setReviewQuestions(sorted);
+                setReviewExamSubject(res.data.examSubject);
+            })
+            .catch(() => {});
     }, [sessionId]);
 
     const displaySubmission = submissionData || submission;
@@ -370,6 +389,11 @@ const ExamResultSummary = () => {
                                     ))}
                                 </div>
                             )}
+                            {displaySubmission?.templateTotalMaxScore != null && (
+                                <p className="text-center text-sm font-bold text-indigo-600 mt-2">
+                                    Ümumi: {displaySubmission.templateTotalScore?.toFixed(1)} / {displaySubmission.templateTotalMaxScore} bal
+                                </p>
+                            )}
                             {(timeTaken || displaySubmission?.durationMinutes) && (
                                 <p className="text-[11px] text-gray-400 flex items-center justify-center gap-1 mt-2">
                                     <HiOutlineClock className="w-3 h-3" />
@@ -398,10 +422,18 @@ const ExamResultSummary = () => {
                             <div className="flex-1 min-w-0">
                                 <div className="mb-2">
                                     {isTemplateExam ? (
-                                        <p className="text-xl font-black text-gray-900 leading-tight">
-                                            {displaySubmission.templateScorePercent?.toFixed(1)}
-                                            <span className="text-gray-400 text-base">%</span>
-                                        </p>
+                                        <>
+                                            <p className="text-[10px] text-gray-400 font-semibold uppercase mb-0.5">Uğur faizi</p>
+                                            <p className="text-xl font-black text-gray-900 leading-tight">
+                                                {displaySubmission.templateScorePercent?.toFixed(1)}
+                                                <span className="text-gray-400 text-base">%</span>
+                                            </p>
+                                            {displaySubmission.templateTotalMaxScore != null && (
+                                                <p className="text-sm font-semibold text-indigo-500 mt-0.5">
+                                                    {displaySubmission.templateTotalScore?.toFixed(1)} / {displaySubmission.templateTotalMaxScore} bal
+                                                </p>
+                                            )}
+                                        </>
                                     ) : (
                                         <p className="text-xl font-black text-gray-900 leading-tight">
                                             {displaySubmission.totalScore?.toFixed(1)}
@@ -442,6 +474,19 @@ const ExamResultSummary = () => {
                         <p className="text-gray-600 font-medium text-sm">
                             Nəticəniz müəllim tərəfindən yoxlandıqdan sonra profilinizə əlavə olunacaq.
                         </p>
+                    </div>
+                )}
+
+                {/* ── Question Nav ── */}
+                {reviewQuestions && reviewQuestions.length > 0 && (
+                    <div className="px-5 pb-2">
+                        <QuestionNav
+                            questions={reviewQuestions}
+                            examSubject={reviewExamSubject}
+                            onClickQ={(q) => navigate(`/test/review/${sessionId}`, {
+                                state: { fromResult: true, scrollToQuestionId: q.id }
+                            })}
+                        />
                     </div>
                 )}
 

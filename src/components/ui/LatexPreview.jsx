@@ -4,9 +4,13 @@ import katex from 'katex';
 const escapeHtml = (str) =>
     str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+// Detect new HTML-formatted content vs old plain-text content
+const hasHtmlTags = (text) => text && /<[a-z][\s\S]*>/i.test(text);
+
 const renderLatex = (text) => {
     if (!text) return '';
 
+    const isHtml = hasHtmlTags(text);
     const parts = [];
     // Match $$...$$ (display) or $...$ (inline) — non-greedy
     const regex = /\$\$([\s\S]+?)\$\$|\$([^\n$]+?)\$/g;
@@ -14,9 +18,10 @@ const renderLatex = (text) => {
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-        // plain text before this match
         if (match.index > last) {
-            parts.push(escapeHtml(text.slice(last, match.index)));
+            const segment = text.slice(last, match.index);
+            // HTML content: convert newlines + pass through; plain text: escape + convert newlines
+            parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(segment).replace(/\n/g, '<br>'));
         }
 
         const isDisplay = match[1] !== undefined;
@@ -28,15 +33,15 @@ const renderLatex = (text) => {
                 output: 'html',
             }));
         } catch {
-            parts.push(escapeHtml(match[0]));
+            parts.push(isHtml ? match[0] : escapeHtml(match[0]));
         }
 
         last = match.index + match[0].length;
     }
 
-    // remaining plain text
     if (last < text.length) {
-        parts.push(escapeHtml(text.slice(last)));
+        const segment = text.slice(last);
+        parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(segment).replace(/\n/g, '<br>'));
     }
 
     return parts.join('');

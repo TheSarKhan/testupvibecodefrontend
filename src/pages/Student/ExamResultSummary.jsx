@@ -183,9 +183,12 @@ const SubjectDonut = ({ stat, colorIndex }) => {
                     </span>
                 ))}
             </div>
-            {stat.sectionMaxScore != null ? (
+            {(stat.sectionMaxScore != null || stat.maxScore > 0) ? (
                 <p className="text-[11px] font-bold text-gray-600">
-                    {stat.sectionScore != null ? stat.sectionScore.toFixed(1) : '–'} / {stat.sectionMaxScore} bal
+                    {stat.sectionMaxScore != null
+                        ? `${stat.sectionScore != null ? stat.sectionScore.toFixed(1) : '–'} / ${stat.sectionMaxScore} bal`
+                        : `${stat.totalScore != null ? stat.totalScore.toFixed(1) : '0'} / ${stat.maxScore} bal`
+                    }
                 </p>
             ) : null}
             <p className="text-[10px] text-gray-400">{total} sual</p>

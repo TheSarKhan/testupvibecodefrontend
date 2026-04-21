@@ -277,11 +277,11 @@ const ExamResultSummary = () => {
         }
     };
 
-    const isTemplateExam = displaySubmission?.templateScorePercent != null;
-    const scorePercent = isTemplateExam
-        ? Math.round(displaySubmission.templateScorePercent)
-        : displaySubmission?.maxScore > 0
-            ? Math.round((displaySubmission.totalScore / displaySubmission.maxScore) * 100)
+    const isTemplateExam = false;
+    const scorePercent = displaySubmission?.maxScore > 0
+        ? Math.round((displaySubmission.totalScore / displaySubmission.maxScore) * 100)
+        : displaySubmission?.templateScorePercent != null
+            ? Math.round(displaySubmission.templateScorePercent)
             : null;
 
     const seed = useMemo(() => parseInt(sessionId || '0', 10) || 0, [sessionId]);

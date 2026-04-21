@@ -117,9 +117,7 @@ const ExamResults = () => {
                 cell: r => (
                     <span className="text-sm font-bold text-indigo-600">
                         {r.submittedAt
-                            ? r.templateScorePercent != null
-                                ? `${r.templateScorePercent?.toFixed(1)}%`
-                                : `${r.totalScore} / ${r.maxScore}`
+                            ? `${r.totalScore ?? 0} / ${r.maxScore ?? 0}`
                             : '–'}
                     </span>
                 ),

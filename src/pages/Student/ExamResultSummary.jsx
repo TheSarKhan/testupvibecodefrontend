@@ -389,9 +389,14 @@ const ExamResultSummary = () => {
                                     ))}
                                 </div>
                             )}
-                            {displaySubmission?.templateTotalMaxScore != null && (
+                            {(displaySubmission?.templateTotalMaxScore != null
+                                ? true
+                                : displaySubmission?.maxScore > 0) && (
                                 <p className="text-center text-sm font-bold text-indigo-600 mt-2">
-                                    Ümumi: {displaySubmission.templateTotalScore?.toFixed(1)} / {displaySubmission.templateTotalMaxScore} bal
+                                    Ümumi: {displaySubmission.templateTotalMaxScore != null
+                                        ? `${displaySubmission.templateTotalScore?.toFixed(1)} / ${displaySubmission.templateTotalMaxScore}`
+                                        : `${displaySubmission.totalScore?.toFixed(1) ?? 0} / ${displaySubmission.maxScore}`
+                                    } bal
                                 </p>
                             )}
                             {(timeTaken || displaySubmission?.durationMinutes) && (

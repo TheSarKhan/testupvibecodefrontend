@@ -274,11 +274,6 @@ const ExamEntry = () => {
                                 <span>Ödənişli · {Number(exam.price).toFixed(2)} ₼</span>
                             </div>
                         )}
-                        {(exam.price == null || exam.price === 0) && (
-                            <div className="mt-3 inline-flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
-                                Pulsuz
-                            </div>
-                        )}
                     </div>
 
                     {/* Inline auth form (login or register) */}

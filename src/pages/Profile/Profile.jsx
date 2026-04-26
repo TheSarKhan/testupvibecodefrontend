@@ -335,9 +335,7 @@ const StudentProfile = ({ user }) => {
         .filter(r => r.examTitle?.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
 
-    const resultPct = (r) => r.templateScorePercent != null
-        ? Math.round(r.templateScorePercent)
-        : pct(r.totalScore, r.maxScore);
+    const resultPct = (r) => pct(r.totalScore, r.maxScore);
 
     const completed = results.filter(r => r.submittedAt);
     const totalExams = completed.length;

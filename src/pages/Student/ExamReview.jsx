@@ -359,10 +359,7 @@ const ExamReview = () => {
 
     if (!review) return null;
 
-    const isTemplateExam = review.templateScorePercent != null;
-    const scorePercent = isTemplateExam
-        ? Math.round(review.templateScorePercent)
-        : review.maxScore > 0 ? Math.round((review.totalScore / review.maxScore) * 100) : 0;
+    const scorePercent = review.maxScore > 0 ? Math.round((review.totalScore / review.maxScore) * 100) : 0;
     const sortedQuestions = [...review.questions].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
     const displayedQuestions = showOnlyUngraded
@@ -462,21 +459,8 @@ const ExamReview = () => {
 
                     <div className="flex-1 grid grid-cols-2 gap-4 w-full">
                         <div className="bg-indigo-50/50 p-4 rounded-2xl">
-                            <p className="text-xs text-indigo-400 font-bold uppercase mb-1">
-                                {isTemplateExam ? 'Uğur faizi' : 'Toplanan Bal'}
-                            </p>
-                            {isTemplateExam ? (
-                                <>
-                                    <p className="text-2xl font-black text-indigo-700">{review.templateScorePercent?.toFixed(1)}%</p>
-                                    {review.templateTotalMaxScore != null && (
-                                        <p className="text-sm font-semibold text-indigo-500 mt-0.5">
-                                            {fmtScore(review.templateTotalScore)} / {fmtScore(review.templateTotalMaxScore)} bal
-                                        </p>
-                                    )}
-                                </>
-                            ) : (
-                                <p className="text-2xl font-black text-indigo-700">{fmtScore(review.totalScore)} / {review.maxScore}</p>
-                            )}
+                            <p className="text-xs text-indigo-400 font-bold uppercase mb-1">Toplanan Bal</p>
+                            <p className="text-2xl font-black text-indigo-700">{fmtScore(review.totalScore)} / {review.maxScore}</p>
                         </div>
                         <div className="bg-purple-50/50 p-4 rounded-2xl">
                             <p className="text-xs text-purple-400 font-bold uppercase mb-1">Tarix</p>

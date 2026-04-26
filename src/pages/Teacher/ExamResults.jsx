@@ -4,7 +4,6 @@ import { HiOutlineArrowLeft, HiOutlineClock, HiOutlineStar, HiOutlineUsers, HiOu
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
-import ExcelJS from 'exceljs';
 import DataTable from 'react-data-table-component';
 
 const StarDisplay = ({ value }) => {
@@ -222,73 +221,17 @@ const ExamResults = () => {
     };
 
     const exportToExcel = async () => {
-        const examTitle = statistics?.examTitle || 'Imtahan';
-        const wb = new ExcelJS.Workbook();
-
-        // Sheet 1: Statistics
-        const statsSheet = wb.addWorksheet('Statistika');
-        statsSheet.columns = [{ width: 24 }, { width: 32 }];
-        const statsRows = [
-            ['İmtahan Adı', examTitle],
-            ['İmtahan ID', String(examId)],
-            ['Ümumi İştirakçı', statistics?.totalParticipants ?? ''],
-            ['Orta Bal', statistics?.averageScore != null ? Number(statistics.averageScore.toFixed(2)) : ''],
-            ['Maksimum Bal', statistics?.maximumScore ?? ''],
-            ['Orta Vaxt (dəq)', statistics?.averageDurationMinutes ?? ''],
-            ['Orta Reytinq', statistics?.averageRating > 0 ? Number(statistics.averageRating.toFixed(2)) : '–'],
-        ];
-        statsRows.forEach(([label, value]) => {
-            const row = statsSheet.addRow([label, value]);
-            row.getCell(1).font = { bold: true };
-        });
-
-        // Sheet 2: Participants
-        const partSheet = wb.addWorksheet('İştirakçılar');
-        const headers = ['#', 'İştirakçı', 'Başlayıb', 'Xərclənən Vaxt', 'Bal', 'Maks. Bal', 'Reytinq', 'Status'];
-        if (isPaid) headers.splice(7, 0, 'Ödəniş');
-        partSheet.addRow(headers).eachCell(cell => {
-            cell.font = { bold: true };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EAED' } };
-        });
-        const colWidths = [4, 26, 20, 14, 10, 10, 10, 18];
-        if (isPaid) colWidths.splice(7, 0, 20);
-        partSheet.columns = colWidths.map(w => ({ width: w }));
-
-        submissions.forEach((r, idx) => {
-            const score = r.submittedAt
-                ? r.templateScorePercent != null ? `${r.templateScorePercent?.toFixed(1)}%` : r.totalScore
-                : '';
-            const maxScore = r.templateScorePercent != null ? '100%' : (r.maxScore ?? '');
-            const status = !r.submittedAt ? 'Davam edir' : r.isFullyGraded ? 'Tam Yoxlanılıb' : 'Yoxlanılır';
-            const rating = r.rating ? `${r.rating}/5` : '–';
-            const row = [
-                idx + 1,
-                r.studentName,
-                r.startedAt ? new Date(r.startedAt).toLocaleString('az-AZ') : '–',
-                formatDuration(r.startedAt, r.submittedAt),
-                score,
-                maxScore,
-                rating,
-                status,
-            ];
-            if (isPaid) {
-                const paymentText = r.hasPaid === true
-                    ? r.amountPaid != null ? `Ödənib (${Number(r.amountPaid).toFixed(2)} ₼)` : 'Ödənib'
-                    : r.hasPaid === false ? 'Ödənilməyib' : '–';
-                row.splice(7, 0, paymentText);
-            }
-            partSheet.addRow(row);
-        });
-
-        const fileName = `${examTitle.replace(/[^\w\s]/g, '').trim()}_neticeler.xlsx`;
-        const buffer = await wb.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        try {
+            const response = await api.get(`/submissions/exam/${examId}/export`, { responseType: 'blob' });
+            const url = URL.createObjectURL(new Blob([response.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `imtahan_${examId}_neticeler.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch {
+            toast.error('Excel faylı yüklənmədi');
+        }
     };
 
     if (loading) {

@@ -141,9 +141,7 @@ const SUBJECT_PALETTE = [
 
 const SubjectDonut = ({ stat, colorIndex }) => {
     const c = SUBJECT_PALETTE[colorIndex % SUBJECT_PALETTE.length];
-    const pct = stat.formulaPercent != null
-        ? Math.round(stat.formulaPercent)
-        : stat.maxScore > 0 ? Math.round((stat.totalScore / stat.maxScore) * 100) : 0;
+    const pct = stat.maxScore > 0 ? Math.round((stat.totalScore / stat.maxScore) * 100) : 0;
     const r = 52;
     const circumference = 2 * Math.PI * r;
     const offset = circumference - (circumference * pct) / 100;
@@ -183,14 +181,11 @@ const SubjectDonut = ({ stat, colorIndex }) => {
                     </span>
                 ))}
             </div>
-            {(stat.sectionMaxScore != null || stat.maxScore > 0) ? (
+            {stat.maxScore > 0 && (
                 <p className="text-[11px] font-bold text-gray-600">
-                    {stat.sectionMaxScore != null
-                        ? `${stat.sectionScore != null ? stat.sectionScore.toFixed(1) : '–'} / ${stat.sectionMaxScore} bal`
-                        : `${stat.totalScore != null ? stat.totalScore.toFixed(1) : '0'} / ${stat.maxScore} bal`
-                    }
+                    {(stat.totalScore ?? 0).toFixed(1)} / {stat.maxScore} bal
                 </p>
-            ) : null}
+            )}
             <p className="text-[10px] text-gray-400">{total} sual</p>
         </div>
     );
@@ -280,12 +275,9 @@ const ExamResultSummary = () => {
         }
     };
 
-    const isTemplateExam = false;
     const scorePercent = displaySubmission?.maxScore > 0
         ? Math.round((displaySubmission.totalScore / displaySubmission.maxScore) * 100)
-        : displaySubmission?.templateScorePercent != null
-            ? Math.round(displaySubmission.templateScorePercent)
-            : null;
+        : null;
 
     const seed = useMemo(() => parseInt(sessionId || '0', 10) || 0, [sessionId]);
     const level = scorePercent !== null ? getLevel(scorePercent) : null;
@@ -392,14 +384,9 @@ const ExamResultSummary = () => {
                                     ))}
                                 </div>
                             )}
-                            {(displaySubmission?.templateTotalMaxScore != null
-                                ? true
-                                : displaySubmission?.maxScore > 0) && (
+                            {displaySubmission?.maxScore > 0 && (
                                 <p className="text-center text-sm font-bold text-indigo-600 mt-2">
-                                    Ümumi: {displaySubmission.templateTotalMaxScore != null
-                                        ? `${displaySubmission.templateTotalScore?.toFixed(1)} / ${displaySubmission.templateTotalMaxScore}`
-                                        : `${displaySubmission.totalScore?.toFixed(1) ?? 0} / ${displaySubmission.maxScore}`
-                                    } bal
+                                    Ümumi: {(displaySubmission.totalScore ?? 0).toFixed(1)} / {displaySubmission.maxScore} bal
                                 </p>
                             )}
                             {(timeTaken || displaySubmission?.durationMinutes) && (
@@ -429,25 +416,10 @@ const ExamResultSummary = () => {
 
                             <div className="flex-1 min-w-0">
                                 <div className="mb-2">
-                                    {isTemplateExam ? (
-                                        <>
-                                            <p className="text-[10px] text-gray-400 font-semibold uppercase mb-0.5">Uğur faizi</p>
-                                            <p className="text-xl font-black text-gray-900 leading-tight">
-                                                {displaySubmission.templateScorePercent?.toFixed(1)}
-                                                <span className="text-gray-400 text-base">%</span>
-                                            </p>
-                                            {displaySubmission.templateTotalMaxScore != null && (
-                                                <p className="text-sm font-semibold text-indigo-500 mt-0.5">
-                                                    {displaySubmission.templateTotalScore?.toFixed(1)} / {displaySubmission.templateTotalMaxScore} bal
-                                                </p>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <p className="text-xl font-black text-gray-900 leading-tight">
-                                            {displaySubmission.totalScore?.toFixed(1)}
-                                            <span className="text-gray-400 text-sm font-medium"> / {displaySubmission.maxScore} bal</span>
-                                        </p>
-                                    )}
+                                    <p className="text-xl font-black text-gray-900 leading-tight">
+                                        {(displaySubmission.totalScore ?? 0).toFixed(1)}
+                                        <span className="text-gray-400 text-sm font-medium"> / {displaySubmission.maxScore} bal</span>
+                                    </p>
                                     {(timeTaken || displaySubmission?.durationMinutes) && (
                                         <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
                                             <HiOutlineClock className="w-3 h-3" />

@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import katex from 'katex';
 
+const decodeEntities = (str) =>
+    str.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+
 const escapeHtml = (str) =>
     str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -21,7 +24,7 @@ const renderLatex = (text) => {
         if (match.index > last) {
             const segment = text.slice(last, match.index);
             // HTML content: convert newlines + pass through; plain text: escape + convert newlines
-            parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(segment).replace(/\n/g, '<br>'));
+            parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(decodeEntities(segment)).replace(/\n/g, '<br>'));
         }
 
         const isDisplay = match[1] !== undefined;
@@ -41,7 +44,7 @@ const renderLatex = (text) => {
 
     if (last < text.length) {
         const segment = text.slice(last);
-        parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(segment).replace(/\n/g, '<br>'));
+        parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(decodeEntities(segment)).replace(/\n/g, '<br>'));
     }
 
     return parts.join('');

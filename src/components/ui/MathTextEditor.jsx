@@ -82,6 +82,10 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 } catch { html += part; }
             } else {
                 html += part
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;')

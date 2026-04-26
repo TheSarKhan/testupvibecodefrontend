@@ -54,7 +54,7 @@ const ExamResults = () => {
         const diffSec = Math.abs(new Date(submittedAt) - new Date(startedAt)) / 1000;
         const m = Math.floor(diffSec / 60);
         const s = Math.floor(diffSec % 60);
-        return `${m}dk ${s}sn`;
+        return `${m}dq ${s}san`;
     };
 
     const handleHide = async (id) => {
@@ -310,7 +310,7 @@ const ExamResults = () => {
                             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><HiOutlineClock className="w-6 h-6" /></div>
                             <div>
                                 <p className="text-xs text-gray-500">Ort. Vaxt</p>
-                                <p className="text-2xl font-black text-gray-900">{statistics.averageDurationMinutes}dk</p>
+                                <p className="text-2xl font-black text-gray-900">{statistics.averageDurationMinutes}dq</p>
                             </div>
                         </div>
                         {/* Average rating */}

@@ -84,6 +84,12 @@ const ExamSession = () => {
     const fetchSessionDetails = async () => {
         try {
             const { data } = await api.get(`/submissions/${sessionId}/session`);
+
+            if (data.submittedAt) {
+                navigate(`/test/result/${sessionId}`, { replace: true });
+                return;
+            }
+
             setSessionData(data);
 
             // Collect all questions (standalone + passage)
@@ -250,7 +256,7 @@ const ExamSession = () => {
         try {
             const { data } = await api.post(`/submissions/${sessionId}/submit`, { answers: currentAnswers });
             toast.success("İmtahan uğurla təhvil verildi!");
-            navigate(`/test/result/${sessionId}`, { state: { submission: data } });
+            navigate(`/test/result/${sessionId}`, { replace: true, state: { submission: data } });
         } catch (error) {
             if (!error._handled) toast.error(error.response?.data?.message || 'İmtahan təhvil verilmədi');
             setIsSubmitting(false);

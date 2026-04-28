@@ -159,7 +159,7 @@ const ExamEntry = () => {
                 toast.success('Bu imtahanı artıq almışsınız. İmtahana başlaya bilərsiniz.');
                 return;
             }
-            localStorage.setItem('pendingPayriffOrderId', data.orderId);
+            localStorage.setItem('pendingPaymentOrderId', data.orderId);
             window.open(data.paymentUrl, '_blank', 'noopener');
         } catch (err) {
             if (!err._handled) toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');

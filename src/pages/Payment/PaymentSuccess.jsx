@@ -25,12 +25,12 @@ const PaymentSuccess = () => {
         const orderId = searchParams.get('orderId')
             || searchParams.get('order_id')
             || searchParams.get('id')
-            || localStorage.getItem('pendingPayriffOrderId');
+            || localStorage.getItem('pendingPaymentOrderId');
         if (!orderId) {
             setStatus('pending');
             return;
         }
-        localStorage.removeItem('pendingPayriffOrderId');
+        localStorage.removeItem('pendingPaymentOrderId');
         orderIdRef.current = orderId;
         verify(orderId);
     }, [authLoading]);

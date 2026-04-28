@@ -124,7 +124,7 @@ const PrivacyPolicy = () => (
                         <ul className="list-disc list-inside space-y-1.5 pl-1">
                             <li>
                                 <strong>Ödəniş emalı:</strong> Ödəniş zamanı kart məlumatlarınız birbaşa ödəniş provayderi
-                                (Payriff/Kapital Bank) tərəfindən emal olunur. Şirkət kart nömrənizi heç vaxt görmür və ya saxlamır.
+                                (Kapital Bank) tərəfindən emal olunur. Şirkət kart nömrənizi heç vaxt görmür və ya saxlamır.
                             </li>
                             <li>
                                 <strong>AI xidməti:</strong> AI sual yaratma funksiyası üçün fənn, mövzu və çətinlik məlumatları

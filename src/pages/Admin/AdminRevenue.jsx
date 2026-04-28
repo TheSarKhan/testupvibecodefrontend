@@ -66,7 +66,7 @@ const AdminRevenue = () => {
                 toast.success(data.alreadyPaid ? 'Artıq aktiv idi' : 'Abunəlik aktivləşdirildi!');
                 fetchStats();
             } else {
-                toast(`Payriff statusu: ${data.payriffStatus || 'UNKNOWN'} — ödəniş tamamlanmayıb`, { icon: '⚠️' });
+                toast(`Kapital Bank statusu: ${data.paymentStatus || 'UNKNOWN'} — ödəniş tamamlanmayıb`, { icon: '⚠️' });
             }
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
@@ -76,7 +76,7 @@ const AdminRevenue = () => {
     };
 
     const handleForceActivate = async (orderId) => {
-        if (!window.confirm('Payriff statusundan asılı olmayaraq bu abunəliyi aktivləşdirirsiniz. Əminsiniz?')) return;
+        if (!window.confirm('Kapital Bank statusundan asılı olmayaraq bu abunəliyi aktivləşdirirsiniz. Əminsiniz?')) return;
         setVerifying(orderId + '_force');
         try {
             const { data } = await api.post(`/admin/revenue/force-activate/${orderId}`);
@@ -119,7 +119,7 @@ const AdminRevenue = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Qazanc Statistikası</h1>
-                    <p className="text-gray-500 mt-1 text-sm">Payriff vasitəsilə gələn ödənişlər</p>
+                    <p className="text-gray-500 mt-1 text-sm">Kapital Bank vasitəsilə gələn ödənişlər</p>
                 </div>
                 <button
                     onClick={fetchStats}
@@ -228,7 +228,7 @@ const AdminRevenue = () => {
                     <div className="px-6 py-4 border-b border-amber-200 flex items-center gap-2">
                         <HiOutlineExclamationCircle className="w-5 h-5 text-amber-600" />
                         <h2 className="font-bold text-amber-800">Gözləyən Ödənişlər ({pending.length})</h2>
-                        <span className="text-xs text-amber-600 ml-1">— Payriff-də tamamlandı amma sistemdə aktivləşmədi</span>
+                        <span className="text-xs text-amber-600 ml-1">— Kapital Bank-da tamamlandı amma sistemdə aktivləşmədi</span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -262,7 +262,7 @@ const AdminRevenue = () => {
                                                 <button
                                                     onClick={() => handleVerify(p.orderId)}
                                                     disabled={!!verifying}
-                                                    title="Payriff-dən statusu yoxla və avtomatik aktivləşdir"
+                                                    title="Kapital Bank-dan statusu yoxla və avtomatik aktivləşdir"
                                                     className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
                                                 >
                                                     {verifying === p.orderId + '_check' ? '...' : 'Yoxla'}
@@ -270,7 +270,7 @@ const AdminRevenue = () => {
                                                 <button
                                                     onClick={() => handleForceActivate(p.orderId)}
                                                     disabled={!!verifying}
-                                                    title="Payriff statusundan asılı olmayaraq məcburi aktivləşdir (pul köçürülübsə)"
+                                                    title="Kapital Bank statusundan asılı olmayaraq məcburi aktivləşdir (pul köçürülübsə)"
                                                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
                                                 >
                                                     {verifying === p.orderId + '_force' ? '...' : 'Force ✓'}

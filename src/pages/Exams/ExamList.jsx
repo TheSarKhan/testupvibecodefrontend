@@ -290,12 +290,12 @@ const ExamList = () => {
     useEffect(() => {
         if (!examPaymentWindowOpen) return;
         const onFocus = async () => {
-            const orderId = localStorage.getItem('pendingPayriffOrderId');
+            const orderId = localStorage.getItem('pendingPaymentOrderId');
             if (!orderId) return;
             try {
                 const { data } = await api.post('/payment/verify', { orderId });
                 if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status) || data.alreadyProcessed) {
-                    localStorage.removeItem('pendingPayriffOrderId');
+                    localStorage.removeItem('pendingPaymentOrderId');
                     setExamPaymentWindowOpen(false);
                     setPayingExam(null);
                     toast.success('Ödəniş uğurlu! İmtahana başlaya bilərsiniz.');
@@ -324,7 +324,7 @@ const ExamList = () => {
                 navigate(`/imtahan/${exam.shareLink}`);
                 return;
             }
-            localStorage.setItem('pendingPayriffOrderId', data.orderId);
+            localStorage.setItem('pendingPaymentOrderId', data.orderId);
             window.open(data.paymentUrl, '_blank', 'noopener');
             setExamPaymentWindowOpen(true);
             toast('Ödəniş pəncərəsi açıldı. Ödənişi tamamlayıb bu səhifəyə qayıdın.', { icon: '💳', duration: 6000 });

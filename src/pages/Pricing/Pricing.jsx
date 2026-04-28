@@ -103,16 +103,16 @@ const Pricing = ({ isEmbedded = false }) => {
 
     const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
 
-    // When user returns to this tab after paying in Payriff tab — auto-verify
+    // When user returns to this tab after paying in Kapital Bank tab — auto-verify
     useEffect(() => {
         if (!paymentWindowOpen) return;
         const onFocus = async () => {
-            const orderId = localStorage.getItem('pendingPayriffOrderId');
+            const orderId = localStorage.getItem('pendingPaymentOrderId');
             if (!orderId) return;
             try {
                 const { data } = await api.post('/payment/verify', { orderId });
                 if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status) || data.alreadyProcessed) {
-                    localStorage.removeItem('pendingPayriffOrderId');
+                    localStorage.removeItem('pendingPaymentOrderId');
                     setPaymentWindowOpen(false);
                     await refreshSubscription();
                     toast.success('Abunəlik aktivləşdirildi! 🎉');
@@ -133,7 +133,7 @@ const Pricing = ({ isEmbedded = false }) => {
                 toast.success('Plan dəyişdirildi! Kredit ilə ödənişsiz keçid edildi.');
                 return;
             }
-            localStorage.setItem('pendingPayriffOrderId', data.orderId);
+            localStorage.setItem('pendingPaymentOrderId', data.orderId);
             window.open(data.paymentUrl, '_blank', 'noopener');
             setPaymentWindowOpen(true);
             toast('Ödəniş pəncərəsi açıldı. Ödənişi tamamlayıb bu səhifəyə qayıdın.', { icon: '💳', duration: 6000 });

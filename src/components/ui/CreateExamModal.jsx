@@ -184,8 +184,8 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                     <HiOutlineStar className="w-6 h-6" />
                 </div>
                 <div>
-                    <h4 className="text-lg font-bold text-gray-900">Olimpiyada Şablonu</h4>
-                    <p className="text-gray-500 text-sm mt-1">Olimpiyada formatında fərqli çəkili suallar və cəza formulalı imtahan yaradın.</p>
+                    <h4 className="text-lg font-bold text-gray-900">Olimpiada Şablonu</h4>
+                    <p className="text-gray-500 text-sm mt-1">Olimpiada formatında fərqli çəkili suallar və cəza formulalı imtahan yaradın.</p>
                     {!hasPermission('useTemplateExams') && (
                         <p className="text-xs text-red-500 mt-2 font-medium">Bu funksiya üçün Pro plana keçin.</p>
                     )}
@@ -419,7 +419,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         if (step === 1) return 'Yeni İmtahan Növü';
         if (examType === 'free') return 'Fənn Seçimi';
         if (examType === 'olimpiyada') {
-            if (step === 2) return 'Olimpiyada Şablonu';
+            if (step === 2) return 'Olimpiada Şablonu';
             if (step === 3) return 'Altbaşlıq Seçimi';
             return 'Fənn Bölməsi';
         }

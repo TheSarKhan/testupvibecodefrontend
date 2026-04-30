@@ -452,7 +452,7 @@ const ExamEditor = () => {
                     ...prev,
                     subject: sds[0].subjectName,
                     extraSubjects: sds.slice(1).map(s => s.subjectName),
-                    title: prev.title || `${sds.map(s => s.subjectName).join(' + ')} - Olimpiyada`,
+                    title: prev.title || `${sds.map(s => s.subjectName).join(' + ')} - Olimpiada`,
                 }));
             } else if (initialLocationState.sectionData) {
                 const sd = initialLocationState.sectionData;
@@ -466,7 +466,7 @@ const ExamEditor = () => {
                 setPassages(ps);
                 setExamConfig(prev => ({
                     ...prev,
-                    title: prev.title || `${sd.subjectName || 'Olimpiyada'} - İmtahan`,
+                    title: prev.title || `${sd.subjectName || 'Olimpiada'} - İmtahan`,
                 }));
             } else if (sds && sds.length === 1) {
                 const sd = sds[0];
@@ -480,7 +480,7 @@ const ExamEditor = () => {
                 setPassages(ps);
                 setExamConfig(prev => ({
                     ...prev,
-                    title: prev.title || `${sd.subjectName || 'Olimpiyada'} - İmtahan`,
+                    title: prev.title || `${sd.subjectName || 'Olimpiada'} - İmtahan`,
                 }));
             }
         }
@@ -803,7 +803,7 @@ const ExamEditor = () => {
                     if (idx !== -1) {
                         updated[idx] = {
                             ...updated[idx],
-                            text: 'Şəkilə əsasən cavabı qeyd edin',
+                            text: 'Şəklə əsasən cavabı qeyd edin',
                             attachedImage: crops[i].questionImage,
                             options: buildOptions(crops[i].options, updated[idx].options),
                         };
@@ -818,7 +818,7 @@ const ExamEditor = () => {
         const startIdx = nextOrderIndex();
         const newQuestions = crops.map((crop, idx) => ({
             id: `batch-${Date.now()}-${idx}`, type: 'MULTIPLE_CHOICE',
-            text: 'Şəkilə əsasən cavabı qeyd edin', points: 1,
+            text: 'Şəklə əsasən cavabı qeyd edin', points: 1,
             attachedImage: crop.questionImage,
             orderIndex: startIdx + idx,
             subjectGroup: isMain ? null : batchPdfSection,
@@ -1121,7 +1121,7 @@ const ExamEditor = () => {
                                 {examConfig.title || (isEditMode ? 'İmtahan Redaktə Edilir' : 'Yeni İmtahan Yaradılır')}
                             </h1>
                             <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isOlimpiyadaMode ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{{ free: 'Sərbəst', template: 'Şablon', olimpiyada: 'Olimpiyada' }[type] || type}</span>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isOlimpiyadaMode ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{{ free: 'Sərbəst', template: 'Şablon', olimpiyada: 'Olimpiada' }[type] || type}</span>
                                 <span>•</span>
                                 <span>{examConfig.subject}</span>
                                 {examConfig.duration && <><span>•</span><span>{examConfig.duration} dəq</span></>}
@@ -1253,7 +1253,7 @@ const ExamEditor = () => {
                 {isOlimpiyadaMode && isMultiSectionTemplate && (
                     <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4">
                         <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide mb-3">
-                            {templateSections[0]?.templateTitle} · {templateSections[0]?.templateSubtitle} · Olimpiyada Şablonu
+                            {templateSections[0]?.templateTitle} · {templateSections[0]?.templateSubtitle} · Olimpiada Şablonu
                         </div>
                         <div className="flex flex-col gap-2">
                             {templateSections.map(sec => (
@@ -1277,7 +1277,7 @@ const ExamEditor = () => {
                     <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
-                                {templateInfo.templateTitle} · {templateInfo.templateSubtitle} · Olimpiyada
+                                {templateInfo.templateTitle} · {templateInfo.templateSubtitle} · Olimpiada
                             </div>
                             <div className="mt-0.5 font-bold text-amber-800 text-base">{templateInfo.subjectName}</div>
                         </div>

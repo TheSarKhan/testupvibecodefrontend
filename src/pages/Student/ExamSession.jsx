@@ -258,7 +258,14 @@ const ExamSession = () => {
             toast.success("İmtahan uğurla təhvil verildi!");
             navigate(`/test/result/${sessionId}`, { replace: true, state: { submission: data } });
         } catch (error) {
-            if (!error._handled) toast.error(error.response?.data?.message || 'İmtahan təhvil verilmədi');
+            const status = error.response?.status;
+            const message = error.response?.data?.message || '';
+            if (status === 400 && message.includes('artıq təhvil')) {
+                toast.info("İmtahan artıq təhvil verilib. Nəticələrə yönləndirilirsiniz...");
+                navigate(`/test/result/${sessionId}`, { replace: true });
+                return;
+            }
+            if (!error._handled) toast.error(message || 'İmtahan təhvil verilmədi');
             setIsSubmitting(false);
         }
     };

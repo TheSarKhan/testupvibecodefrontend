@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
 import {
     HiOutlineEye, HiOutlineEyeOff,
     HiOutlineMail, HiOutlineLockClosed,
     HiOutlineBookOpen, HiOutlineChartBar, HiOutlineLightningBolt,
+    HiOutlineArrowLeft,
 } from 'react-icons/hi';
 import { useGoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
@@ -83,8 +83,17 @@ const Login = () => {
                 />
             )}
 
-            <div className="flex flex-col min-h-screen">
-            <Navbar />
+            <div className="flex min-h-screen relative">
+
+                {/* Back to site button */}
+                <Link
+                    to="/"
+                    className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-300 px-3.5 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all"
+                >
+                    <HiOutlineArrowLeft className="w-4 h-4" />
+                    Sayta qayıt
+                </Link>
+
             <div className="flex flex-1">
 
                 {/* ── Left branding panel ── */}
@@ -248,6 +257,7 @@ const Login = () => {
             </div>
         </>
     );
+
 };
 
 export default Login;

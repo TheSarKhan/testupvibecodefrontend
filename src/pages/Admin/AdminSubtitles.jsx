@@ -9,9 +9,9 @@ import toast from 'react-hot-toast';
 
 const TYPES = [
     { value: 'STANDARD',  label: 'Standart (DİM)', color: 'indigo' },
-    { value: 'OLIMPIYADA', label: 'Olimpiyada',     color: 'amber'  },
+    { value: 'OLIMPIYADA', label: 'Olimpiada',     color: 'amber'  },
 ];
-const TYPE_LABEL = { STANDARD: 'Standart (DİM)', OLIMPIYADA: 'Olimpiyada' };
+const TYPE_LABEL = { STANDARD: 'Standart (DİM)', OLIMPIYADA: 'Olimpiada' };
 const TYPE_COLOR = { STANDARD: 'indigo', OLIMPIYADA: 'amber' };
 
 const TypeSelector = ({ value, onChange }) => (

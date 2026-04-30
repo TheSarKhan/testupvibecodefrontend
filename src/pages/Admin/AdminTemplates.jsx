@@ -16,7 +16,7 @@ const TYPES = [
     },
     {
         value: 'OLIMPIYADA',
-        label: 'Olimpiyada',
+        label: 'Olimpiada',
         desc: 'Hər suala ayrı bal qrupu təyin edilə bilər',
         color: 'amber',
     },
@@ -29,7 +29,7 @@ const TypeBadge = ({ type }) => {
     if (meta.value === 'STANDARD') return null;
     return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
-            Olimpiyada
+            Olimpiada
         </span>
     );
 };

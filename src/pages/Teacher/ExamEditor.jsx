@@ -978,12 +978,30 @@ const ExamEditor = () => {
             return;
         }
 
-        const allQs = [
-            ...questions,
-            ...passages.flatMap(p => p.questions || [])
-        ];
-        for (let i = 0; i < allQs.length; i++) {
-            const q = allQs[i];
+        // Build ordered list matching UI numbering: section order, then orderIndex within section
+        const subjectsList = [examConfig.subject, ...(examConfig.extraSubjects || [])];
+        const orderedQs = [];
+        subjectsList.forEach((sub, si) => {
+            const isMain = si === 0;
+            const sectionItems = [
+                ...questions
+                    .filter(q => isMain ? (q.subjectGroup == null || q.subjectGroup === sub) : q.subjectGroup === sub)
+                    .map(q => ({ kind: 'question', data: q, orderIndex: q.orderIndex ?? 0 })),
+                ...passages
+                    .filter(p => isMain ? (p.subjectGroup == null || p.subjectGroup === sub) : p.subjectGroup === sub)
+                    .map(p => ({ kind: 'passage', data: p, orderIndex: p.orderIndex ?? 0 }))
+            ].sort((a, b) => a.orderIndex - b.orderIndex);
+            sectionItems.forEach(item => {
+                if (item.kind === 'question') {
+                    orderedQs.push(item.data);
+                } else {
+                    (item.data.questions || []).forEach(pq => orderedQs.push(pq));
+                }
+            });
+        });
+
+        for (let i = 0; i < orderedQs.length; i++) {
+            const q = orderedQs[i];
             const label = `Sual ${i + 1}`;
             if (q.type === 'MULTIPLE_CHOICE' || q.type === 'MULTI_SELECT') {
                 if (!q.options || !q.options.some(o => o.isCorrect)) {

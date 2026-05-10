@@ -5,6 +5,8 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { HiOutlineX } from 'react-icons/hi';
 
+const GUEST_KEY = 'guestOngoingExam';
+
 const OngoingExamPopup = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -29,12 +31,61 @@ const OngoingExamPopup = () => {
             }
         };
 
-        if (user && !isExamSession) {
+        const fetchGuestOngoing = async () => {
+            const raw = localStorage.getItem(GUEST_KEY);
+            if (!raw) {
+                setOngoingExams([]);
+                return;
+            }
+            let stored;
+            try { stored = JSON.parse(raw); } catch {
+                localStorage.removeItem(GUEST_KEY);
+                setOngoingExams([]);
+                return;
+            }
+            try {
+                const { data } = await api.get(`/submissions/${stored.submissionId}/session`);
+                if (data.submittedAt) {
+                    localStorage.removeItem(GUEST_KEY);
+                    setOngoingExams([]);
+                    return;
+                }
+                if (data.durationMinutes && data.remainingSeconds != null && data.remainingSeconds <= 0) {
+                    localStorage.removeItem(GUEST_KEY);
+                    setOngoingExams([]);
+                    return;
+                }
+                const exam = {
+                    id: stored.submissionId,
+                    examTitle: data.examTitle || stored.examTitle,
+                    startedAt: data.startedAt || stored.startedAt,
+                    durationMinutes: data.durationMinutes ?? stored.durationMinutes,
+                };
+                setOngoingExams([exam]);
+                if (exam.startedAt && exam.durationMinutes) {
+                    calculateTimeLeft(exam.startedAt, exam.durationMinutes);
+                }
+            } catch (error) {
+                if (error.response?.status === 404 || error.response?.status === 400) {
+                    localStorage.removeItem(GUEST_KEY);
+                    setOngoingExams([]);
+                }
+            }
+        };
+
+        if (isExamSession) {
+            setOngoingExams([]);
+            return;
+        }
+
+        if (user) {
             fetchOngoing();
-            const interval = setInterval(fetchOngoing, 30000); // Refresh every 30s
+            const interval = setInterval(fetchOngoing, 30000);
             return () => clearInterval(interval);
         } else {
-            setOngoingExams([]);
+            fetchGuestOngoing();
+            const interval = setInterval(fetchGuestOngoing, 30000);
+            return () => clearInterval(interval);
         }
     }, [user, isExamSession]);
 
@@ -65,11 +116,12 @@ const OngoingExamPopup = () => {
 
     const handleFinishExam = async (submissionId) => {
         if (!window.confirm("Bu imtahanı bitirmək istədiyinizə əminsiniz?")) return;
-        
+
         setFinishingId(submissionId);
         try {
             await api.post(`/submissions/${submissionId}/finalize`);
             toast.success("İmtahan bitirildi");
+            if (!user) localStorage.removeItem(GUEST_KEY);
             setOngoingExams(prev => prev.filter(ex => ex.id !== submissionId));
             navigate(`/test/result/${submissionId}`);
         } catch (error) {
@@ -103,7 +155,7 @@ const OngoingExamPopup = () => {
                         </button>
 
                         {/* Close Button */}
-                        <button 
+                        <button
                             onClick={() => setIsHidden(true)}
                             className="text-white/90 hover:text-white transition-colors"
                         >

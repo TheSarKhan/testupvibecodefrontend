@@ -738,11 +738,11 @@ const ExamEditor = () => {
     };
 
     const handleUpdateQuestion = (qId, updatedData) => {
-        setQuestions(questions.map(q => q.id === qId ? updatedData : q));
+        setQuestions(prev => prev.map(q => q.id === qId ? updatedData : q));
     };
 
     const handleDeleteQuestion = (qId) => {
-        setQuestions(questions.filter(q => q.id !== qId));
+        setQuestions(prev => prev.filter(q => q.id !== qId));
     };
 
     const handleBatchPdfComplete = (payload) => {
@@ -845,11 +845,11 @@ const ExamEditor = () => {
     };
 
     const handleUpdatePassage = (pId, updatedData) => {
-        setPassages(passages.map(p => p.id === pId ? updatedData : p));
+        setPassages(prev => prev.map(p => p.id === pId ? updatedData : p));
     };
 
     const handleDeletePassage = (pId) => {
-        setPassages(passages.filter(p => p.id !== pId));
+        setPassages(prev => prev.filter(p => p.id !== pId));
     };
 
     const handleAddPassageQuestion = (pId) => {
@@ -869,7 +869,7 @@ const ExamEditor = () => {
     };
 
     const handleUpdatePassageQuestion = (pId, qId, updatedData) => {
-        setPassages(passages.map(p => p.id === pId
+        setPassages(prev => prev.map(p => p.id === pId
             ? { ...p, questions: p.questions.map(q => q.id === qId ? updatedData : q) }
             : p));
     };

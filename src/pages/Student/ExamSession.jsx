@@ -86,6 +86,7 @@ const ExamSession = () => {
             const { data } = await api.get(`/submissions/${sessionId}/session`);
 
             if (data.submittedAt) {
+                localStorage.removeItem('guestOngoingExam');
                 navigate(`/test/result/${sessionId}`, { replace: true });
                 return;
             }
@@ -123,6 +124,7 @@ const ExamSession = () => {
                 }
             }
         } catch (error) {
+            localStorage.removeItem('guestOngoingExam');
             if (!error._handled) toast.error(error.response?.data?.message || "Sessiya tapılmadı");
             navigate('/imtahanlar');
         } finally {
@@ -255,12 +257,14 @@ const ExamSession = () => {
         setIsSubmitting(true);
         try {
             const { data } = await api.post(`/submissions/${sessionId}/submit`, { answers: currentAnswers });
+            localStorage.removeItem('guestOngoingExam');
             toast.success("İmtahan uğurla təhvil verildi!");
             navigate(`/test/result/${sessionId}`, { replace: true, state: { submission: data } });
         } catch (error) {
             const status = error.response?.status;
             const message = error.response?.data?.message || '';
             if (status === 400 && message.includes('artıq təhvil')) {
+                localStorage.removeItem('guestOngoingExam');
                 toast.info("İmtahan artıq təhvil verilib. Nəticələrə yönləndirilirsiniz...");
                 navigate(`/test/result/${sessionId}`, { replace: true });
                 return;

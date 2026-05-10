@@ -187,6 +187,14 @@ const ExamEntry = () => {
                 guestName: isAuthenticated ? undefined : guestName,
                 accessCode: exam?.visibility === 'PRIVATE' ? accessCode : undefined
             });
+            if (!isAuthenticated) {
+                localStorage.setItem('guestOngoingExam', JSON.stringify({
+                    submissionId: data.id,
+                    examTitle: data.examTitle || exam.title,
+                    startedAt: data.startedAt,
+                    durationMinutes: data.durationMinutes,
+                }));
+            }
             navigate(`/test/take/${data.id}`);
         } catch (error) {
             if (!error._handled) toast.error(error.response?.data?.message || "İmtahana başlamaq mümkün olmadı");

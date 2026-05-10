@@ -36,15 +36,36 @@ const DIFF_COLORS = {
 };
 
 // ─── Preview card for a single generated question ────────────────────────────
-const PreviewQuestion = ({ q, index, onRemove }) => (
-    <div className="relative p-4 bg-white border border-gray-100 rounded-xl shadow-sm group">
+const PreviewQuestion = ({ q, index, onRemove }) => {
+    const errors = [];
+    const contentVal = validateLatexSyntax(q.content);
+    if (!contentVal.valid) errors.push(...contentVal.errors);
+    (q.options || []).forEach((opt) => {
+        const v = validateLatexSyntax(opt.content || opt.text);
+        if (!v.valid) errors.push(...v.errors);
+    });
+    if (q.correctAnswer) {
+        const v = validateLatexSyntax(q.correctAnswer);
+        if (!v.valid) errors.push(...v.errors);
+    }
+    const hasError = errors.length > 0;
+
+    return (
+    <div className={`relative p-4 bg-white border rounded-xl shadow-sm group ${hasError ? 'border-red-300 bg-red-50/30' : 'border-gray-100'}`}>
         <button
             onClick={() => onRemove(index)}
             className="absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
         >
             <HiOutlineX className="w-4 h-4" />
         </button>
-        <p className="text-xs text-gray-400 font-semibold mb-1.5">Sual {index + 1}</p>
+        <div className="flex items-center gap-2 mb-1.5">
+            <p className="text-xs text-gray-400 font-semibold">Sual {index + 1}</p>
+            {hasError && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">
+                    ⚠ LaTeX xətalı — silin
+                </span>
+            )}
+        </div>
         <div className="text-sm font-medium text-gray-800 leading-relaxed pr-6">
             <LatexPreview content={q.content} />
         </div>
@@ -76,7 +97,8 @@ const PreviewQuestion = ({ q, index, onRemove }) => (
             </p>
         )}
     </div>
-);
+    );
+};
 
 // ─── Main modal ──────────────────────────────────────────────────────────────
 const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [], onSave }) => {

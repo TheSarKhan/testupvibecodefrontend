@@ -265,7 +265,7 @@ const ExamSession = () => {
             const message = error.response?.data?.message || '';
             if (status === 400 && message.includes('artıq təhvil')) {
                 localStorage.removeItem('guestOngoingExam');
-                toast.info("İmtahan artıq təhvil verilib. Nəticələrə yönləndirilirsiniz...");
+                toast.success("İmtahan artıq təhvil verilib. Nəticələrə yönləndirilirsiniz...");
                 navigate(`/test/result/${sessionId}`, { replace: true });
                 return;
             }

@@ -50,7 +50,7 @@ const AccessCodeModal = ({ code, onClose }) => {
                     </span>
                 </div>
 
-                <p className="text-xs text-gray-400 text-center mb-4">Bu kod yalnız <b>1 dəfə</b> istifadə edilə bilər · <b>12 saat</b> keçərlidir</p>
+                <p className="text-xs text-gray-400 text-center mb-4">Bu kod yalnız <b>1 dəfə</b> istifadə edilə bilər · <b>48 saat</b> keçərlidir</p>
 
                 <button
                     onClick={onClose}

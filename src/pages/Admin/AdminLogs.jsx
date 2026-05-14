@@ -5,69 +5,211 @@ import {
     HiOutlineRefresh,
     HiOutlineChevronLeft,
     HiOutlineChevronRight,
+    // Auth
+    HiOutlineLogin,
+    HiOutlineUserAdd,
+    HiOutlineKey,
+    HiOutlineExclamationCircle,
+    // User
+    HiOutlineShieldCheck,
+    HiOutlineSwitchVertical,
+    HiOutlineUserGroup,
+    HiOutlineTrash,
+    // Exam
+    HiOutlineDocumentAdd,
+    HiOutlinePencilAlt,
+    HiOutlineDocumentRemove,
+    HiOutlineGlobeAlt,
+    HiOutlineEyeOff,
+    HiOutlineCurrencyDollar,
+    HiOutlinePlay,
+    HiOutlineCheckCircle,
+    HiOutlineClipboardCheck,
+    HiOutlineUsers,
+    HiOutlineUpload,
+    HiOutlineDownload,
+    HiOutlineXCircle,
+    // Content
+    HiOutlineBookOpen,
+    HiOutlineHashtag,
+    HiOutlinePhotograph,
+    HiOutlineTag,
+    HiOutlineTemplate,
+    HiOutlineCollection,
+    HiOutlineViewGridAdd,
+    HiOutlineDatabase,
+    HiOutlineMail,
+    HiOutlineBell,
+    // AI
+    HiOutlineSparkles,
+    // Payment
+    HiOutlineCreditCard,
+    HiOutlineCash,
+    HiOutlineReceiptRefund,
+    HiOutlineGift,
+    HiOutlineShieldExclamation,
+    HiOutlineLockClosed,
+    // System
+    HiOutlineCog,
 } from 'react-icons/hi';
 import api from '../../api/axios';
 
-const ACTION_LABELS = {
+// ─── Action metadata: icon + label + intent color ──────────────────────────
+// intent: emerald (create/success) | blue (update) | rose (delete/fail) |
+//         violet (submit/send) | amber (warn/system) | indigo (auth) | fuchsia (ai)
+
+const ACTION_META = {
     // Auth
-    USER_LOGIN: 'Giriş',
-    USER_LOGIN_FAILED: 'Giriş uğursuz',
-    USER_REGISTERED: 'Qeydiyyat',
-    PASSWORD_CHANGED: 'Şifrə dəyişdirildi',
+    USER_LOGIN:                       { icon: HiOutlineLogin,             label: 'Giriş',                       intent: 'indigo' },
+    USER_LOGIN_FAILED:                { icon: HiOutlineExclamationCircle, label: 'Giriş uğursuz',               intent: 'rose'   },
+    USER_REGISTERED:                  { icon: HiOutlineUserAdd,           label: 'Qeydiyyat',                   intent: 'emerald'},
+    PASSWORD_CHANGED:                 { icon: HiOutlineKey,               label: 'Şifrə dəyişdirildi',          intent: 'blue'   },
+    PASSWORD_RESET_REQUESTED:         { icon: HiOutlineKey,               label: 'Şifrə sıfırlama tələbi',      intent: 'amber'  },
+    PASSWORD_RESET_COMPLETED:         { icon: HiOutlineKey,               label: 'Şifrə sıfırlandı',            intent: 'blue'   },
+
     // User management
-    USER_ROLE_CHANGED: 'Rol dəyişdirildi',
-    USER_DELETED: 'İstifadəçi silindi',
-    USER_TOGGLED: 'Status dəyişdi',
-    USER_EXAM_ASSIGNED: 'İmtahan təyin edildi',
+    USER_ROLE_CHANGED:                { icon: HiOutlineShieldCheck,       label: 'Rol dəyişdirildi',            intent: 'blue'   },
+    USER_DELETED:                     { icon: HiOutlineTrash,             label: 'İstifadəçi silindi',          intent: 'rose'   },
+    USER_TOGGLED:                     { icon: HiOutlineSwitchVertical,    label: 'Status dəyişdi',              intent: 'blue'   },
+    USER_EXAM_ASSIGNED:               { icon: HiOutlineUserGroup,         label: 'İmtahan təyin edildi',        intent: 'emerald'},
+
     // Exam lifecycle
-    EXAM_CREATED: 'İmtahan yaradıldı',
-    EXAM_UPDATED: 'İmtahan yeniləndi',
-    EXAM_DELETED: 'İmtahan silindi',
-    EXAM_STATUS_CHANGED: 'İmtahan statusu dəyişdi',
-    EXAM_SITE_PUBLISHED: 'Saytda paylaşıldı',
-    EXAM_SITE_UNPUBLISHED: 'Saytdan çıxarıldı',
+    EXAM_CREATED:                     { icon: HiOutlineDocumentAdd,       label: 'İmtahan yaradıldı',           intent: 'emerald'},
+    EXAM_UPDATED:                     { icon: HiOutlinePencilAlt,         label: 'İmtahan yeniləndi',           intent: 'blue'   },
+    EXAM_DELETED:                     { icon: HiOutlineDocumentRemove,    label: 'İmtahan silindi',             intent: 'rose'   },
+    EXAM_STATUS_CHANGED:              { icon: HiOutlineRefresh,           label: 'İmtahan statusu dəyişdi',     intent: 'blue'   },
+    EXAM_SITE_PUBLISHED:              { icon: HiOutlineGlobeAlt,          label: 'Saytda paylaşıldı',           intent: 'emerald'},
+    EXAM_SITE_UNPUBLISHED:            { icon: HiOutlineEyeOff,            label: 'Saytdan çıxarıldı',           intent: 'rose'   },
+    EXAM_PRICE_CHANGED:               { icon: HiOutlineCurrencyDollar,    label: 'Qiymət dəyişdirildi',         intent: 'blue'   },
+    EXAM_ACCESS_CODE_GENERATED:       { icon: HiOutlineKey,               label: 'Giriş kodu yaradıldı',        intent: 'indigo' },
+    EXAM_PURCHASED:                   { icon: HiOutlineDocumentAdd,       label: 'İmtahan alındı',              intent: 'emerald'},
+    EXAM_PDF_DOWNLOADED:              { icon: HiOutlineDownload,          label: 'PDF endirildi',               intent: 'amber'  },
+    EXAM_RESULTS_EXPORTED:            { icon: HiOutlineDownload,          label: 'Nəticələr ixrac edildi',      intent: 'amber'  },
+
     // Exam session
-    EXAM_STARTED: 'İmtahan başlandı',
-    EXAM_SUBMITTED: 'İmtahan təhvil verildi',
-    // Subject/Content
-    SUBJECT_ADDED: 'Fənn əlavə edildi',
-    SUBJECT_DELETED: 'Fənn silindi',
-    TOPIC_ADDED: 'Mövzu əlavə edildi',
-    TOPIC_DELETED: 'Mövzu silindi',
+    EXAM_STARTED:                     { icon: HiOutlinePlay,              label: 'İmtahan başlandı',            intent: 'violet' },
+    EXAM_SUBMITTED:                   { icon: HiOutlineCheckCircle,       label: 'İmtahan təhvil verildi',      intent: 'emerald'},
+
+    // Submission / grading
+    SUBMISSION_MANUAL_GRADED:         { icon: HiOutlineClipboardCheck,    label: 'Əl ilə yoxlandı',             intent: 'blue'   },
+    SUBMISSION_HIDDEN:                { icon: HiOutlineEyeOff,            label: 'Nəticə gizlədildi',           intent: 'rose'   },
+
+    // Collaborative
+    COLLABORATIVE_EXAM_CREATED:       { icon: HiOutlineUsers,             label: 'Birgə imtahan yaradıldı',     intent: 'emerald'},
+    COLLABORATIVE_COLLABORATOR_ADDED: { icon: HiOutlineUserAdd,           label: 'Müəllim əlavə edildi',        intent: 'emerald'},
+    COLLABORATIVE_DRAFT_SUBMITTED:    { icon: HiOutlineUpload,            label: 'Suallar göndərildi',          intent: 'violet' },
+    COLLABORATIVE_DRAFT_APPROVED:     { icon: HiOutlineCheckCircle,       label: 'Suallar təsdiqləndi',         intent: 'emerald'},
+    COLLABORATIVE_DRAFT_REJECTED:     { icon: HiOutlineXCircle,           label: 'Suallar geri qaytarıldı',     intent: 'rose'   },
+
+    // Subject / Topic
+    SUBJECT_ADDED:                    { icon: HiOutlineBookOpen,          label: 'Fənn əlavə edildi',           intent: 'emerald'},
+    SUBJECT_UPDATED:                  { icon: HiOutlineBookOpen,          label: 'Fənn yeniləndi',              intent: 'blue'   },
+    SUBJECT_DELETED:                  { icon: HiOutlineBookOpen,          label: 'Fənn silindi',                intent: 'rose'   },
+    TOPIC_ADDED:                      { icon: HiOutlineHashtag,           label: 'Mövzu əlavə edildi',          intent: 'emerald'},
+    TOPIC_DELETED:                    { icon: HiOutlineHashtag,           label: 'Mövzu silindi',               intent: 'rose'   },
+
+    // Banner
+    BANNER_CREATED:                   { icon: HiOutlinePhotograph,        label: 'Banner yaradıldı',            intent: 'emerald'},
+    BANNER_UPDATED:                   { icon: HiOutlinePhotograph,        label: 'Banner yeniləndi',            intent: 'blue'   },
+    BANNER_DELETED:                   { icon: HiOutlinePhotograph,        label: 'Banner silindi',              intent: 'rose'   },
+
+    // Tag
+    TAG_CREATED:                      { icon: HiOutlineTag,               label: 'Teq yaradıldı',               intent: 'emerald'},
+    TAG_DELETED:                      { icon: HiOutlineTag,               label: 'Teq silindi',                 intent: 'rose'   },
+
+    // Template / Subtitle / Section
+    TEMPLATE_CREATED:                 { icon: HiOutlineTemplate,          label: 'Şablon yaradıldı',            intent: 'emerald'},
+    TEMPLATE_UPDATED:                 { icon: HiOutlineTemplate,          label: 'Şablon yeniləndi',            intent: 'blue'   },
+    TEMPLATE_DELETED:                 { icon: HiOutlineTemplate,          label: 'Şablon silindi',              intent: 'rose'   },
+    TEMPLATE_SUBTITLE_CREATED:        { icon: HiOutlineCollection,        label: 'Altbaşlıq yaradıldı',         intent: 'emerald'},
+    TEMPLATE_SUBTITLE_UPDATED:        { icon: HiOutlineCollection,        label: 'Altbaşlıq yeniləndi',         intent: 'blue'   },
+    TEMPLATE_SUBTITLE_DELETED:        { icon: HiOutlineCollection,        label: 'Altbaşlıq silindi',           intent: 'rose'   },
+    TEMPLATE_SECTION_CREATED:         { icon: HiOutlineViewGridAdd,       label: 'Bölmə yaradıldı',             intent: 'emerald'},
+    TEMPLATE_SECTION_UPDATED:         { icon: HiOutlineViewGridAdd,       label: 'Bölmə yeniləndi',             intent: 'blue'   },
+    TEMPLATE_SECTION_DELETED:         { icon: HiOutlineViewGridAdd,       label: 'Bölmə silindi',               intent: 'rose'   },
+
+    // Question Bank
+    BANK_SUBJECT_CREATED:             { icon: HiOutlineDatabase,          label: 'Bank fənni yaradıldı',        intent: 'emerald'},
+    BANK_SUBJECT_UPDATED:             { icon: HiOutlineDatabase,          label: 'Bank fənni yeniləndi',        intent: 'blue'   },
+    BANK_SUBJECT_DELETED:             { icon: HiOutlineDatabase,          label: 'Bank fənni silindi',          intent: 'rose'   },
+    BANK_QUESTION_CREATED:            { icon: HiOutlineDatabase,          label: 'Bank sualı yaradıldı',        intent: 'emerald'},
+    BANK_QUESTION_UPDATED:            { icon: HiOutlineDatabase,          label: 'Bank sualı yeniləndi',        intent: 'blue'   },
+    BANK_QUESTION_DELETED:            { icon: HiOutlineDatabase,          label: 'Bank sualı silindi',          intent: 'rose'   },
+
+    // AI
+    AI_QUESTIONS_GENERATED:           { icon: HiOutlineSparkles,          label: 'AI sual generasiyası',        intent: 'fuchsia'},
+    AI_EXAM_GENERATED:                { icon: HiOutlineSparkles,          label: 'AI imtahan generasiyası',     intent: 'fuchsia'},
+
+    // Contact
+    CONTACT_READ:                     { icon: HiOutlineMail,              label: 'Mesaj oxundu',                intent: 'blue'   },
+    CONTACT_REPLIED:                  { icon: HiOutlineMail,              label: 'Mesaja cavab verildi',        intent: 'violet' },
+    CONTACT_DELETED:                  { icon: HiOutlineMail,              label: 'Mesaj silindi',               intent: 'rose'   },
+
     // Notification
-    NOTIFICATION_SENT: 'Bildiriş göndərildi',
+    NOTIFICATION_SENT:                { icon: HiOutlineBell,              label: 'Bildiriş göndərildi',         intent: 'violet' },
+
     // Payment / Subscription
-    SUBSCRIPTION_PURCHASED: 'Abunəlik alındı',
-    SUBSCRIPTION_SWITCHED: 'Plan dəyişdirildi',
-    SUBSCRIPTION_ASSIGNED_MANUAL: 'Plan əl ilə təyin edildi',
-    SUBSCRIPTION_CANCELLED: 'Abunəlik ləğv edildi',
+    PAYMENT_INITIATED:                { icon: HiOutlineCreditCard,        label: 'Ödəniş başladıldı',           intent: 'violet' },
+    PAYMENT_FAILED:                   { icon: HiOutlineExclamationCircle, label: 'Ödəniş uğursuz',              intent: 'rose'   },
+    PAYMENT_AUTO_RECOVERED:           { icon: HiOutlineReceiptRefund,     label: 'Ödəniş avtomatik bərpası',    intent: 'emerald'},
+    PAYMENT_PROVIDER_ERROR:           { icon: HiOutlineShieldExclamation, label: 'Bank API xətası',             intent: 'amber'  },
+    PAYMENT_UNAUTHORIZED_ACCESS:      { icon: HiOutlineLockClosed,        label: 'Yetkisiz ödəniş cəhdi',       intent: 'rose'   },
+    PAYMENT_STORED_CARD_USED:         { icon: HiOutlineCreditCard,        label: 'Yadda saxlanmış kart',        intent: 'violet' },
+    PAYMENT_REVERSED:                 { icon: HiOutlineReceiptRefund,     label: 'Ödəniş geri qaytarıldı',      intent: 'rose'   },
+    PAYMENT_RATE_LIMITED:             { icon: HiOutlineShieldExclamation, label: 'Limit aşıldı',                intent: 'amber'  },
+    ORDER_CANCELLED:                  { icon: HiOutlineXCircle,           label: 'Order ləğv edildi',           intent: 'rose'   },
+    ORDER_ORPHANED:                   { icon: HiOutlineShieldExclamation, label: 'Orphan KB order',             intent: 'rose'   },
+    SUBSCRIPTION_PURCHASED:           { icon: HiOutlineCreditCard,        label: 'Abunəlik alındı',             intent: 'emerald'},
+    SUBSCRIPTION_SWITCHED:            { icon: HiOutlineReceiptRefund,     label: 'Plan dəyişdirildi',           intent: 'blue'   },
+    SUBSCRIPTION_RENEWED:             { icon: HiOutlineReceiptRefund,     label: 'Abunəlik uzadıldı',           intent: 'emerald'},
+    SUBSCRIPTION_ASSIGNED_MANUAL:     { icon: HiOutlineShieldCheck,       label: 'Plan əl ilə təyin edildi',    intent: 'emerald'},
+    SUBSCRIPTION_CANCELLED:           { icon: HiOutlineXCircle,           label: 'Abunəlik ləğv edildi',        intent: 'rose'   },
+    SUBSCRIPTION_GIFTED:              { icon: HiOutlineGift,              label: 'Hədiyyə plan verildi',        intent: 'fuchsia'},
+    PLAN_CREATED:                     { icon: HiOutlineCash,              label: 'Plan yaradıldı',              intent: 'emerald'},
+    PLAN_UPDATED:                     { icon: HiOutlineCash,              label: 'Plan yeniləndi',              intent: 'blue'   },
+    PLAN_DELETED:                     { icon: HiOutlineCash,              label: 'Plan silindi',                intent: 'rose'   },
+
     // System
-    SYSTEM_ERROR: 'Sistem xətası',
+    SYSTEM_ERROR:                     { icon: HiOutlineCog,               label: 'Sistem xətası',               intent: 'amber'  },
+};
+
+// Intent → tailwind classes for the icon circle + badge
+const INTENT_STYLES = {
+    emerald: { circle: 'bg-emerald-50 text-emerald-600 ring-emerald-100', badge: 'bg-emerald-50 text-emerald-700' },
+    blue:    { circle: 'bg-blue-50 text-blue-600 ring-blue-100',          badge: 'bg-blue-50 text-blue-700' },
+    indigo:  { circle: 'bg-indigo-50 text-indigo-600 ring-indigo-100',    badge: 'bg-indigo-50 text-indigo-700' },
+    violet:  { circle: 'bg-violet-50 text-violet-600 ring-violet-100',    badge: 'bg-violet-50 text-violet-700' },
+    rose:    { circle: 'bg-rose-50 text-rose-600 ring-rose-100',          badge: 'bg-rose-50 text-rose-700' },
+    amber:   { circle: 'bg-amber-50 text-amber-600 ring-amber-100',       badge: 'bg-amber-50 text-amber-700' },
+    fuchsia: { circle: 'bg-fuchsia-50 text-fuchsia-600 ring-fuchsia-100', badge: 'bg-fuchsia-50 text-fuchsia-700' },
+    gray:    { circle: 'bg-gray-100 text-gray-500 ring-gray-100',         badge: 'bg-gray-100 text-gray-600' },
 };
 
 const CATEGORIES = [
-    { key: 'ALL', label: 'Hamısı' },
-    { key: 'AUTH', label: 'Giriş/Çıxış' },
-    { key: 'USER', label: 'İstifadəçi' },
-    { key: 'EXAM', label: 'İmtahan' },
+    { key: 'ALL',     label: 'Hamısı' },
+    { key: 'AUTH',    label: 'Giriş/Çıxış' },
+    { key: 'USER',    label: 'İstifadəçi' },
+    { key: 'EXAM',    label: 'İmtahan' },
     { key: 'CONTENT', label: 'Kontent' },
+    { key: 'AI',      label: 'AI' },
     { key: 'PAYMENT', label: 'Ödəniş' },
-    { key: 'SYSTEM', label: 'Sistem' },
+    { key: 'SYSTEM',  label: 'Sistem' },
 ];
 
 const CATEGORY_STYLES = {
-    AUTH:    'bg-blue-100 text-blue-700',
+    AUTH:    'bg-indigo-100 text-indigo-700',
     USER:    'bg-purple-100 text-purple-700',
-    EXAM:    'bg-indigo-100 text-indigo-700',
+    EXAM:    'bg-blue-100 text-blue-700',
     CONTENT: 'bg-teal-100 text-teal-700',
+    AI:      'bg-fuchsia-100 text-fuchsia-700',
     PAYMENT: 'bg-emerald-100 text-emerald-700',
-    SYSTEM:  'bg-gray-100 text-gray-600',
+    SYSTEM:  'bg-amber-100 text-amber-700',
 };
 
 const PERIODS = [
-    { key: '', label: 'Hamısı' },
+    { key: '',      label: 'Hamısı' },
     { key: 'TODAY', label: 'Bu gün' },
-    { key: 'WEEK', label: 'Bu həftə' },
+    { key: 'WEEK',  label: 'Bu həftə' },
     { key: 'MONTH', label: 'Bu ay' },
 ];
 
@@ -98,7 +240,7 @@ const formatExact = (isoStr) => {
 
 const SkeletonRow = () => (
     <div className="flex items-center gap-4 px-6 py-4 animate-pulse">
-        <div className="w-24 h-5 bg-gray-200 rounded-full" />
+        <div className="w-10 h-10 bg-gray-100 rounded-xl" />
         <div className="flex-1 space-y-2">
             <div className="w-40 h-4 bg-gray-200 rounded" />
             <div className="w-56 h-3 bg-gray-100 rounded" />
@@ -286,21 +428,27 @@ const AdminLogs = () => {
 };
 
 const LogRow = ({ log }) => {
-    const catStyle = CATEGORY_STYLES[log.category] || CATEGORY_STYLES.SYSTEM;
-    const actionLabel = ACTION_LABELS[log.action] || log.action;
+    const meta = ACTION_META[log.action] || {
+        icon: HiOutlineCog,
+        label: log.action,
+        intent: 'gray',
+    };
+    const Icon = meta.icon;
+    const styles = INTENT_STYLES[meta.intent] || INTENT_STYLES.gray;
 
     return (
         <div className="flex items-start gap-4 px-6 py-4 hover:bg-gray-50/60 transition-colors">
-            {/* Action badge */}
-            <div className="flex-shrink-0 mt-0.5">
-                <span className={`inline-flex items-center px-2.5 py-1 text-[11px] font-bold rounded-lg ${catStyle}`}>
-                    {actionLabel}
-                </span>
+            {/* Action icon */}
+            <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ring-1 ${styles.circle}`}>
+                <Icon className="w-5 h-5" />
             </div>
 
             {/* Main info */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-bold rounded-md ${styles.badge}`}>
+                        {meta.label}
+                    </span>
                     <span className="text-sm font-semibold text-gray-800 truncate">
                         {log.actorName || log.actorEmail || '—'}
                     </span>
@@ -308,7 +456,7 @@ const LogRow = ({ log }) => {
                         <span className="text-xs text-gray-400 truncate">{log.actorEmail}</span>
                     )}
                     {log.targetType && (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md font-medium">
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium uppercase tracking-wide">
                             {log.targetType}
                         </span>
                     )}

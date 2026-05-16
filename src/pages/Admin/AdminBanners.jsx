@@ -1,11 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
     HiOutlinePlus, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineEye,
     HiOutlineEyeOff, HiOutlineX, HiOutlineCheck, HiOutlinePhotograph,
     HiOutlineArrowUp, HiOutlineArrowDown, HiOutlineUpload,
 } from 'react-icons/hi';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import {
+    useAdminBanners,
+    useCreateBanner,
+    useUpdateBanner,
+    useDeleteBanner,
+} from '../../hooks/admin/useAdminBanners';
+import { useUndoableAction } from '../../hooks/admin/useUndoableAction';
+import InlineEdit from '../../components/admin/InlineEdit';
+import Pagination from '../../components/admin/Pagination';
 
 const POSITIONS = [
     { value: 'HERO', label: 'Hero (Üst tam genişlik)', desc: 'Sayfanın ən üstünde, hero bölməsinin altında' },
@@ -41,6 +49,8 @@ const emptyForm = {
     bgGradient: 'from-indigo-600 to-purple-600',
     orderIndex: 0,
     targetAudience: 'ALL',
+    startAt: '',
+    endAt: '',
 };
 
 const BannerPreview = ({ form }) => {
@@ -274,6 +284,28 @@ const Modal = ({ banner, onClose, onSave }) => {
                             </div>
                         </div>
 
+                        {/* Scheduling */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Başlama tarixi (opsional)</label>
+                                <input
+                                    type="datetime-local"
+                                    value={form.startAt ? form.startAt.slice(0, 16) : ''}
+                                    onChange={e => set('startAt', e.target.value || null)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Bitmə tarixi (opsional)</label>
+                                <input
+                                    type="datetime-local"
+                                    value={form.endAt ? form.endAt.slice(0, 16) : ''}
+                                    onChange={e => set('endAt', e.target.value || null)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                />
+                            </div>
+                        </div>
+
                         {/* Order + Active */}
                         <div className="flex gap-3">
                             <div className="flex-1">
@@ -320,50 +352,47 @@ const Modal = ({ banner, onClose, onSave }) => {
 };
 
 const AdminBanners = () => {
-    const [banners, setBanners] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [modal, setModal] = useState(null); // null | { mode: 'create' | 'edit', banner? }
     const [deleting, setDeleting] = useState(null);
 
-    useEffect(() => { fetchBanners(); }, []);
+    const [page, setPage] = useState(0);
+    const { data, isLoading: loading, error } = useAdminBanners({ page, size: 10 });
+    const banners = data?.content ?? [];
+    const totalPages = data?.totalPages ?? 0;
+    const totalElements = data?.totalElements ?? 0;
+    const createBanner = useCreateBanner();
+    const updateBanner = useUpdateBanner();
+    const deleteBanner = useDeleteBanner();
+    const undoable = useUndoableAction();
 
-    const fetchBanners = async () => {
-        setLoading(true);
-        try {
-            const { data } = await api.get('/admin/banners');
-            setBanners(data);
-        } catch { toast.error('Bannerlər yüklənmədi'); }
-        finally { setLoading(false); }
-    };
+    if (error) toast.error('Bannerlər yüklənmədi');
 
     const handleSave = async (form) => {
         try {
             if (modal?.banner) {
-                await api.put(`/admin/banners/${modal.banner.id}`, form);
+                await updateBanner.mutateAsync({ id: modal.banner.id, banner: form });
                 toast.success('Banner yeniləndi');
             } else {
-                await api.post('/admin/banners', form);
+                await createBanner.mutateAsync(form);
                 toast.success('Banner əlavə edildi');
             }
-            fetchBanners();
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
-    const handleDelete = async (id) => {
-        setDeleting(id);
-        try {
-            await api.delete(`/admin/banners/${id}`);
-            toast.success('Banner silindi');
-            fetchBanners();
-        } catch { toast.error('Silinə bilmədi'); }
-        finally { setDeleting(null); }
+    const handleDelete = (id) => {
+        const banner = banners.find(b => b.id === id);
+        undoable.run({
+            label: `"${banner?.title || 'Banner'}" silinir...`,
+            successMessage: 'Banner silindi',
+            errorMessage: 'Silinə bilmədi',
+            onCommit: () => deleteBanner.mutateAsync(id),
+        });
     };
 
     const toggleActive = async (banner) => {
         try {
-            await api.put(`/admin/banners/${banner.id}`, { isActive: !banner.isActive });
+            await updateBanner.mutateAsync({ id: banner.id, banner: { isActive: !banner.isActive } });
             toast.success(banner.isActive ? 'Banner gizlədildi' : 'Banner aktivləşdirildi');
-            fetchBanners();
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
@@ -451,7 +480,13 @@ const AdminBanners = () => {
                                         {/* Info */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                <h3 className="font-bold text-gray-900 text-sm truncate">{banner.title}</h3>
+                                                <h3 className="font-bold text-gray-900 text-sm">
+                                                    <InlineEdit
+                                                        value={banner.title}
+                                                        onSave={(newTitle) => updateBanner.mutateAsync({ id: banner.id, banner: { title: newTitle } })}
+                                                        inputClassName="font-bold"
+                                                    />
+                                                </h3>
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${banner.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                                     {banner.isActive ? 'Aktiv' : 'Gizli'}
                                                 </span>
@@ -479,6 +514,26 @@ const AdminBanners = () => {
                                                     {banner.linkUrl}
                                                 </p>
                                             )}
+                                            <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-500">
+                                                <span className="flex items-center gap-1" title="Göstərmə sayı">
+                                                    👁 {banner.impressionCount ?? 0}
+                                                </span>
+                                                <span className="flex items-center gap-1" title="Klik sayı">
+                                                    🖱 {banner.clickCount ?? 0}
+                                                </span>
+                                                {banner.impressionCount > 0 && (
+                                                    <span className="text-emerald-600 font-semibold" title="CTR">
+                                                        {(((banner.clickCount ?? 0) / banner.impressionCount) * 100).toFixed(1)}% CTR
+                                                    </span>
+                                                )}
+                                                {(banner.startAt || banner.endAt) && (
+                                                    <span className="text-amber-600 font-semibold" title="Cədvəlləşmiş">
+                                                        📅 {banner.startAt ? new Date(banner.startAt).toLocaleDateString('az-AZ') : '...'}
+                                                        {' → '}
+                                                        {banner.endAt ? new Date(banner.endAt).toLocaleDateString('az-AZ') : '∞'}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Sıra */}
@@ -518,6 +573,10 @@ const AdminBanners = () => {
                         );
                     })}
                 </div>
+            )}
+
+            {banners.length > 0 && (
+                <Pagination page={page} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />
             )}
         </div>
     );

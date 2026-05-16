@@ -1,7 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { HiOutlinePlus, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineCheckCircle, HiOutlineXCircle } from 'react-icons/hi';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import {
+    useAdminSubscriptionPlans,
+    useCreateSubscriptionPlan,
+    useUpdateSubscriptionPlan,
+    useDeleteSubscriptionPlan,
+} from '../../hooks/admin/useAdminSubscriptionPlans';
+import Pagination from '../../components/admin/Pagination';
 
 const INITIAL_FORM = {
     name: '',
@@ -47,30 +53,23 @@ const featureLabels = [
 ];
 
 const AdminSubscriptionPlans = () => {
-    const [plans, setPlans] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form, setForm] = useState(INITIAL_FORM);
     const [editingId, setEditingId] = useState(null);
-    const [saving, setSaving] = useState(false);
-    const [submittingDelete, setSubmittingDelete] = useState(null);
 
-    useEffect(() => {
-        fetchPlans();
-    }, []);
+    const [page, setPage] = useState(0);
+    const { data, isLoading: loading, error } = useAdminSubscriptionPlans({ page, size: 12 });
+    const rawPlans = data?.content ?? [];
+    const totalPages = data?.totalPages ?? 0;
+    const totalElements = data?.totalElements ?? 0;
+    const plans = useMemo(() => [...rawPlans].sort((a, b) => a.price - b.price), [rawPlans]);
+    const createPlan = useCreateSubscriptionPlan();
+    const updatePlan = useUpdateSubscriptionPlan();
+    const deletePlan = useDeleteSubscriptionPlan();
+    const saving = createPlan.isPending || updatePlan.isPending;
+    const submittingDelete = deletePlan.isPending ? deletePlan.variables : null;
 
-    const fetchPlans = async () => {
-        try {
-            const { data } = await api.get('/subscription-plans');
-
-            // Sort by price ascending
-            setPlans(data.sort((a, b) => a.price - b.price));
-        } catch (error) {
-            toast.error('Planları yükləyərkən xəta baş verdi');
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (error) toast.error('Planları yükləyərkən xəta baş verdi');
 
     const handleOpenModal = (plan = null) => {
         if (plan) {
@@ -104,7 +103,6 @@ const AdminSubscriptionPlans = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setSaving(true);
         const aiLimit = form.monthlyAiQuestionLimit;
         const payload = {
             ...form,
@@ -113,34 +111,25 @@ const AdminSubscriptionPlans = () => {
         };
         try {
             if (editingId) {
-                const { data } = await api.put(`/subscription-plans/${editingId}`, payload);
-                setPlans(prev => prev.map(p => p.id === editingId ? data : p));
+                await updatePlan.mutateAsync({ id: editingId, plan: payload });
                 toast.success('Plan uğurla yeniləndi');
             } else {
-                const { data } = await api.post('/subscription-plans', payload);
-                setPlans(prev => [...prev, data].sort((a, b) => a.price - b.price));
+                await createPlan.mutateAsync(payload);
                 toast.success('Yeni plan əlavə edildi');
             }
             handleCloseModal();
         } catch (error) {
             if (!error._handled) toast.error(error.response?.data?.message || 'Əməliyyat uğursuz oldu');
-        } finally {
-            setSaving(false);
         }
     };
 
     const handleDelete = async (id) => {
         if (!window.confirm('Bu planı silmək istədiyinizə əminsiniz?')) return;
-        setSubmittingDelete(id);
         try {
-            await api.delete(`/subscription-plans/${id}`);
-
+            await deletePlan.mutateAsync(id);
             toast.success('Plan silindi');
-            setPlans(prev => prev.filter(p => p.id !== id));
         } catch (error) {
             if (!error._handled) toast.error(error.response?.data?.message || 'Silinmədi');
-        } finally {
-            setSubmittingDelete(null);
         }
     };
 
@@ -237,6 +226,10 @@ const AdminSubscriptionPlans = () => {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {plans.length > 0 && (
+                <Pagination page={page} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />
             )}
 
             {/* Modal */}

@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import {
+    useAdminTemplates,
+    useAdminSubtitles,
+    useUpdateTemplate,
+    useCreateSubtitle,
+    useUpdateSubtitle,
+    useDeleteSubtitle,
+} from '../../hooks/admin/useAdminTemplates';
+import Pagination from '../../components/admin/Pagination';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     HiOutlinePlus, HiOutlineTrash, HiOutlinePencilAlt,
     HiOutlineChevronRight, HiOutlineArrowLeft, HiOutlineCheck, HiOutlineX,
 } from 'react-icons/hi';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
 const TYPES = [
@@ -40,48 +48,34 @@ const AdminSubtitles = () => {
     const { templateId } = useParams();
     const navigate = useNavigate();
 
-    const [template, setTemplate] = useState(null);
-    const [subtitles, setSubtitles] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    // subtitle create/edit
     const [creating, setCreating] = useState(false);
     const [newSubtitle, setNewSubtitle] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editValue, setEditValue] = useState('');
 
-    // template title + type inline edit
     const [editingTitle, setEditingTitle] = useState(false);
     const [titleDraft, setTitleDraft] = useState('');
     const [typeDraft, setTypeDraft] = useState('STANDARD');
 
-    useEffect(() => { fetchData(); }, [templateId]);
+    const [page, setPage] = useState(0);
+    const { data: templatesPage } = useAdminTemplates({ page: 0, size: 100 });
+    const templates = templatesPage?.content ?? [];
+    const { data: subData, isLoading } = useAdminSubtitles(templateId, { page, size: 15 });
+    const subtitles = subData?.content ?? [];
+    const totalPages = subData?.totalPages ?? 0;
+    const totalElements = subData?.totalElements ?? 0;
+    const template = templates.find(t => String(t.id) === String(templateId)) || null;
+    const loading = isLoading;
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [templatesRes, subtitlesRes] = await Promise.all([
-                api.get('/admin/templates'),
-                api.get(`/admin/templates/${templateId}/subtitles`),
-            ]);
-            const tmpl = templatesRes.data.find(t => String(t.id) === String(templateId));
-            if (tmpl) setTemplate(tmpl);
-            setSubtitles(subtitlesRes.data);
-        } catch {
-            toast.error('Məlumatlar yüklənmədi');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const updateTemplate = useUpdateTemplate();
+    const createSubtitle = useCreateSubtitle();
+    const updateSubtitleMut = useUpdateSubtitle();
+    const deleteSubtitleMut = useDeleteSubtitle();
 
     const handleUpdateTemplate = async () => {
         if (!titleDraft.trim()) { toast.error('Başlıq boş ola bilməz'); return; }
         try {
-            const { data } = await api.put(`/admin/templates/${templateId}`, {
-                title: titleDraft.trim(),
-                templateType: typeDraft,
-            });
-            setTemplate(data);
+            await updateTemplate.mutateAsync({ id: templateId, template: { title: titleDraft.trim(), templateType: typeDraft } });
             setEditingTitle(false);
             toast.success('Yeniləndi');
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
@@ -90,8 +84,7 @@ const AdminSubtitles = () => {
     const handleCreate = async () => {
         if (!newSubtitle.trim()) { toast.error('Altbaşlıq daxil edin'); return; }
         try {
-            const { data } = await api.post(`/admin/templates/${templateId}/subtitles`, { subtitle: newSubtitle.trim() });
-            setSubtitles(prev => [...prev, data]);
+            await createSubtitle.mutateAsync({ templateId, subtitle: { subtitle: newSubtitle.trim() } });
             setNewSubtitle(''); setCreating(false);
             toast.success('Altbaşlıq yaradıldı');
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
@@ -100,8 +93,7 @@ const AdminSubtitles = () => {
     const handleUpdate = async (id) => {
         if (!editValue.trim()) { toast.error('Altbaşlıq daxil edin'); return; }
         try {
-            const { data } = await api.put(`/admin/subtitles/${id}`, { subtitle: editValue.trim() });
-            setSubtitles(prev => prev.map(s => s.id === id ? data : s));
+            await updateSubtitleMut.mutateAsync({ id, subtitle: { subtitle: editValue.trim() } });
             setEditingId(null);
             toast.success('Yeniləndi');
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
@@ -110,8 +102,7 @@ const AdminSubtitles = () => {
     const handleDelete = async (id, name) => {
         if (!window.confirm(`"${name}" altbaşlığını silmək istədiyinizə əminsiniz?`)) return;
         try {
-            await api.delete(`/admin/subtitles/${id}`);
-            setSubtitles(prev => prev.filter(s => s.id !== id));
+            await deleteSubtitleMut.mutateAsync(id);
             toast.success('Altbaşlıq silindi');
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
@@ -240,6 +231,10 @@ const AdminSubtitles = () => {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {subtitles.length > 0 && (
+                <Pagination page={page} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />
             )}
         </div>
     );

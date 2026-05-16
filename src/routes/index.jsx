@@ -43,7 +43,6 @@ import AdminCollaborativeExams from '../pages/Admin/AdminCollaborativeExams';
 import AdminLogs from '../pages/Admin/AdminLogs';
 import AdminContactMessages from '../pages/Admin/AdminContactMessages';
 import AdminRevenue from '../pages/Admin/AdminRevenue';
-import AdminTags from '../pages/Admin/AdminTags';
 import CollaborativeAssignments from '../pages/Teacher/CollaborativeAssignments';
 import PaymentSuccess from '../pages/Payment/PaymentSuccess';
 import PaymentDecline from '../pages/Payment/PaymentDecline';
@@ -147,7 +146,6 @@ const router = createBrowserRouter([
             { path: 'bildirişlər', element: <AdminNotifications /> },
             { path: 'loglar', element: <AdminLogs /> },
             { path: 'qazanc', element: <AdminRevenue /> },
-            { path: 'teqler', element: <AdminTags /> },
         ],
     },
 ]);

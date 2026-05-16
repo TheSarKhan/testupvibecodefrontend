@@ -1,11 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import {
+    useAdminContactMessages,
+    useContactMessagesUnreadCount,
+    useMarkContactMessageRead,
+    useReplyContactMessage,
+    useDeleteContactMessage,
+} from '../../hooks/admin/useAdminContactMessages';
+import Pagination from '../../components/admin/Pagination';
 import {
     HiOutlineMail, HiOutlineTrash, HiOutlineSearch,
     HiOutlineRefresh, HiOutlineEye, HiOutlineCheck,
     HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineFilter,
     HiOutlineReply, HiOutlineX,
 } from 'react-icons/hi';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
 const SUBJECT_LABELS = {
@@ -32,66 +39,45 @@ const fmtDate = (iso) => {
 };
 
 const AdminContactMessages = () => {
-    const [messages, setMessages] = useState([]);
-    const [total, setTotal] = useState(0);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [search, setSearch] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
     const [readFilter, setReadFilter] = useState('');
     const [expanded, setExpanded] = useState(null);
-    const [replyModal, setReplyModal] = useState(null); // { msg }
+    const [replyModal, setReplyModal] = useState(null);
     const [replySubject, setReplySubject] = useState('');
     const [replyBody, setReplyBody] = useState('');
     const [replyChannel, setReplyChannel] = useState('GMAIL');
-    const [replySending, setReplySending] = useState(false);
     const PAGE_SIZE = 20;
 
-    const fetchUnread = useCallback(() => {
-        api.get('/admin/contact-messages/unread-count')
-            .then(r => setUnreadCount(r.data.count || 0))
-            .catch(() => {});
-    }, []);
+    const { data, isFetching, error, refetch: fetchMessages } = useAdminContactMessages({
+        page, size: PAGE_SIZE, search, subject: subjectFilter, read: readFilter,
+    });
+    const messages = data?.content ?? [];
+    const total = data?.totalElements ?? 0;
+    const loading = isFetching;
+    if (error) toast.error('Mesajlar yüklənmədi');
 
-    const fetchMessages = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams({ page, size: PAGE_SIZE });
-            if (search) params.set('search', search);
-            if (subjectFilter) params.set('subject', subjectFilter);
-            if (readFilter !== '') params.set('read', readFilter);
-            const { data } = await api.get(`/admin/contact-messages?${params}`);
-            setMessages(data.content || []);
-            setTotal(data.totalElements || 0);
-        } catch {
-            toast.error('Mesajlar yüklənmədi');
-        } finally {
-            setLoading(false);
-        }
-    }, [page, search, subjectFilter, readFilter]);
+    const { data: unreadData, refetch: fetchUnread } = useContactMessagesUnreadCount();
+    const unreadCount = unreadData?.count ?? 0;
 
-    useEffect(() => { fetchMessages(); }, [fetchMessages]);
-    useEffect(() => { fetchUnread(); }, [fetchUnread]);
+    const markRead = useMarkContactMessageRead();
+    const replyMsg = useReplyContactMessage();
+    const deleteMsg = useDeleteContactMessage();
+    const replySending = replyMsg.isPending;
 
     const handleExpand = async (msg) => {
         if (expanded?.id === msg.id) { setExpanded(null); return; }
         setExpanded(msg);
         if (!msg.isRead) {
-            try {
-                await api.patch(`/admin/contact-messages/${msg.id}/read`);
-                setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m));
-                setUnreadCount(prev => Math.max(0, prev - 1));
-            } catch {}
+            try { await markRead.mutateAsync(msg.id); } catch {}
         }
     };
 
     const handleDelete = async (id) => {
         if (!window.confirm('Bu mesajı silmək istədiyinizə əminsiniz?')) return;
         try {
-            await api.delete(`/admin/contact-messages/${id}`);
-            setMessages(prev => prev.filter(m => m.id !== id));
-            setTotal(prev => prev - 1);
+            await deleteMsg.mutateAsync(id);
             if (expanded?.id === id) setExpanded(null);
             toast.success('Mesaj silindi');
         } catch {
@@ -101,9 +87,7 @@ const AdminContactMessages = () => {
 
     const handleMarkRead = async (id) => {
         try {
-            await api.patch(`/admin/contact-messages/${id}/read`);
-            setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: true } : m));
-            setUnreadCount(prev => Math.max(0, prev - 1));
+            await markRead.mutateAsync(id);
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
         }
@@ -119,24 +103,15 @@ const AdminContactMessages = () => {
 
     const sendReply = async () => {
         if (!replyBody.trim()) return;
-        setReplySending(true);
         try {
-            await api.post(`/admin/contact-messages/${replyModal.msg.id}/reply`, {
-                subject: replySubject,
-                body: replyBody,
-                channel: replyChannel,
+            await replyMsg.mutateAsync({
+                id: replyModal.msg.id,
+                reply: { subject: replySubject, body: replyBody, channel: replyChannel },
             });
-            // Mark as read locally
-            setMessages(prev => prev.map(m =>
-                m.id === replyModal.msg.id ? { ...m, isRead: true } : m
-            ));
-            setUnreadCount(prev => replyModal.msg.isRead ? prev : Math.max(0, prev - 1));
             toast.success('Cavab göndərildi');
             setReplyModal(null);
         } catch {
             toast.error('Göndərmə zamanı xəta baş verdi');
-        } finally {
-            setReplySending(false);
         }
     };
 
@@ -321,25 +296,7 @@ const AdminContactMessages = () => {
             )}
 
             {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-6">
-                    <button
-                        disabled={page === 0}
-                        onClick={() => setPage(p => p - 1)}
-                        className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 transition-colors"
-                    >
-                        Əvvəlki
-                    </button>
-                    <span className="text-sm text-gray-500">{page + 1} / {totalPages}</span>
-                    <button
-                        disabled={page >= totalPages - 1}
-                        onClick={() => setPage(p => p + 1)}
-                        className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 transition-colors"
-                    >
-                        Növbəti
-                    </button>
-                </div>
-            )}
+            <Pagination page={page} totalPages={totalPages} totalElements={total} onChange={setPage} />
             {/* Reply Modal */}
             {replyModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

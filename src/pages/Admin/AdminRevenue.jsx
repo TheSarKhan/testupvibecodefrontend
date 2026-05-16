@@ -1,11 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
     HiOutlineCurrencyDollar, HiOutlineTrendingUp, HiOutlineTrendingDown,
     HiOutlineUsers, HiOutlineRefresh, HiOutlineCheckCircle, HiOutlineExclamationCircle
 } from 'react-icons/hi';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+    useAdminRevenue,
+    useAdminPendingOrders,
+    useVerifyOrder,
+    useForceActivateOrder,
+    useCancelOrder,
+    downloadRevenueCsv,
+} from '../../hooks/admin/useAdminRevenue';
+import { adminKeys } from '../../hooks/admin/queryKeys';
+import Pagination from '../../components/admin/Pagination';
+import { useClientPagination } from '../../hooks/admin/useClientPagination';
 
 const monthNames = {
     '01': 'Yan', '02': 'Fev', '03': 'Mar', '04': 'Apr',
@@ -42,29 +53,44 @@ const RevenueBarChart = ({ data }) => {
     );
 };
 
+const STATUS_META = {
+    PAID:    { label: 'Ödənilmiş', dot: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
+    PENDING: { label: 'Gözləyən',  dot: 'bg-amber-500',   text: 'text-amber-700',   bg: 'bg-amber-50' },
+    FAILED:  { label: 'Uğursuz',   dot: 'bg-red-500',     text: 'text-red-700',     bg: 'bg-red-50' },
+    PROCESSING: { label: 'İşlənir', dot: 'bg-blue-500',   text: 'text-blue-700',    bg: 'bg-blue-50' },
+};
+
 const AdminRevenue = () => {
-    const [stats, setStats] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [pending, setPending] = useState([]);
     const [verifying, setVerifying] = useState(null);
+    const [exportFrom, setExportFrom] = useState('');
+    const [exportTo, setExportTo] = useState('');
+    const [exportStatus, setExportStatus] = useState('PAID');
+    const [exporting, setExporting] = useState(false);
+    const qc = useQueryClient();
+
+    const { data: stats, isLoading } = useAdminRevenue();
+    const [pendPage, setPendPage] = useState(0);
+    const { data: pendingPage } = useAdminPendingOrders({ page: pendPage, size: 10 });
+    const pending = pendingPage?.content ?? [];
+    const pendTotalPages = pendingPage?.totalPages ?? 0;
+    const pendTotal = pendingPage?.totalElements ?? 0;
+    const { paged: pagedRecent, page: recentPage, setPage: setRecentPage, totalPages: recentTotalPages, totalElements: recentTotal } = useClientPagination(stats?.recentPayments ?? [], 10);
+
+    const verifyOrder = useVerifyOrder();
+    const forceActivate = useForceActivateOrder();
+    const cancelOrder = useCancelOrder();
 
     const fetchStats = () => {
-        setLoading(true);
-        Promise.all([
-            api.get('/admin/revenue').then(r => r.data),
-            api.get('/admin/revenue/pending-orders').then(r => r.data).catch(() => []),
-        ]).then(([rev, pend]) => { setStats(rev); setPending(pend); }).finally(() => setLoading(false));
+        qc.invalidateQueries({ queryKey: adminKeys.revenue });
+        qc.invalidateQueries({ queryKey: adminKeys.pendingOrders });
     };
-
-    useEffect(() => { fetchStats(); }, []);
 
     const handleVerify = async (orderId) => {
         setVerifying(orderId + '_check');
         try {
-            const { data } = await api.post(`/admin/revenue/verify-order/${orderId}`);
+            const data = await verifyOrder.mutateAsync(orderId);
             if (data.success) {
                 toast.success(data.alreadyPaid ? 'Artıq aktiv idi' : 'Abunəlik aktivləşdirildi!');
-                fetchStats();
             } else {
                 toast(`Kapital Bank statusu: ${data.paymentStatus || 'UNKNOWN'} — ödəniş tamamlanmayıb`, { icon: '⚠️' });
             }
@@ -79,11 +105,8 @@ const AdminRevenue = () => {
         if (!window.confirm('Kapital Bank statusundan asılı olmayaraq bu abunəliyi aktivləşdirirsiniz. Əminsiniz?')) return;
         setVerifying(orderId + '_force');
         try {
-            const { data } = await api.post(`/admin/revenue/force-activate/${orderId}`);
-            if (data.success) {
-                toast.success('Abunəlik məcburi aktivləşdirildi!');
-                fetchStats();
-            }
+            const data = await forceActivate.mutateAsync(orderId);
+            if (data.success) toast.success('Abunəlik məcburi aktivləşdirildi!');
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
         } finally {
@@ -95,15 +118,16 @@ const AdminRevenue = () => {
         if (!window.confirm('Bu pending orderi ləğv edirsiniz. Əminsiniz?')) return;
         setVerifying(orderId + '_cancel');
         try {
-            await api.post(`/admin/revenue/cancel-order/${orderId}`);
+            await cancelOrder.mutateAsync(orderId);
             toast.success('Order ləğv edildi');
-            fetchStats();
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
         } finally {
             setVerifying(null);
         }
     };
+
+    const loading = isLoading;
 
     const growthPositive = (stats?.growthPct ?? 0) >= 0;
 
@@ -116,7 +140,7 @@ const AdminRevenue = () => {
     return (
         <div className="p-6 md:p-8 space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Qazanc Statistikası</h1>
                     <p className="text-gray-500 mt-1 text-sm">Kapital Bank vasitəsilə gələn ödənişlər</p>
@@ -127,6 +151,50 @@ const AdminRevenue = () => {
                 >
                     <HiOutlineRefresh className="w-4 h-4" />
                     Yenilə
+                </button>
+            </div>
+
+            {/* Export bar */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-end gap-3">
+                <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-gray-500">Tarix (başlanğıc)</label>
+                    <input type="date" value={exportFrom} onChange={e => setExportFrom(e.target.value)}
+                        className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-gray-500">Tarix (son)</label>
+                    <input type="date" value={exportTo} onChange={e => setExportTo(e.target.value)}
+                        className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400" />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-gray-500">Status</label>
+                    <select value={exportStatus} onChange={e => setExportStatus(e.target.value)}
+                        className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:border-emerald-400">
+                        <option value="PAID">Ödənilmiş</option>
+                        <option value="PENDING">Gözləyən</option>
+                        <option value="FAILED">Uğursuz</option>
+                    </select>
+                </div>
+                <button
+                    disabled={exporting}
+                    onClick={async () => {
+                        setExporting(true);
+                        try {
+                            await downloadRevenueCsv({
+                                status: exportStatus,
+                                from: exportFrom ? `${exportFrom}T00:00:00` : undefined,
+                                to: exportTo ? `${exportTo}T23:59:59` : undefined,
+                            });
+                            toast.success('CSV yükləndi');
+                        } catch {
+                            toast.error('Export uğursuz oldu');
+                        } finally {
+                            setExporting(false);
+                        }
+                    }}
+                    className="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+                >
+                    {exporting ? 'Yüklənir...' : 'CSV Export'}
                 </button>
             </div>
 
@@ -222,6 +290,28 @@ const AdminRevenue = () => {
                 </div>
             </div>
 
+            {/* Status breakdown */}
+            {stats?.statusBreakdown?.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                    <h3 className="font-bold text-gray-800 text-sm mb-4">Order statuslarına görə</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {stats.statusBreakdown.map(s => {
+                            const meta = STATUS_META[s.status] || { label: s.status, dot: 'bg-gray-400', text: 'text-gray-700', bg: 'bg-gray-50' };
+                            return (
+                                <div key={s.status} className={`rounded-xl p-4 ${meta.bg}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
+                                        <span className={`text-xs font-bold uppercase tracking-wide ${meta.text}`}>{meta.label}</span>
+                                    </div>
+                                    <p className="text-2xl font-extrabold text-gray-900 tabular-nums">{s.count}</p>
+                                    <p className="text-xs text-gray-500 mt-1">{fmt(s.totalAmount)} AZN</p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {/* Pending orders — needs action */}
             {pending.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl shadow-sm">
@@ -290,6 +380,11 @@ const AdminRevenue = () => {
                             </tbody>
                         </table>
                     </div>
+                    {pending.length > 0 && (
+                        <div className="px-6 pb-4">
+                            <Pagination page={pendPage} totalPages={pendTotalPages} totalElements={pendTotal} onChange={setPendPage} />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -314,7 +409,7 @@ const AdminRevenue = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {stats?.recentPayments?.length > 0 ? stats.recentPayments.map((p, i) => (
+                            {stats?.recentPayments?.length > 0 ? pagedRecent.map((p, i) => (
                                 <tr key={i} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-3.5">
                                         <p className="font-semibold text-gray-900">{p.userName}</p>
@@ -343,6 +438,11 @@ const AdminRevenue = () => {
                         </tbody>
                     </table>
                 </div>
+                {(stats?.recentPayments?.length ?? 0) > 0 && (
+                    <div className="px-6 pb-4">
+                        <Pagination page={recentPage} totalPages={recentTotalPages} totalElements={recentTotal} onChange={setRecentPage} />
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,44 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     HiOutlinePlus, HiOutlineTrash, HiOutlinePencil,
     HiOutlineBookOpen, HiOutlineGlobe, HiOutlineUser,
     HiOutlineX, HiOutlineCheck
 } from 'react-icons/hi';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import {
+    useBankSubjects,
+    useCreateBankSubject,
+    useUpdateBankSubject,
+    useDeleteBankSubject,
+} from '../../hooks/admin/useAdminQuestionBank';
+import Pagination from '../../components/admin/Pagination';
 
 const AdminQuestionBank = () => {
     const navigate = useNavigate();
 
-    const [subjects, setSubjects] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [adding, setAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [newIsGlobal, setNewIsGlobal] = useState(false);
     const [editId, setEditId] = useState(null);
     const [editName, setEditName] = useState('');
 
-    useEffect(() => {
-        fetchSubjects();
-    }, []);
+    const [page, setPage] = useState(0);
+    const { data, isLoading: loading, error } = useBankSubjects({ page, size: 12 });
+    const subjects = data?.content ?? [];
+    const totalPages = data?.totalPages ?? 0;
+    const totalElements = data?.totalElements ?? 0;
+    const createSubject = useCreateBankSubject();
+    const updateSubject = useUpdateBankSubject();
+    const deleteSubject = useDeleteBankSubject();
 
-    const fetchSubjects = async () => {
-        try {
-            const { data } = await api.get('/bank/subjects');
-            setSubjects(data);
-        } catch {
-            toast.error('Fənnlər yüklənmədi');
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (error) toast.error('Fənnlər yüklənmədi');
 
     const handleAdd = async () => {
         if (!newName.trim()) return;
         try {
-            const { data } = await api.post('/bank/subjects', { name: newName.trim(), isGlobal: newIsGlobal });
-            setSubjects(prev => [data, ...prev]);
+            await createSubject.mutateAsync({ name: newName.trim(), isGlobal: newIsGlobal });
             setNewName('');
             setNewIsGlobal(false);
             setAdding(false);
@@ -51,8 +50,7 @@ const AdminQuestionBank = () => {
     const handleRename = async (id) => {
         if (!editName.trim()) return;
         try {
-            const { data } = await api.put(`/bank/subjects/${id}`, { name: editName.trim() });
-            setSubjects(prev => prev.map(s => s.id === id ? data : s));
+            await updateSubject.mutateAsync({ id, payload: { name: editName.trim() } });
             setEditId(null);
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
@@ -62,8 +60,7 @@ const AdminQuestionBank = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Bu fənni silmək istədiyinizdən əminsiniz? Bütün suallar da silinəcək.')) return;
         try {
-            await api.delete(`/bank/subjects/${id}`);
-            setSubjects(prev => prev.filter(s => s.id !== id));
+            await deleteSubject.mutateAsync(id);
             toast.success('Fənn silindi');
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
@@ -196,6 +193,7 @@ const AdminQuestionBank = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {ownSubjects.map(s => <SubjectCard key={s.id} subject={s} />)}
                             </div>
+                            <Pagination page={page} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />
                         </div>
                     )}
                 </div>

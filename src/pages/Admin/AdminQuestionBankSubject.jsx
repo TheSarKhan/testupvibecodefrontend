@@ -6,8 +6,15 @@ import {
     HiOutlineX, HiOutlineCheckCircle
 } from 'react-icons/hi';
 import { QuestionEditor, LatexPreview } from '../../components/ui';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import {
+    useBankSubjects,
+    useBankSubjectQuestions,
+    useCreateBankQuestion,
+    useUpdateBankQuestion,
+    useDeleteBankQuestion,
+} from '../../hooks/admin/useAdminQuestionBank';
+import Pagination from '../../components/admin/Pagination';
 
 // ── Type config ──────────────────────────────────────────────────────────────
 const BACKEND_TO_FRONTEND = {
@@ -192,13 +199,34 @@ const AdminQuestionBankSubject = () => {
     const { subjectId } = useParams();
     const navigate = useNavigate();
 
-    const [subject, setSubject] = useState(null);
     const [questions, setQuestions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState('');
     const [viewQuestion, setViewQuestion] = useState(null);
     const [editQuestion, setEditQuestion] = useState(null);
+
+    const [page, setPage] = useState(0);
+    const { data: subjectsPage } = useBankSubjects({ page: 0, size: 100 });
+    const subjects = subjectsPage?.content ?? [];
+    const { data: questionsPage, isLoading, error } = useBankSubjectQuestions(subjectId, { page, size: 20 });
+    const questionsData = questionsPage?.content ?? [];
+    const totalPages = questionsPage?.totalPages ?? 0;
+    const totalElements = questionsPage?.totalElements ?? 0;
+    const subject = subjects.find(s => String(s.id) === String(subjectId)) || { name: 'Fənn', isGlobal: false };
+    const loading = isLoading;
+
+    const createQuestion = useCreateBankQuestion();
+    const updateQuestion = useUpdateBankQuestion();
+    const deleteQuestion = useDeleteBankQuestion();
+    const saving = createQuestion.isPending || updateQuestion.isPending;
+
+    if (error) toast.error('Məlumatlar yüklənmədi');
+
+    // Sync local editor state when server data loads/refreshes
+    useEffect(() => {
+        if (questionsData) {
+            setQuestions(questionsData.map(bankToEditor));
+        }
+    }, [questionsData]);
 
     const filteredQuestions = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -209,45 +237,21 @@ const AdminQuestionBankSubject = () => {
         );
     }, [questions, search]);
 
-    useEffect(() => { fetchData(); }, [subjectId]);
-
-    const fetchData = async () => {
-        try {
-            const [subjectsRes, questionsRes] = await Promise.all([
-                api.get('/bank/subjects'),
-                api.get(`/bank/subjects/${subjectId}/questions`),
-            ]);
-            const found = subjectsRes.data.find(s => String(s.id) === String(subjectId));
-            setSubject(found || { name: 'Fənn', isGlobal: false });
-            setQuestions(questionsRes.data.map(bankToEditor));
-        } catch {
-            toast.error('Məlumatlar yüklənmədi');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const pagedQuestions = filteredQuestions; // page slicing now server-side
 
     const handleSave = async (localQuestion) => {
         if (!localQuestion.text.trim()) { toast.error('Sualın mətni boş ola bilməz'); return; }
-        setSaving(true);
         try {
             const payload = editorToBank(Number(subjectId), localQuestion);
-            let saved;
-            if (localQuestion._bankId) {
-                const { data } = await api.put(`/bank/questions/${localQuestion._bankId}`, payload);
-                saved = data;
-            } else {
-                const { data } = await api.post('/bank/questions', payload);
-                saved = data;
-            }
+            const saved = localQuestion._bankId
+                ? await updateQuestion.mutateAsync({ id: localQuestion._bankId, payload })
+                : await createQuestion.mutateAsync(payload);
             const updated = bankToEditor(saved);
             setQuestions(prev => prev.map(q => q.id === localQuestion.id ? updated : q));
             setEditQuestion(null);
             toast.success('Sual yadda saxlanıldı');
         } catch {
             toast.error('Yadda saxlanılmadı');
-        } finally {
-            setSaving(false);
         }
     };
 
@@ -257,7 +261,7 @@ const AdminQuestionBankSubject = () => {
         if (q._bankId) {
             if (!window.confirm('Bu sualı silmək istədiyinizdən əminsiniz?')) return;
             try {
-                await api.delete(`/bank/questions/${q._bankId}`);
+                await deleteQuestion.mutateAsync({ id: q._bankId, subjectId });
                 toast.success('Sual silindi');
             } catch {
                 toast.error('Əməliyyat uğursuz oldu');
@@ -268,9 +272,11 @@ const AdminQuestionBankSubject = () => {
     };
 
     const handleAddQuestion = () => {
-        const newQ = newEditorQuestion(questions.length);
+        const newQ = newEditorQuestion(totalElements);
         setQuestions(prev => [...prev, newQ]);
         setEditQuestion(newQ);
+        // Jump to last page where the new (unsaved) question will live
+        setPage(Math.max(0, Math.ceil((totalElements + 1) / 20) - 1));
     };
 
     if (loading) {
@@ -342,9 +348,9 @@ const AdminQuestionBankSubject = () => {
                                         <p>Axtarışa uyğun sual tapılmadı</p>
                                     </td>
                                 </tr>
-                            ) : filteredQuestions.map((q, idx) => (
+                            ) : pagedQuestions.map((q, idx) => (
                                 <tr key={q.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 py-3 text-xs text-gray-400 font-medium">{idx + 1}</td>
+                                    <td className="px-4 py-3 text-xs text-gray-400 font-medium">{page * 20 + idx + 1}</td>
                                     <td className="px-4 py-3">
                                         <div className="line-clamp-2 text-gray-800">
                                             <LatexPreview content={q.text || '—'} />
@@ -377,6 +383,10 @@ const AdminQuestionBankSubject = () => {
                         </tbody>
                     </table>
                 </div>
+            )}
+
+            {filteredQuestions.length > 0 && (
+                <Pagination page={page} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />
             )}
 
             {viewQuestion && <ViewModal question={viewQuestion} onClose={() => setViewQuestion(null)} />}

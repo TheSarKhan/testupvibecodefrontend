@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineMenu, HiOutlineX, HiOutlineMail, HiOutlineTrendingUp, HiOutlineTag } from 'react-icons/hi';
+import { HiOutlineChartBar, HiOutlineUsers, HiOutlineDocumentText, HiOutlineArrowLeft, HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineTemplate, HiOutlineCurrencyDollar, HiOutlineSpeakerphone, HiOutlineBell, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineMenu, HiOutlineX, HiOutlineMail, HiOutlineTrendingUp, HiOutlineTag, HiOutlineSearch } from 'react-icons/hi';
+import { useQuery } from '@tanstack/react-query';
 import api from '../../api/axios';
+import { adminKeys } from '../../hooks/admin/queryKeys';
+import CommandPalette from '../../components/admin/CommandPalette';
 
 const navGroups = [
     {
@@ -20,8 +23,7 @@ const navGroups = [
             { to: '/admin/oz-imtahanlar', label: 'Öz İmtahanlarım', icon: HiOutlineDocumentText },
             { to: '/admin/birge-imtahanlar', label: 'Birgə İmtahanlar', icon: HiOutlineUserGroup },
             { to: '/admin/muellim-imtahanlar', label: 'Müəllim İmtahanları', icon: HiOutlineAcademicCap },
-            { to: '/admin/fennler', label: 'Fənnlər', icon: HiOutlineBookOpen },
-            { to: '/admin/teqler', label: 'Teqlər', icon: HiOutlineTag },
+            { to: '/admin/fennler', label: 'Fənnlər & Teqlər', icon: HiOutlineBookOpen },
             { to: '/admin/sablonlar', label: 'Şablonlar', icon: HiOutlineTemplate },
             { to: '/admin/sual-bazasi', label: 'Sual Bazası', icon: HiOutlineBookOpen },
         ],
@@ -39,26 +41,35 @@ const navGroups = [
 const AdminLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [pendingCount, setPendingCount] = useState(0);
-    const [unreadContactCount, setUnreadContactCount] = useState(0);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [paletteOpen, setPaletteOpen] = useState(false);
 
-    // Close sidebar on route change (mobile)
     useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
+    // Global Cmd+K / Ctrl+K
     useEffect(() => {
-        const fetchCounts = () => {
-            api.get('/admin/collaborative-exams/pending-count')
-                .then(r => setPendingCount(r.data.count || 0))
-                .catch(() => {});
-            api.get('/admin/contact-messages/unread-count')
-                .then(r => setUnreadContactCount(r.data.count || 0))
-                .catch(() => {});
+        const onKey = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                setPaletteOpen(true);
+            }
         };
-        fetchCounts();
-        const interval = setInterval(fetchCounts, 60000);
-        return () => clearInterval(interval);
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
     }, []);
+
+    const { data: pendingData } = useQuery({
+        queryKey: adminKeys.collaborativeExamsPendingCount,
+        queryFn: () => api.get('/admin/collaborative-exams/pending-count').then(r => r.data),
+        refetchInterval: 60_000,
+    });
+    const { data: unreadData } = useQuery({
+        queryKey: adminKeys.contactMessagesUnreadCount,
+        queryFn: () => api.get('/admin/contact-messages/unread-count').then(r => r.data),
+        refetchInterval: 60_000,
+    });
+    const pendingCount = pendingData?.count ?? 0;
+    const unreadContactCount = unreadData?.count ?? 0;
 
     const SidebarContent = () => (
         <>
@@ -71,6 +82,14 @@ const AdminLayout = () => {
                     <HiOutlineX className="w-5 h-5" />
                 </button>
             </div>
+            <button
+                onClick={() => setPaletteOpen(true)}
+                className="mx-3 mt-3 flex items-center gap-2 px-3 py-2 text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+                <HiOutlineSearch className="w-4 h-4" />
+                <span className="flex-1 text-left">Tez axtar...</span>
+                <kbd className="text-[10px] font-bold bg-white border border-gray-200 text-gray-400 px-1.5 py-0.5 rounded">⌘K</kbd>
+            </button>
             <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
                 {navGroups.map(group => (
                     <div key={group.label}>
@@ -150,6 +169,7 @@ const AdminLayout = () => {
                     <Outlet />
                 </main>
             </div>
+            <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
         </div>
     );
 };

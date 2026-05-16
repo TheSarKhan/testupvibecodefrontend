@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
     HiOutlineClipboardList,
     HiOutlineSearch,
@@ -50,7 +50,8 @@ import {
     // System
     HiOutlineCog,
 } from 'react-icons/hi';
-import api from '../../api/axios';
+import { useAdminLogs } from '../../hooks/admin/useAdminLogs';
+import Pagination from '../../components/admin/Pagination';
 
 // ─── Action metadata: icon + label + intent color ──────────────────────────
 // intent: emerald (create/success) | blue (update) | rose (delete/fail) |
@@ -237,17 +238,14 @@ const SkeletonRow = () => (
 );
 
 const AdminLogs = () => {
-    const [logs, setLogs] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [period, setPeriod] = useState('');
     const [activeCategory, setActiveCategory] = useState('ALL');
+    const [actor, setActor] = useState('');
+    const [debouncedActor, setDebouncedActor] = useState('');
     const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
 
-    // Debounce search
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search);
@@ -256,39 +254,39 @@ const AdminLogs = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
-    const fetchLogs = useCallback(() => {
-        setLoading(true);
-        const params = new URLSearchParams();
-        params.set('page', page);
-        params.set('size', 30);
-        if (debouncedSearch) params.set('search', debouncedSearch);
-        if (period) params.set('period', period);
-
-        api.get(`/admin/logs?${params.toString()}`)
-            .then(res => {
-                const data = res.data;
-                setLogs(data.content || []);
-                setTotalPages(data.totalPages || 0);
-                setTotalElements(data.totalElements || 0);
-            })
-            .catch(() => setLogs([]))
-            .finally(() => setLoading(false));
-    }, [page, debouncedSearch, period]);
-
     useEffect(() => {
-        fetchLogs();
-    }, [fetchLogs]);
+        const timer = setTimeout(() => {
+            setDebouncedActor(actor);
+            setPage(0);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [actor]);
 
-    // Reset page when period changes
+    const { data, isFetching, refetch } = useAdminLogs({
+        search: debouncedSearch,
+        period,
+        category: activeCategory,
+        actor: debouncedActor,
+        page,
+        size: 30,
+    });
+    const logs = data?.content ?? [];
+    const totalPages = data?.totalPages ?? 0;
+    const totalElements = data?.totalElements ?? 0;
+    const loading = isFetching;
+    const fetchLogs = refetch;
+
     const handlePeriodChange = (p) => {
         setPeriod(p);
         setPage(0);
     };
 
-    // Client-side category filter
-    const filteredLogs = activeCategory === 'ALL'
-        ? logs
-        : logs.filter(l => l.category === activeCategory);
+    const handleCategoryChange = (cat) => {
+        setActiveCategory(cat);
+        setPage(0);
+    };
+
+    const filteredLogs = logs;
 
     return (
         <div className="p-6 max-w-6xl mx-auto">
@@ -348,7 +346,7 @@ const AdminLogs = () => {
                     {CATEGORIES.map(cat => (
                         <button
                             key={cat.key}
-                            onClick={() => setActiveCategory(cat.key)}
+                            onClick={() => handleCategoryChange(cat.key)}
                             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors ${
                                 activeCategory === cat.key
                                     ? cat.key === 'ALL'
@@ -360,6 +358,24 @@ const AdminLogs = () => {
                             {cat.label}
                         </button>
                     ))}
+                </div>
+
+                {/* Advanced filters */}
+                <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex flex-wrap items-center gap-3">
+                    <div className="relative flex-1 min-w-[200px] max-w-xs">
+                        <input
+                            type="text"
+                            placeholder="Actor email filter..."
+                            value={actor}
+                            onChange={e => setActor(e.target.value)}
+                            className="w-full pl-3 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300 focus:border-indigo-400 bg-white"
+                        />
+                    </div>
+                    {actor && (
+                        <button onClick={() => setActor('')} className="text-xs text-gray-400 hover:text-gray-700">
+                            Təmizlə
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -387,34 +403,58 @@ const AdminLogs = () => {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 px-1">
-                    <button
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                        <HiOutlineChevronLeft className="w-4 h-4" />
-                        Əvvəlki
-                    </button>
-                    <span className="text-sm text-gray-500">
-                        Səhifə {page + 1} / {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={page >= totalPages - 1}
-                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                        Növbəti
-                        <HiOutlineChevronRight className="w-4 h-4" />
-                    </button>
-                </div>
+            {totalElements > 0 && (
+                <Pagination page={page} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />
             )}
         </div>
     );
 };
 
+const tryParseJson = (str) => {
+    if (!str || typeof str !== 'string') return null;
+    const trimmed = str.trim();
+    if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return null;
+    try { return JSON.parse(trimmed); } catch { return null; }
+};
+
+const DetailsViewer = ({ details }) => {
+    const parsed = tryParseJson(details);
+    if (parsed) {
+        return (
+            <pre className="text-xs bg-gray-900 text-emerald-200 p-3 rounded-lg overflow-x-auto font-mono max-h-80">
+{JSON.stringify(parsed, null, 2)}
+            </pre>
+        );
+    }
+    const kvPattern = /([A-Za-zƏəĞğİıÖöÜüÇçŞş\s]+):\s*([^,\n]+)/g;
+    if (details.includes(':') && (details.includes(',') || details.length < 200)) {
+        const parts = [];
+        let m;
+        while ((m = kvPattern.exec(details)) !== null) {
+            parts.push({ key: m[1].trim(), value: m[2].trim() });
+        }
+        if (parts.length > 1) {
+            return (
+                <div className="bg-gray-50 rounded-lg p-3 space-y-1.5">
+                    {parts.map((p, i) => (
+                        <div key={i} className="flex items-baseline gap-2 text-xs">
+                            <span className="font-semibold text-gray-600 shrink-0">{p.key}:</span>
+                            <span className="text-gray-800 font-mono">{p.value}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+    }
+    return (
+        <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap break-words font-mono">
+            {details}
+        </div>
+    );
+};
+
 const LogRow = ({ log }) => {
+    const [expanded, setExpanded] = useState(false);
     const meta = ACTION_META[log.action] || {
         icon: HiOutlineCog,
         label: log.action,
@@ -422,53 +462,67 @@ const LogRow = ({ log }) => {
     };
     const Icon = meta.icon;
     const styles = INTENT_STYLES[meta.intent] || INTENT_STYLES.gray;
+    const hasDetails = log.details && log.details.trim().length > 0;
 
     return (
-        <div className="flex items-start gap-4 px-6 py-4 hover:bg-gray-50/60 transition-colors">
-            {/* Action icon */}
-            <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ring-1 ${styles.circle}`}>
-                <Icon className="w-5 h-5" />
-            </div>
+        <div className="px-6 py-4 hover:bg-gray-50/60 transition-colors">
+            <div
+                onClick={() => hasDetails && setExpanded(!expanded)}
+                className={`flex items-start gap-4 ${hasDetails ? 'cursor-pointer' : ''}`}
+            >
+                <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ring-1 ${styles.circle}`}>
+                    <Icon className="w-5 h-5" />
+                </div>
 
-            {/* Main info */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-bold rounded-md ${styles.badge}`}>
-                        {meta.label}
-                    </span>
-                    <span className="text-sm font-semibold text-gray-800 truncate">
-                        {log.actorName || log.actorEmail || '—'}
-                    </span>
-                    {log.actorEmail && log.actorName && log.actorEmail !== log.actorName && (
-                        <span className="text-xs text-gray-400 truncate">{log.actorEmail}</span>
-                    )}
-                    {log.targetType && (
-                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium uppercase tracking-wide">
-                            {log.targetType}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 text-[11px] font-bold rounded-md ${styles.badge}`}>
+                            {meta.label}
                         </span>
+                        <span className="text-sm font-semibold text-gray-800 truncate">
+                            {log.actorName || log.actorEmail || '—'}
+                        </span>
+                        {log.actorEmail && log.actorName && log.actorEmail !== log.actorName && (
+                            <span className="text-xs text-gray-400 truncate">{log.actorEmail}</span>
+                        )}
+                        {log.targetType && (
+                            <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium uppercase tracking-wide">
+                                {log.targetType}
+                            </span>
+                        )}
+                    </div>
+                    {log.targetName && (
+                        <p className="text-sm text-gray-600 mt-0.5 truncate">
+                            {log.targetName}
+                        </p>
+                    )}
+                    {hasDetails && !expanded && (
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                            {log.details}
+                        </p>
                     )}
                 </div>
-                {log.targetName && (
-                    <p className="text-sm text-gray-600 mt-0.5 truncate">
-                        {log.targetName}
-                    </p>
-                )}
-                {log.details && (
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">
-                        {log.details}
-                    </p>
-                )}
+
+                <div className="flex-shrink-0 text-right flex items-center gap-2">
+                    {hasDetails && (
+                        <span className="text-[10px] text-indigo-500 font-semibold">
+                            {expanded ? '▲' : '▼'}
+                        </span>
+                    )}
+                    <span
+                        className="text-xs text-gray-400 cursor-default"
+                        title={formatExact(log.createdAt)}
+                    >
+                        {relativeTime(log.createdAt)}
+                    </span>
+                </div>
             </div>
 
-            {/* Timestamp */}
-            <div className="flex-shrink-0 text-right">
-                <span
-                    className="text-xs text-gray-400 cursor-default"
-                    title={formatExact(log.createdAt)}
-                >
-                    {relativeTime(log.createdAt)}
-                </span>
-            </div>
+            {hasDetails && expanded && (
+                <div className="mt-3 pl-14">
+                    <DetailsViewer details={log.details} />
+                </div>
+            )}
         </div>
     );
 };

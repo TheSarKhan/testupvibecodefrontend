@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
     HiOutlineUsers, HiOutlineAcademicCap, HiOutlineDocumentText,
@@ -6,7 +5,12 @@ import {
     HiOutlineShieldCheck, HiOutlineCheckCircle, HiOutlineClock,
     HiOutlineLightningBolt, HiOutlineCurrencyDollar, HiOutlineTrendingDown,
 } from 'react-icons/hi';
-import api from '../../api/axios';
+import {
+    ResponsiveContainer, BarChart as RBarChart, Bar, XAxis, YAxis,
+    Tooltip, CartesianGrid, LineChart, Line,
+} from 'recharts';
+import { useAdminStats } from '../../hooks/admin/useAdminStats';
+import { useAdminPendingOrders, useAdminRevenue } from '../../hooks/admin/useAdminRevenue';
 
 /* ─── helpers ─── */
 const monthNames = { '01':'Yan','02':'Fev','03':'Mar','04':'Apr','05':'May','06':'İyn','07':'İyl','08':'Avq','09':'Sen','10':'Okt','11':'Noy','12':'Dek' };
@@ -24,55 +28,65 @@ const statusBadge = (status) => {
     return <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${map[status]||'bg-gray-100 text-gray-600'}`}>{labels[status]||status}</span>;
 };
 
-/* ─── mini bar chart ─── */
-const MiniBar = ({ data, valueKey = 'count', color }) => {
-    if (!data?.length) return <div className="flex items-end justify-center gap-1 h-14 text-gray-200 text-xs">—</div>;
-    const max = Math.max(...data.map(d => d[valueKey]), 1);
+/* ─── full bar chart (Recharts) ─── */
+const BAR_COLORS = {
+    'bg-indigo-400': '#818cf8',
+    'bg-violet-400': '#a78bfa',
+    'bg-emerald-400': '#34d399',
+};
+
+const monthTick = (m) => monthNames[m?.split?.('-')?.[1]] || m;
+
+const BarChart = ({ data, valueKey = 'count', formatVal, color }) => {
+    if (!data?.length) return <div className="flex items-center justify-center h-32 text-gray-300 text-sm">Məlumat yoxdur</div>;
+    const fill = BAR_COLORS[color] || '#818cf8';
     return (
-        <div className="flex items-end gap-1 h-14">
-            {data.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                    <div className={`w-full rounded-sm ${color}`} style={{ height: `${Math.max((d[valueKey] / max) * 48, d[valueKey] > 0 ? 4 : 1)}px` }} />
-                    <span className="text-[8px] text-gray-300">{monthNames[d.month?.split('-')[1]] || ''}</span>
-                </div>
-            ))}
+        <div className="h-32">
+            <ResponsiveContainer width="100%" height="100%">
+                <RBarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: -20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis dataKey="month" tickFormatter={monthTick} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#d1d5db' }} axisLine={false} tickLine={false} tickFormatter={formatVal} width={40} />
+                    <Tooltip
+                        formatter={(v) => [formatVal ? formatVal(v) : v, valueKey === 'revenue' ? 'AZN' : 'Say']}
+                        labelFormatter={monthTick}
+                        contentStyle={{ borderRadius: 10, fontSize: 12, border: '1px solid #e5e7eb', padding: '6px 10px' }}
+                        cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                    />
+                    <Bar dataKey={valueKey} fill={fill} radius={[6, 6, 0, 0]} />
+                </RBarChart>
+            </ResponsiveContainer>
         </div>
     );
 };
 
-/* ─── full bar chart ─── */
-const BarChart = ({ data, valueKey = 'count', formatVal, color }) => {
-    if (!data?.length) return <div className="flex items-center justify-center h-32 text-gray-300 text-sm">Məlumat yoxdur</div>;
-    const max = Math.max(...data.map(d => d[valueKey]), 1);
+const SparkLine = ({ data, valueKey = 'count' }) => {
+    if (!data?.length) return <div className="h-14 flex items-center justify-center text-white/40 text-xs">—</div>;
     return (
-        <div className="flex items-end gap-2 h-32">
-            {data.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-xs font-bold text-gray-500">{d[valueKey] > 0 ? (formatVal ? formatVal(d[valueKey]) : d[valueKey]) : ''}</span>
-                    <div className={`w-full rounded-t-lg ${color}`} style={{ height: `${Math.max((d[valueKey] / max) * 88, d[valueKey] > 0 ? 6 : 2)}px` }} />
-                    <span className="text-xs text-gray-400">{monthNames[d.month?.split('-')[1]] || d.month}</span>
-                </div>
-            ))}
+        <div className="h-14">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                    <Line type="monotone" dataKey={valueKey} stroke="rgba(255,255,255,0.85)" strokeWidth={2} dot={false} />
+                    <Tooltip
+                        formatter={(v) => valueKey === 'revenue' ? `${Math.round(v)} ₼` : v}
+                        labelFormatter={monthTick}
+                        contentStyle={{ borderRadius: 8, fontSize: 11, border: 'none', padding: '4px 8px' }}
+                    />
+                </LineChart>
+            </ResponsiveContainer>
         </div>
     );
 };
 
 /* ─── component ─── */
 const AdminDashboard = () => {
-    const [stats, setStats] = useState(null);
-    const [revenue, setRevenue] = useState(null);
-    const [pendingOrders, setPendingOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { data: stats, isLoading: statsLoading } = useAdminStats();
+    const { data: revenue } = useAdminRevenue();
+    const { data: pendingPage } = useAdminPendingOrders({ page: 0, size: 1 });
+    const pendingOrders = pendingPage?.content ?? [];
+    const pendingCount = pendingPage?.totalElements ?? 0;
 
-    useEffect(() => {
-        Promise.all([
-            api.get('/admin/stats').then(r => r.data),
-            api.get('/admin/revenue').then(r => r.data).catch(() => null),
-            api.get('/admin/revenue/pending-orders').then(r => r.data).catch(() => []),
-        ]).then(([s, r, p]) => { setStats(s); setRevenue(r); setPendingOrders(p); }).finally(() => setLoading(false));
-    }, []);
-
-    if (loading) return (
+    if (statsLoading) return (
         <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
         </div>
@@ -100,11 +114,11 @@ const AdminDashboard = () => {
             </div>
 
             {/* Pending payments alert */}
-            {pendingOrders.length > 0 && (
+            {pendingCount > 0 && (
                 <Link to="/admin/qazanc" className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 hover:bg-amber-100 transition-colors">
                     <HiOutlineTrendingDown className="w-5 h-5 text-amber-600 shrink-0" />
                     <div className="flex-1">
-                        <p className="text-sm font-bold text-amber-800">{pendingOrders.length} gözləyən ödəniş — aktivləşdirilməyib</p>
+                        <p className="text-sm font-bold text-amber-800">{pendingCount} gözləyən ödəniş — aktivləşdirilməyib</p>
                         <p className="text-xs text-amber-600">Kapital Bank-da tamamlandı amma abunəlik yaranmadı. Klikləyin →</p>
                     </div>
                 </Link>
@@ -141,7 +155,7 @@ const AdminDashboard = () => {
                     </div>
                     {revenueMonthly.length > 0 && (
                         <div className="mt-4 opacity-60 group-hover:opacity-80 transition-opacity">
-                            <MiniBar data={revenueMonthly} valueKey="revenue" color="bg-white/70" />
+                            <SparkLine data={revenueMonthly} valueKey="revenue" />
                         </div>
                     )}
                 </Link>
@@ -172,7 +186,7 @@ const AdminDashboard = () => {
                     </div>
                     {stats?.monthlySubmissions?.length > 0 && (
                         <div className="mt-4 opacity-50">
-                            <MiniBar data={stats.monthlySubmissions} valueKey="count" color="bg-white/70" />
+                            <SparkLine data={stats.monthlySubmissions} valueKey="count" />
                         </div>
                     )}
                 </div>

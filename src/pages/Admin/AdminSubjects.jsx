@@ -3,8 +3,17 @@ import {
     HiOutlineBookOpen, HiOutlinePlus, HiOutlineTrash, HiOutlineTag,
     HiOutlinePencil, HiOutlineColorSwatch, HiOutlineChevronRight
 } from 'react-icons/hi';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import {
+    useAdminSubjects,
+    useAddSubject,
+    useDeleteSubject,
+    useAddTopic,
+    useDeleteTopic,
+    useUpdateSubjectMetadata,
+} from '../../hooks/admin/useAdminSubjects';
+import Pagination from '../../components/admin/Pagination';
+import TagsTab from './subjects/TagsTab';
 
 const PRESET_COLORS = [
     '#6366f1', '#0ea5e9', '#10b981', '#22c55e', '#f59e0b',
@@ -30,25 +39,37 @@ const GRADE_SECTION_LABELS = {
 };
 
 const AdminSubjects = () => {
-    const [subjects, setSubjects] = useState([]);
+    const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' | 'tags'
     const [selectedId, setSelectedId] = useState(null);
     const [newName, setNewName] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [adding, setAdding] = useState(false);
-
-    // Right panel state
     const [newTopicName, setNewTopicName] = useState('');
     const [newTopicGrade, setNewTopicGrade] = useState('');
-    const [addingTopic, setAddingTopic] = useState(false);
-
-    // Metadata editor state
     const [metaColor, setMetaColor] = useState('');
     const [metaDesc, setMetaDesc] = useState('');
-    const [savingMeta, setSavingMeta] = useState(false);
 
+    const [subjPage, setSubjPage] = useState(0);
+    const { data: subjData, isLoading: loading, error } = useAdminSubjects({ page: subjPage, size: 15 });
+    const subjects = subjData?.content ?? [];
+    const subjTotalPages = subjData?.totalPages ?? 0;
+    const subjTotal = subjData?.totalElements ?? 0;
+    const addSubject = useAddSubject();
+    const deleteSubjectMut = useDeleteSubject();
+    const addTopicMut = useAddTopic();
+    const deleteTopicMut = useDeleteTopic();
+    const saveMetaMut = useUpdateSubjectMetadata();
+
+    const adding = addSubject.isPending;
+    const addingTopic = addTopicMut.isPending;
+    const savingMeta = saveMetaMut.isPending;
+
+    if (error) toast.error('Fənnlər yüklənmədi');
+
+    // Auto-select first subject when list loads
     useEffect(() => {
-        fetchSubjects();
-    }, []);
+        if (subjects.length > 0 && !selectedId) {
+            setSelectedId(subjects[0].id);
+        }
+    }, [subjects, selectedId]);
 
     const selectedSubject = useMemo(
         () => subjects.find(s => s.id === selectedId) || null,
@@ -62,35 +83,17 @@ const AdminSubjects = () => {
         }
     }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const fetchSubjects = async () => {
-        try {
-            const { data } = await api.get('/admin/subjects');
-            setSubjects(data);
-            if (data.length > 0 && !selectedId) {
-                setSelectedId(data[0].id);
-            }
-        } catch {
-            toast.error('Fənnlər yüklənmədi');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleAddSubject = async (e) => {
         e.preventDefault();
         const trimmed = newName.trim();
         if (!trimmed) return;
-        setAdding(true);
         try {
-            const { data } = await api.post('/admin/subjects', { name: trimmed });
-            setSubjects(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name, 'az')));
+            const data = await addSubject.mutateAsync(trimmed);
             setNewName('');
             setSelectedId(data.id);
             toast.success(`"${data.name}" əlavə edildi`);
-        } catch (error) {
-            if (!error._handled) toast.error(error.response?.data?.message || 'Əməliyyat uğursuz oldu');
-        } finally {
-            setAdding(false);
+        } catch (err) {
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         }
     };
 
@@ -101,49 +104,38 @@ const AdminSubjects = () => {
         }
         if (!window.confirm(`"${subject.name}" fənnini silmək istədiyinizdən əminsiniz?`)) return;
         try {
-            await api.delete(`/admin/subjects/${subject.id}`);
-            setSubjects(prev => prev.filter(s => s.id !== subject.id));
+            await deleteSubjectMut.mutateAsync(subject.id);
             if (selectedId === subject.id) {
                 const remaining = subjects.filter(s => s.id !== subject.id);
                 setSelectedId(remaining.length > 0 ? remaining[0].id : null);
             }
             toast.success(`"${subject.name}" silindi`);
-        } catch (error) {
-            if (!error._handled) toast.error(error.response?.data?.message || 'Əməliyyat uğursuz oldu');
+        } catch (err) {
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         }
     };
 
     const handleAddTopic = async () => {
         const trimmed = newTopicName.trim();
         if (!trimmed || !selectedId) return;
-        setAddingTopic(true);
         try {
-            const { data } = await api.post(`/admin/subjects/${selectedId}/topics`, {
+            await addTopicMut.mutateAsync({
+                subjectId: selectedId,
                 name: trimmed,
                 gradeLevel: newTopicGrade || null,
             });
-            setSubjects(prev => prev.map(s => {
-                if (s.id !== selectedId) return s;
-                return { ...s, topics: [...(s.topics || []), data] };
-            }));
             setNewTopicName('');
             setNewTopicGrade('');
             toast.success('Mövzu əlavə edildi');
-        } catch (error) {
-            if (!error._handled) toast.error(error.response?.data?.message || 'Əməliyyat uğursuz oldu');
-        } finally {
-            setAddingTopic(false);
+        } catch (err) {
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
         }
     };
 
     const handleRemoveTopic = async (topicId) => {
         if (!selectedId) return;
         try {
-            await api.delete(`/admin/subjects/${selectedId}/topics/${topicId}`);
-            setSubjects(prev => prev.map(s => {
-                if (s.id !== selectedId) return s;
-                return { ...s, topics: (s.topics || []).filter(t => t.id !== topicId) };
-            }));
+            await deleteTopicMut.mutateAsync({ subjectId: selectedId, topicId });
             toast.success('Mövzu silindi');
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
@@ -152,18 +144,15 @@ const AdminSubjects = () => {
 
     const handleSaveMeta = async () => {
         if (!selectedId) return;
-        setSavingMeta(true);
         try {
-            const { data } = await api.put(`/admin/subjects/${selectedId}/metadata`, {
+            await saveMetaMut.mutateAsync({
+                subjectId: selectedId,
                 color: metaColor || null,
                 description: metaDesc || null,
             });
-            setSubjects(prev => prev.map(s => s.id === selectedId ? { ...s, ...data } : s));
             toast.success('Metadata yadda saxlanıldı');
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
-        } finally {
-            setSavingMeta(false);
         }
     };
 
@@ -192,10 +181,27 @@ const AdminSubjects = () => {
     return (
         <div className="p-6">
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Fənn İdarəetməsi</h1>
-                <p className="text-sm text-gray-500 mt-1">Müəllimlərin imtahan yaradarkən seçə biləcəyi fənn siyahısı</p>
+                <h1 className="text-2xl font-bold text-gray-900">Kontent Taksonomiyası</h1>
+                <p className="text-sm text-gray-500 mt-1">Fənnlər və imtahan teqləri</p>
             </div>
 
+            {/* Tab switcher */}
+            <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+                <button
+                    onClick={() => setActiveTab('subjects')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'subjects' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Fənnlər
+                </button>
+                <button
+                    onClick={() => setActiveTab('tags')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'tags' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Teqlər
+                </button>
+            </div>
+
+            {activeTab === 'tags' ? <TagsTab /> : (
             <div className="flex gap-6 min-h-[600px]">
                 {/* ── Left panel: subject list ── */}
                 <div className="w-72 shrink-0 flex flex-col gap-3">
@@ -227,7 +233,7 @@ const AdminSubjects = () => {
                         {subjects.length === 0 ? (
                             <p className="text-center text-gray-400 py-10 text-sm">Heç bir fənn tapılmadı</p>
                         ) : (
-                            <ul className="divide-y divide-gray-50 max-h-[520px] overflow-y-auto">
+                            <ul className="divide-y divide-gray-50 min-h-[520px] max-h-[520px] overflow-y-auto">
                                 {subjects.map(subject => {
                                     const topicCount = (subject.topics || []).length;
                                     const isSelected = subject.id === selectedId;
@@ -263,6 +269,11 @@ const AdminSubjects = () => {
                                     );
                                 })}
                             </ul>
+                        )}
+                        {subjects.length > 0 && (
+                            <div className="px-3 pb-3">
+                                <Pagination page={subjPage} totalPages={subjTotalPages} totalElements={subjTotal} onChange={setSubjPage} maxButtons={3} compact />
+                            </div>
                         )}
                     </div>
                 </div>
@@ -440,6 +451,7 @@ const AdminSubjects = () => {
                     </div>
                 )}
             </div>
+            )}
         </div>
     );
 };

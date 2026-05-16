@@ -1,12 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
     HiOutlineSearch, HiOutlineTrash, HiOutlineGlobe, HiOutlineLockClosed,
     HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineExternalLink,
     HiOutlineChartBar,
 } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import {
+    useAdminExams,
+    useToggleSitePublished,
+    useSetExamPrice,
+    useDeleteExam,
+} from '../../hooks/admin/useAdminExams';
+import TableSkeleton from '../../components/admin/TableSkeleton';
+import Pagination from '../../components/admin/Pagination';
 
 const STATUSES = [
     { value: '', label: 'Hamısı' },
@@ -27,35 +34,29 @@ const statusLabel = {
 
 const AdminExams = () => {
     const navigate = useNavigate();
-    const [exams, setExams] = useState([]);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
-    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [page, setPage] = useState(0);
     const [searchInput, setSearchInput] = useState('');
     const [priceInputs, setPriceInputs] = useState({});
-    const [savingPrice, setSavingPrice] = useState({});
 
-    const fetchExams = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams({ page, size: 20, teacherRoleName: 'TEACHER' });
-            if (search) params.set('search', search);
-            if (statusFilter) params.set('status', statusFilter);
-            const { data } = await api.get(`/admin/exams?${params}`);
-            setExams(data.content);
-            setTotalPages(data.totalPages);
-            setTotalElements(data.totalElements);
-        } catch {
-            toast.error('İmtahanlar yüklənmədi');
-        } finally {
-            setLoading(false);
-        }
-    }, [search, statusFilter, page]);
+    const { data, isFetching, error } = useAdminExams({
+        search,
+        status: statusFilter,
+        teacherRoleName: 'TEACHER',
+        page,
+        size: 20,
+    });
+    if (error) toast.error('İmtahanlar yüklənmədi');
+    const exams = data?.content ?? [];
+    const totalPages = data?.totalPages ?? 0;
+    const totalElements = data?.totalElements ?? 0;
+    const loading = isFetching;
 
-    useEffect(() => { fetchExams(); }, [fetchExams]);
+    const togglePublish = useToggleSitePublished();
+    const setPrice = useSetExamPrice();
+    const deleteExamMut = useDeleteExam();
+    const savingPrice = setPrice.isPending && setPrice.variables ? { [setPrice.variables.examId]: true } : {};
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -64,14 +65,10 @@ const AdminExams = () => {
     };
 
     const handleToggleSitePublish = async (examId) => {
-        const prev = exams.find(e => e.id === examId)?.sitePublished;
-        setExams(exams.map(e => e.id === examId ? { ...e, sitePublished: !prev } : e));
         try {
-            const { data } = await api.patch(`/admin/exams/${examId}/site-publish`);
-            setExams(ex => ex.map(e => e.id === examId ? { ...e, sitePublished: data.sitePublished } : e));
+            const data = await togglePublish.mutateAsync(examId);
             toast.success(data.sitePublished ? 'Saytda paylaşıldı' : 'Saytdan silindi');
         } catch {
-            setExams(exams.map(e => e.id === examId ? { ...e, sitePublished: prev } : e));
             toast.error('Əməliyyat uğursuz oldu');
         }
     };
@@ -87,24 +84,19 @@ const AdminExams = () => {
             toast.error('Düzgün qiymət daxil edin');
             return;
         }
-        setSavingPrice(prev => ({ ...prev, [examId]: true }));
         try {
-            const { data } = await api.patch(`/admin/exams/${examId}/price`, { price });
-            setExams(ex => ex.map(e => e.id === examId ? { ...e, price: data.price } : e));
+            await setPrice.mutateAsync({ examId, price });
             setPriceInputs(prev => { const n = { ...prev }; delete n[examId]; return n; });
             toast.success('Qiymət yadda saxlandı');
         } catch {
             toast.error('Qiymət saxlanılmadı');
-        } finally {
-            setSavingPrice(prev => ({ ...prev, [examId]: false }));
         }
     };
 
     const handleDelete = async (examId, title) => {
         if (!window.confirm(`"${title}" imtahanını silmək istədiyinizə əminsiniz?`)) return;
         try {
-            await api.delete(`/admin/exams/${examId}`);
-            setExams(exams.filter(e => e.id !== examId));
+            await deleteExamMut.mutateAsync(examId);
             toast.success('İmtahan silindi');
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
@@ -157,10 +149,8 @@ const AdminExams = () => {
 
             {/* Table */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {loading ? (
-                    <div className="flex justify-center py-20">
-                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
-                    </div>
+                {loading && exams.length === 0 ? (
+                    <TableSkeleton rows={6} cols={5} />
                 ) : exams.length === 0 ? (
                     <div className="text-center py-20 text-gray-400">İmtahan tapılmadı</div>
                 ) : (
@@ -263,21 +253,7 @@ const AdminExams = () => {
                 )}
             </div>
 
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                    <span className="text-sm text-gray-500">Səhifə {page + 1} / {totalPages}</span>
-                    <div className="flex gap-2">
-                        <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
-                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors">
-                            <HiOutlineChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}
-                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors">
-                            <HiOutlineChevronRight className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <Pagination page={page} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />
         </div>
     );
 };

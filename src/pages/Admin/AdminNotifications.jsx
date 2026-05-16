@@ -1,291 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useAdminUsers } from '../../hooks/admin/useAdminUsers';
+import { useSendAdminNotification } from '../../hooks/admin/useAdminNotifications';
 import {
     HiBell, HiMail, HiUsers, HiUserGroup, HiShieldCheck, HiAcademicCap,
-    HiPaperClip, HiX, HiCheckCircle, HiClock, HiChevronLeft, HiChevronRight,
-    HiSearch, HiCheck, HiInformationCircle, HiOutlineSpeakerphone, HiOutlineExclamationCircle, HiOutlineLink, HiOutlinePencilAlt
+    HiPaperClip, HiX, HiCheckCircle, HiClock, HiInformationCircle,
+    HiOutlineSpeakerphone, HiOutlineExclamationCircle, HiOutlineLink, HiOutlinePencilAlt
 } from 'react-icons/hi';
-import api from '../../api/axios';
 import toast from 'react-hot-toast';
-
-// ─── Sabitlər ────────────────────────────────────────────────────────────────
-
-const ROLE_OPTIONS = [
-    { value: 'STUDENT', label: 'Tələbələr', icon: HiUserGroup, color: 'emerald' },
-    { value: 'TEACHER', label: 'Müəllimlər', icon: HiAcademicCap, color: 'indigo' },
-    { value: 'ADMIN', label: 'Adminlər', icon: HiShieldCheck, color: 'purple' },
-];
-
-const CHANNEL_LABELS = { SITE: 'Sayt', GMAIL: 'Gmail', SENDPULSE: 'SendPulse' };
-const TARGET_LABELS = { ALL: 'Hamısı', ROLE: 'Rola görə', SELECTED: 'Seçilmiş' };
-
-const fmtDate = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-};
-
-// ─── User seçim komponenti ────────────────────────────────────────────────────
-
-const UserSelector = ({ selectedIds, onChange }) => {
-    const [search, setSearch] = useState('');
-    const [users, setUsers] = useState([]);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [loading, setLoading] = useState(false);
-
-    const fetchUsers = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams({ page, size: 10 });
-            if (search.trim()) params.set('search', search.trim());
-            const { data } = await api.get(`/admin/users?${params}`);
-            setUsers(data.content || []);
-            setTotalPages(data.totalPages || 0);
-        } catch {
-            toast.error('İstifadəçilər yüklənə bilmədi');
-        } finally {
-            setLoading(false);
-        }
-    }, [search, page]);
-
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
-
-    useEffect(() => {
-        setPage(0);
-    }, [search]);
-
-    const toggle = (id) => {
-        onChange(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        );
-    };
-
-    const toggleAll = () => {
-        const pageIds = users.map(u => u.id);
-        const allSelected = pageIds.every(id => selectedIds.includes(id));
-        if (allSelected) {
-            onChange(prev => prev.filter(id => !pageIds.includes(id)));
-        } else {
-            onChange(prev => [...new Set([...prev, ...pageIds])]);
-        }
-    };
-
-    return (
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-            {/* Search */}
-            <div className="p-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                <HiSearch className="w-4 h-4 text-gray-400 shrink-0" />
-                <input
-                    type="text"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Ad, email axtar..."
-                    className="flex-1 bg-transparent text-sm outline-none text-gray-700 placeholder-gray-400"
-                />
-                {selectedIds.length > 0 && (
-                    <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
-                        {selectedIds.length} seçilib
-                    </span>
-                )}
-            </div>
-
-            {/* List */}
-            <div className="divide-y divide-gray-50 max-h-56 overflow-y-auto">
-                {loading ? (
-                    <div className="flex justify-center py-6">
-                        <div className="animate-spin h-5 w-5 border-b-2 border-indigo-600 rounded-full" />
-                    </div>
-                ) : users.length === 0 ? (
-                    <p className="text-center text-sm text-gray-400 py-6">İstifadəçi tapılmadı</p>
-                ) : (
-                    <>
-                        {/* Toggle all on this page */}
-                        <div
-                            onClick={toggleAll}
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer bg-gray-50/80"
-                        >
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                                users.every(u => selectedIds.includes(u.id))
-                                    ? 'bg-indigo-600 border-indigo-600'
-                                    : 'border-gray-300'
-                            }`}>
-                                {users.every(u => selectedIds.includes(u.id)) && <HiCheck className="w-3 h-3 text-white" />}
-                            </div>
-                            <span className="text-xs text-gray-500 font-medium">Bu səhifədəkiləri seç</span>
-                        </div>
-                        {users.map(user => (
-                            <div
-                                key={user.id}
-                                onClick={() => toggle(user.id)}
-                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-50 cursor-pointer transition-colors"
-                            >
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                                    selectedIds.includes(user.id)
-                                        ? 'bg-indigo-600 border-indigo-600'
-                                        : 'border-gray-300'
-                                }`}>
-                                    {selectedIds.includes(user.id) && <HiCheck className="w-3 h-3 text-white" />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-800 truncate">{user.fullName}</p>
-                                    <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                                </div>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                    user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700'
-                                    : user.role === 'TEACHER' ? 'bg-indigo-100 text-indigo-700'
-                                    : 'bg-emerald-100 text-emerald-700'
-                                }`}>
-                                    {user.role === 'ADMIN' ? 'Admin' : user.role === 'TEACHER' ? 'Müəllim' : 'Tələbə'}
-                                </span>
-                            </div>
-                        ))}
-                    </>
-                )}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-gray-50">
-                    <button
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                        className="p-1 rounded disabled:opacity-40 hover:bg-gray-200 transition-colors"
-                    >
-                        <HiChevronLeft className="w-4 h-4 text-gray-600" />
-                    </button>
-                    <span className="text-xs text-gray-500">{page + 1} / {totalPages}</span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={page >= totalPages - 1}
-                        className="p-1 rounded disabled:opacity-40 hover:bg-gray-200 transition-colors"
-                    >
-                        <HiChevronRight className="w-4 h-4 text-gray-600" />
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// ─── Tarixçə Cədvəli ──────────────────────────────────────────────────────────
-
-const HistoryTable = () => {
-    const [logs, setLogs] = useState([]);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [loading, setLoading] = useState(false);
-
-    const fetchHistory = useCallback(async () => {
-        setLoading(true);
-        try {
-            const { data } = await api.get(`/admin/notifications/history?page=${page}&size=15`);
-            setLogs(data.content || []);
-            setTotalPages(data.totalPages || 0);
-        } catch {
-            toast.error('Tarixçə yüklənə bilmədi');
-        } finally {
-            setLoading(false);
-        }
-    }, [page]);
-
-    useEffect(() => { fetchHistory(); }, [fetchHistory]);
-
-    const channelBadge = (channels) => {
-        if (!channels) return null;
-        return channels.split(',').map(c => (
-            <span key={c} className={`text-xs px-2 py-0.5 rounded-full font-medium mr-1 ${
-                c === 'SITE' ? 'bg-blue-100 text-blue-700'
-                : c === 'GMAIL' ? 'bg-red-100 text-red-700'
-                : 'bg-orange-100 text-orange-700'
-            }`}>
-                {CHANNEL_LABELS[c] || c}
-            </span>
-        ));
-    };
-
-    if (loading) return (
-        <div className="flex justify-center py-16">
-            <div className="animate-spin h-8 w-8 border-b-2 border-indigo-600 rounded-full" />
-        </div>
-    );
-
-    return (
-        <div>
-            {logs.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                    <HiClock className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                    <p className="text-sm">Hələ göndəriş yoxdur</p>
-                </div>
-            ) : (
-                <>
-                    <div className="overflow-x-auto rounded-xl border border-gray-100">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Başlıq</th>
-                                    <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Kanal</th>
-                                    <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Hədəf</th>
-                                    <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Alıcı</th>
-                                    <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Tarix</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50 bg-white">
-                                {logs.map(log => (
-                                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-5 py-3">
-                                            <p className="font-semibold text-gray-800 truncate max-w-[200px]">{log.title}</p>
-                                            {log.description && (
-                                                <p className="text-xs text-gray-400 truncate max-w-[200px] mt-0.5">{log.description}</p>
-                                            )}
-                                        </td>
-                                        <td className="px-5 py-3">{channelBadge(log.channels)}</td>
-                                        <td className="px-5 py-3">
-                                            <span className="text-gray-600">
-                                                {TARGET_LABELS[log.targetType] || log.targetType}
-                                                {log.roleFilter && (
-                                                    <span className="ml-1 text-gray-400">
-                                                        ({ROLE_OPTIONS.find(r => r.value === log.roleFilter)?.label || log.roleFilter})
-                                                    </span>
-                                                )}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3">
-                                            <span className="font-semibold text-indigo-700">{log.recipientCount}</span>
-                                            <span className="text-gray-400 ml-1">nəfər</span>
-                                        </td>
-                                        <td className="px-5 py-3 text-gray-500 text-xs">{fmtDate(log.sentAt)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 mt-4">
-                            <button
-                                onClick={() => setPage(p => Math.max(0, p - 1))}
-                                disabled={page === 0}
-                                className="p-2 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                            >
-                                <HiChevronLeft className="w-4 h-4 text-gray-600" />
-                            </button>
-                            <span className="text-sm text-gray-600">{page + 1} / {totalPages}</span>
-                            <button
-                                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                                disabled={page >= totalPages - 1}
-                                className="p-2 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                            >
-                                <HiChevronRight className="w-4 h-4 text-gray-600" />
-                            </button>
-                        </div>
-                    )}
-                </>
-            )}
-        </div>
-    );
-};
+import UserSelector from './notifications/UserSelector';
+import HistoryTable from './notifications/HistoryTable';
+import { ROLE_OPTIONS } from './notifications/constants';
 
 // ─── Ana Komponent ─────────────────────────────────────────────────────────────
 
@@ -307,28 +31,19 @@ const AdminNotifications = () => {
     const [channelEmail, setChannelEmail] = useState(false);
     const [emailProvider, setEmailProvider] = useState('GMAIL');
     const [attachment, setAttachment] = useState(null);
-    const [sending, setSending] = useState(false);
 
-    // User count for preview
-    const [previewCount, setPreviewCount] = useState(null);
+    const sendNotification = useSendAdminNotification();
+    const sending = sendNotification.isPending;
 
-    useEffect(() => {
-        if (targetType === 'SELECTED') {
-            setPreviewCount(selectedUserIds.length);
-            return;
-        }
-        const fetchCount = async () => {
-            try {
-                const params = new URLSearchParams({ page: 0, size: 1 });
-                if (targetType === 'ROLE') params.set('role', roleFilter);
-                const { data } = await api.get(`/admin/users?${params}`);
-                setPreviewCount(data.totalElements ?? 0);
-            } catch {
-                setPreviewCount(null);
-            }
-        };
-        fetchCount();
-    }, [targetType, roleFilter, selectedUserIds]);
+    // Use admin users hook to derive preview count
+    const { data: previewData } = useAdminUsers({
+        role: targetType === 'ROLE' ? roleFilter : '',
+        page: 0,
+        size: 1,
+    });
+    const previewCount = targetType === 'SELECTED'
+        ? selectedUserIds.length
+        : (previewData?.totalElements ?? null);
 
     const handleSend = async () => {
         if (!title.trim()) { toast.error('Başlıq daxil edin'); return; }
@@ -358,11 +73,8 @@ const AdminNotifications = () => {
         formData.append('request', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));
         if (attachment) formData.append('attachment', attachment);
 
-        setSending(true);
         try {
-            await api.post('/admin/notifications/send', formData, {
-                headers: { 'Content-Type': undefined },
-            });
+            await sendNotification.mutateAsync(formData);
             toast.success(`${previewCount ?? '?'} istifadəçiyə göndərildi`);
             setTitle('');
             setDescription('');
@@ -370,8 +82,6 @@ const AdminNotifications = () => {
             setAttachment(null);
         } catch (e) {
             if (!e._handled) toast.error(e.response?.data?.message || 'Göndərmə zamanı xəta baş verdi');
-        } finally {
-            setSending(false);
         }
     };
 

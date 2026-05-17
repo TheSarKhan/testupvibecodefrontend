@@ -122,6 +122,10 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
         }
     }, [isOpen]);
 
+    const refreshAiUsage = () => {
+        api.get('/ai/usage').then(res => setAiUsage(res.data)).catch(() => {});
+    };
+
     const handleGenerate = async () => {
         setGenerating(true);
         setError('');
@@ -145,6 +149,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
             setError(msg);
         } finally {
             setGenerating(false);
+            refreshAiUsage();
         }
     };
 

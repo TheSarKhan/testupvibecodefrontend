@@ -111,8 +111,6 @@ const ExamList = () => {
     const [showAiExamModal, setShowAiExamModal] = useState(false);
     const [savedExamLinks, setSavedExamLinks] = useState(new Set());
     const [savingLink, setSavingLink] = useState(null);
-    const [examPaymentWindowOpen, setExamPaymentWindowOpen] = useState(false);
-    const [payingExam, setPayingExam] = useState(null);
     const [purchasedExams, setPurchasedExams] = useState(new Set());
 
     // Collaborative assignments (teacher only)
@@ -284,56 +282,7 @@ const ExamList = () => {
         toast.success("Paylaşım linki kopyalandı");
     };
 
-    const handleJoinExam = (exam) => navigate(`/imtahan/${exam.shareLink}`);
-
-    // Auto-check exam payment when tab regains focus
-    useEffect(() => {
-        if (!examPaymentWindowOpen) return;
-        const onFocus = async () => {
-            const orderId = localStorage.getItem('pendingPaymentOrderId');
-            if (!orderId) return;
-            try {
-                const { data } = await api.post('/payment/verify', { orderId });
-                if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status) || data.alreadyProcessed) {
-                    localStorage.removeItem('pendingPaymentOrderId');
-                    setExamPaymentWindowOpen(false);
-                    setPayingExam(null);
-                    toast.success('Ödəniş uğurlu! İmtahana başlaya bilərsiniz.');
-                    if (data.examShareLink) {
-                        setPurchasedExams(prev => new Set([...prev, data.examShareLink]));
-                        navigate(`/imtahan/${data.examShareLink}`);
-                    }
-                }
-            } catch {}
-        };
-        window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
-    }, [examPaymentWindowOpen]);
-
-    const handlePurchaseExam = async (exam) => {
-        if (!isAuthenticated) {
-            toast.error('Satın almaq üçün hesabınıza daxil olun');
-            navigate('/login', { state: { returnUrl: '/imtahanlar' } });
-            return;
-        }
-        setPayingExam(exam.id);
-        try {
-            const { data } = await api.post('/payment/initiate-exam', { shareLink: exam.shareLink });
-            if (data.alreadyPurchased) {
-                setPurchasedExams(prev => new Set([...prev, exam.shareLink]));
-                navigate(`/imtahan/${exam.shareLink}`);
-                return;
-            }
-            localStorage.setItem('pendingPaymentOrderId', data.orderId);
-            window.open(data.paymentUrl, '_blank', 'noopener');
-            setExamPaymentWindowOpen(true);
-            toast('Ödəniş pəncərəsi açıldı. Ödənişi tamamlayıb bu səhifəyə qayıdın.', { icon: '💳', duration: 6000 });
-        } catch (err) {
-            if (!err._handled) toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');
-        } finally {
-            setPayingExam(null);
-        }
-    };
+    const handleViewExam = (exam) => navigate(`/imtahanlar/melumat/${exam.shareLink}`);
 
     const handleAiExamGenerate = (questions, subjectName) => {
         setShowAiExamModal(false);
@@ -780,131 +729,17 @@ const ExamList = () => {
                                 <EmptyState activeFilterCount={activeFilterCount} onClear={clearFilters} isStudent />
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {filteredExams.map(exam => {
-                                        const isSaved = savedExamLinks.has(exam.shareLink);
-                                        const isPaid = exam.price != null && Number(exam.price) > 0;
-                                        const isPurchased = isPaid && purchasedExams.has(exam.shareLink);
-                                        const subjects = exam.subjects?.length ? exam.subjects : (exam.subject ? [exam.subject] : []);
-                                        const tags = exam.tags || [];
-                                        const questionCount = (exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0);
-                                        const avgRating = exam.averageRating ? Math.round(exam.averageRating * 10) / 10 : null;
-                                        const ratingCount = exam.ratingCount || 0;
-                                        const canStart = !isPaid || isPurchased;
-                                        const accentClass = isPurchased ? 'bg-green-500' : isPaid ? 'bg-amber-400' : 'bg-indigo-500';
-                                        return (
-                                            <div
-                                                key={exam.id}
-                                                onClick={() => canStart && handleJoinExam(exam)}
-                                                className={`group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col overflow-hidden ${canStart ? 'cursor-pointer' : 'cursor-default'}`}
-                                            >
-                                                {/* Accent bar */}
-                                                <div className={`h-1 w-full ${accentClass}`} />
-
-                                                <div className="p-5 flex flex-col flex-1">
-                                                    {/* Top row: subjects + bookmark */}
-                                                    <div className="flex items-start justify-between gap-2 mb-3">
-                                                        <div className="flex flex-wrap gap-1 min-w-0">
-                                                            {subjects.slice(0, 2).map((s, i) => (
-                                                                <span key={i} className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 truncate max-w-[120px]">
-                                                                    {s}
-                                                                </span>
-                                                            ))}
-                                                            {exam.visibility === 'PRIVATE' && (
-                                                                <span className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                                                                    <HiOutlineLockClosed className="w-3 h-3" /> Gizli
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <button
-                                                            onClick={e => { e.stopPropagation(); handleToggleDepot(exam); }}
-                                                            disabled={savingLink === exam.shareLink}
-                                                            title={isSaved ? 'Depodan çıxar' : 'Depoya əlavə et'}
-                                                            className={`p-1.5 rounded-xl transition-all disabled:opacity-50 shrink-0 ${isSaved ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200' : 'text-gray-300 hover:text-indigo-500 hover:bg-indigo-50'}`}
-                                                        >
-                                                            {savingLink === exam.shareLink
-                                                                ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                                                : isSaved ? <HiBookmark className="w-4 h-4" /> : <HiOutlineBookmark className="w-4 h-4" />
-                                                            }
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Title */}
-                                                    <h3 className="font-bold text-gray-900 text-base leading-snug mb-1 group-hover:text-indigo-700 transition-colors line-clamp-2">
-                                                        {exam.title}
-                                                    </h3>
-
-                                                    {/* Teacher + Rating */}
-                                                    <div className="flex items-center justify-between gap-2 mb-2">
-                                                        {exam.teacherName && (
-                                                            <p className="text-xs text-gray-400 truncate">{exam.teacherName}</p>
-                                                        )}
-                                                        {avgRating !== null && (
-                                                            <div className="flex items-center gap-1 shrink-0">
-                                                                <span className="text-yellow-400 text-sm leading-none">★</span>
-                                                                <span className="text-xs font-bold text-gray-700">{avgRating.toFixed(1)}</span>
-                                                                {ratingCount > 0 && <span className="text-[11px] text-gray-400">({ratingCount})</span>}
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Tags */}
-                                                    {tags.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 mb-3">
-                                                            {tags.slice(0, 3).map((tag, i) => (
-                                                                <span key={i} className="text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
-                                                                    #{tag}
-                                                                </span>
-                                                            ))}
-                                                            {tags.length > 3 && (
-                                                                <span className="text-[11px] text-gray-400 px-1 font-medium">+{tags.length - 3}</span>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Meta stats */}
-                                                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-auto mb-4">
-                                                        <span className="flex items-center gap-1 font-medium">
-                                                            <HiOutlineQuestionMarkCircle className="w-3.5 h-3.5" />
-                                                            {questionCount} sual
-                                                        </span>
-                                                        {exam.durationMinutes > 0 && (
-                                                            <span className="flex items-center gap-1 font-medium">
-                                                                <HiOutlineClock className="w-3.5 h-3.5" />
-                                                                {exam.durationMinutes} dəq
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Footer: price + CTA */}
-                                                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100">
-                                                        {isPurchased ? (
-                                                            <span className="text-xs font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">Alınıb</span>
-                                                        ) : isPaid ? (
-                                                            <span className="text-sm font-black text-amber-600">{Number(exam.price).toFixed(2)} ₼</span>
-                                                        ) : (
-                                                            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">Pulsuz</span>
-                                                        )}
-                                                        <button
-                                                            onClick={e => { e.stopPropagation(); isPurchased ? handleJoinExam(exam) : isPaid ? handlePurchaseExam(exam) : handleJoinExam(exam); }}
-                                                            disabled={payingExam === exam.id}
-                                                            className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all disabled:opacity-60 shadow-sm ${
-                                                                isPurchased
-                                                                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-100'
-                                                                    : isPaid
-                                                                        ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-100'
-                                                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100'
-                                                            }`}
-                                                        >
-                                                            {payingExam === exam.id
-                                                                ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                                : isPurchased ? 'Başla' : isPaid ? 'Satın al' : 'Başla'}
-                                                            {payingExam !== exam.id && <HiOutlineArrowRight className="w-3.5 h-3.5" />}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                    {filteredExams.map(exam => (
+                                        <StudentExamCard
+                                            key={exam.id}
+                                            exam={exam}
+                                            isSaved={savedExamLinks.has(exam.shareLink)}
+                                            savingLink={savingLink}
+                                            isPurchased={exam.price != null && Number(exam.price) > 0 && purchasedExams.has(exam.shareLink)}
+                                            onView={handleViewExam}
+                                            onToggleDepot={handleToggleDepot}
+                                        />
+                                    ))}
                                 </div>
                             )
                         ) : (
@@ -1024,5 +859,167 @@ const EmptyState = ({ activeFilterCount, onClear, isStudent }) => (
         )}
     </div>
 );
+
+// ── Student exam card ────────────────────────────────────────────────────────
+const SUBJECT_PALETTES = [
+    { bg: 'bg-indigo-50',  ring: 'ring-indigo-100',  text: 'text-indigo-700',  dot: 'bg-indigo-500'  },
+    { bg: 'bg-emerald-50', ring: 'ring-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+    { bg: 'bg-amber-50',   ring: 'ring-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500'   },
+    { bg: 'bg-rose-50',    ring: 'ring-rose-100',    text: 'text-rose-700',    dot: 'bg-rose-500'    },
+    { bg: 'bg-sky-50',     ring: 'ring-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500'     },
+    { bg: 'bg-violet-50',  ring: 'ring-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500'  },
+    { bg: 'bg-teal-50',    ring: 'ring-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500'    },
+];
+
+const hashIndex = (s, n) => {
+    let h = 0;
+    for (let i = 0; i < (s || '').length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return Math.abs(h) % n;
+};
+
+const StudentExamCard = ({ exam, isSaved, savingLink, isPurchased, onView, onToggleDepot }) => {
+    const subjects = exam.subjects?.length ? exam.subjects : (exam.subject ? [exam.subject] : []);
+    const tags = exam.tags || [];
+    const questionCount = (exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0);
+    const avgRating = exam.averageRating ? Math.round(exam.averageRating * 10) / 10 : null;
+    const ratingCount = exam.ratingCount || 0;
+    const isPaid = exam.price != null && Number(exam.price) > 0;
+    const isPrivate = exam.visibility === 'PRIVATE';
+
+    const primarySubject = subjects[0] || 'İmtahan';
+    const palette = SUBJECT_PALETTES[hashIndex(primarySubject, SUBJECT_PALETTES.length)];
+
+    return (
+        <article
+            onClick={() => onView(exam)}
+            className="group relative flex flex-col bg-white rounded-2xl border border-gray-200/70 hover:border-indigo-300 shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_32px_-12px_rgba(79,70,229,0.25)] transition-all duration-300 cursor-pointer overflow-hidden"
+        >
+            {/* ── Top section: subject avatar + status pill ── */}
+            <div className={`relative px-5 pt-5 pb-4 ${palette.bg}`}>
+                {/* Decorative ring */}
+                <div className={`pointer-events-none absolute -top-10 -right-10 w-32 h-32 rounded-full ring-8 ${palette.ring} opacity-60`} />
+
+                <div className="relative flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-11 h-11 rounded-xl ${palette.dot} flex items-center justify-center text-white font-black text-base shadow-sm shrink-0`}>
+                            {primarySubject.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                {subjects.slice(0, 2).map((s, i) => (
+                                    <span key={i} className={`text-[11px] font-semibold ${palette.text} truncate max-w-[140px]`}>
+                                        {s}
+                                    </span>
+                                ))}
+                                {subjects.length > 2 && (
+                                    <span className={`text-[11px] font-semibold ${palette.text}/70`}>+{subjects.length - 2}</span>
+                                )}
+                            </div>
+                            {exam.teacherName && (
+                                <p className="text-[11px] text-gray-500 truncate mt-0.5">{exam.teacherName}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={e => { e.stopPropagation(); onToggleDepot(exam); }}
+                        disabled={savingLink === exam.shareLink}
+                        title={isSaved ? 'Depodan çıxar' : 'Depoya əlavə et'}
+                        className={`p-1.5 rounded-lg transition-all disabled:opacity-50 shrink-0 ${
+                            isSaved
+                                ? 'bg-white text-indigo-600 shadow-sm'
+                                : 'text-gray-400 hover:text-indigo-600 hover:bg-white/60'
+                        }`}
+                    >
+                        {savingLink === exam.shareLink
+                            ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            : isSaved ? <HiBookmark className="w-4 h-4" /> : <HiOutlineBookmark className="w-4 h-4" />
+                        }
+                    </button>
+                </div>
+            </div>
+
+            {/* ── Body ── */}
+            <div className="flex flex-col flex-1 px-5 pt-4 pb-5">
+                {/* Title */}
+                <h3 className="font-bold text-gray-900 text-[15px] leading-snug mb-2 group-hover:text-indigo-700 transition-colors line-clamp-2">
+                    {exam.title}
+                </h3>
+
+                {/* Tags + rating row */}
+                <div className="flex items-center justify-between gap-2 mb-3 min-h-[20px]">
+                    <div className="flex items-center gap-x-2 gap-y-1 flex-wrap min-w-0">
+                        {tags.slice(0, 2).map((tag, i) => (
+                            <span key={i} className="text-[11px] text-gray-500 font-medium truncate max-w-[110px]">
+                                #{tag}
+                            </span>
+                        ))}
+                        {tags.length > 2 && (
+                            <span className="text-[11px] text-gray-400 font-medium">+{tags.length - 2}</span>
+                        )}
+                        {isPrivate && (
+                            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-gray-500">
+                                <HiOutlineLockClosed className="w-3 h-3" /> Gizli
+                            </span>
+                        )}
+                    </div>
+                    {avgRating !== null && (
+                        <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-amber-400 text-sm leading-none">★</span>
+                            <span className="text-xs font-bold text-gray-700">{avgRating.toFixed(1)}</span>
+                            {ratingCount > 0 && <span className="text-[11px] text-gray-400">({ratingCount})</span>}
+                        </div>
+                    )}
+                </div>
+
+                {/* Meta row */}
+                <div className="flex items-center gap-3 text-xs text-gray-500 mt-auto mb-4">
+                    <span className="inline-flex items-center gap-1.5 font-medium">
+                        <HiOutlineQuestionMarkCircle className="w-3.5 h-3.5 text-gray-400" />
+                        {questionCount} sual
+                    </span>
+                    {exam.durationMinutes > 0 && (
+                        <>
+                            <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                            <span className="inline-flex items-center gap-1.5 font-medium">
+                                <HiOutlineClock className="w-3.5 h-3.5 text-gray-400" />
+                                {exam.durationMinutes} dəq
+                            </span>
+                        </>
+                    )}
+                </div>
+
+                {/* Footer: status + CTA */}
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-dashed border-gray-200">
+                    <div className="min-w-0">
+                        {isPurchased ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Alınıb
+                            </span>
+                        ) : isPaid ? (
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-[17px] font-extrabold text-gray-900 tabular-nums">
+                                    {Number(exam.price).toFixed(2)}
+                                </span>
+                                <span className="text-xs font-bold text-gray-500">₼</span>
+                            </div>
+                        ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Pulsuz
+                            </span>
+                        )}
+                    </div>
+
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg bg-gray-900 text-white group-hover:bg-indigo-600 transition-colors">
+                        İmtahana bax
+                        <HiOutlineArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                </div>
+            </div>
+        </article>
+    );
+};
 
 export default ExamList;

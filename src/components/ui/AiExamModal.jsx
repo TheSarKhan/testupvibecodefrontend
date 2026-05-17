@@ -97,6 +97,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
         } finally {
             setLoading(false);
             setLoadingMsg('');
+            api.get('/ai/usage').then(res => setAiUsage(res.data)).catch(() => {});
         }
     };
 

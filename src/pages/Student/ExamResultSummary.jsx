@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineEye, HiOutlineClock } from 'react-icons/hi';
+import { HiOutlineEye, HiOutlineClock, HiOutlineVideoCamera } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import QuestionNav from '../../components/ui/QuestionNav';
@@ -480,6 +480,19 @@ const ExamResultSummary = () => {
                         <HiOutlineEye className="w-4 h-4" />
                         Cavablarıma Bax
                     </button>
+
+                    {/* Explanation video (only if teacher provided one) */}
+                    {displaySubmission?.explanationVideoUrl && (
+                        <a
+                            href={displaySubmission.explanationVideoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                            <HiOutlineVideoCamera className="w-4 h-4" />
+                            İzah Videosuna Bax
+                        </a>
+                    )}
 
 
                     {/* Rating inline */}

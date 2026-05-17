@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     HiOutlineX, HiOutlineBookOpen, HiOutlineSearch,
-    HiOutlineChevronRight, HiOutlineArrowLeft, HiOutlineGlobe, HiOutlineUser
+    HiOutlineChevronRight, HiOutlineArrowLeft, HiOutlineGlobe, HiOutlineUser,
+    HiOutlineCheck, HiOutlineTag
 } from 'react-icons/hi';
 import LatexPreview from './LatexPreview';
 import api from '../../api/axios';
@@ -23,19 +24,33 @@ const BACKEND_FRONTEND_MAP = {
     MULTI_SELECT: 'MULTI_SELECT', OPEN_AUTO: 'OPEN_AUTO',
     OPEN_MANUAL: 'OPEN_MANUAL', FILL_IN_THE_BLANK: 'FILL_IN_THE_BLANK', MATCHING: 'MATCHING',
 };
+const DIFFICULTY_LABELS = { EASY: 'Asan', MEDIUM: 'Orta', HARD: 'Çətin' };
+const DIFFICULTY_COLORS = {
+    EASY: 'bg-green-50 text-green-700',
+    MEDIUM: 'bg-yellow-50 text-yellow-700',
+    HARD: 'bg-red-50 text-red-700',
+};
+const GRADE_LEVELS = ['1-4', '5-8', '9-11', 'Buraxılış'];
 
 /**
  * BankPickerModal
  * Props:
- *   onSelect(bankQuestion) – called with the raw BankQuestionResponse
+ *   onSelect(bankQuestion)   — kept for backward compatibility (single pick mode)
+ *   onSelectMany(bankQuestions[]) — preferred: called once with all picked rows
  *   onClose()
  *   filterType – optional: only show questions of this frontend type
+ *   allowMulti – default true; when false acts like the old single-pick modal
  */
-const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
+const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, allowMulti = true }) => {
     const [subjects, setSubjects] = useState([]);
     const [selectedSubject, setSelectedSubject] = useState(null);
     const [questions, setQuestions] = useState([]);
     const [search, setSearch] = useState('');
+    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [difficultyFilter, setDifficultyFilter] = useState('ALL');
+    const [gradeFilter, setGradeFilter] = useState('ALL');
+    const [topicFilter, setTopicFilter] = useState('ALL');
+    const [selectedIds, setSelectedIds] = useState(() => new Set());
     const [loadingSubjects, setLoadingSubjects] = useState(true);
     const [loadingQuestions, setLoadingQuestions] = useState(false);
 
@@ -49,6 +64,8 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
     const openSubject = async (subject) => {
         setSelectedSubject(subject);
         setLoadingQuestions(true);
+        setSelectedIds(new Set());
+        setSearch(''); setTypeFilter('ALL'); setDifficultyFilter('ALL'); setGradeFilter('ALL'); setTopicFilter('ALL');
         try {
             const { data } = await api.get(`/bank/subjects/${subject.id}/questions`);
             setQuestions(data);
@@ -62,12 +79,67 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
     const handleBack = () => {
         setSelectedSubject(null);
         setQuestions([]);
-        setSearch('');
+        setSelectedIds(new Set());
     };
 
-    const filteredQuestions = questions.filter(q => {
-        return !search || q.content.toLowerCase().includes(search.toLowerCase());
-    });
+    const filteredQuestions = useMemo(() => {
+        const term = search.trim().toLowerCase();
+        return questions.filter(q => {
+            if (typeFilter !== 'ALL' && q.questionType !== typeFilter) return false;
+            if (difficultyFilter !== 'ALL' && q.difficulty !== difficultyFilter) return false;
+            if (gradeFilter !== 'ALL' && q.gradeLevel !== gradeFilter) return false;
+            if (topicFilter !== 'ALL' && q.topic !== topicFilter) return false;
+            if (!term) return true;
+            if (q.content?.toLowerCase().includes(term)) return true;
+            if (q.correctAnswer?.toLowerCase().includes(term)) return true;
+            return (q.options || []).some(o => (o.content || '').toLowerCase().includes(term));
+        });
+    }, [questions, search, typeFilter, difficultyFilter, gradeFilter, topicFilter]);
+
+    const topics = useMemo(() => {
+        const s = new Set(questions.map(q => q.topic).filter(Boolean));
+        return [...s].sort();
+    }, [questions]);
+    const usedTypes = useMemo(() => {
+        const s = new Set(questions.map(q => q.questionType).filter(Boolean));
+        return [...s];
+    }, [questions]);
+    const usedDifficulties = useMemo(() => {
+        const s = new Set(questions.map(q => q.difficulty).filter(Boolean));
+        return ['EASY', 'MEDIUM', 'HARD'].filter(d => s.has(d));
+    }, [questions]);
+    const usedGrades = useMemo(() => {
+        const s = new Set(questions.map(q => q.gradeLevel).filter(Boolean));
+        return GRADE_LEVELS.filter(g => s.has(g));
+    }, [questions]);
+
+    const toggle = (id) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+    const selectAllFiltered = () => {
+        setSelectedIds(new Set(filteredQuestions.map(q => q.id)));
+    };
+    const clearSelection = () => setSelectedIds(new Set());
+    const pickRandom = (n) => {
+        const pool = [...filteredQuestions];
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        setSelectedIds(new Set(pool.slice(0, Math.min(n, pool.length)).map(q => q.id)));
+    };
+
+    const confirmBulk = () => {
+        if (selectedIds.size === 0) return;
+        const picked = questions.filter(q => selectedIds.has(q.id));
+        if (onSelectMany) onSelectMany(picked);
+        else if (onSelect) picked.forEach(p => onSelect(p));
+        onClose?.();
+    };
 
     const globalSubjects = subjects.filter(s => s.isGlobal);
     const ownSubjects = subjects.filter(s => !s.isGlobal);
@@ -90,12 +162,11 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-                {/* Header */}
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-3">
                         {selectedSubject && (
-                            <button onClick={handleBack} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
+                            <button onClick={handleBack} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100" title="Geri">
                                 <HiOutlineArrowLeft className="w-4 h-4" />
                             </button>
                         )}
@@ -115,23 +186,92 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                     </button>
                 </div>
 
-                {/* Search (only in question view) */}
                 {selectedSubject && (
-                    <div className="px-5 py-3 border-b border-gray-100">
-                        <div className="relative">
-                            <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                placeholder="Sual axtar..."
-                                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
-                            />
+                    <>
+                        <div className="px-5 py-3 border-b border-gray-100 space-y-3">
+                            <div className="relative">
+                                <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="Sual, variant və ya cavabda axtar..."
+                                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
+                                />
+                            </div>
+
+                            {(usedTypes.length > 1 || usedDifficulties.length > 0 || usedGrades.length > 0 || topics.length > 0) && (
+                                <div className="flex flex-wrap gap-1.5 items-center">
+                                    {usedTypes.length > 1 && (
+                                        <select
+                                            value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+                                            className="text-xs px-2.5 py-1.5 border border-gray-200 rounded-full bg-white"
+                                        >
+                                            <option value="ALL">Bütün tiplər</option>
+                                            {usedTypes.map(t => <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>)}
+                                        </select>
+                                    )}
+                                    {usedDifficulties.length > 0 && (
+                                        <select
+                                            value={difficultyFilter} onChange={e => setDifficultyFilter(e.target.value)}
+                                            className="text-xs px-2.5 py-1.5 border border-gray-200 rounded-full bg-white"
+                                        >
+                                            <option value="ALL">Bütün çətinliklər</option>
+                                            {usedDifficulties.map(d => <option key={d} value={d}>{DIFFICULTY_LABELS[d]}</option>)}
+                                        </select>
+                                    )}
+                                    {usedGrades.length > 0 && (
+                                        <select
+                                            value={gradeFilter} onChange={e => setGradeFilter(e.target.value)}
+                                            className="text-xs px-2.5 py-1.5 border border-gray-200 rounded-full bg-white"
+                                        >
+                                            <option value="ALL">Bütün siniflər</option>
+                                            {usedGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                                        </select>
+                                    )}
+                                    {topics.length > 0 && (
+                                        <select
+                                            value={topicFilter} onChange={e => setTopicFilter(e.target.value)}
+                                            className="text-xs px-2.5 py-1.5 border border-gray-200 rounded-full bg-white max-w-[200px]"
+                                        >
+                                            <option value="ALL">Bütün mövzular</option>
+                                            {topics.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    )}
+                                </div>
+                            )}
+
+                            {allowMulti && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                        onClick={selectAllFiltered}
+                                        className="text-xs font-semibold px-3 py-1.5 border border-indigo-200 text-indigo-700 rounded-full hover:bg-indigo-50"
+                                    >
+                                        Filtrlənənləri seç ({filteredQuestions.length})
+                                    </button>
+                                    <button
+                                        onClick={() => pickRandom(10)}
+                                        className="text-xs font-semibold px-3 py-1.5 border border-violet-200 text-violet-700 rounded-full hover:bg-violet-50"
+                                    >
+                                        Təsadüfi 10
+                                    </button>
+                                    {selectedIds.size > 0 && (
+                                        <button
+                                            onClick={clearSelection}
+                                            className="text-xs font-semibold px-3 py-1.5 border border-gray-200 text-gray-600 rounded-full hover:bg-gray-50"
+                                        >
+                                            Seçimi təmizlə
+                                        </button>
+                                    )}
+                                    <span className="text-xs text-gray-500 ml-auto">
+                                        Seçilib: <b className="text-indigo-700">{selectedIds.size}</b>
+                                    </span>
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    </>
                 )}
 
-                {/* Content */}
                 <div className="flex-1 overflow-y-auto">
                     {!selectedSubject ? (
                         loadingSubjects ? (
@@ -176,24 +316,47 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                             </div>
                         ) : filteredQuestions.length === 0 ? (
                             <div className="text-center py-12 text-gray-400 text-sm">
-                                {questions.length === 0 ? 'Bu fənndə sual yoxdur' : 'Axtarış üzrə nəticə tapılmadı'}
+                                {questions.length === 0 ? 'Bu fənndə sual yoxdur' : 'Filtrlərə uyğun sual tapılmadı'}
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-50">
                                 {filteredQuestions.map((q, idx) => {
                                     const isDifferentType = filterType && BACKEND_FRONTEND_MAP[q.questionType] !== filterType;
+                                    const checked = selectedIds.has(q.id);
                                     return (
                                     <div
                                         key={q.id}
-                                        onClick={() => onSelect(q)}
-                                        className="flex items-start gap-3 px-5 py-4 hover:bg-indigo-50/40 transition-colors cursor-pointer group"
+                                        onClick={() => allowMulti ? toggle(q.id) : (onSelect?.(q), onClose?.())}
+                                        className={`flex items-start gap-3 px-5 py-4 transition-colors cursor-pointer group ${checked ? 'bg-indigo-50/60' : 'hover:bg-indigo-50/30'}`}
                                     >
-                                        <span className="text-xs font-bold text-gray-400 mt-0.5 shrink-0 w-5">{idx + 1}.</span>
+                                        {allowMulti && (
+                                            <div className={`mt-1 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                                checked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 bg-white'
+                                            }`}>
+                                                {checked && <HiOutlineCheck className="w-3.5 h-3.5" strokeWidth={3} />}
+                                            </div>
+                                        )}
+                                        <span className="text-xs font-bold text-gray-400 mt-1 shrink-0 w-5">{idx + 1}.</span>
                                         <div className="flex-1 min-w-0 space-y-1.5">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${TYPE_COLORS[q.questionType] || 'bg-gray-100 text-gray-600'}`}>
                                                     {TYPE_LABELS[q.questionType] || q.questionType}
                                                 </span>
+                                                {q.difficulty && (
+                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[q.difficulty]}`}>
+                                                        {DIFFICULTY_LABELS[q.difficulty]}
+                                                    </span>
+                                                )}
+                                                {q.gradeLevel && (
+                                                    <span className="text-[10px] font-semibold bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full">
+                                                        {q.gradeLevel}
+                                                    </span>
+                                                )}
+                                                {q.topic && (
+                                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">
+                                                        <HiOutlineTag className="w-2.5 h-2.5" />{q.topic}
+                                                    </span>
+                                                )}
                                                 <span className="text-[10px] text-gray-400">{q.points} bal</span>
                                                 {isDifferentType && (
                                                     <span className="text-[10px] font-semibold bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
@@ -201,11 +364,10 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-sm text-gray-800">
+                                            <div className="text-sm text-gray-800 line-clamp-3">
                                                 <LatexPreview content={q.content} />
                                             </div>
                                         </div>
-                                        <span className="text-xs text-indigo-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">Seç</span>
                                     </div>
                                     );
                                 })}
@@ -213,6 +375,21 @@ const BankPickerModal = ({ onSelect, onClose, filterType = null }) => {
                         )
                     )}
                 </div>
+
+                {/* Sticky bulk action bar */}
+                {selectedSubject && allowMulti && selectedIds.size > 0 && (
+                    <div className="px-5 py-3 border-t border-gray-100 bg-gradient-to-r from-indigo-50 to-violet-50 flex items-center justify-between">
+                        <p className="text-sm font-semibold text-indigo-800">
+                            {selectedIds.size} sual seçildi
+                        </p>
+                        <button
+                            onClick={confirmBulk}
+                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
+                        >
+                            İmtahana əlavə et →
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

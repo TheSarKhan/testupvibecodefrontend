@@ -11,6 +11,7 @@ import Login from '../pages/Auth/Login';
 import Register from '../pages/Auth/Register';
 import ExamList from '../pages/Exams/ExamList';
 import ExamView from '../pages/Exams/ExamView';
+import ExamDetail from '../pages/Exams/ExamDetail';
 import ExamEditor from '../pages/Teacher/ExamEditor';
 import Profile from '../pages/Profile/Profile';
 import Pricing from '../pages/Pricing/Pricing';
@@ -68,6 +69,7 @@ const router = createBrowserRouter([
             { path: 'gizlilik-siyaseti', element: <PrivacyPolicy /> },
             { path: 'imtahanlar', element: <ExamList /> },
             { path: 'birge-imtahanlari', element: <CollaborativeAssignments /> },
+            { path: 'imtahanlar/melumat/:shareLink', element: <ExamDetail /> },
             { path: 'imtahanlar/:examId/neticeler', element: <ExamResults /> },
             { path: 'imtahanlar/:examId/statistika', element: <ExamResults /> },
             { path: 'imtahanlar/:id', element: <ExamView /> },

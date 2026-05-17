@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { HiOutlineDocumentText, HiOutlineClock, HiOutlineEye, HiOutlineBookOpen, HiLockClosed, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineDocumentText, HiOutlineClock, HiOutlineEye, HiOutlineBookOpen, HiLockClosed, HiOutlineX, HiOutlineVideoCamera } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -70,11 +70,28 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
         setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
     };
 
+    const isValidVideoUrl = (url) => {
+        if (!url || !url.trim()) return true;
+        try {
+            const u = new URL(url.trim());
+            return u.protocol === 'http:' || u.protocol === 'https:';
+        } catch {
+            return false;
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSave(formData);
+        if (!isValidVideoUrl(formData.explanationVideoUrl)) {
+            return;
+        }
+        const cleaned = {
+            ...formData,
+            explanationVideoUrl: (formData.explanationVideoUrl || '').trim() || null,
+        };
+        onSave(cleaned);
         onClose();
-        if (onPublish) onPublish(formData);
+        if (onPublish) onPublish(cleaned);
     };
 
     return (
@@ -115,6 +132,32 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                         className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         placeholder="İmtahan haqqında qısa məlumat..."
                     />
+                </div>
+
+                {/* Explanation video URL (optional) */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        İzah videosunun linki <span className="text-gray-400 font-normal">(opsional)</span>
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <HiOutlineVideoCamera className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                            type="url"
+                            name="explanationVideoUrl"
+                            value={formData.explanationVideoUrl || ''}
+                            onChange={handleChange}
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="https://youtube.com/watch?v=..."
+                        />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                        Tələbələr imtahanı bitirdikdən sonra bu izaha keçid edə biləcəklər.
+                    </p>
+                    {formData.explanationVideoUrl && !isValidVideoUrl(formData.explanationVideoUrl) && (
+                        <p className="mt-1 text-xs text-red-500">Düzgün URL daxil edin (http:// və ya https://).</p>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

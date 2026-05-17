@@ -184,7 +184,7 @@ const ExamEditor = () => {
         subject: initialLocationState.subject && initialLocationState.subject !== 'Seçilməyib'
             ? initialLocationState.subject : (initialLocationState.type === 'template' ? (initialLocationState.sectionData?.subjectName || 'Şablon') : 'Riyaziyyat'),
         extraSubjects: [],
-        duration: 60, visibility: 'PUBLIC', password: '', tags: [], description: ''
+        duration: 60, visibility: 'PUBLIC', password: '', tags: [], description: '', explanationVideoUrl: ''
     });
     const [subjectsList, setSubjectsList] = useState([]);
     const [showSectionPicker, setShowSectionPicker] = useState(false);
@@ -288,6 +288,29 @@ const ExamEditor = () => {
             setQuestions(prev => [...prev, newQ]);
             toast.success('Sual bazadan əlavə edildi');
         }
+    };
+
+    const handleBankSelectMany = (bqs) => {
+        const { section, replaceId } = bankPicker || {};
+        setBankPicker(null);
+        if (replaceId) {
+            // Replace mode only supports a single question; take the first.
+            if (bqs.length > 0) handleBankSelect(bqs[0]);
+            return;
+        }
+        const isMain = !section || section === examConfig.subject;
+        let baseOrder = nextOrderIndex();
+        const newQs = bqs.map((bq, i) => {
+            const converted = bankQuestionToEditorFormat(bq);
+            return {
+                ...converted,
+                orderIndex: baseOrder + i,
+                id: `${Date.now()}-${i}-${bq.id}`,
+                subjectGroup: isMain ? null : section,
+            };
+        });
+        setQuestions(prev => [...prev, ...newQs]);
+        toast.success(`${newQs.length} sual bazadan əlavə edildi`);
     };
 
     const handleAiGenerate = async () => {
@@ -552,7 +575,8 @@ const ExamEditor = () => {
                 subject: data.subjects?.[0] || 'Riyaziyyat',
                 extraSubjects: data.subjects?.slice(1) || [],
                 duration: data.durationMinutes, visibility: data.visibility,
-                tags: data.tags || [], description: data.description || ''
+                tags: data.tags || [], description: data.description || '',
+                explanationVideoUrl: data.explanationVideoUrl || ''
             });
             setType(data.examType === 'OLIMPIYADA' ? 'olimpiyada' : data.examType.toLowerCase());
             setExamStatus(data.status || 'DRAFT');
@@ -928,6 +952,7 @@ const ExamEditor = () => {
         return {
             title: cfg.title || 'Adsız İmtahan',
             description: cfg.description || '',
+            explanationVideoUrl: (cfg.explanationVideoUrl && cfg.explanationVideoUrl.trim()) ? cfg.explanationVideoUrl.trim() : null,
             subjects: cfg.subject ? [cfg.subject, ...(cfg.extraSubjects || [])] : [],
             visibility: cfg.visibility || 'PUBLIC',
             examType: type === 'free' ? 'FREE' : type === 'olimpiyada' ? 'OLIMPIYADA' : 'TEMPLATE',
@@ -1752,7 +1777,9 @@ const ExamEditor = () => {
             {bankPicker && (
                 <BankPickerModal
                     filterType={bankPicker.filterType}
+                    allowMulti={!bankPicker.replaceId}
                     onSelect={handleBankSelect}
+                    onSelectMany={handleBankSelectMany}
                     onClose={() => setBankPicker(null)}
                 />
             )}

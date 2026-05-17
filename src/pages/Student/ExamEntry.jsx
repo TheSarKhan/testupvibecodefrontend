@@ -21,6 +21,10 @@ const ExamEntry = () => {
     const [hasPurchased, setHasPurchased] = useState(false);
     const [isPurchasing, setIsPurchasing] = useState(false);
 
+    // Guest ongoing session (resume in-progress exam instead of starting a new one)
+    const [guestOngoing, setGuestOngoing] = useState(null);
+    const [isFinishingOngoing, setIsFinishingOngoing] = useState(false);
+
     // Inline login/register states
     const [showAuthForm, setShowAuthForm] = useState(false);
     const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
@@ -50,6 +54,82 @@ const ExamEntry = () => {
             checkPurchaseStatus(exam);
         }
     }, [isAuthenticated]);
+
+    // Detect a guest ongoing submission for this exam and offer to resume it
+    useEffect(() => {
+        if (isAuthenticated) {
+            setGuestOngoing(null);
+            return;
+        }
+        const raw = localStorage.getItem('guestOngoingExam');
+        if (!raw) {
+            setGuestOngoing(null);
+            return;
+        }
+        let stored;
+        try { stored = JSON.parse(raw); } catch {
+            localStorage.removeItem('guestOngoingExam');
+            setGuestOngoing(null);
+            return;
+        }
+        if (!stored?.submissionId) {
+            localStorage.removeItem('guestOngoingExam');
+            setGuestOngoing(null);
+            return;
+        }
+        // Only block this entry page if the ongoing submission belongs to THIS exam.
+        // (For other exams, OngoingExamPopup still nudges the user globally.)
+        if (stored.shareLink && stored.shareLink !== shareLink) {
+            setGuestOngoing(null);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const { data } = await api.get(`/submissions/${stored.submissionId}/session`);
+                if (cancelled) return;
+                if (data.submittedAt) {
+                    localStorage.removeItem('guestOngoingExam');
+                    setGuestOngoing(null);
+                    return;
+                }
+                if (data.durationMinutes && data.remainingSeconds != null && data.remainingSeconds <= 0) {
+                    localStorage.removeItem('guestOngoingExam');
+                    setGuestOngoing(null);
+                    return;
+                }
+                setGuestOngoing({
+                    submissionId: stored.submissionId,
+                    examTitle: data.examTitle || stored.examTitle,
+                    startedAt: data.startedAt || stored.startedAt,
+                    durationMinutes: data.durationMinutes ?? stored.durationMinutes,
+                });
+            } catch (err) {
+                if (cancelled) return;
+                if (err.response?.status === 404 || err.response?.status === 400) {
+                    localStorage.removeItem('guestOngoingExam');
+                }
+                setGuestOngoing(null);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isAuthenticated, shareLink]);
+
+    const handleFinishOngoing = async () => {
+        if (!guestOngoing) return;
+        if (!window.confirm('Yarımçıq imtahanı bitirmək istədiyinizə əminsiniz?')) return;
+        setIsFinishingOngoing(true);
+        try {
+            await api.post(`/submissions/${guestOngoing.submissionId}/finalize`);
+            localStorage.removeItem('guestOngoingExam');
+            toast.success('İmtahan bitirildi');
+            navigate(`/test/result/${guestOngoing.submissionId}`);
+        } catch (err) {
+            if (!err._handled) toast.error(err.response?.data?.message || 'İmtahanı bitirərkən xəta baş verdi');
+        } finally {
+            setIsFinishingOngoing(false);
+        }
+    };
 
     const checkPurchaseStatus = async (examData) => {
         if (!isAuthenticated) return;
@@ -193,6 +273,7 @@ const ExamEntry = () => {
                     examTitle: data.examTitle || exam.title,
                     startedAt: data.startedAt,
                     durationMinutes: data.durationMinutes,
+                    shareLink,
                 }));
             }
             navigate(`/test/take/${data.id}`);
@@ -283,6 +364,33 @@ const ExamEntry = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Resume guest ongoing exam — shown instead of the start form */}
+                    {guestOngoing && !isAuthenticated && (
+                        <div className="mb-6 p-5 bg-indigo-50 border border-indigo-200 rounded-xl text-center">
+                            <p className="text-sm font-semibold text-indigo-900 mb-1">Yarımçıq imtahanınız var</p>
+                            <p className="text-xs text-indigo-700 mb-4">
+                                Bu imtahanı əvvəl başlatmısınız. Davam edə və ya bitirə bilərsiniz. Yeni imtahana başlamaq üçün əvvəlcə cari imtahanı bitirin.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(`/test/take/${guestOngoing.submissionId}`)}
+                                    className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                                >
+                                    İmtahana davam et
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleFinishOngoing}
+                                    disabled={isFinishingOngoing}
+                                    className="flex-1 py-2.5 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-60"
+                                >
+                                    {isFinishingOngoing ? 'Gözləyin...' : 'İmtahanı bitir'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Inline auth form (login or register) */}
                     {googlePending && (
@@ -465,6 +573,7 @@ const ExamEntry = () => {
                         </div>
                     )}
 
+                    {!guestOngoing && (
                     <form onSubmit={handleStartExam} className="space-y-6">
                         {!isAuthenticated && !showAuthForm && (
                             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
@@ -560,6 +669,7 @@ const ExamEntry = () => {
                             </button>
                         )}
                     </form>
+                    )}
                 </div>
             </div>
         </div>

@@ -1,9 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     HiOutlineArrowLeft, HiOutlinePlus, HiOutlineTrash, HiOutlineSave,
     HiOutlineBookOpen, HiOutlineSearch, HiOutlinePencil, HiOutlineEye,
-    HiOutlineX, HiOutlineCheckCircle, HiOutlineTag
+    HiOutlineX, HiOutlineCheckCircle, HiOutlineTag, HiOutlineDuplicate,
+    HiOutlineDownload, HiOutlineSortDescending, HiOutlineChevronLeft,
+    HiOutlineChevronRight, HiOutlineDocumentDuplicate, HiOutlineMenu,
+    HiOutlineExclamation
 } from 'react-icons/hi';
 import { QuestionEditor, LatexPreview, AiGenerateModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
@@ -36,21 +39,27 @@ const TYPE_COLORS = {
     MATCHING: 'bg-pink-50 text-pink-700',
 };
 
-// ── Difficulty config ─────────────────────────────────────────────────────────
 const DIFFICULTY_LABELS = { EASY: 'Asan', MEDIUM: 'Orta', HARD: 'Çətin' };
 const DIFFICULTY_COLORS = {
     EASY: 'bg-green-50 text-green-700',
     MEDIUM: 'bg-yellow-50 text-yellow-700',
     HARD: 'bg-red-50 text-red-700',
 };
-const DIFFICULTY_OPTIONS = [
-    { value: '', label: '— Çətinlik (istəyə bağlı) —' },
-    { value: 'EASY', label: 'Asan' },
-    { value: 'MEDIUM', label: 'Orta' },
-    { value: 'HARD', label: 'Çətin' },
+
+const GRADE_LEVELS = ['1-4', '5-8', '9-11', 'Buraxılış'];
+
+const SORT_OPTIONS = [
+    { value: 'order',           label: 'Sıra üzrə' },
+    { value: 'newest',          label: 'Yeni → köhnə' },
+    { value: 'oldest',          label: 'Köhnə → yeni' },
+    { value: 'difficulty_asc',  label: 'Çətinlik: asan → çətin' },
+    { value: 'difficulty_desc', label: 'Çətinlik: çətin → asan' },
+    { value: 'topic',           label: 'Mövzuya görə' },
+    { value: 'points_desc',     label: 'Bal: çox → az' },
+    { value: 'points_asc',      label: 'Bal: az → çox' },
 ];
 
-// ── Data mappers ─────────────────────────────────────────────────────────────
+// Map BankQuestion (backend) <-> editor model (frontend)
 const bankToEditor = (bq) => ({
     id: String(bq.id),
     _bankId: bq.id,
@@ -62,6 +71,9 @@ const bankToEditor = (bq) => ({
     subjectGroup: null,
     topic: bq.topic || null,
     difficulty: bq.difficulty || null,
+    gradeLevel: bq.gradeLevel || null,
+    tags: Array.isArray(bq.tags) ? bq.tags : (bq.tags ? [...bq.tags] : []),
+    createdAt: bq.createdAt || null,
     options: (bq.options || [])
         .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
         .map(o => ({ id: String(o.id), text: o.content || '', isCorrect: !!o.isCorrect, attachedImage: o.attachedImage || null })),
@@ -81,6 +93,8 @@ const editorToBank = (subjectId, eq) => ({
     correctAnswer: eq.sampleAnswer || null,
     topic: eq.topic || null,
     difficulty: eq.difficulty || null,
+    gradeLevel: eq.gradeLevel || null,
+    tags: Array.isArray(eq.tags) ? eq.tags.filter(Boolean) : [],
     options: (eq.options || []).map((o, i) => ({
         content: o.text || '',
         isCorrect: !!o.isCorrect,
@@ -105,6 +119,8 @@ const newEditorQuestion = (orderIndex) => ({
     subjectGroup: null,
     topic: null,
     difficulty: null,
+    gradeLevel: null,
+    tags: [],
     options: [
         { id: `o1-${Date.now()}`, text: 'A', isCorrect: false },
         { id: `o2-${Date.now()}`, text: 'B', isCorrect: false },
@@ -114,6 +130,13 @@ const newEditorQuestion = (orderIndex) => ({
     matchingPairs: [],
     sampleAnswer: '',
 });
+
+// Simple text-based duplicate hash: lowercase + strip whitespace + sort options
+const dedupeHash = (q) => {
+    const norm = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const opts = (q.options || []).map(o => norm(o.text)).sort().join('|');
+    return norm(q.text) + '@@' + opts;
+};
 
 // ── View Modal ───────────────────────────────────────────────────────────────
 const ViewModal = ({ question, onClose }) => {
@@ -129,8 +152,13 @@ const ViewModal = ({ question, onClose }) => {
                         </span>
                         <span className="text-xs text-gray-400">{question.points} bal</span>
                         {question.difficulty && (
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${DIFFICULTY_COLORS[question.difficulty] || 'bg-gray-100 text-gray-600'}`}>
-                                {DIFFICULTY_LABELS[question.difficulty] || question.difficulty}
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${DIFFICULTY_COLORS[question.difficulty]}`}>
+                                {DIFFICULTY_LABELS[question.difficulty]}
+                            </span>
+                        )}
+                        {question.gradeLevel && (
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-50 text-sky-700">
+                                {question.gradeLevel}
                             </span>
                         )}
                         {question.topic && (
@@ -138,6 +166,11 @@ const ViewModal = ({ question, onClose }) => {
                                 <HiOutlineTag className="w-3 h-3" />{question.topic}
                             </span>
                         )}
+                        {(question.tags || []).map(t => (
+                            <span key={t} className="text-[11px] font-semibold bg-pink-50 text-pink-700 px-2 py-0.5 rounded-full">
+                                #{t}
+                            </span>
+                        ))}
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
                         <HiOutlineX className="w-5 h-5" />
@@ -183,9 +216,186 @@ const ViewModal = ({ question, onClose }) => {
     );
 };
 
+// ── Difficulty pill button ───────────────────────────────────────────────────
+const DIFFICULTY_PILL_STYLES = {
+    EASY: { active: 'bg-green-500 text-white border-green-500', idle: 'bg-white text-green-700 border-green-200 hover:border-green-400 hover:bg-green-50' },
+    MEDIUM: { active: 'bg-yellow-500 text-white border-yellow-500', idle: 'bg-white text-yellow-700 border-yellow-200 hover:border-yellow-400 hover:bg-yellow-50' },
+    HARD: { active: 'bg-red-500 text-white border-red-500', idle: 'bg-white text-red-700 border-red-200 hover:border-red-400 hover:bg-red-50' },
+};
+const DifficultyPill = ({ level, active, onClick }) => {
+    const styles = DIFFICULTY_PILL_STYLES[level];
+    return (
+        <button type="button" onClick={onClick}
+            className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold border-2 transition-all ${active ? styles.active : styles.idle}`}>
+            {active && <HiOutlineCheckCircle className="w-4 h-4" />}
+            {DIFFICULTY_LABELS[level]}
+        </button>
+    );
+};
+
+// ── Topic combobox with "+ Yeni mövzu yarat" ─────────────────────────────────
+const TopicCombobox = ({ value, onChange, availableTopics }) => {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const rootRef = useRef(null);
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const q = query.trim();
+    const lower = q.toLowerCase();
+    const merged = useMemo(() => {
+        const set = new Map();
+        availableTopics.forEach(t => set.set(t.name, t.name));
+        if (value && !set.has(value)) set.set(value, value);
+        return [...set.keys()];
+    }, [availableTopics, value]);
+    const filtered = merged.filter(n => !lower || n.toLowerCase().includes(lower));
+    const showCreate = q && !merged.some(n => n.toLowerCase() === lower);
+
+    const commit = (name) => {
+        onChange(name || null);
+        setOpen(false);
+        setQuery('');
+    };
+
+    return (
+        <div className="relative" ref={rootRef}>
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => setOpen(o => !o)}
+                    className={`flex-1 inline-flex items-center justify-between gap-2 px-3 py-2 border rounded-xl text-sm transition-colors ${
+                        value
+                            ? 'border-teal-300 bg-teal-50 text-teal-800'
+                            : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-300'
+                    }`}
+                >
+                    <span className="inline-flex items-center gap-1.5 truncate">
+                        <HiOutlineTag className="w-3.5 h-3.5" />
+                        {value || 'Mövzu seç'}
+                    </span>
+                    {value && (
+                        <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => { e.stopPropagation(); onChange(null); }}
+                            className="text-teal-700 hover:text-teal-900"
+                            title="Təmizlə"
+                        >
+                            <HiOutlineX className="w-3.5 h-3.5" />
+                        </span>
+                    )}
+                </button>
+            </div>
+
+            {open && (
+                <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-hidden flex flex-col">
+                    <div className="p-2 border-b border-gray-100">
+                        <input
+                            autoFocus
+                            type="text"
+                            value={query}
+                            onChange={e => setQuery(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (showCreate) commit(q);
+                                    else if (filtered.length > 0) commit(filtered[0]);
+                                } else if (e.key === 'Escape') setOpen(false);
+                            }}
+                            placeholder="Mövzu axtar və ya yeni ad yaz..."
+                            className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400"
+                        />
+                    </div>
+                    <div className="flex-1 overflow-y-auto py-1">
+                        {filtered.length === 0 && !showCreate && (
+                            <p className="text-xs text-gray-400 px-3 py-2">Mövzu tapılmadı</p>
+                        )}
+                        {filtered.map(name => (
+                            <button
+                                key={name}
+                                type="button"
+                                onClick={() => commit(name)}
+                                className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-indigo-50 ${
+                                    name === value ? 'bg-teal-50 text-teal-800 font-semibold' : 'text-gray-700'
+                                }`}
+                            >
+                                <HiOutlineTag className="w-3.5 h-3.5 text-teal-500" />
+                                {name}
+                            </button>
+                        ))}
+                        {showCreate && (
+                            <button
+                                type="button"
+                                onClick={() => commit(q)}
+                                className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-indigo-50 border-t border-gray-100 text-indigo-700 font-semibold"
+                            >
+                                <HiOutlinePlus className="w-4 h-4" />
+                                "{q}" mövzusunu yarat
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ── Tag input (chip + free text) ─────────────────────────────────────────────
+const TagInput = ({ value, onChange }) => {
+    const [text, setText] = useState('');
+    const tags = value || [];
+    const commit = () => {
+        const t = text.trim().toLowerCase();
+        if (!t) return;
+        if (tags.includes(t)) { setText(''); return; }
+        onChange([...tags, t]);
+        setText('');
+    };
+    return (
+        <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5 border border-gray-200 rounded-xl bg-white min-h-[44px] focus-within:border-indigo-400">
+            {tags.map(t => (
+                <span key={t} className="inline-flex items-center gap-1 bg-pink-50 text-pink-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    #{t}
+                    <button type="button" onClick={() => onChange(tags.filter(x => x !== t))} className="hover:text-pink-900">
+                        <HiOutlineX className="w-3 h-3" />
+                    </button>
+                </span>
+            ))}
+            <input
+                type="text"
+                value={text}
+                onChange={e => setText(e.target.value)}
+                onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commit(); }
+                    else if (e.key === 'Backspace' && !text && tags.length > 0) {
+                        onChange(tags.slice(0, -1));
+                    }
+                }}
+                onBlur={commit}
+                placeholder={tags.length === 0 ? 'imtahan-2024, olimpiada... Enter ilə əlavə et' : 'Yeni etiket...'}
+                className="flex-1 min-w-[120px] text-xs px-1 py-1 outline-none bg-transparent"
+            />
+        </div>
+    );
+};
+
 // ── Edit Modal ───────────────────────────────────────────────────────────────
 const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
     const [local, setLocal] = useState(question);
+
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-4">
@@ -196,56 +406,83 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
                     </button>
                 </div>
 
-                <div className="px-5 pt-4 pb-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Topic selector */}
-                    {availableTopics.length > 0 && (
+                {/* ── Metadata card ───────────────────── */}
+                <div className="mx-5 mt-4 mb-2 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-4 space-y-4">
+                    {/* Difficulty + grade */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
-                                <HiOutlineTag className="w-3.5 h-3.5 text-teal-500" /> Mövzu
+                            <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                                <span className="inline-block w-1 h-3.5 bg-indigo-500 rounded-full" /> Çətinlik
                             </label>
-                            <select
-                                value={local.topic || ''}
-                                onChange={e => setLocal(prev => ({ ...prev, topic: e.target.value || null }))}
-                                className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            >
-                                <option value="">— Mövzu seçin (istəyə bağlı) —</option>
-                                {availableTopics.map(t => (
-                                    <option key={t.id} value={t.name}>{t.name}</option>
-                                ))}
-                            </select>
+                            <div className="flex items-center gap-2">
+                                <DifficultyPill level="EASY" active={local.difficulty === 'EASY'} onClick={() => setLocal(p => ({ ...p, difficulty: p.difficulty === 'EASY' ? null : 'EASY' }))} />
+                                <DifficultyPill level="MEDIUM" active={local.difficulty === 'MEDIUM'} onClick={() => setLocal(p => ({ ...p, difficulty: p.difficulty === 'MEDIUM' ? null : 'MEDIUM' }))} />
+                                <DifficultyPill level="HARD" active={local.difficulty === 'HARD'} onClick={() => setLocal(p => ({ ...p, difficulty: p.difficulty === 'HARD' ? null : 'HARD' }))} />
+                            </div>
                         </div>
-                    )}
+                        <div>
+                            <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                                <span className="inline-block w-1 h-3.5 bg-sky-500 rounded-full" /> Sinif
+                            </label>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                {GRADE_LEVELS.map(g => {
+                                    const active = local.gradeLevel === g;
+                                    return (
+                                        <button key={g} type="button"
+                                            onClick={() => setLocal(p => ({ ...p, gradeLevel: p.gradeLevel === g ? null : g }))}
+                                            className={`px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                                                active ? 'bg-sky-500 text-white border-sky-500' : 'bg-white text-sky-700 border-sky-200 hover:border-sky-400 hover:bg-sky-50'
+                                            }`}>
+                                            {g}
+                                        </button>
+                                    );
+                                })}
+                                {local.gradeLevel && (
+                                    <button type="button" onClick={() => setLocal(p => ({ ...p, gradeLevel: null }))}
+                                        className="px-2 py-2 text-xs text-gray-500 hover:bg-gray-100 rounded-xl"><HiOutlineX className="w-4 h-4" /></button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-                    {/* Difficulty selector */}
+                    {/* Topic combobox */}
                     <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Çətinlik dərəcəsi</label>
-                        <select
-                            value={local.difficulty || ''}
-                            onChange={e => setLocal(prev => ({ ...prev, difficulty: e.target.value || null }))}
-                            className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                            {DIFFICULTY_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
+                        <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                            <HiOutlineTag className="w-3.5 h-3.5 text-teal-500" /> Mövzu
+                        </label>
+                        <TopicCombobox
+                            value={local.topic}
+                            onChange={(t) => setLocal(p => ({ ...p, topic: t }))}
+                            availableTopics={availableTopics}
+                        />
+                    </div>
+
+                    {/* Tags */}
+                    <div>
+                        <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                            <span className="text-pink-500">#</span> Etiketlər
+                        </label>
+                        <TagInput value={local.tags} onChange={(tags) => setLocal(p => ({ ...p, tags }))} />
                     </div>
                 </div>
 
                 <QuestionEditor
                     question={local}
                     index={0}
-                    onChange={(_qId, updated) => setLocal(prev => ({ ...updated, id: prev.id, _bankId: prev._bankId, topic: prev.topic, difficulty: prev.difficulty }))}
+                    onChange={(_qId, updated) => setLocal(prev => ({
+                        ...updated,
+                        id: prev.id, _bankId: prev._bankId,
+                        topic: prev.topic, difficulty: prev.difficulty,
+                        gradeLevel: prev.gradeLevel, tags: prev.tags,
+                    }))}
                     onDelete={null}
                     hidePoints={false}
                     hideDelete
                 />
                 <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100">
                     <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 text-sm">Ləğv et</button>
-                    <button
-                        onClick={() => onSave(local)}
-                        disabled={saving}
-                        className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl disabled:opacity-50"
-                    >
+                    <button onClick={() => onSave(local)} disabled={saving}
+                        className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl disabled:opacity-50">
                         <HiOutlineSave className="w-4 h-4" />
                         {saving ? 'Saxlanılır...' : 'Yadda saxla'}
                     </button>
@@ -255,61 +492,114 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
     );
 };
 
+// ── Stats Card ───────────────────────────────────────────────────────────────
+const StatsCard = ({ stats }) => {
+    if (!stats) return null;
+    const fmt = (iso) => {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        const diff = (Date.now() - d.getTime()) / 1000;
+        if (diff < 60) return 'indi';
+        if (diff < 3600) return `${Math.floor(diff / 60)} dəq əvvəl`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} saat əvvəl`;
+        return `${Math.floor(diff / 86400)} gün əvvəl`;
+    };
+    const totalByType = Object.entries(stats.byType || {});
+    return (
+        <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-4 text-white shadow-md flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div>
+                <p className="text-2xl font-bold leading-none">{stats.total}</p>
+                <p className="text-[11px] uppercase tracking-wide opacity-80 mt-1">sual</p>
+            </div>
+            <div className="w-px h-10 bg-white/20 hidden md:block" />
+            <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                {totalByType.map(([type, count]) => (
+                    <span key={type} className="text-[11px] font-semibold bg-white/15 px-2 py-0.5 rounded-full">
+                        {count} {TYPE_LABELS[BACKEND_TO_FRONTEND[type]] || type}
+                    </span>
+                ))}
+                {stats.topics > 0 && (
+                    <span className="text-[11px] font-semibold bg-white/15 px-2 py-0.5 rounded-full">
+                        {stats.topics} mövzu
+                    </span>
+                )}
+                {stats.tagsCount > 0 && (
+                    <span className="text-[11px] font-semibold bg-white/15 px-2 py-0.5 rounded-full">
+                        {stats.tagsCount} etiket
+                    </span>
+                )}
+            </div>
+            <div className="text-right text-[11px] opacity-90 hidden sm:block">
+                Son əlavə: <b>{fmt(stats.lastAddedAt)}</b>
+            </div>
+        </div>
+    );
+};
+
 // ── Main Component ───────────────────────────────────────────────────────────
+const PAGE_SIZE = 20;
+
 const QuestionBankSubject = () => {
     const { subjectId } = useParams();
     const navigate = useNavigate();
     const { isAdmin } = useAuth();
 
     const [subject, setSubject] = useState(null);
+    const [stats, setStats] = useState(null);
     const [questions, setQuestions] = useState([]);
+    const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
     const [search, setSearch] = useState('');
+    const [searchDebounced, setSearchDebounced] = useState('');
     const [topicFilter, setTopicFilter] = useState('ALL');
     const [difficultyFilter, setDifficultyFilter] = useState('ALL');
+    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [gradeFilter, setGradeFilter] = useState('ALL');
+    const [sort, setSort] = useState('order');
+    const [page, setPage] = useState(0);
     const [viewQuestion, setViewQuestion] = useState(null);
     const [editQuestion, setEditQuestion] = useState(null);
     const [availableTopics, setAvailableTopics] = useState([]);
     const [aiModalOpen, setAiModalOpen] = useState(false);
+    const [selectedIds, setSelectedIds] = useState(() => new Set());
+    const [dragId, setDragId] = useState(null);
+    const [hoverId, setHoverId] = useState(null);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const searchRef = useRef(null);
 
-    const filteredQuestions = useMemo(() => {
-        let list = questions;
-        if (topicFilter !== 'ALL') {
-            list = list.filter(q => q.topic === topicFilter);
-        }
-        if (difficultyFilter !== 'ALL') {
-            list = list.filter(q => q.difficulty === difficultyFilter);
-        }
-        const q = search.trim().toLowerCase();
-        if (!q) return list;
-        return list.filter(question =>
-            question.text.toLowerCase().includes(q) ||
-            (question.options || []).some(o => o.text.toLowerCase().includes(q))
-        );
-    }, [questions, search, topicFilter, difficultyFilter]);
+    useEffect(() => { fetchInitial(); }, [subjectId]);
 
-    useEffect(() => { fetchData(); }, [subjectId]);
+    // Debounce search input
+    useEffect(() => {
+        const id = setTimeout(() => setSearchDebounced(search.trim()), 300);
+        return () => clearTimeout(id);
+    }, [search]);
 
-    const fetchData = async () => {
+    // Reset page when filters change
+    useEffect(() => { setPage(0); }, [searchDebounced, topicFilter, difficultyFilter, typeFilter, gradeFilter, sort]);
+
+    // Fetch paged questions whenever filters/sort/page change
+    useEffect(() => {
+        if (!subject) return;
+        fetchPaged();
+    }, [subject, page, sort, searchDebounced, topicFilter, difficultyFilter, typeFilter, gradeFilter]);
+
+    const fetchInitial = async () => {
+        setLoading(true);
         try {
-            const [subjectsRes, questionsRes] = await Promise.all([
-                api.get('/bank/subjects'),
-                api.get(`/bank/subjects/${subjectId}/questions`),
-            ]);
+            const subjectsRes = await api.get('/bank/subjects');
             const found = subjectsRes.data.find(s => String(s.id) === String(subjectId));
-            setSubject(found || { name: 'Fənn', isGlobal: false });
+            const sub = found || { name: 'Fənn', isGlobal: false };
+            setSubject(sub);
             setCanEdit(!!found && (!found.isGlobal || isAdmin));
-            const mapped = questionsRes.data.map(bankToEditor);
-            setQuestions(mapped);
-
-            // Fetch topics for this bank subject's name from ExamSubject topics
             if (found?.name) {
                 api.get('/subjects/topics', { params: { name: found.name } })
                     .then(r => setAvailableTopics(r.data || []))
                     .catch(() => {});
             }
+            await refreshStats();
         } catch {
             toast.error('Məlumatlar yüklənmədi');
         } finally {
@@ -317,59 +607,90 @@ const QuestionBankSubject = () => {
         }
     };
 
+    const fetchPaged = useCallback(async () => {
+        try {
+            const params = {
+                page, size: PAGE_SIZE, sort,
+                search: searchDebounced || undefined,
+                topic: topicFilter !== 'ALL' ? topicFilter : undefined,
+                difficulty: difficultyFilter !== 'ALL' ? difficultyFilter : undefined,
+                type: typeFilter !== 'ALL' ? FRONTEND_TO_BACKEND[typeFilter] : undefined,
+                gradeLevel: gradeFilter !== 'ALL' ? gradeFilter : undefined,
+            };
+            const { data } = await api.get(`/bank/subjects/${subjectId}/questions/paged`, { params });
+            setQuestions((data.content || []).map(bankToEditor));
+            setTotalElements(data.totalElements ?? 0);
+        } catch {
+            toast.error('Suallar yüklənmədi');
+        }
+    }, [subjectId, page, sort, searchDebounced, topicFilter, difficultyFilter, typeFilter, gradeFilter]);
+
+    const refreshStats = async () => {
+        try {
+            const { data } = await api.get(`/bank/subjects/${subjectId}/stats`);
+            setStats(data);
+        } catch {}
+    };
+
+    // ── Keyboard shortcuts ───────────────────────────────────────────────────
+    useEffect(() => {
+        const onKey = (e) => {
+            const tag = (e.target.tagName || '').toLowerCase();
+            const inField = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
+            if (e.key === '/' && !inField) {
+                e.preventDefault();
+                searchRef.current?.focus();
+            } else if ((e.key === 'n' || e.key === 'N') && !inField && canEdit && !viewQuestion && !editQuestion && !aiModalOpen) {
+                e.preventDefault();
+                handleAddQuestion();
+            } else if (e.key === 'Escape') {
+                if (viewQuestion) setViewQuestion(null);
+                else if (editQuestion) setEditQuestion(null);
+                else if (selectedIds.size > 0) setSelectedIds(new Set());
+            }
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [canEdit, viewQuestion, editQuestion, aiModalOpen, selectedIds]);
+
+    // ── Save (with duplicate detection) ──────────────────────────────────────
     const handleSave = async (localQuestion) => {
         if (!localQuestion.text.trim()) { toast.error('Sualın mətni boş ola bilməz'); return; }
 
-        // LaTeX validation for content
         const contentValidation = validateLatexSyntax(localQuestion.text);
         if (!contentValidation.valid) {
             toast.error(`LaTeX xətası sualda:\n${getLatexErrorMessage(contentValidation.errors)}`);
             return;
         }
-
-        // LaTeX validation for options
         if (localQuestion.options) {
             for (const opt of localQuestion.options) {
                 const optValidation = validateLatexSyntax(opt.text);
-                if (!optValidation.valid) {
-                    toast.error(`LaTeX xətası variantda:\n${getLatexErrorMessage(optValidation.errors)}`);
-                    return;
-                }
+                if (!optValidation.valid) { toast.error(`LaTeX xətası variantda:\n${getLatexErrorMessage(optValidation.errors)}`); return; }
             }
         }
-
-        // LaTeX validation for answer
         if (localQuestion.sampleAnswer) {
             const answerValidation = validateLatexSyntax(localQuestion.sampleAnswer);
-            if (!answerValidation.valid) {
-                toast.error(`LaTeX xətası cavabda:\n${getLatexErrorMessage(answerValidation.errors)}`);
-                return;
-            }
+            if (!answerValidation.valid) { toast.error(`LaTeX xətası cavabda:\n${getLatexErrorMessage(answerValidation.errors)}`); return; }
         }
 
         const needsCorrect = ['MULTIPLE_CHOICE', 'MULTI_SELECT'].includes(localQuestion.type);
-        const needsAnswer = ['OPEN_AUTO', 'FILL_IN_THE_BLANK'].includes(localQuestion.type);
-        if (needsCorrect && !localQuestion.options?.some(o => o.isCorrect)) {
-            toast.error('Ən azı bir düzgün variant seçilməlidir'); return;
-        }
-        if (needsAnswer && !localQuestion.sampleAnswer?.trim()) {
-            toast.error('Düzgün cavab daxil edilməlidir'); return;
-        }
+        const needsAnswer  = ['OPEN_AUTO', 'FILL_IN_THE_BLANK'].includes(localQuestion.type);
+        if (needsCorrect && !localQuestion.options?.some(o => o.isCorrect)) { toast.error('Ən azı bir düzgün variant seçilməlidir'); return; }
+        if (needsAnswer && !localQuestion.sampleAnswer?.trim()) { toast.error('Düzgün cavab daxil edilməlidir'); return; }
+
+        // Duplicate detection (against currently-loaded page; not perfect but cheap)
+        const hash = dedupeHash(localQuestion);
+        const dup = questions.find(q => q.id !== localQuestion.id && dedupeHash(q) === hash);
+        if (dup && !window.confirm('Eyni mətnli sual artıq mövcuddur. Yenə də yadda saxlayım?')) return;
+
         setSaving(true);
         try {
             const payload = editorToBank(Number(subjectId), localQuestion);
-            let saved;
-            if (localQuestion._bankId) {
-                const { data } = await api.put(`/bank/questions/${localQuestion._bankId}`, payload);
-                saved = data;
-            } else {
-                const { data } = await api.post('/bank/questions', payload);
-                saved = data;
-            }
-            const updated = bankToEditor(saved);
-            setQuestions(prev => prev.map(q => q.id === localQuestion.id ? updated : q));
+            if (localQuestion._bankId) await api.put(`/bank/questions/${localQuestion._bankId}`, payload);
+            else await api.post('/bank/questions', payload);
             setEditQuestion(null);
             toast.success('Sual yadda saxlanıldı');
+            await Promise.all([fetchPaged(), refreshStats()]);
         } catch {
             toast.error('Yadda saxlanılmadı');
         } finally {
@@ -385,31 +706,97 @@ const QuestionBankSubject = () => {
             try {
                 await api.delete(`/bank/questions/${q._bankId}`);
                 toast.success('Sual silindi');
+                await Promise.all([fetchPaged(), refreshStats()]);
             } catch {
                 toast.error('Əməliyyat uğursuz oldu');
-                return;
             }
+        } else {
+            setQuestions(prev => prev.filter(q => q.id !== localId));
         }
-        setQuestions(prev => prev.filter(q => q.id !== localId));
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+        const ids = [...selectedIds].map(id => questions.find(q => q.id === id)?._bankId).filter(Boolean);
+        if (ids.length === 0) return;
+        if (!window.confirm(`${ids.length} sualı silmək istədiyinizdən əminsiniz?`)) return;
+        setBulkDeleting(true);
+        try {
+            const { data } = await api.post('/bank/questions/bulk-delete', { ids });
+            toast.success(`${data.deleted} sual silindi`);
+            setSelectedIds(new Set());
+            await Promise.all([fetchPaged(), refreshStats()]);
+        } catch {
+            toast.error('Əməliyyat uğursuz oldu');
+        } finally {
+            setBulkDeleting(false);
+        }
+    };
+
+    const handleClone = async (q) => {
+        if (!q._bankId) { toast.error('Əvvəlcə yadda saxlanmalıdır'); return; }
+        try {
+            await api.post(`/bank/questions/${q._bankId}/clone`);
+            toast.success('Sual klonlandı');
+            await Promise.all([fetchPaged(), refreshStats()]);
+        } catch {
+            toast.error('Klonlama uğursuz oldu');
+        }
     };
 
     const handleAddQuestion = () => {
-        const newQ = newEditorQuestion(questions.length);
-        setQuestions(prev => [...prev, newQ]);
+        const newQ = newEditorQuestion(totalElements);
         setEditQuestion(newQ);
     };
 
-    // Unique topics among existing questions (for filter pills)
-    const usedTopics = useMemo(() => {
-        const set = new Set(questions.map(q => q.topic).filter(Boolean));
-        return [...set].sort();
-    }, [questions]);
+    const handleExportExcel = async () => {
+        try {
+            const res = await api.get(`/bank/subjects/${subjectId}/export`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${subject?.name || 'sual-bazasi'}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            toast.error('Yükləmə uğursuz oldu');
+        }
+    };
 
-    // Used difficulties among existing questions
-    const usedDifficulties = useMemo(() => {
-        const set = new Set(questions.map(q => q.difficulty).filter(Boolean));
-        return ['EASY', 'MEDIUM', 'HARD'].filter(d => set.has(d));
-    }, [questions]);
+    // ── Drag & drop reorder (HTML5 native) ───────────────────────────────────
+    const onDragStart = (id) => setDragId(id);
+    const onDragOver = (e, id) => { e.preventDefault(); if (id !== hoverId) setHoverId(id); };
+    const onDragEnd = () => { setDragId(null); setHoverId(null); };
+    const onDrop = async (targetId) => {
+        if (!dragId || dragId === targetId) { onDragEnd(); return; }
+        const fromIdx = questions.findIndex(q => q.id === dragId);
+        const toIdx   = questions.findIndex(q => q.id === targetId);
+        if (fromIdx < 0 || toIdx < 0) { onDragEnd(); return; }
+        const next = [...questions];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        setQuestions(next);
+        onDragEnd();
+        // Persist (only if all have _bankId)
+        const orderedIds = next.map(q => q._bankId).filter(Boolean);
+        try {
+            await api.post(`/bank/subjects/${subjectId}/reorder`, { orderedIds });
+        } catch {
+            toast.error('Sıra yadda saxlanmadı');
+            fetchPaged();
+        }
+    };
+
+    // ── Derived UI data ──────────────────────────────────────────────────────
+    const allFilteredSelected = questions.length > 0 && questions.every(q => selectedIds.has(q.id));
+    const totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
+    const showingFrom = totalElements === 0 ? 0 : page * PAGE_SIZE + 1;
+    const showingTo   = Math.min((page + 1) * PAGE_SIZE, totalElements);
+    const draggableSort = sort === 'order' && !searchDebounced
+        && topicFilter === 'ALL' && difficultyFilter === 'ALL'
+        && typeFilter === 'ALL' && gradeFilter === 'ALL';
 
     if (loading) {
         return (
@@ -434,16 +821,24 @@ const QuestionBankSubject = () => {
                             <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full shrink-0">Ümumi baza</span>
                         )}
                     </div>
-                    <div className="relative w-56">
+                    <div className="relative w-72">
                         <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
+                            ref={searchRef}
                             type="text"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            placeholder="Sual axtar..."
+                            placeholder="Sual, variant, cavab... ( / )"
                             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400"
                         />
                     </div>
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-semibold rounded-xl transition-colors"
+                        title="Excel olaraq ixrac et"
+                    >
+                        <HiOutlineDownload className="w-4 h-4" /> Excel
+                    </button>
                     {canEdit && (
                         <div className="flex items-center gap-2">
                             <button
@@ -455,6 +850,7 @@ const QuestionBankSubject = () => {
                             <button
                                 onClick={handleAddQuestion}
                                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                                title="Yeni sual (N)"
                             >
                                 <HiOutlinePlus className="w-4 h-4" /> Yeni sual
                             </button>
@@ -463,61 +859,83 @@ const QuestionBankSubject = () => {
                 </div>
             </div>
 
-            <div className="container-main mt-6">
-                {/* Filter pills */}
-                {(usedTopics.length > 0 || usedDifficulties.length > 0) && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                        {/* Topic filters */}
-                        {usedTopics.length > 0 && (
-                            <>
-                                <button
-                                    onClick={() => setTopicFilter('ALL')}
-                                    className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${topicFilter === 'ALL' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}
-                                >
-                                    Hamısı
-                                </button>
-                                {usedTopics.map(t => (
-                                    <button
-                                        key={t}
-                                        onClick={() => setTopicFilter(topicFilter === t ? 'ALL' : t)}
-                                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${topicFilter === t ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-teal-700 border-teal-200 hover:border-teal-400'}`}
-                                    >
-                                        <HiOutlineTag className="w-3 h-3" />{t}
-                                    </button>
-                                ))}
-                            </>
-                        )}
+            <div className="container-main mt-6 space-y-4">
+                {/* Stats card */}
+                <StatsCard stats={stats} />
 
-                        {/* Difficulty filters */}
-                        {usedDifficulties.length > 0 && (
-                            <>
-                                {usedTopics.length > 0 && <span className="w-px bg-gray-200 self-stretch" />}
-                                {usedDifficulties.map(d => (
-                                    <button
-                                        key={d}
-                                        onClick={() => setDifficultyFilter(difficultyFilter === d ? 'ALL' : d)}
-                                        className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-                                            difficultyFilter === d
-                                                ? d === 'EASY' ? 'bg-green-600 text-white border-green-600'
-                                                    : d === 'MEDIUM' ? 'bg-yellow-500 text-white border-yellow-500'
-                                                    : 'bg-red-600 text-white border-red-600'
-                                                : d === 'EASY' ? 'bg-white text-green-700 border-green-200 hover:border-green-400'
-                                                    : d === 'MEDIUM' ? 'bg-white text-yellow-700 border-yellow-200 hover:border-yellow-400'
-                                                    : 'bg-white text-red-700 border-red-200 hover:border-red-400'
-                                        }`}
-                                    >
-                                        {DIFFICULTY_LABELS[d]}
-                                    </button>
-                                ))}
-                            </>
+                {/* Filter & sort row */}
+                <div className="flex flex-wrap items-center gap-2">
+                    <select
+                        value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+                        className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:border-indigo-400"
+                    >
+                        <option value="ALL">Bütün tiplər</option>
+                        {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                    <select
+                        value={difficultyFilter} onChange={e => setDifficultyFilter(e.target.value)}
+                        className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:border-indigo-400"
+                    >
+                        <option value="ALL">Bütün çətinliklər</option>
+                        {Object.entries(DIFFICULTY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                    <select
+                        value={gradeFilter} onChange={e => setGradeFilter(e.target.value)}
+                        className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:border-indigo-400"
+                    >
+                        <option value="ALL">Bütün siniflər</option>
+                        {GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                    <select
+                        value={topicFilter} onChange={e => setTopicFilter(e.target.value)}
+                        className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:border-indigo-400 max-w-[200px]"
+                    >
+                        <option value="ALL">Bütün mövzular</option>
+                        {availableTopics.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                    </select>
+
+                    <div className="flex-1" />
+
+                    <div className="inline-flex items-center gap-1.5 px-2 py-1 border border-gray-200 rounded-full bg-white">
+                        <HiOutlineSortDescending className="w-3.5 h-3.5 text-gray-400" />
+                        <select
+                            value={sort} onChange={e => setSort(e.target.value)}
+                            className="text-xs font-semibold bg-transparent focus:outline-none"
+                        >
+                            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Bulk action bar */}
+                {selectedIds.size > 0 && (
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
+                        <p className="text-sm font-semibold text-indigo-900">
+                            {selectedIds.size} sual seçildi
+                        </p>
+                        <div className="flex-1" />
+                        <button
+                            onClick={() => setSelectedIds(new Set())}
+                            className="text-xs font-semibold text-gray-600 hover:bg-white px-3 py-1.5 rounded-lg"
+                        >Seçimi təmizlə</button>
+                        {canEdit && (
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={bulkDeleting}
+                                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg disabled:opacity-50"
+                            >
+                                <HiOutlineTrash className="w-3.5 h-3.5" />
+                                {bulkDeleting ? 'Silinir...' : 'Sil'}
+                            </button>
                         )}
                     </div>
                 )}
 
-                {questions.length === 0 ? (
+                {/* Table */}
+                {totalElements === 0 && questions.length === 0 ? (
                     <div className="text-center py-20">
                         <HiOutlineBookOpen className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                        <p className="text-gray-500 font-medium">Bu fənndə hələ sual yoxdur</p>
+                        <p className="text-gray-500 font-medium">Filtrlərə uyğun sual tapılmadı</p>
                         {canEdit && (
                             <button onClick={handleAddQuestion} className="mt-4 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm">
                                 İlk sualı əlavə et
@@ -529,69 +947,134 @@ const QuestionBankSubject = () => {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    <th className="px-4 py-3 text-left w-10">#</th>
-                                    <th className="px-4 py-3 text-left">Sual mətni</th>
+                                    <th className="px-3 py-3 text-left w-8">
+                                        {canEdit && (
+                                            <input
+                                                type="checkbox"
+                                                checked={allFilteredSelected}
+                                                onChange={() => {
+                                                    if (allFilteredSelected) setSelectedIds(new Set());
+                                                    else setSelectedIds(new Set(questions.map(q => q.id)));
+                                                }}
+                                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-400"
+                                            />
+                                        )}
+                                    </th>
+                                    <th className="px-3 py-3 text-left w-10">#</th>
+                                    <th className="px-4 py-3 text-left">Sual</th>
                                     <th className="px-4 py-3 text-left w-28">Mövzu</th>
+                                    <th className="px-4 py-3 text-left w-20">Sinif</th>
                                     <th className="px-4 py-3 text-left w-24">Çətinlik</th>
                                     <th className="px-4 py-3 text-left w-36">Tip</th>
-                                    <th className="px-4 py-3 text-center w-16">Bal</th>
-                                    <th className="px-4 py-3 text-right w-28">Əməliyyatlar</th>
+                                    <th className="px-4 py-3 text-center w-14">Bal</th>
+                                    <th className="px-4 py-3 text-right w-36">Əməliyyat</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {filteredQuestions.length === 0 ? (
+                                {questions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="text-center py-12 text-gray-400">
+                                        <td colSpan={9} className="text-center py-12 text-gray-400">
                                             <HiOutlineSearch className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                            <p>Axtarışa uyğun sual tapılmadı</p>
+                                            <p>Filtrlərə uyğun sual tapılmadı</p>
                                         </td>
                                     </tr>
-                                ) : filteredQuestions.map((q, idx) => (
-                                    <tr key={q.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-4 py-3 text-xs text-gray-400 font-medium">{idx + 1}</td>
-                                        <td className="px-4 py-3">
+                                ) : questions.map((q, idx) => {
+                                    const checked = selectedIds.has(q.id);
+                                    const isDragTarget = hoverId === q.id && dragId !== q.id;
+                                    return (
+                                    <tr
+                                        key={q.id}
+                                        draggable={canEdit && draggableSort}
+                                        onDragStart={() => onDragStart(q.id)}
+                                        onDragOver={(e) => onDragOver(e, q.id)}
+                                        onDragLeave={() => setHoverId(null)}
+                                        onDrop={() => onDrop(q.id)}
+                                        onDragEnd={onDragEnd}
+                                        className={`transition-colors ${checked ? 'bg-indigo-50/60' : 'hover:bg-gray-50'} ${isDragTarget ? 'outline outline-2 outline-indigo-400' : ''}`}
+                                    >
+                                        <td className="px-3 py-3 align-top">
+                                            <div className="flex items-center gap-1.5">
+                                                {canEdit && draggableSort && (
+                                                    <span className="cursor-grab text-gray-300 hover:text-gray-500" title="Sıralamaq üçün sürüşdür">
+                                                        <HiOutlineMenu className="w-3.5 h-3.5" />
+                                                    </span>
+                                                )}
+                                                {canEdit && (
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        onChange={() => {
+                                                            setSelectedIds(prev => {
+                                                                const next = new Set(prev);
+                                                                if (next.has(q.id)) next.delete(q.id); else next.add(q.id);
+                                                                return next;
+                                                            });
+                                                        }}
+                                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-400"
+                                                    />
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-3 text-xs text-gray-400 font-medium align-top">
+                                            {page * PAGE_SIZE + idx + 1}
+                                        </td>
+                                        <td className="px-4 py-3 align-top">
                                             <div className="line-clamp-2 text-gray-800">
                                                 <LatexPreview content={q.text || '—'} />
                                             </div>
+                                            {(q.tags || []).length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {q.tags.slice(0, 4).map(t => (
+                                                        <span key={t} className="text-[10px] font-semibold bg-pink-50 text-pink-700 px-1.5 py-0.5 rounded-full">#{t}</span>
+                                                    ))}
+                                                    {q.tags.length > 4 && (
+                                                        <span className="text-[10px] text-gray-400">+{q.tags.length - 4}</span>
+                                                    )}
+                                                </div>
+                                            )}
                                             {!q._bankId && (
                                                 <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full mt-1 inline-block">Yadda saxlanılmayıb</span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 align-top">
                                             {q.topic ? (
                                                 <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">
                                                     <HiOutlineTag className="w-3 h-3" />{q.topic}
                                                 </span>
-                                            ) : (
-                                                <span className="text-xs text-gray-300">—</span>
-                                            )}
+                                            ) : <span className="text-xs text-gray-300">—</span>}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 align-top">
+                                            {q.gradeLevel ? (
+                                                <span className="text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full whitespace-nowrap">{q.gradeLevel}</span>
+                                            ) : <span className="text-xs text-gray-300">—</span>}
+                                        </td>
+                                        <td className="px-4 py-3 align-top">
                                             {q.difficulty ? (
                                                 <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${DIFFICULTY_COLORS[q.difficulty] || 'bg-gray-100 text-gray-600'}`}>
                                                     {DIFFICULTY_LABELS[q.difficulty] || q.difficulty}
                                                 </span>
-                                            ) : (
-                                                <span className="text-xs text-gray-300">—</span>
-                                            )}
+                                            ) : <span className="text-xs text-gray-300">—</span>}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 align-top">
                                             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${TYPE_COLORS[q.type] || 'bg-gray-100 text-gray-600'}`}>
                                                 {TYPE_LABELS[q.type] || q.type}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-center font-semibold text-gray-700">{q.points}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 text-center font-semibold text-gray-700 align-top">{q.points}</td>
+                                        <td className="px-4 py-3 align-top">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button onClick={() => setViewQuestion(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Bax">
+                                                <button onClick={() => setViewQuestion(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50" title="Bax">
                                                     <HiOutlineEye className="w-4 h-4" />
                                                 </button>
                                                 {canEdit && (
                                                     <>
-                                                        <button onClick={() => setEditQuestion(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Redaktə et">
+                                                        <button onClick={() => setEditQuestion(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Redaktə">
                                                             <HiOutlinePencil className="w-4 h-4" />
                                                         </button>
-                                                        <button onClick={() => handleDelete(q.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Sil">
+                                                        <button onClick={() => handleClone(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50" title="Klonla">
+                                                            <HiOutlineDocumentDuplicate className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={() => handleDelete(q.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50" title="Sil">
                                                             <HiOutlineTrash className="w-4 h-4" />
                                                         </button>
                                                     </>
@@ -599,10 +1082,47 @@ const QuestionBankSubject = () => {
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>
                         </table>
+
+                        {/* Pagination */}
+                        {totalElements > PAGE_SIZE && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+                                <p className="text-xs text-gray-500">
+                                    {showingFrom}–{showingTo} / {totalElements}
+                                </p>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                                        disabled={page === 0}
+                                        className="p-1.5 rounded-lg text-gray-500 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <HiOutlineChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <span className="text-xs font-semibold text-gray-700 px-2">
+                                        {page + 1} / {totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                                        disabled={page >= totalPages - 1}
+                                        className="p-1.5 rounded-lg text-gray-500 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <HiOutlineChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
+                )}
+
+                {/* Drag hint */}
+                {canEdit && !draggableSort && totalElements > 1 && (
+                    <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
+                        <HiOutlineExclamation className="w-3.5 h-3.5" />
+                        Sırasını dəyişmək üçün sıralamağı "Sıra üzrə"-yə qoyun və filtrləri təmizləyin.
+                    </p>
                 )}
             </div>
 
@@ -623,7 +1143,7 @@ const QuestionBankSubject = () => {
                 subjectId={Number(subjectId)}
                 subjectName={subject?.name || ''}
                 topics={availableTopics}
-                onSave={fetchData}
+                onSave={() => Promise.all([fetchPaged(), refreshStats()])}
             />
         </div>
     );

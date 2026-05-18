@@ -50,7 +50,7 @@ const InlineEdit = ({
         return (
             <span
                 onClick={() => !readOnly && setEditing(true)}
-                className={`group inline-flex items-center gap-1.5 ${readOnly ? '' : 'cursor-pointer hover:bg-indigo-50 -mx-1 px-1 rounded'} ${className}`}
+                className={`group inline-flex items-center gap-1.5 ${readOnly ? '' : 'cursor-pointer hover:bg-blue-50 -mx-1 px-1 rounded'} ${className}`}
             >
                 <span className={value ? '' : 'text-gray-400 italic'}>{value || placeholder}</span>
                 {!readOnly && (
@@ -72,7 +72,7 @@ const InlineEdit = ({
                 }}
                 onBlur={commit}
                 disabled={saving}
-                className={`px-2 py-0.5 border border-indigo-400 rounded outline-none text-sm bg-white ${inputClassName}`}
+                className={`px-2 py-0.5 border border-blue-400 rounded outline-none text-sm bg-white ${inputClassName}`}
             />
             <button onMouseDown={e => e.preventDefault()} onClick={commit} disabled={saving}
                 className="p-0.5 text-emerald-600 hover:bg-emerald-50 rounded">

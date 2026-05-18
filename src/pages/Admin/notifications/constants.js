@@ -2,8 +2,8 @@ import { HiUserGroup, HiAcademicCap, HiShieldCheck } from 'react-icons/hi';
 
 export const ROLE_OPTIONS = [
     { value: 'STUDENT', label: 'Tələbələr', icon: HiUserGroup, color: 'emerald' },
-    { value: 'TEACHER', label: 'Müəllimlər', icon: HiAcademicCap, color: 'indigo' },
-    { value: 'ADMIN', label: 'Adminlər', icon: HiShieldCheck, color: 'purple' },
+    { value: 'TEACHER', label: 'Müəllimlər', icon: HiAcademicCap, color: 'blue' },
+    { value: 'ADMIN', label: 'Adminlər', icon: HiShieldCheck, color: 'emerald' },
 ];
 
 export const CHANNEL_LABELS = { SITE: 'Sayt', GMAIL: 'Gmail', SENDPULSE: 'SendPulse' };

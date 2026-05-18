@@ -84,7 +84,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                         </p>
                         <button
                             onClick={onClose}
-                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all text-sm"
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all text-sm"
                         >
                             Daxil olmaq üçün keç
                         </button>
@@ -128,7 +128,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                                             onChange={(e) => setEmail(e.target.value)}
                                             required
                                             autoFocus
-                                            className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
+                                            className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
                                             placeholder="email@nümunə.az"
                                         />
                                     </div>
@@ -136,7 +136,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 text-sm shadow-sm shadow-indigo-200"
+                                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 text-sm shadow-sm shadow-blue-200"
                                 >
                                     {loading ? (
                                         <>
@@ -169,7 +169,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                                         onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                         required
                                         autoFocus
-                                        className="w-full text-center text-2xl font-bold tracking-[0.6em] py-3.5 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-gray-900 placeholder:text-gray-300 placeholder:tracking-[0.6em]"
+                                        className="w-full text-center text-2xl font-bold tracking-[0.6em] py-3.5 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-gray-900 placeholder:text-gray-300 placeholder:tracking-[0.6em]"
                                         placeholder="000000"
                                     />
                                     <button
@@ -181,7 +181,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                                                 .catch(() => toast.error('Əməliyyat uğursuz oldu'))
                                                 .finally(() => setLoading(false));
                                         }}
-                                        className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                                        className="mt-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                                     >
                                         Kodu yenidən göndər
                                     </button>
@@ -199,7 +199,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                                             value={newPassword}
                                             onChange={(e) => setNewPassword(e.target.value)}
                                             required
-                                            className="w-full pl-11 pr-11 py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
+                                            className="w-full pl-11 pr-11 py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
                                             placeholder="Ən azı 6 simvol"
                                         />
                                         <button type="button" onClick={() => setShowNew(v => !v)}
@@ -226,7 +226,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                                                     ? passwordsMatch
                                                         ? 'border-green-400 focus:ring-green-500/20 focus:border-green-500'
                                                         : 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
-                                                    : 'border-gray-200 focus:ring-indigo-500/20 focus:border-indigo-500'
+                                                    : 'border-gray-200 focus:ring-blue-500/20 focus:border-blue-500'
                                             }`}
                                             placeholder="••••••••"
                                         />
@@ -248,7 +248,7 @@ const ForgotPasswordModal = ({ onClose }) => {
                                 <button
                                     type="submit"
                                     disabled={loading || otp.length < 6}
-                                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 text-sm shadow-sm shadow-indigo-200"
+                                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 text-sm shadow-sm shadow-blue-200"
                                 >
                                     {loading ? (
                                         <>

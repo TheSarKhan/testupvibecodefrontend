@@ -4,101 +4,505 @@ import { useAuth } from '../../context/AuthContext';
 import {
     HiOutlineEye, HiOutlineEyeOff,
     HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlinePhone,
-    HiOutlineAcademicCap, HiOutlineBookOpen,
-    HiOutlineSparkles, HiOutlineX, HiOutlineCheckCircle,
-    HiOutlineArrowLeft, HiOutlineArrowRight,
-    HiOutlineUserGroup, HiOutlineChartBar, HiOutlineLightningBolt,
+    HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineChartBar,
+    HiOutlineLightningBolt, HiOutlineSparkles, HiOutlineX, HiOutlineCheck,
+    HiOutlineChevronLeft, HiOutlineArrowLeft, HiOutlineArrowRight,
+    HiOutlineGift, HiOutlineChevronRight,
 } from 'react-icons/hi';
 import { useGoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import GoogleRoleModal from '../../components/ui/GoogleRoleModal';
-import logo from '../../assets/logo.png';
 
-// ── Password strength ─────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+// Helpers
+// ───────────────────────────────────────────────────────────────────────────
+
+const GoogleIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 48 48">
+        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.2 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.4-.1-3.5z"/>
+        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.2 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+        <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.5-5.2l-6.2-5.3C29.2 35 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.7 39.7 16.3 44 24 44z"/>
+        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4 5.5l6.2 5.3c-.4.4 6.5-4.8 6.5-14.3 0-1.3-.1-2.4-.4-3.5z"/>
+    </svg>
+);
+
 const calcStrength = (pwd) => {
     if (!pwd) return 0;
     let s = 0;
     if (pwd.length >= 8) s++;
-    if (/[A-Z]/.test(pwd)) s++;
+    if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) s++;
     if (/[0-9]/.test(pwd)) s++;
     if (/[^A-Za-z0-9]/.test(pwd)) s++;
     return s;
 };
-const STRENGTH_META = [
-    null,
-    { label: 'Zəif',  barColor: 'bg-red-400',  textColor: 'text-red-500'   },
-    { label: 'Orta',  barColor: 'bg-amber-400', textColor: 'text-amber-500' },
-    { label: 'Yaxşı', barColor: 'bg-blue-400',  textColor: 'text-blue-500'  },
-    { label: 'Güclü', barColor: 'bg-green-500', textColor: 'text-green-600' },
-];
 
-// ── Left panel features ───────────────────────────────────────────────────────
-const FEATURES = [
-    { icon: HiOutlineUserGroup,     title: '5,000+ Müəllim',     desc: 'Azərbaycanlı müəllimlərin seçimi'          },
-    { icon: HiOutlineChartBar,      title: 'Dərin statistika',    desc: 'Hər şagirdin nəticəsini ayrıca izləyin'    },
-    { icon: HiOutlineLightningBolt, title: 'AI sual yaratma',     desc: 'Saniyələr içində hazır, keyfiyyətli suallar' },
-];
+const STRENGTH_LABEL = ['Çox zəif', 'Zəif', 'Orta', 'Yaxşı', 'Güclü'];
+const STRENGTH_COLOR = ['bg-red-400', 'bg-red-400', 'bg-amber-400', 'bg-[var(--primary)]', 'bg-[var(--brand-green-600)]'];
 
-// ── Step indicator ────────────────────────────────────────────────────────────
-const StepDots = ({ current, total }) => (
-    <div className="flex items-center gap-2 justify-center mb-6">
+// ───────────────────────────────────────────────────────────────────────────
+// Step indicator
+// ───────────────────────────────────────────────────────────────────────────
+
+const StepDots = ({ step, total = 3 }) => (
+    <div className="flex items-center gap-2 justify-center mb-7">
         {Array.from({ length: total }).map((_, i) => (
             <div
                 key={i}
                 className={`rounded-full transition-all duration-300 ${
-                    i < current
-                        ? 'w-2 h-2 bg-indigo-600'
-                        : i === current
-                            ? 'w-6 h-2 bg-indigo-600'
-                            : 'w-2 h-2 bg-gray-200'
+                    i < step
+                        ? 'w-2 h-2 bg-[var(--brand-green-600)]'
+                        : i === step
+                            ? 'w-7 h-2 bg-[var(--primary)]'
+                            : 'w-2 h-2 bg-[var(--ink-200)]'
                 }`}
             />
         ))}
     </div>
 );
 
-// ── Welcome gift modal ────────────────────────────────────────────────────────
-const WelcomeGiftModal = ({ onClose }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <div className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
-            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 text-center">
-                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-4xl">🎁</span>
-                </div>
-                <h2 className="text-2xl font-extrabold text-white mb-1">Xoş gəldiniz!</h2>
-                <p className="text-indigo-200 text-sm">testup.az ilə imtahan hazırlığında yeni bir səhifə açıldı</p>
-            </div>
-            <div className="p-6 text-center">
-                <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-sm font-bold px-4 py-2 rounded-full mb-4">
-                    <HiOutlineSparkles className="w-4 h-4" />
-                    3 aylıq Basic plan — Pulsuz Hədiyyə!
-                </div>
-                <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                    Müəllim kimi qeydiyyatdan keçdiyiniz üçün sizə{' '}
-                    <strong>3 aylıq Basic abunəlik</strong> hədiyyə edildi.
+// ───────────────────────────────────────────────────────────────────────────
+// Brand panel
+// ───────────────────────────────────────────────────────────────────────────
+
+const RegisterBrand = ({ role }) => {
+    const isTeacher = role === 'TEACHER';
+    const isStudent = role === 'STUDENT';
+    return (
+        <aside
+            className="hidden lg:flex lg:w-[44%] xl:w-[42%] flex-col justify-between p-10 xl:p-14 relative overflow-hidden text-white"
+            style={{ background: 'linear-gradient(155deg, var(--brand-blue-700) 0%, var(--primary) 55%, var(--brand-green-600) 130%)' }}
+        >
+            <div className="absolute -top-32 -right-32 w-80 h-80 bg-white/5 rounded-full" />
+            <div className="absolute -bottom-40 -left-32 w-[480px] h-[480px] bg-white/5 rounded-full" />
+            <div className="absolute top-1/2 right-12 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2" />
+
+            {/* Logo */}
+            <Link to="/" className="relative z-10 inline-flex items-center gap-2 w-fit">
+                <span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="4 12 10 18 20 6" />
+                    </svg>
+                </span>
+                <span className="font-extrabold text-[20px] tracking-tight">
+                    testup<span className="text-[var(--brand-green-100)]">.az</span>
+                </span>
+            </Link>
+
+            {/* Body */}
+            <div className="relative z-10 my-10">
+                <h1 className="text-[34px] xl:text-[42px] font-extrabold leading-[1.1] tracking-[-0.02em] mb-4">
+                    {isTeacher ? (<>Müasir müəllim,<br />müasir alətlə<br />işləyir.</>)
+                        : (<>Hazırlığa bir<br />addım qalıb.</>)}
+                </h1>
+                <p className="text-white/75 text-[15px] xl:text-[16px] leading-relaxed max-w-[440px]">
+                    {isTeacher ? (
+                        <>Müəllim kimi qeydiyyatdan keçin — <strong className="text-white font-semibold">3 aylıq Peşəkar plan</strong> sizindir. Pulsuz.</>
+                    ) : isStudent ? (
+                        <>Hesabınızı yaradın, imtahanlara qoşulun, nəticələrinizi və inkişafınızı bir yerdə izləyin.</>
+                    ) : (
+                        <>Hesab yaradıb saniyələr içində ilk imtahanınıza qoşulun — qeydiyyat tamamilə pulsuzdur.</>
+                    )}
                 </p>
-                <div className="grid grid-cols-2 gap-2 mb-6 text-left">
-                    {['Sınırsız sual bazası', 'PDF yükləmə', 'Detallı statistika', 'Şablon imtahanlar'].map(f => (
-                        <div key={f} className="flex items-center gap-2 text-xs text-gray-600">
-                            <span className="text-green-500 font-bold">✓</span> {f}
+
+                <div className="mt-9 flex flex-col gap-4">
+                    {[
+                        { Icon: HiOutlineUserGroup,      name: '12 000+ müəllim',   desc: 'Azərbaycanlı müəllimlərin seçimi' },
+                        { Icon: HiOutlineChartBar,       name: 'Dərin statistika',  desc: 'Hər şagirdin nəticəsini ayrıca izləyin' },
+                        { Icon: HiOutlineLightningBolt,  name: 'AI sual yaratma',   desc: 'Saniyələr içində hazır, keyfiyyətli suallar' },
+                    ].map((f, i) => (
+                        <div key={i} className="flex items-start gap-3.5">
+                            <span className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 backdrop-blur-sm">
+                                <f.Icon className="w-5 h-5 text-white" />
+                            </span>
+                            <div>
+                                <div className="font-bold text-[14.5px]">{f.name}</div>
+                                <div className="text-[13px] text-white/65 mt-0.5">{f.desc}</div>
+                            </div>
                         </div>
                     ))}
                 </div>
-                <button onClick={onClose} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">
-                    Başlayaq! 🚀
+            </div>
+
+            {/* Teacher gift card */}
+            <div className="relative z-10 flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/15">
+                <div className="w-11 h-11 rounded-xl bg-[var(--brand-green-600)]/30 text-[var(--brand-green-100)] flex items-center justify-center shrink-0">
+                    <HiOutlineGift className="w-5 h-5" />
+                </div>
+                <div>
+                    <div className="font-bold text-[14px]">{isTeacher ? 'Müəllim hədiyyəsi aktivdir' : 'Müəllim hədiyyəsi'}</div>
+                    <div className="text-[12.5px] text-white/65 mt-0.5">Müəllim hesabına xüsusi hədiyyə — 3 ay Peşəkar plan, büsbütün pulsuz</div>
+                </div>
+            </div>
+        </aside>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Field input (reusable)
+// ───────────────────────────────────────────────────────────────────────────
+
+const Field = ({ label, Icon, type = 'text', value, onChange, placeholder, required, autoComplete, trailing }) => (
+    <div className="mt-4">
+        <label className="block text-[12.5px] font-bold uppercase tracking-[0.08em] text-[var(--ink-600)] mb-1.5">{label}</label>
+        <div className="relative">
+            {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-400)] w-4 h-4 pointer-events-none" />}
+            <input
+                type={type}
+                value={value}
+                onChange={onChange}
+                required={required}
+                autoComplete={autoComplete}
+                placeholder={placeholder}
+                className={`w-full h-12 ${Icon ? 'pl-11' : 'pl-4'} ${trailing ? 'pr-11' : 'pr-4'} rounded-xl bg-[var(--ink-50)] border border-[var(--ink-200)] text-[14px] text-[var(--ink-900)] placeholder-[var(--ink-400)] outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)] transition-colors`}
+            />
+            {trailing}
+        </div>
+    </div>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// Steps
+// ───────────────────────────────────────────────────────────────────────────
+
+const StepRole = ({ role, setRole, googleLogin, onNext }) => (
+    <>
+        <StepDots step={0} />
+        <h1 className="text-[24px] sm:text-[28px] font-extrabold text-[var(--ink-900)] tracking-tight text-center">
+            Necə tanıyım sizi?
+        </h1>
+        <p className="mt-1.5 text-[14px] text-[var(--ink-500)] text-center">
+            Rolunuzu seçin — istəsəniz sonra dəyişə bilərsiniz
+        </p>
+
+        <div className="mt-6 flex flex-col gap-3">
+            {[
+                { value: 'STUDENT', name: 'Şagird', desc: 'İmtahanlara qoşul, nəticəni anında gör', Icon: HiOutlineAcademicCap, bonus: null },
+                { value: 'TEACHER', name: 'Müəllim', desc: 'İmtahan hazırla, nəticəni real vaxtda izlə', Icon: HiOutlineUserGroup, bonus: '✦ 3 ay hədiyyə' },
+            ].map((r) => {
+                const active = role === r.value;
+                return (
+                    <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setRole(r.value)}
+                        className={`w-full text-left flex items-center gap-3.5 p-4 rounded-2xl border-2 transition-all ${
+                            active
+                                ? 'border-[var(--primary)] bg-[var(--primary-soft)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.4)]'
+                                : 'border-[var(--ink-200)] bg-white hover:border-[var(--ink-300)]'
+                        }`}
+                    >
+                        <span className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                            r.value === 'TEACHER'
+                                ? 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]'
+                                : 'bg-[var(--primary-soft)] text-[var(--primary)]'
+                        }`}>
+                            <r.Icon className="w-6 h-6" />
+                        </span>
+                        <span className="flex-1 min-w-0">
+                            <span className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-[15.5px] text-[var(--ink-900)]">{r.name}</span>
+                                {r.bonus && (
+                                    <span className="inline-flex items-center text-[10.5px] font-bold text-[var(--brand-green-600)] bg-[var(--accent-soft)] border border-[var(--brand-green-100)] px-2 py-0.5 rounded-full">
+                                        {r.bonus}
+                                    </span>
+                                )}
+                            </span>
+                            <span className="block text-[13px] text-[var(--ink-500)] mt-0.5">{r.desc}</span>
+                        </span>
+                        <HiOutlineChevronRight className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-[var(--primary)]' : 'text-[var(--ink-400)]'}`} />
+                    </button>
+                );
+            })}
+        </div>
+
+        <button
+            type="button"
+            onClick={onNext}
+            disabled={!role}
+            className="w-full h-12 mt-6 inline-flex items-center justify-center gap-2 rounded-full font-bold text-[14px] text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+        >
+            Davam et <HiOutlineArrowRight className="w-4 h-4" />
+        </button>
+
+        <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[var(--ink-150)]" />
+            </div>
+            <div className="relative flex justify-center">
+                <span className="bg-white px-3 text-[11.5px] font-semibold text-[var(--ink-400)] uppercase tracking-wider">və ya</span>
+            </div>
+        </div>
+
+        <button
+            type="button"
+            onClick={() => googleLogin()}
+            className="w-full h-12 inline-flex items-center justify-center gap-3 rounded-full border border-[var(--ink-200)] bg-white hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] text-[14px] font-semibold text-[var(--ink-800)] transition-all"
+        >
+            <GoogleIcon />
+            Google ilə qeydiyyat
+        </button>
+
+        <p className="mt-6 text-center text-[13.5px] text-[var(--ink-500)]">
+            Artıq hesabınız var?{' '}
+            <Link to="/login" className="text-[var(--primary)] font-semibold hover:text-[var(--primary-hover)] transition-colors">
+                Daxil olun
+            </Link>
+        </p>
+    </>
+);
+
+const StepDetails = ({ role, formData, set, onBack, onNext }) => {
+    const ready = formData.fullName.trim() && formData.email.trim();
+    return (
+        <>
+            <StepDots step={1} />
+            <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--ink-600)] hover:text-[var(--primary)] transition-colors mb-3"
+            >
+                <HiOutlineArrowLeft className="w-3.5 h-3.5" /> Geri
+            </button>
+
+            <h1 className="text-[24px] sm:text-[28px] font-extrabold text-[var(--ink-900)] tracking-tight">
+                Məlumatlarınız
+            </h1>
+            <p className="mt-1.5 text-[14px] text-[var(--ink-500)]">
+                {role === 'TEACHER' ? 'Müəllim' : 'Şagird'} kimi qeydiyyat
+            </p>
+
+            <Field
+                label="Ad, Soyad"
+                Icon={HiOutlineUser}
+                value={formData.fullName}
+                onChange={e => set('fullName', e.target.value)}
+                placeholder="Ad Soyad"
+                required
+            />
+            <Field
+                label="E-poçt"
+                Icon={HiOutlineMail}
+                type="email"
+                value={formData.email}
+                onChange={e => set('email', e.target.value)}
+                placeholder="email@nümunə.az"
+                autoComplete="email"
+                required
+            />
+            <Field
+                label="Telefon nömrəsi"
+                Icon={HiOutlinePhone}
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={e => set('phoneNumber', e.target.value)}
+                placeholder="+994 50 000 00 00"
+            />
+
+            <button
+                type="button"
+                onClick={onNext}
+                disabled={!ready}
+                className="w-full h-12 mt-6 inline-flex items-center justify-center gap-2 rounded-full font-bold text-[14px] text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+            >
+                Davam et <HiOutlineArrowRight className="w-4 h-4" />
+            </button>
+
+            <p className="mt-6 text-center text-[13.5px] text-[var(--ink-500)]">
+                Artıq hesabınız var?{' '}
+                <Link to="/login" className="text-[var(--primary)] font-semibold hover:text-[var(--primary-hover)] transition-colors">
+                    Daxil olun
+                </Link>
+            </p>
+        </>
+    );
+};
+
+const StepPassword = ({ formData, set, onBack, onSubmit, loading }) => {
+    const [showP1, setShowP1] = useState(false);
+    const [showP2, setShowP2] = useState(false);
+    const s = calcStrength(formData.password);
+    const ready = formData.password.length >= 8 && formData.password === formData.confirmPassword && formData.termsAccepted;
+
+    return (
+        <>
+            <StepDots step={2} />
+            <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--ink-600)] hover:text-[var(--primary)] transition-colors mb-3"
+            >
+                <HiOutlineArrowLeft className="w-3.5 h-3.5" /> Geri
+            </button>
+
+            <h1 className="text-[24px] sm:text-[28px] font-extrabold text-[var(--ink-900)] tracking-tight">
+                Şifrə yaradın
+            </h1>
+            <p className="mt-1.5 text-[14px] text-[var(--ink-500)]">
+                Güclü şifrə — güvənli hesab
+            </p>
+
+            <Field
+                label="Şifrə"
+                Icon={HiOutlineLockClosed}
+                type={showP1 ? 'text' : 'password'}
+                value={formData.password}
+                onChange={e => set('password', e.target.value)}
+                placeholder="••••••••"
+                required
+                trailing={
+                    <button
+                        type="button"
+                        onClick={() => setShowP1(v => !v)}
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[var(--ink-400)] hover:text-[var(--ink-700)]"
+                        tabIndex={-1}
+                    >
+                        {showP1 ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                    </button>
+                }
+            />
+
+            {formData.password && (
+                <>
+                    <div className="flex gap-1 mt-2">
+                        {[1, 2, 3, 4].map(i => (
+                            <span
+                                key={i}
+                                className={`flex-1 h-1 rounded-full transition-colors ${i <= s ? STRENGTH_COLOR[Math.min(s, 4)] : 'bg-[var(--ink-150)]'}`}
+                            />
+                        ))}
+                    </div>
+                    <div className="text-[11.5px] text-[var(--ink-500)] mt-1.5">
+                        <strong className={s >= 3 ? 'text-[var(--brand-green-600)]' : s >= 2 ? 'text-amber-600' : 'text-red-600'}>{STRENGTH_LABEL[s]}</strong>
+                        {formData.password.length < 8 && ' · Ən azı 8 simvol olmalıdır'}
+                    </div>
+                </>
+            )}
+
+            <Field
+                label="Şifrəni təsdiqləyin"
+                Icon={HiOutlineLockClosed}
+                type={showP2 ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={e => set('confirmPassword', e.target.value)}
+                placeholder="••••••••"
+                required
+                trailing={
+                    <button
+                        type="button"
+                        onClick={() => setShowP2(v => !v)}
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[var(--ink-400)] hover:text-[var(--ink-700)]"
+                        tabIndex={-1}
+                    >
+                        {showP2 ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
+                    </button>
+                }
+            />
+
+            {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="text-[11.5px] text-red-600 mt-1.5">Şifrələr uyğun gəlmir</p>
+            )}
+
+            <label className="flex items-start gap-2.5 mt-5 cursor-pointer">
+                <input
+                    type="checkbox"
+                    checked={formData.termsAccepted}
+                    onChange={e => set('termsAccepted', e.target.checked)}
+                    className="w-4 h-4 rounded accent-[var(--primary)] mt-0.5 shrink-0"
+                />
+                <span className="text-[13px] text-[var(--ink-700)] leading-snug">
+                    <Link to="/legal/sertler" className="text-[var(--primary)] font-semibold hover:underline">İstifadə şərtləri</Link>
+                    {' '}və{' '}
+                    <Link to="/legal/mexfilik" className="text-[var(--primary)] font-semibold hover:underline">Gizlilik Siyasətini</Link>
+                    {' '}oxuyub qəbul edirəm
+                </span>
+            </label>
+
+            <button
+                type="button"
+                onClick={onSubmit}
+                disabled={!ready || loading}
+                className="w-full h-12 mt-6 inline-flex items-center justify-center gap-2 rounded-full font-bold text-[14px] text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+            >
+                {loading ? (
+                    <>
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Yaradılır...
+                    </>
+                ) : 'Hesab yarat'}
+            </button>
+
+            <p className="mt-6 text-center text-[13.5px] text-[var(--ink-500)]">
+                Artıq hesabınız var?{' '}
+                <Link to="/login" className="text-[var(--primary)] font-semibold hover:text-[var(--primary-hover)] transition-colors">
+                    Daxil olun
+                </Link>
+            </p>
+        </>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Welcome gift modal (no emoji)
+// ───────────────────────────────────────────────────────────────────────────
+
+const WelcomeGiftModal = ({ onClose }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
+            <div
+                className="p-8 text-center text-white relative overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, var(--brand-blue-700) 0%, var(--primary) 55%, var(--brand-green-600) 130%)' }}
+            >
+                <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/10 rounded-full" />
+                <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-white/10 rounded-full" />
+                <div className="relative">
+                    <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                        <HiOutlineGift className="w-10 h-10" />
+                    </div>
+                    <h2 className="text-[24px] font-extrabold mb-1">Xoş gəldiniz!</h2>
+                    <p className="text-white/75 text-[13.5px]">testup.az ilə imtahan hazırlığında yeni bir səhifə açıldı</p>
+                </div>
+            </div>
+            <div className="p-6 text-center">
+                <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-[12.5px] font-bold px-3 py-1.5 rounded-full mb-4">
+                    <HiOutlineSparkles className="w-3.5 h-3.5" />
+                    3 aylıq Basic plan — Pulsuz hədiyyə!
+                </div>
+                <p className="text-[var(--ink-600)] text-[13.5px] leading-relaxed mb-5">
+                    Müəllim kimi qeydiyyatdan keçdiyiniz üçün sizə{' '}
+                    <strong className="text-[var(--ink-900)]">3 aylıq Basic abunəlik</strong> hədiyyə edildi.
+                </p>
+                <div className="grid grid-cols-2 gap-2 mb-5 text-left">
+                    {['Sınırsız sual bazası', 'PDF yükləmə', 'Detallı statistika', 'Şablon imtahanlar'].map(f => (
+                        <div key={f} className="inline-flex items-center gap-1.5 text-[11.5px] text-[var(--ink-600)]">
+                            <HiOutlineCheck className="w-3.5 h-3.5 text-[var(--brand-green-600)] shrink-0" />
+                            {f}
+                        </div>
+                    ))}
+                </div>
+                <button
+                    onClick={onClose}
+                    className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-full font-bold text-[14px] text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                >
+                    Başlayaq
                 </button>
             </div>
-            <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white">
+            <button onClick={onClose} className="absolute top-4 right-4 text-white/75 hover:text-white">
                 <HiOutlineX className="w-5 h-5" />
             </button>
         </div>
     </div>
 );
 
-// ── Register ──────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────────
+// Main
+// ───────────────────────────────────────────────────────────────────────────
+
 const Register = () => {
-    const [step, setStep] = useState(0); // 0=role, 1=info, 2=password
+    const [step, setStep] = useState(0);
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
@@ -108,8 +512,6 @@ const Register = () => {
         role: '',
         termsAccepted: false,
     });
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showGiftModal, setShowGiftModal] = useState(false);
     const [googlePending, setGooglePending] = useState(null);
@@ -139,14 +541,8 @@ const Register = () => {
     });
 
     const handleSubmit = async () => {
-        if (!formData.termsAccepted) {
-            toast.error('İstifadə şərtlərini qəbul etməlisiniz');
-            return;
-        }
-        if (formData.password !== formData.confirmPassword) {
-            toast.error('Şifrələr uyğun gəlmir');
-            return;
-        }
+        if (!formData.termsAccepted) { toast.error('İstifadə şərtlərini qəbul etməlisiniz'); return; }
+        if (formData.password !== formData.confirmPassword) { toast.error('Şifrələr uyğun gəlmir'); return; }
         setLoading(true);
         try {
             const data = await register({
@@ -159,11 +555,8 @@ const Register = () => {
             });
             loginWithTokens(data);
             toast.success('Qeydiyyat uğurla tamamlandı!');
-            if (data?.giftPlanAssigned) {
-                setShowGiftModal(true);
-            } else {
-                navigate('/');
-            }
+            if (data?.giftPlanAssigned) setShowGiftModal(true);
+            else navigate('/');
         } catch (error) {
             if (!error._handled) toast.error(error.response?.data?.message || 'Qeydiyyat uğursuz oldu');
         } finally {
@@ -171,411 +564,9 @@ const Register = () => {
         }
     };
 
-    const strength = calcStrength(formData.password);
-    const strengthMeta = STRENGTH_META[strength];
-    const passwordsMatch = formData.password === formData.confirmPassword;
-
-    // ── Step 0: Role selection ────────────────────────────────────────────────
-    const RoleStep = () => (
-        <div>
-            <StepDots current={0} total={3} />
-            <div className="text-center mb-8">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Necə tanıyım sizi?</h2>
-                <p className="mt-1.5 text-sm text-gray-500">Rolunuzu seçin — istəsəniz sonra dəyişə bilərsiniz</p>
-            </div>
-
-            <div className="space-y-3">
-                {/* Student */}
-                <button
-                    type="button"
-                    onClick={() => { set('role', 'STUDENT'); setStep(1); }}
-                    className="w-full flex items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all group text-left"
-                >
-                    <div className="w-12 h-12 rounded-xl bg-indigo-100 group-hover:bg-indigo-200 flex items-center justify-center flex-shrink-0 transition-colors">
-                        <HiOutlineBookOpen className="w-6 h-6 text-indigo-600" />
-                    </div>
-                    <div className="flex-1">
-                        <p className="font-semibold text-gray-900">Şagird</p>
-                        <p className="text-sm text-gray-500 mt-0.5">İmtahanlara qoşul, nəticəni anında gör</p>
-                    </div>
-                    <HiOutlineArrowRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors" />
-                </button>
-
-                {/* Teacher */}
-                <button
-                    type="button"
-                    onClick={() => { set('role', 'TEACHER'); setStep(1); }}
-                    className="w-full flex items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all group text-left relative overflow-hidden"
-                >
-                    <div className="w-12 h-12 rounded-xl bg-violet-100 group-hover:bg-violet-200 flex items-center justify-center flex-shrink-0 transition-colors">
-                        <HiOutlineAcademicCap className="w-6 h-6 text-violet-600" />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <p className="font-semibold text-gray-900">Müəllim</p>
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                                <HiOutlineSparkles className="w-3 h-3" /> 3 ay hədiyyə
-                            </span>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-0.5">İmtahan hazırla, nəticəni real vaxtda izlə</p>
-                    </div>
-                    <HiOutlineArrowRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors" />
-                </button>
-            </div>
-
-            {/* Divider */}
-            <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-100" />
-                </div>
-                <div className="relative flex justify-center text-xs text-gray-400">
-                    <span className="bg-white px-3">və ya</span>
-                </div>
-            </div>
-
-            <div className="flex justify-center">
-                <button
-                    type="button"
-                    onClick={() => googleLogin()}
-                    className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
-                >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Google ilə qeydiyyat
-                </button>
-            </div>
-
-            <p className="mt-5 text-center text-sm text-gray-500">
-                Artıq hesabınız var?{' '}
-                <Link to="/login" className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors">
-                    Daxil olun
-                </Link>
-            </p>
-        </div>
-    );
-
-    // ── Step 1: Name + Email ──────────────────────────────────────────────────
-    const InfoStep = () => {
-        const handleNext = (e) => {
-            e.preventDefault();
-            if (!formData.fullName.trim())    { toast.error('Ad, Soyad daxil edin');       return; }
-            if (!formData.email.trim())       { toast.error('E-poçt daxil edin');          return; }
-            if (!formData.phoneNumber.trim()) { toast.error('Telefon nömrəsi daxil edin'); return; }
-            setStep(2);
-        };
-        return (
-            <form onSubmit={handleNext}>
-                <StepDots current={1} total={3} />
-                <div className="mb-6">
-                    <button type="button" onClick={() => setStep(0)}
-                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 mb-3 transition-colors">
-                        <HiOutlineArrowLeft className="w-3.5 h-3.5" />
-                        Geri
-                    </button>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Məlumatlarınız</h2>
-                    <p className="mt-1 text-sm text-gray-500">
-                        {formData.role === 'TEACHER' ? 'Müəllim' : 'Şagird'} kimi qeydiyyat
-                    </p>
-                </div>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Ad, Soyad</label>
-                        <div className="relative">
-                            <HiOutlineUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                            <input
-                                type="text"
-                                value={formData.fullName}
-                                onChange={(e) => set('fullName', e.target.value)}
-                                required
-                                autoFocus
-                                autoComplete="name"
-                                className="w-full pl-11 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
-                                placeholder="Ad Soyad"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">E-poçt</label>
-                        <div className="relative">
-                            <HiOutlineMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                            <input
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => set('email', e.target.value)}
-                                required
-                                autoComplete="email"
-                                className="w-full pl-11 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
-                                placeholder="email@nümunə.az"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefon nömrəsi</label>
-                        <div className="relative">
-                            <HiOutlinePhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                            <input
-                                type="tel"
-                                value={formData.phoneNumber}
-                                onChange={(e) => set('phoneNumber', e.target.value)}
-                                autoComplete="tel"
-                                className="w-full pl-11 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
-                                placeholder="+994 50 000 00 00"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <button
-                    type="submit"
-                    className="w-full mt-6 py-2.5 sm:py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-sm shadow-indigo-200"
-                >
-                    Davam et
-                    <HiOutlineArrowRight className="w-4 h-4" />
-                </button>
-
-                <p className="mt-5 text-center text-sm text-gray-500">
-                    Artıq hesabınız var?{' '}
-                    <Link to="/login" className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors">
-                        Daxil olun
-                    </Link>
-                </p>
-            </form>
-        );
-    };
-
-    // ── Step 2: Password + Terms ──────────────────────────────────────────────
-    const PasswordStep = () => (
-        <div>
-            <StepDots current={2} total={3} />
-            <div className="mb-6">
-                <button type="button" onClick={() => setStep(1)}
-                    className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 mb-3 transition-colors">
-                    <HiOutlineArrowLeft className="w-3.5 h-3.5" />
-                    Geri
-                </button>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Şifrə yaradın</h2>
-                <p className="mt-1 text-sm text-gray-500">Güclü şifrə — güvənli hesab</p>
-            </div>
-
-            <div className="space-y-4">
-                {/* Password */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Şifrə</label>
-                    <div className="relative">
-                        <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            value={formData.password}
-                            onChange={(e) => set('password', e.target.value)}
-                            required
-                            autoFocus
-                            autoComplete="new-password"
-                            className="w-full pl-11 pr-11 py-2.5 sm:py-3 border border-gray-200 rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm"
-                            placeholder="••••••••"
-                        />
-                        <button type="button" onClick={() => setShowPassword(v => !v)}
-                            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                            {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
-                        </button>
-                    </div>
-                    {formData.password && (
-                        <div className="mt-2 space-y-1">
-                            <div className="flex gap-1">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${strength >= i && strengthMeta ? strengthMeta.barColor : 'bg-gray-200'}`} />
-                                ))}
-                            </div>
-                            {strengthMeta && (
-                                <p className={`text-xs ${strengthMeta.textColor}`}>
-                                    Şifrə gücü: <span className="font-medium">{strengthMeta.label}</span>
-                                </p>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Confirm */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Şifrəni təsdiqləyin</label>
-                    <div className="relative">
-                        <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-                        <input
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            value={formData.confirmPassword}
-                            onChange={(e) => set('confirmPassword', e.target.value)}
-                            required
-                            autoComplete="new-password"
-                            className={`w-full pl-11 pr-11 py-2.5 sm:py-3 border rounded-xl bg-gray-50/60 focus:bg-white focus:ring-2 outline-none transition-all text-gray-900 placeholder:text-gray-400 text-sm ${
-                                formData.confirmPassword
-                                    ? passwordsMatch
-                                        ? 'border-green-400 focus:ring-green-500/20 focus:border-green-500'
-                                        : 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
-                                    : 'border-gray-200 focus:ring-indigo-500/20 focus:border-indigo-500'
-                            }`}
-                            placeholder="••••••••"
-                        />
-                        <button type="button" onClick={() => setShowConfirmPassword(v => !v)}
-                            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
-                            {showConfirmPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
-                        </button>
-                    </div>
-                    {formData.confirmPassword && (
-                        <p className={`mt-1.5 text-xs font-medium flex items-center gap-1 ${passwordsMatch ? 'text-green-600' : 'text-red-500'}`}>
-                            {passwordsMatch
-                                ? <><HiOutlineCheckCircle className="w-3.5 h-3.5" /> Şifrələr uyğundur</>
-                                : <><HiOutlineX className="w-3.5 h-3.5" /> Şifrələr uyğun gəlmir</>
-                            }
-                        </p>
-                    )}
-                </div>
-
-                {/* Terms */}
-                <label className="flex items-start gap-3 cursor-pointer group pt-1">
-                    <div className="relative mt-0.5 flex-shrink-0">
-                        <input
-                            type="checkbox"
-                            checked={formData.termsAccepted}
-                            onChange={(e) => set('termsAccepted', e.target.checked)}
-                            className="sr-only"
-                        />
-                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                            formData.termsAccepted ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 group-hover:border-indigo-400'
-                        }`}>
-                            {formData.termsAccepted && (
-                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                            )}
-                        </div>
-                    </div>
-                    <span className="text-sm text-gray-600 leading-relaxed">
-                        <a href="/istifade-sertleri" target="_blank" className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors">İstifadə şərtlərini</a>
-                        {' '}və{' '}
-                        <a href="/gizlilik-siyaseti" target="_blank" className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors">Gizlilik Siyasətini</a>
-                        {' '}oxuyub qəbul edirəm
-                    </span>
-                </label>
-            </div>
-
-            <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading || !formData.termsAccepted}
-                className="w-full mt-6 py-2.5 sm:py-3 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm shadow-sm shadow-indigo-200"
-            >
-                {loading ? (
-                    <>
-                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        Gözləyin...
-                    </>
-                ) : 'Hesab yarat'}
-            </button>
-
-            <p className="mt-5 text-center text-sm text-gray-500">
-                Artıq hesabınız var?{' '}
-                <Link to="/login" className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors">
-                    Daxil olun
-                </Link>
-            </p>
-        </div>
-    );
-
     return (
         <>
             {showGiftModal && <WelcomeGiftModal onClose={() => navigate('/')} />}
-
-            <div className="flex min-h-screen relative">
-
-                {/* Back to site button */}
-                <Link
-                    to="/"
-                    className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-300 px-3.5 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all"
-                >
-                    <HiOutlineArrowLeft className="w-4 h-4" />
-                    Sayta qayıt
-                </Link>
-
-            <div className="flex flex-1">
-
-                {/* ── Left branding panel ── */}
-                <div className="hidden lg:flex lg:w-[42%] xl:w-[44%] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 flex-col justify-between p-8 xl:p-12 relative overflow-hidden select-none">
-                    <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/5 rounded-full" />
-                    <div className="absolute -bottom-32 -left-20 w-96 h-96 bg-white/5 rounded-full" />
-                    <div className="absolute top-1/2 right-8 w-24 h-24 bg-white/5 rounded-full -translate-y-1/2" />
-
-                    <Link to="/" className="relative z-10">
-                        <img src={logo} alt="testup.az" className="h-7 xl:h-8 w-auto brightness-0 invert" />
-                    </Link>
-
-                    <div className="relative z-10">
-                        <h1 className="text-[1.9rem] xl:text-[2.5rem] font-extrabold text-white leading-snug mb-3 xl:mb-4">
-                            Müasir müəllim<br />
-                            <span className="text-indigo-200">müasir alətlə</span><br />
-                            işləyir
-                        </h1>
-                        <p className="text-indigo-200/90 text-sm xl:text-base leading-relaxed mb-7 xl:mb-10">
-                            Müəllim kimi qeydiyyatdan keçin —{' '}
-                            <strong className="text-white">3 aylıq Basic plan</strong> sizindir. Pulsuz.
-                        </p>
-
-                        <div className="space-y-4 xl:space-y-5">
-                            {FEATURES.map(({ icon: Icon, title, desc }) => (
-                                <div key={title} className="flex items-start gap-3 xl:gap-4">
-                                    <div className="w-9 h-9 xl:w-10 xl:h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        <Icon className="w-4 h-4 xl:w-5 xl:h-5 text-indigo-200" />
-                                    </div>
-                                    <div>
-                                        <p className="text-white font-semibold text-xs xl:text-sm">{title}</p>
-                                        <p className="text-indigo-300 text-xs mt-0.5 hidden xl:block">{desc}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="mt-6 xl:mt-8 p-3 xl:p-4 bg-white/10 rounded-2xl border border-white/20">
-                            <div className="flex items-center gap-3">
-                                <span className="text-2xl xl:text-3xl">🎁</span>
-                                <div>
-                                    <p className="text-white font-bold text-sm">Müəllim hədiyyəsi</p>
-                                    <p className="text-indigo-200 text-xs mt-0.5">
-                                        Müəllim hesabına xüsusi hədiyyə — 3 ay Basic plan, büsbütün pulsuz.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p className="text-indigo-400/50 text-xs relative z-10">© 2025 testup.az</p>
-                </div>
-
-                {/* ── Right form panel ── */}
-                <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 bg-gray-50 overflow-y-auto">
-                    <div className="w-full max-w-[400px]">
-
-                        {/* Mobile logo */}
-                        <div className="lg:hidden flex justify-center mb-7">
-                            <img src={logo} alt="testup.az" className="h-8 w-auto" />
-                        </div>
-
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
-                            {step === 0 && RoleStep()}
-                            {step === 1 && InfoStep()}
-                            {step === 2 && PasswordStep()}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            </div>
 
             {googlePending && (
                 <GoogleRoleModal
@@ -583,16 +574,71 @@ const Register = () => {
                     userInfo={googlePending.userInfo}
                     onSuccess={(data) => {
                         loginWithTokens(data);
-                        if (data.giftPlanAssigned) {
-                            setShowGiftModal(true);
-                        } else {
-                            toast.success('Qeydiyyat tamamlandı!');
-                            navigate('/');
-                        }
+                        toast.success('Qeydiyyat tamamlandı!');
+                        navigate(data.role === 'ADMIN' ? '/admin' : '/');
                     }}
                     onClose={() => setGooglePending(null)}
                 />
             )}
+
+            <div className="flex min-h-screen" style={{ background: 'var(--paper-cream)' }}>
+                <RegisterBrand role={formData.role} />
+
+                <section className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-10">
+                    {/* Top — back to site */}
+                    <div className="w-full max-w-[460px] mb-6">
+                        <Link
+                            to="/"
+                            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--ink-600)] hover:text-[var(--primary)] transition-colors"
+                        >
+                            <HiOutlineChevronLeft className="w-4 h-4" />
+                            Sayta qayıt
+                        </Link>
+                    </div>
+
+                    {/* Mobile logo */}
+                    <Link to="/" className="lg:hidden inline-flex items-center gap-2 mb-6">
+                        <span className="w-9 h-9 rounded-xl bg-[var(--primary)] flex items-center justify-center">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="4 12 10 18 20 6" />
+                            </svg>
+                        </span>
+                        <span className="font-extrabold text-[20px] tracking-tight text-[var(--ink-900)]">
+                            testup<span className="text-[var(--brand-green-600)]">.az</span>
+                        </span>
+                    </Link>
+
+                    {/* Form card */}
+                    <div className="w-full max-w-[460px] bg-white border border-[var(--ink-200)] rounded-3xl p-7 sm:p-9 shadow-[var(--sh-sm)]">
+                        {step === 0 && (
+                            <StepRole
+                                role={formData.role}
+                                setRole={(r) => set('role', r)}
+                                googleLogin={googleLogin}
+                                onNext={() => setStep(1)}
+                            />
+                        )}
+                        {step === 1 && (
+                            <StepDetails
+                                role={formData.role}
+                                formData={formData}
+                                set={set}
+                                onBack={() => setStep(0)}
+                                onNext={() => setStep(2)}
+                            />
+                        )}
+                        {step === 2 && (
+                            <StepPassword
+                                formData={formData}
+                                set={set}
+                                onBack={() => setStep(1)}
+                                onSubmit={handleSubmit}
+                                loading={loading}
+                            />
+                        )}
+                    </div>
+                </section>
+            </div>
         </>
     );
 };

@@ -27,8 +27,8 @@ const AccessCodeModal = ({ code, onClose }) => {
             >
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-indigo-50 rounded-xl">
-                            <HiOutlineKey className="w-5 h-5 text-indigo-600" />
+                        <div className="p-2 bg-blue-50 rounded-xl">
+                            <HiOutlineKey className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
                             <p className="text-sm font-bold text-gray-800">Tələbə Giriş Kodu</p>
@@ -42,10 +42,10 @@ const AccessCodeModal = ({ code, onClose }) => {
 
                 <div
                     onClick={copy}
-                    className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-4 cursor-pointer hover:bg-indigo-100 transition-colors mb-3"
+                    className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 cursor-pointer hover:bg-blue-100 transition-colors mb-3"
                 >
-                    <span className="text-3xl font-black tracking-[0.4em] text-indigo-700 font-mono">{code}</span>
-                    <span className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${copied ? 'bg-green-100 text-green-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                    <span className="text-3xl font-black tracking-[0.4em] text-blue-700 font-mono">{code}</span>
+                    <span className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${copied ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
                         {copied ? '✓ Kopyalandı' : 'Kopyala'}
                     </span>
                 </div>
@@ -87,7 +87,7 @@ const AccessCodeButton = ({ examId }) => {
             <button
                 onClick={generate}
                 disabled={generating}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-60 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-100 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 text-blue-700 text-xs font-bold rounded-xl border border-blue-100 transition-colors"
             >
                 <HiOutlineKey className={`w-3.5 h-3.5 ${generating ? 'animate-pulse' : ''}`} />
                 {generating ? 'Yaradılır...' : 'Tələbə Kodu Yarat'}
@@ -114,7 +114,7 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1.5">
                         {typeLabel && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[11px] font-bold uppercase tracking-wide">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[11px] font-bold uppercase tracking-wide">
                                 {typeLabel}
                             </span>
                         )}
@@ -144,7 +144,7 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                     {/* Action icons */}
                     <div className="flex items-center gap-0.5 -mr-1">
                         {!isDraft && onShare && (
-                            <button onClick={() => onShare(exam.id)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Paylaş">
+                            <button onClick={() => onShare(exam.id)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Paylaş">
                                 <HiOutlineShare className="w-4 h-4" />
                             </button>
                         )}
@@ -207,7 +207,7 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                                 <button
                                     key={index}
                                     onClick={() => onTagClick(tag)}
-                                    className="px-2 py-0.5 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-700 text-gray-500 text-[11px] rounded-full font-medium transition-colors"
+                                    className="px-2 py-0.5 bg-gray-100 hover:bg-blue-100 hover:text-blue-700 text-gray-500 text-[11px] rounded-full font-medium transition-colors"
                                     title={`"${tag}" teqinə görə filtrele`}
                                 >
                                     #{tag}
@@ -246,7 +246,7 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                     {canEdit ? (
                         <Link
                             to={`/imtahanlar/duzenle/${exam.id}`}
-                            className="flex justify-center items-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors w-full"
+                            className="flex justify-center items-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors w-full"
                         >
                             <HiOutlinePencilAlt className="w-4 h-4" />
                             Davam Et
@@ -269,7 +269,7 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                     </Link>
                     <Link
                         to={`/imtahanlar/${exam.id}/statistika`}
-                        className="flex justify-center items-center gap-1.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                        className="flex justify-center items-center gap-1.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
                     >
                         <HiOutlineChartBar className="w-4 h-4" />
                         Statistika

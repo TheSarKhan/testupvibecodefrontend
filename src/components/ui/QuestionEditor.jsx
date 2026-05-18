@@ -15,7 +15,7 @@ const QUESTION_TYPES = {
     FILL_IN_THE_BLANK: 'Boşluq Doldurma'
 };
 
-const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false, pointsReadOnly = false }) => {
+const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false, pointsReadOnly = false, typeReadOnly = false }) => {
     const { hasPermission } = useAuth();
     const [mathModalField, setMathModalField] = useState(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
@@ -100,17 +100,17 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             name={`correct-${question.id}`}
                             checked={opt.isCorrect}
                             onChange={(e) => updateOption(opt.id, 'isCorrect', question.type === 'MULTI_SELECT' ? e.target.checked : true)}
-                            className={`w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 ${question.type === 'MULTI_SELECT' ? 'rounded' : ''}`}
+                            className={`w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 ${question.type === 'MULTI_SELECT' ? 'rounded' : ''}`}
                             title={question.type === 'MULTI_SELECT' ? 'Düzgün cavab(lar)dan biri kimi işarələ' : 'Düzgün cavabı işarələ'}
                         />
                         <div className="flex-1 flex flex-col gap-2">
-                            <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+                            <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
                                 <MathTextEditor
                                     ref={setEditorRef(`option-${opt.id}`)}
                                     value={opt.text}
                                     onChange={(val) => updateOption(opt.id, 'text', val)}
                                     placeholder={`${String.fromCharCode(65 + i)} variantı`}
-                                    className={`flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[40px] ${opt.isCorrect ? 'bg-indigo-50/30' : 'bg-transparent'}`}
+                                    className={`flex-1 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[40px] ${opt.isCorrect ? 'bg-blue-50/30' : 'bg-transparent'}`}
                                 />
                                 {/* Image / PDF Button */}
                                 <div className="relative border-l border-gray-100 flex items-center">
@@ -138,7 +138,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     />
                                     <button
                                         type="button"
-                                        className={`px-2 transition-colors ${(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? 'text-gray-300' : 'text-gray-400 hover:text-indigo-600'}`}
+                                        className={`px-2 transition-colors ${(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? 'text-gray-300' : 'text-gray-400 hover:text-blue-600'}`}
                                         title={(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? 'Bu xüsusiyyət üçün plana keçin' : 'Variant üçün şəkil və ya PDF kəsimi əlavə et'}
                                     >
                                         {(!hasPermission('addImage') && !hasPermission('importQuestionsFromPdf')) ? <HiLockClosed className="w-4 h-4" /> : <HiOutlinePlus className="w-4 h-4" />}
@@ -148,7 +148,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     type="button"
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => setMathModalField({ type: 'option', id: opt.id })}
-                                    className="px-3 border-l text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
+                                    className="px-3 border-l text-blue-600 font-bold hover:bg-blue-50 flex items-center justify-center transition-colors shrink-0"
                                     title="Riyaziyyat formulu əlavə et"
                                 >
                                     fx
@@ -187,7 +187,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                 <button
                     type="button"
                     onClick={addOption}
-                    className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium border border-transparent hover:border-indigo-100"
+                    className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium border border-transparent hover:border-blue-100"
                 >
                     <HiOutlinePlus className="w-4 h-4" />
                     Variant əlavə et
@@ -202,7 +202,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
             <p className="text-sm text-green-700 font-medium mb-3">Şagird cavabı müəllimin qeyd etdiyi düzgün cavabla avtomatik müqayisə ediləcək.</p>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Düzgün cavab <span className="text-red-500">*</span></label>
-                <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+                <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
                     <MathTextEditor
                         ref={setEditorRef('sampleAnswer')}
                         value={question.sampleAnswer || ''}
@@ -214,7 +214,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => setMathModalField({ type: 'sampleAnswer' })}
-                        className="px-3 border-l border-gray-200 text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
+                        className="px-3 border-l border-gray-200 text-blue-600 font-bold hover:bg-blue-50 flex items-center justify-center transition-colors shrink-0"
                         title="Riyaziyyat formulu əlavə et"
                     >
                         fx
@@ -230,7 +230,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
             <p className="text-sm text-yellow-800 font-medium mb-3">Şagird cavabını mətndə (LaTeX dəstəyi ilə) və ya şəkil yükləyərək göndərəcək. Müəllim yoxlayacaq və 0 / 1/3 / 2/3 / tam bal verəcək.</p>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">İstinad cavab (İstəyə bağlı — yalnız müəllim görür)</label>
-                <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 overflow-hidden">
+                <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
                     <MathTextEditor
                         ref={setEditorRef('sampleAnswer')}
                         value={question.sampleAnswer || ''}
@@ -242,7 +242,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => setMathModalField({ type: 'sampleAnswer' })}
-                        className="px-3 border-l border-gray-200 text-indigo-600 font-bold hover:bg-indigo-50 flex items-center justify-center transition-colors shrink-0"
+                        className="px-3 border-l border-gray-200 text-blue-600 font-bold hover:bg-blue-50 flex items-center justify-center transition-colors shrink-0"
                         title="Riyaziyyat formulu əlavə et"
                     >
                         fx
@@ -354,7 +354,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     <button
                         type="button"
                         onClick={addDistractor}
-                        className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-transparent hover:border-indigo-100 transition-colors"
+                        className="inline-flex items-center gap-2 text-sm text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-transparent hover:border-blue-100 transition-colors"
                     >
                         <HiOutlinePlus className="w-4 h-4" /> Yanlış seçim əlavə et
                     </button>
@@ -578,8 +578,8 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
 
         return (
             <div className="space-y-6 mt-8">
-                <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl mb-4">
-                    <p className="text-xs text-indigo-700 font-medium">
+                <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl mb-4">
+                    <p className="text-xs text-blue-700 font-medium">
                         <span className="font-bold">Təlimat:</span> Maddələri əlavə edin və klikləyərək birləşdirin. Bir maddəni bir neçə maddə ilə birləşdirə bilərsiniz. Oxun üzərinə klikləyərək əlaqəni silə bilərsiniz.
                     </p>
                 </div>
@@ -588,7 +588,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     <div className="flex-1 space-y-10 z-10">
                         <div className="flex items-center justify-between mb-2">
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sol Sütun</h4>
-                            <button type="button" onClick={addLeftItem} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
+                            <button type="button" onClick={addLeftItem} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
                         </div>
                         {leftNodes.map((node) => {
                             const isLinked = pairs.some(p => p.leftVisualId === node.visualId && p.rightItem);
@@ -624,7 +624,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                         <input type="file" accept="image/*,application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handlePairFileSelect(node.visualId, 'left', e.target.files[0])} />
                                         <button type="button" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Şəkil / PDF"><HiOutlinePlus className="w-4 h-4" /></button>
                                     </div>
-                                    <button type="button" onClick={() => setMathModalField({ type: 'matching-left', id: node.visualId })} className="p-1.5 text-indigo-600 font-bold hover:bg-indigo-50 rounded-lg text-xs" title="Riyaziyyat">fx</button>
+                                    <button type="button" onClick={() => setMathModalField({ type: 'matching-left', id: node.visualId })} className="p-1.5 text-blue-600 font-bold hover:bg-blue-50 rounded-lg text-xs" title="Riyaziyyat">fx</button>
                                     <div className="flex-1"></div>
                                     <button 
                                         type="button" 
@@ -637,7 +637,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                             }
                                         }}
                                         className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${
-                                            activeTeacherLeftId === node.visualId ? 'bg-yellow-400 text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600'
+                                            activeTeacherLeftId === node.visualId ? 'bg-yellow-400 text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-600'
                                         }`}
                                     >
                                         {activeTeacherLeftId === node.visualId ? 'Seçilib' : 'Birləşdir'}
@@ -651,7 +651,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     <div className="flex-1 space-y-10 z-10">
                         <div className="flex items-center justify-between mb-2">
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sağ Sütun</h4>
-                            <button type="button" onClick={addRightItem} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
+                            <button type="button" onClick={addRightItem} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
                         </div>
                         {rightNodes.map((node) => {
                             const isLinked = pairs.some(p => p.rightVisualId === node.visualId && p.leftItem);
@@ -684,13 +684,13 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                         <input type="file" accept="image/*,application/pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handlePairFileSelect(node.visualId, 'right', e.target.files[0])} />
                                         <button type="button" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Şəkil / PDF"><HiOutlinePlus className="w-4 h-4" /></button>
                                     </div>
-                                    <button type="button" onClick={() => setMathModalField({ type: 'matching-right', id: node.visualId })} className="p-1.5 text-indigo-600 font-bold hover:bg-indigo-50 rounded-lg text-xs" title="Riyaziyyat">fx</button>
+                                    <button type="button" onClick={() => setMathModalField({ type: 'matching-right', id: node.visualId })} className="p-1.5 text-blue-600 font-bold hover:bg-blue-50 rounded-lg text-xs" title="Riyaziyyat">fx</button>
                                     <div className="flex-1"></div>
                                     {activeTeacherLeftId && (
                                         <button 
                                             type="button" 
                                             onClick={() => handleLink(activeTeacherLeftId, node.visualId)}
-                                            className="px-3 py-1 bg-indigo-600 text-white text-[10px] font-bold uppercase rounded-md shadow-sm hover:bg-indigo-700"
+                                            className="px-3 py-1 bg-blue-600 text-white text-[10px] font-bold uppercase rounded-md shadow-sm hover:bg-blue-700"
                                         >
                                             Buraya Birləşdir
                                         </button>
@@ -778,23 +778,71 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
         );
     };
 
+    // Collaborative-draft review banner: shown only when the parent passed reviewStatus
+    // through (either via the API for collab drafts, or via local state). Approved questions
+    // are locked-down visually; rejected ones surface the admin comment so the teacher knows
+    // what to fix before re-submitting.
+    const renderReviewBanner = () => {
+        const status = question.reviewStatus;
+        if (!status) return null;
+        if (status === 'APPROVED') {
+            return (
+                <div className="flex items-center gap-2 px-3 py-2 mb-4 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs font-semibold">
+                    <HiLockClosed className="w-4 h-4 shrink-0" />
+                    Bu sual artıq təsdiqlənib və əsas imtahana köçürülüb.
+                </div>
+            );
+        }
+        if (status === 'REJECTED') {
+            return (
+                <div className="px-3 py-2 mb-4 rounded-lg bg-red-50 border border-red-200 text-xs">
+                    <div className="font-bold text-red-800 mb-0.5">Admin bu sualı rədd etdi — düzəliş edin</div>
+                    {question.reviewComment ? (
+                        <p className="text-red-700 leading-relaxed">{question.reviewComment}</p>
+                    ) : (
+                        <p className="text-red-700/80 italic">Şərh qoyulmayıb. Düzəldib yenidən göndərə bilərsiniz.</p>
+                    )}
+                </div>
+            );
+        }
+        if (status === 'PENDING') {
+            return (
+                <div className="flex items-center gap-2 px-3 py-2 mb-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    Admin yoxlamasını gözləyir.
+                </div>
+            );
+        }
+        return null;
+    };
+
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative group transition-all hover:border-indigo-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative group transition-all hover:border-blue-200">
+            {renderReviewBanner()}
             {/* Question Header & Controls */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
                         {index + 1}
                     </span>
-                    <select
-                        value={question.type}
-                        onChange={(e) => handleChange('type', e.target.value)}
-                        className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 transition-colors hover:bg-gray-100"
-                    >
-                        {Object.entries(QUESTION_TYPES).map(([key, label]) => (
-                            <option key={key} value={key}>{label}</option>
-                        ))}
-                    </select>
+                    {typeReadOnly ? (
+                        // Şablon section-larda sual tipi şablonla müəyyən olunur — müəllim
+                        // dəyişdirə bilməz. Read-only mətn kimi göstərilir, kilid ikonu ilə.
+                        <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg p-2 px-3" title="Sual tipi şablonla təyin olunur">
+                            <HiLockClosed className="w-3.5 h-3.5 text-gray-400" />
+                            <span className="font-medium">{QUESTION_TYPES[question.type] || question.type}</span>
+                        </div>
+                    ) : (
+                        <select
+                            value={question.type}
+                            onChange={(e) => handleChange('type', e.target.value)}
+                            className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 transition-colors hover:bg-gray-100"
+                        >
+                            {Object.entries(QUESTION_TYPES).map(([key, label]) => (
+                                <option key={key} value={key}>{label}</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -810,12 +858,12 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     max="100"
                                     value={question.points}
                                     onChange={(e) => handleChange('points', Math.min(100, Math.max(1, parseFloat(e.target.value) || 1)))}
-                                    className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-indigo-700"
+                                    className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-blue-700"
                                 />
                             )}
                         </div>
                     )}
-                    {!hideDelete && (
+                    {!hideDelete && question.reviewStatus !== 'APPROVED' && (
                         <button
                             onClick={() => onDelete(question.id)}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
@@ -891,7 +939,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             type="button"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => setMathModalField({ type: 'main' })}
-                            className="text-xs font-bold px-2.5 py-1 rounded-md transition-colors bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                            className="text-xs font-bold px-2.5 py-1 rounded-md transition-colors bg-blue-50 text-blue-700 hover:bg-blue-100"
                             title="Riyaziyyat formulu əlavə et"
                         >
                             fx Riyaziyyat

@@ -54,7 +54,7 @@ const AssignPlanModal = ({ user, onClose }) => {
                             required
                             value={planForm.planId}
                             onChange={e => setPlanForm({ ...planForm, planId: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400"
                         >
                             <option value="">Plan seçin...</option>
                             {plans.map(p => (
@@ -71,7 +71,7 @@ const AssignPlanModal = ({ user, onClose }) => {
                             required
                             value={planForm.durationMonths}
                             onChange={e => setPlanForm({ ...planForm, durationMonths: parseInt(e.target.value) || 1 })}
-                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400"
                         />
                         <p className="text-xs text-gray-400 mt-1">Sistem tərəfindən limitsiz planlaşdırmalar üçün (məs: 1200 ay = 100 il) yaza bilərsiniz.</p>
                     </div>
@@ -79,7 +79,7 @@ const AssignPlanModal = ({ user, onClose }) => {
                         <button type="button" onClick={onClose} className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
                             Ləğv et
                         </button>
-                        <button type="submit" disabled={assigning} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors disabled:opacity-70">
+                        <button type="submit" disabled={assigning} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-70">
                             {assigning ? 'Təyin edilir...' : 'Təyin et'}
                         </button>
                     </div>

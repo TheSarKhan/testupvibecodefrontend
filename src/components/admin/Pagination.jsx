@@ -27,7 +27,7 @@ const Pagination = ({ page, totalPages, totalElements, onChange, maxButtons = 5,
                 <button
                     onClick={() => onChange(Math.max(0, page - 1))}
                     disabled={page === 0}
-                    className="p-1.5 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                    className="p-1.5 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40 transition-colors"
                 >
                     <HiOutlineChevronLeft className="w-3.5 h-3.5" />
                 </button>
@@ -39,7 +39,7 @@ const Pagination = ({ page, totalPages, totalElements, onChange, maxButtons = 5,
                             onClick={() => onChange(n)}
                             className={`w-7 h-7 rounded-md text-xs font-semibold transition-colors ${
                                 n === page
-                                    ? 'bg-indigo-600 text-white'
+                                    ? 'bg-blue-600 text-white'
                                     : 'text-gray-600 hover:bg-gray-100'
                             }`}
                         >
@@ -51,7 +51,7 @@ const Pagination = ({ page, totalPages, totalElements, onChange, maxButtons = 5,
                 <button
                     onClick={() => onChange(Math.min(totalPages - 1, page + 1))}
                     disabled={page >= totalPages - 1}
-                    className="p-1.5 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                    className="p-1.5 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40 transition-colors"
                 >
                     <HiOutlineChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -64,7 +64,7 @@ const Pagination = ({ page, totalPages, totalElements, onChange, maxButtons = 5,
             <button
                 onClick={() => onChange(Math.max(0, page - 1))}
                 disabled={page === 0}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
                 <HiOutlineChevronLeft className="w-4 h-4" />
                 Əvvəlki
@@ -77,8 +77,8 @@ const Pagination = ({ page, totalPages, totalElements, onChange, maxButtons = 5,
                         onClick={() => onChange(n)}
                         className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
                             n === page
-                                ? 'bg-indigo-600 text-white'
-                                : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                                ? 'bg-blue-600 text-white'
+                                : 'border border-gray-200 text-gray-600 hover:bg-gray-100'
                         }`}
                     >
                         {n + 1}
@@ -92,7 +92,7 @@ const Pagination = ({ page, totalPages, totalElements, onChange, maxButtons = 5,
             <button
                 onClick={() => onChange(Math.min(totalPages - 1, page + 1))}
                 disabled={page >= totalPages - 1}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
                 Növbəti
                 <HiOutlineChevronRight className="w-4 h-4" />

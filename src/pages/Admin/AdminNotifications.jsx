@@ -106,7 +106,7 @@ const AdminNotifications = () => {
                         onClick={() => setActiveTab(key)}
                         className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
                             activeTab === key
-                                ? 'bg-white text-indigo-700 shadow-sm'
+                                ? 'bg-white text-blue-700 shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700'
                         }`}
                     >
@@ -125,7 +125,7 @@ const AdminNotifications = () => {
                         {/* 1. Hədəf */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                             <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                                <HiUsers className="w-4 h-4 text-indigo-500" />
+                                <HiUsers className="w-4 h-4 text-blue-500" />
                                 Hədəf auditoriya
                             </h2>
 
@@ -140,8 +140,8 @@ const AdminNotifications = () => {
                                         onClick={() => setTargetType(opt.value)}
                                         className={`px-4 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${
                                             targetType === opt.value
-                                                ? 'bg-indigo-600 text-white border-indigo-600'
-                                                : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'
+                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
                                         }`}
                                     >
                                         {opt.label}
@@ -158,7 +158,7 @@ const AdminNotifications = () => {
                                             onClick={() => setRoleFilter(role.value)}
                                             className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-colors ${
                                                 roleFilter === role.value
-                                                    ? 'bg-indigo-50 border-indigo-400 text-indigo-700'
+                                                    ? 'bg-blue-50 border-blue-400 text-blue-700'
                                                     : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                                             }`}
                                         >
@@ -182,8 +182,8 @@ const AdminNotifications = () => {
                             {/* Count preview */}
                             {previewCount !== null && (
                                 <div className="mt-4 flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-                                    <HiInformationCircle className="w-4 h-4 text-indigo-400 shrink-0" />
-                                    Bu göndəriş <strong className="text-indigo-700">{previewCount}</strong> istifadəçiyə çatacaq
+                                    <HiInformationCircle className="w-4 h-4 text-blue-400 shrink-0" />
+                                    Bu göndəriş <strong className="text-blue-700">{previewCount}</strong> istifadəçiyə çatacaq
                                 </div>
                             )}
                         </div>
@@ -191,7 +191,7 @@ const AdminNotifications = () => {
                         {/* 2. Məzmun */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                             <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                                <HiBell className="w-4 h-4 text-indigo-500" />
+                                <HiBell className="w-4 h-4 text-blue-500" />
                                 Bildiriş məzmunu
                             </h2>
 
@@ -204,7 +204,7 @@ const AdminNotifications = () => {
                                         onChange={e => setTitle(e.target.value)}
                                         placeholder="Məs. Yeni mövsüm başladı!"
                                         maxLength={100}
-                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                     />
                                     <p className="text-xs text-gray-400 text-right mt-1">{title.length}/100</p>
                                 </div>
@@ -215,7 +215,7 @@ const AdminNotifications = () => {
                                         onChange={e => setDescription(e.target.value)}
                                         placeholder="Bildiriş məzmununu yazın..."
                                         rows={4}
-                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
+                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                                     />
                                 </div>
                                 
@@ -225,8 +225,8 @@ const AdminNotifications = () => {
                                         <label className="block text-xs font-semibold text-gray-600 mb-2">Bildirişin Növü</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {[
-                                                { value: 'SYSTEM', label: 'Sistem', icon: HiBell, color: 'text-indigo-500 bg-indigo-50 border-indigo-200' },
-                                                { value: 'ANNOUNCEMENT', label: 'Elan', icon: HiOutlineSpeakerphone, color: 'text-purple-500 bg-purple-50 border-purple-200' },
+                                                { value: 'SYSTEM', label: 'Sistem', icon: HiBell, color: 'text-blue-500 bg-blue-50 border-blue-200' },
+                                                { value: 'ANNOUNCEMENT', label: 'Elan', icon: HiOutlineSpeakerphone, color: 'text-emerald-500 bg-emerald-50 border-emerald-200' },
                                                 { value: 'WARNING', label: 'Təcili', icon: HiOutlineExclamationCircle, color: 'text-red-500 bg-red-50 border-red-200' },
                                                 { value: 'EXAM_CREATED', label: 'İmtahan', icon: HiOutlinePencilAlt, color: 'text-emerald-500 bg-emerald-50 border-emerald-200' },
                                             ].map(type => (
@@ -237,7 +237,7 @@ const AdminNotifications = () => {
                                                     className={`flex items-center gap-2 px-3 py-2 border rounded-xl text-xs font-semibold transition-all ${
                                                         notifType === type.value
                                                             ? `border-opacity-100 shadow-sm ${type.color}`
-                                                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'
                                                     }`}
                                                 >
                                                     <type.icon className="w-4 h-4 shrink-0" />
@@ -259,7 +259,7 @@ const AdminNotifications = () => {
                                                 value={actionUrl}
                                                 onChange={e => setActionUrl(e.target.value)}
                                                 placeholder="Məs. /imtahanlar/123"
-                                                className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                                className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                             />
                                         </div>
                                         <p className="mt-1.5 text-[10px] text-gray-400">İstifadəçi bildirişə klikləyəndə avtomatik bu səhifəyə gedəcək.</p>
@@ -275,7 +275,7 @@ const AdminNotifications = () => {
                         {/* 3. Kanallar */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                             <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                                <HiMail className="w-4 h-4 text-indigo-500" />
+                                <HiMail className="w-4 h-4 text-blue-500" />
                                 Göndəriş kanalı
                             </h2>
 
@@ -331,8 +331,8 @@ const AdminNotifications = () => {
                                                         onClick={() => setEmailProvider(p.value)}
                                                         className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
                                                             emailProvider === p.value
-                                                                ? 'bg-indigo-600 text-white border-indigo-600'
-                                                                : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
+                                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                                : 'bg-white text-gray-500 border-gray-200 hover:border-blue-300'
                                                         }`}
                                                     >
                                                         {p.label}
@@ -357,7 +357,7 @@ const AdminNotifications = () => {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors">
+                                                <label className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                                                     <HiPaperClip className="w-4 h-4 text-gray-400" />
                                                     <span className="text-xs text-gray-500">Fayl seç...</span>
                                                     <input
@@ -377,7 +377,7 @@ const AdminNotifications = () => {
                         <button
                             onClick={handleSend}
                             disabled={sending}
-                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold rounded-xl transition-colors shadow-sm"
+                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold rounded-xl transition-colors shadow-sm"
                         >
                             {sending ? (
                                 <>

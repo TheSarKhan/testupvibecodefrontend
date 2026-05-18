@@ -17,6 +17,7 @@ import {
 import { adminKeys } from '../../hooks/admin/queryKeys';
 import Pagination from '../../components/admin/Pagination';
 import { useClientPagination } from '../../hooks/admin/useClientPagination';
+import { fmtDate } from '../../utils/date';
 
 const monthNames = {
     '01': 'Yan', '02': 'Fev', '03': 'Mar', '04': 'Apr',
@@ -147,7 +148,7 @@ const AdminRevenue = () => {
                 </div>
                 <button
                     onClick={fetchStats}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                     <HiOutlineRefresh className="w-4 h-4" />
                     Yenilə
@@ -207,7 +208,7 @@ const AdminRevenue = () => {
                 </div>
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <div className="flex items-center gap-2 mb-1">
-                        <HiOutlineCurrencyDollar className="w-4 h-4 text-indigo-500" />
+                        <HiOutlineCurrencyDollar className="w-4 h-4 text-blue-500" />
                         <p className="text-xs font-medium text-gray-500">Bu ay</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 tabular-nums">{fmt(stats?.thisMonthRevenue)} <span className="text-sm font-normal text-gray-400">AZN</span></p>
@@ -229,7 +230,7 @@ const AdminRevenue = () => {
                 </div>
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <div className="flex items-center gap-2 mb-1">
-                        <HiOutlineUsers className="w-4 h-4 text-purple-500" />
+                        <HiOutlineUsers className="w-4 h-4 text-emerald-500" />
                         <p className="text-xs font-medium text-gray-500">Aktiv Abunəliklər</p>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 tabular-nums">{stats?.activeSubscriptions ?? 0}</p>
@@ -264,7 +265,7 @@ const AdminRevenue = () => {
                     <h3 className="font-bold text-gray-800 text-sm mb-4">Plana görə qazanc</h3>
                     {stats?.revenueByPlan?.length > 0 ? (() => {
                         const maxR = Math.max(...stats.revenueByPlan.map(p => p.revenue), 1);
-                        const colors = ['bg-emerald-500', 'bg-indigo-500', 'bg-violet-500', 'bg-amber-500'];
+                        const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500'];
                         return (
                             <div className="space-y-4">
                                 {stats.revenueByPlan.map((p, i) => (
@@ -339,13 +340,13 @@ const AdminRevenue = () => {
                                             <p className="text-xs text-gray-500">{p.userEmail}</p>
                                         </td>
                                         <td className="px-6 py-3.5">
-                                            <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full">{p.planName}</span>
+                                            <span className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full">{p.planName}</span>
                                         </td>
                                         <td className="px-6 py-3.5 text-right font-bold text-gray-800 tabular-nums">
                                             {fmt(p.amount)} AZN
                                         </td>
                                         <td className="px-6 py-3.5 text-right text-gray-500 text-xs">
-                                            {p.createdAt ? new Date(p.createdAt).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                                            {fmtDate(p.createdAt)}
                                         </td>
                                         <td className="px-6 py-3.5 text-right">
                                             <div className="flex items-center justify-end gap-2">
@@ -353,7 +354,7 @@ const AdminRevenue = () => {
                                                     onClick={() => handleVerify(p.orderId)}
                                                     disabled={!!verifying}
                                                     title="Kapital Bank-dan statusu yoxla və avtomatik aktivləşdir"
-                                                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
                                                 >
                                                     {verifying === p.orderId + '_check' ? '...' : 'Yoxla'}
                                                 </button>
@@ -395,7 +396,7 @@ const AdminRevenue = () => {
                         <HiOutlineCurrencyDollar className="w-4 h-4 text-emerald-500" />
                         <h2 className="font-bold text-gray-800">Son Ödənişlər</h2>
                     </div>
-                    <Link to="/admin/loglar" className="text-xs text-indigo-600 hover:underline font-medium">Loglara bax →</Link>
+                    <Link to="/admin/loglar" className="text-xs text-blue-600 hover:underline font-medium">Loglara bax →</Link>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -410,13 +411,13 @@ const AdminRevenue = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {stats?.recentPayments?.length > 0 ? pagedRecent.map((p, i) => (
-                                <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                <tr key={i} className="hover:bg-gray-100 transition-colors">
                                     <td className="px-6 py-3.5">
                                         <p className="font-semibold text-gray-900">{p.userName}</p>
                                         <p className="text-xs text-gray-400">{p.userEmail}</p>
                                     </td>
                                     <td className="px-6 py-3.5">
-                                        <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full">{p.planName}</span>
+                                        <span className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full">{p.planName}</span>
                                     </td>
                                     <td className="px-6 py-3.5 text-right font-bold text-emerald-700 tabular-nums">
                                         {fmt(p.amount)} AZN
@@ -425,7 +426,7 @@ const AdminRevenue = () => {
                                         {p.durationDays} gün
                                     </td>
                                     <td className="px-6 py-3.5 text-right text-gray-400 text-xs">
-                                        {p.createdAt ? new Date(p.createdAt).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                                        {fmtDate(p.createdAt)}
                                     </td>
                                 </tr>
                             )) : (

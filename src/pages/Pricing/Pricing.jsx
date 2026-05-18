@@ -1,61 +1,541 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { HiCheckCircle, HiXCircle, HiOutlineCreditCard, HiOutlineX } from 'react-icons/hi';
+import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+import {
+    HiOutlineCheck, HiOutlinePlus, HiOutlineCreditCard, HiOutlineX,
+    HiOutlineArrowRight,
+} from 'react-icons/hi';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
-const featureList = [
-    { key: 'monthlyExamLimit', label: 'Aylıq İmtahan Sayı', type: 'number' },
-    { key: 'maxQuestionsPerExam', label: 'Bir imtahanda max Sual', type: 'number' },
-    { key: 'maxSavedExamsLimit', label: 'Ümumi yadda saxlanılan imtahan', type: 'number' },
-    { key: 'maxParticipantsPerExam', label: 'Max iştirakçı sayısı', type: 'number' },
-    { key: 'studentResultAnalysis', label: 'Şagird nəticələrinin analizi', type: 'boolean' },
-    { key: 'examEditing', label: 'İmtahan redaktəsi', type: 'boolean' },
-    { key: 'addImage', label: 'Suala şəkil əlavə etmək', type: 'boolean' },
-    { key: 'addPassageQuestion', label: 'Mətn/Dinləmə sualları', type: 'boolean' },
-    { key: 'downloadPastExams', label: 'Keçmiş imtahanları yükləmək', type: 'boolean' },
-    { key: 'downloadAsPdf', label: 'İmtahanı PDF kimi yükləmək', type: 'boolean' },
-    { key: 'multipleSubjects', label: 'Bir imtahanda bir neçə fənn', type: 'boolean' },
-    { key: 'useTemplateExams', label: 'Şablon imtahanlardan istifadə', type: 'boolean' },
-    { key: 'manualChecking', label: 'Açıq sualların yoxlanışı (Manual)', type: 'boolean' },
-    { key: 'selectExamDuration', label: 'Xüsusi imtahan müddəti', type: 'boolean' },
-    { key: 'useQuestionBank', label: 'Sual bazasından istifadə', type: 'boolean' },
-    { key: 'createQuestionBank', label: 'Sual bazası yaratmaq', type: 'boolean' },
-    { key: 'importQuestionsFromPdf', label: 'PDF-dən sualların kəsilməsi', type: 'boolean' }
+// ───────────────────────────────────────────────────────────────────────────
+// Static feature list used for the comparison table and the per-card features.
+// ───────────────────────────────────────────────────────────────────────────
+
+const FEATURE_LIST = [
+    { key: 'monthlyExamLimit',        label: 'Aylıq İmtahan Sayı',                type: 'number' },
+    { key: 'maxQuestionsPerExam',     label: 'Bir imtahanda max sual',            type: 'number' },
+    { key: 'maxSavedExamsLimit',      label: 'Ümumi yadda saxlanılan imtahan',    type: 'number' },
+    { key: 'maxParticipantsPerExam',  label: 'Max iştirakçı sayı',                type: 'number' },
+    { key: 'studentResultAnalysis',   label: 'Şagird nəticələrinin analizi',      type: 'boolean' },
+    { key: 'examEditing',             label: 'İmtahan redaktəsi',                 type: 'boolean' },
+    { key: 'addImage',                label: 'Suala şəkil əlavə etmək',           type: 'boolean' },
+    { key: 'addPassageQuestion',      label: 'Mətn / Dinləmə sualları',           type: 'boolean' },
+    { key: 'downloadPastExams',       label: 'Keçmiş imtahanları yükləmək',       type: 'boolean' },
+    { key: 'downloadAsPdf',           label: 'İmtahanı PDF kimi yükləmək',        type: 'boolean' },
+    { key: 'multipleSubjects',        label: 'Bir imtahanda bir neçə fənn',       type: 'boolean' },
+    { key: 'useTemplateExams',        label: 'Şablon imtahanlardan istifadə',     type: 'boolean' },
+    { key: 'manualChecking',          label: 'Açıq sualların yoxlanışı',          type: 'boolean' },
+    { key: 'selectExamDuration',      label: 'Xüsusi imtahan müddəti',            type: 'boolean' },
+    { key: 'useQuestionBank',         label: 'Sual bazasından istifadə',          type: 'boolean' },
+    { key: 'createQuestionBank',      label: 'Sual bazası yaratmaq',              type: 'boolean' },
+    { key: 'importQuestionsFromPdf',  label: 'PDF-dən sualların kəsilməsi',       type: 'boolean' },
 ];
 
 const MONTHS_OPTIONS = [
-    { value: 1, label: '1 ay' },
-    { value: 3, label: '3 ay', discount: 5 },
-    { value: 6, label: '6 ay', discount: 10 },
-    { value: 12, label: '12 ay', discount: 15 },
+    { value: 1,  label: 'Aylıq' },
+    { value: 12, label: 'İllik', discount: 20 },
 ];
+
+const fmtNum = (v) => (v === -1 ? 'Limitsiz' : v == null ? '—' : v);
+
+// ───────────────────────────────────────────────────────────────────────────
+// Hero
+// ───────────────────────────────────────────────────────────────────────────
+
+const PlansHero = () => (
+    <section
+        className="relative pt-16 md:pt-20 pb-12 md:pb-14 overflow-hidden border-b border-[var(--ink-150)]"
+        style={{ background: 'linear-gradient(180deg, var(--brand-blue-50) 0%, transparent 100%)' }}
+    >
+        <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+                backgroundImage: 'linear-gradient(rgba(15,23,42,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.045) 1px, transparent 1px)',
+                backgroundSize: '56px 56px',
+                maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 80%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 80%)',
+            }}
+        />
+        <div className="container-main relative">
+            <div className="flex items-center gap-2 text-[13.5px] text-[var(--ink-500)] mb-5">
+                <Link to="/" className="hover:text-[var(--primary)]">Ana Səhifə</Link>
+                <span className="text-[var(--ink-300)]">/</span>
+                <span className="text-[var(--ink-800)] font-semibold">Planlar</span>
+            </div>
+            <div className="text-center max-w-[720px] mx-auto">
+                <span className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] text-[13px] font-semibold border border-blue-100">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
+                    14 gün pulsuz sınaq · Kredit kartı tələb olunmur
+                </span>
+                <h1 className="mt-5 text-[36px] md:text-[52px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
+                    Hər müəllim və mərkəz üçün uyğun plan
+                </h1>
+                <p className="mt-4 text-[18px] text-[var(--ink-500)] max-w-[580px] mx-auto leading-relaxed">
+                    Pulsuz başlayın, ehtiyacınız böyüdükcə miqyaslandırın. Bütün planlar əsas xüsusiyyətlərə daxildir — sizinçün dəyəri yalnız limitlər müəyyən edir.
+                </p>
+            </div>
+        </div>
+    </section>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// Billing toggle
+// ───────────────────────────────────────────────────────────────────────────
+
+const BillingToggle = ({ months, setMonths }) => (
+    <div className="flex justify-center mb-10">
+        <div className="inline-flex bg-[var(--ink-100)] border border-[var(--ink-200)] rounded-full p-1 gap-1">
+            {MONTHS_OPTIONS.map(opt => (
+                <button
+                    key={opt.value}
+                    onClick={() => setMonths(opt.value)}
+                    className={`relative inline-flex items-center gap-2 px-5 py-2 rounded-full text-[14px] font-semibold transition-all ${
+                        months === opt.value
+                            ? 'bg-white text-[var(--ink-900)] shadow-[var(--sh-sm)]'
+                            : 'text-[var(--ink-500)] hover:text-[var(--ink-700)]'
+                    }`}
+                >
+                    {opt.label}
+                    {opt.discount && (
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                            months === opt.value ? 'bg-[var(--brand-green-100)] text-[var(--brand-green-600)]' : 'bg-[var(--brand-green-50)] text-[var(--brand-green-600)]'
+                        }`}>
+                            −{opt.discount}%
+                        </span>
+                    )}
+                </button>
+            ))}
+        </div>
+    </div>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// Plan card — testup style with real backend data
+// ───────────────────────────────────────────────────────────────────────────
+
+const PlanCard = ({
+    plan, featured, months, isCurrent, action, wallet, isFreeSwitch,
+    displayPrice, onSubscribe, paying, remainingDays,
+}) => {
+    const ringSelected = featured;
+    return (
+        <div
+            className={`relative rounded-3xl p-7 transition-all ${
+                featured
+                    ? 'bg-[var(--ink-900)] text-white border border-[var(--ink-900)] shadow-2xl md:scale-105'
+                    : 'bg-white text-[var(--ink-800)] border border-[var(--ink-200)] hover:-translate-y-1 hover:shadow-[var(--sh-md)]'
+            }`}
+        >
+            {featured && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[var(--accent)] text-[#06351A] text-[11px] font-bold tracking-wider uppercase">
+                    Ən populyar
+                </span>
+            )}
+
+            <div className="flex items-center gap-2 flex-wrap">
+                <div className={`text-[13px] font-bold uppercase tracking-[0.12em] ${ringSelected ? 'text-[var(--accent)]' : 'text-[var(--primary)]'}`}>
+                    {plan.name}
+                </div>
+                {isCurrent && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        remainingDays <= 7  ? 'bg-red-100 text-red-700' :
+                        remainingDays <= 30 ? 'bg-amber-100 text-amber-700' :
+                                              'bg-green-100 text-green-700'
+                    }`}>
+                        {remainingDays === 0 ? 'Bu gün bitir' : `${remainingDays} gün qalır`}
+                    </span>
+                )}
+            </div>
+
+            <p className={`mt-2 text-[14px] ${featured ? 'text-white/70' : 'text-[var(--ink-500)]'} min-h-[40px]`}>
+                {plan.description || 'Yeni imtahanlar yaradın və şagirdləri qiymətləndirin.'}
+            </p>
+
+            {/* Price */}
+            <div className="mt-5 flex items-baseline gap-1.5">
+                <span className={`text-[52px] font-bold leading-none tracking-tight ${featured ? 'text-white' : 'text-[var(--ink-900)]'}`}>
+                    {plan.price > 0 ? (isFreeSwitch ? '0' : displayPrice) : '0'}
+                </span>
+                {plan.price > 0 && !isFreeSwitch && (
+                    <span className={`text-[14px] font-semibold ${featured ? 'text-white/70' : 'text-[var(--ink-500)]'}`}>AZN</span>
+                )}
+            </div>
+            <div className={`text-[13px] mt-1 ${featured ? 'text-white/60' : 'text-[var(--ink-500)]'}`}>
+                {plan.price === 0
+                    ? 'ömürlük pulsuz'
+                    : months === 12 ? 'aylıq, illik ödəniş' : 'aylıq, AZN'}
+            </div>
+
+            {/* Credit breakdown */}
+            {action === 'switch' && wallet?.creditAzn > 0 && (
+                <div className={`mt-4 p-3 rounded-xl border text-[12px] ${
+                    featured
+                        ? (isFreeSwitch ? 'bg-emerald-500/15 border-emerald-400/30 text-white' : 'bg-amber-500/15 border-amber-400/30 text-white')
+                        : (isFreeSwitch ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200')
+                }`}>
+                    <div className="flex justify-between">
+                        <span className={featured ? 'opacity-80' : 'text-gray-600'}>Plan qiyməti</span>
+                        <span>{(displayPrice * months).toFixed(2)} AZN</span>
+                    </div>
+                    <div className={`flex justify-between font-semibold mt-1 ${
+                        isFreeSwitch ? 'text-[var(--brand-green-600)]' : 'text-amber-700'
+                    } ${featured ? '!text-white' : ''}`}>
+                        <span>Cari plan krediti</span>
+                        <span>−{wallet.creditAzn.toFixed(2)} AZN</span>
+                    </div>
+                    <div className="flex justify-between font-bold pt-1.5 mt-1.5 border-t border-current/15">
+                        <span>Ödəniləcək</span>
+                        <span>{isFreeSwitch ? 'Pulsuz' : wallet.chargeAmount.toFixed(2) + ' AZN'}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* CTA */}
+            <div className="mt-5">
+                {plan.price === 0 ? (
+                    <div className={`w-full text-center text-[13px] font-medium py-3 rounded-full ${
+                        featured ? 'bg-white/10 text-white/70' : 'bg-[var(--ink-100)] text-[var(--ink-500)] border border-[var(--ink-200)]'
+                    }`}>
+                        Baza plan — hər zaman mövcuddur
+                    </div>
+                ) : (
+                    <button
+                        onClick={onSubscribe}
+                        disabled={paying}
+                        className={`w-full inline-flex items-center justify-center gap-2 h-12 rounded-full font-bold text-[14.5px] transition-all ${
+                            paying
+                                ? 'bg-[var(--ink-300)] text-white cursor-wait'
+                                : featured
+                                    ? 'bg-white text-[var(--ink-900)] hover:bg-white/95'
+                                    : action === 'renew'
+                                        ? 'bg-[var(--brand-green-600)] hover:bg-[var(--brand-green-600)]/90 text-white'
+                                        : isFreeSwitch
+                                            ? 'bg-[var(--accent)] hover:bg-[var(--brand-green-600)] text-[#06351A] hover:text-white'
+                                            : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white'
+                        }`}
+                    >
+                        {paying ? 'İşlənir...'
+                            : action === 'renew'   ? <><HiOutlineCreditCard className="w-4 h-4" /> Uzat</>
+                            : isFreeSwitch         ? <><HiOutlineCheck className="w-4 h-4" /> Ödənişsiz keçid</>
+                            : action === 'switch'  ? <><HiOutlineCreditCard className="w-4 h-4" /> Plana keçid</>
+                                                     : <>14 gün pulsuz sına <HiOutlineArrowRight className="w-4 h-4" /></>}
+                    </button>
+                )}
+            </div>
+
+            {/* Feature highlights */}
+            <ul className={`mt-7 pt-6 space-y-2.5 border-t ${featured ? 'border-white/15' : 'border-[var(--ink-150)]'}`}>
+                {FEATURE_LIST.map((f, j) => {
+                    const v = plan[f.key];
+                    const isBool = f.type === 'boolean';
+                    const isIncluded = isBool ? v === true : (v === -1 || v > 0);
+                    const displayVal = isBool ? null : (v === -1 ? 'Limitsiz' : v);
+                    return (
+                        <li key={j} className={`flex items-start gap-2.5 text-[13.5px] ${
+                            isIncluded ? '' : 'opacity-40'
+                        }`}>
+                            <HiOutlineCheck className={`w-4 h-4 mt-0.5 shrink-0 ${
+                                featured ? 'text-[var(--accent)]' : 'text-[var(--primary)]'
+                            }`} />
+                            <span className={featured ? 'text-white/90' : 'text-[var(--ink-700)]'}>
+                                {f.label}
+                                {displayVal !== null && (
+                                    <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                                        featured ? 'bg-white/10' : 'bg-[var(--ink-100)]'
+                                    }`}>
+                                        {displayVal}
+                                    </span>
+                                )}
+                            </span>
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Comparison table — uses real backend plan data
+// ───────────────────────────────────────────────────────────────────────────
+
+const CompareTable = ({ plans }) => {
+    if (!plans?.length) return null;
+    const cellVal = (plan, f) => {
+        const v = plan[f.key];
+        if (f.type === 'boolean') {
+            return v === true
+                ? <HiOutlineCheck className="w-5 h-5 mx-auto text-[var(--brand-green-600)]" />
+                : <span className="text-[var(--ink-300)]">—</span>;
+        }
+        return <span className="font-semibold text-[var(--ink-800)]">{fmtNum(v)}</span>;
+    };
+    return (
+        <section className="py-20 md:py-24">
+            <div className="container-main">
+                <div className="text-center max-w-[720px] mx-auto mb-12">
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">Müqayisə</span>
+                    <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)]">
+                        Bütün xüsusiyyətlər yan-yana
+                    </h2>
+                    <p className="mt-4 text-[17px] text-[var(--ink-500)] leading-relaxed">
+                        Hansı planın sizinçün uyğun olduğunu görmək üçün xüsusiyyətləri müqayisə edin.
+                    </p>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-[var(--ink-200)] bg-white">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-[14px] min-w-[640px]">
+                            <thead>
+                                <tr className="border-b border-[var(--ink-150)]">
+                                    <th className="text-left px-5 py-4 text-[13px] font-bold text-[var(--ink-500)] uppercase tracking-wider min-w-[240px]">Xüsusiyyət</th>
+                                    {plans.map((p, i) => {
+                                        const isFeatured = i === 1;
+                                        return (
+                                            <th key={p.id} className={`px-5 py-4 text-center ${isFeatured ? 'bg-[var(--primary-soft)]' : ''}`}>
+                                                <div className={`text-[15px] font-bold ${isFeatured ? 'text-[var(--primary)]' : 'text-[var(--ink-900)]'}`}>{p.name}</div>
+                                                <div className="text-[12px] text-[var(--ink-500)] mt-0.5">
+                                                    {p.price === 0 ? 'Pulsuz' : `${p.price} AZN/ay`}
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colSpan={plans.length + 1} className="bg-[var(--ink-50)] px-5 py-3 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--primary)]">
+                                        Əsas limitlər
+                                    </td>
+                                </tr>
+                                {FEATURE_LIST.filter(f => f.type === 'number').map((f, j) => (
+                                    <tr key={j} className="border-t border-[var(--ink-150)]">
+                                        <td className="px-5 py-3 text-[var(--ink-700)]">{f.label}</td>
+                                        {plans.map((p, i) => (
+                                            <td key={p.id} className={`text-center px-5 py-3 ${i === 1 ? 'bg-[var(--primary-soft)]/40' : ''}`}>
+                                                {cellVal(p, f)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                                <tr>
+                                    <td colSpan={plans.length + 1} className="bg-[var(--ink-50)] px-5 py-3 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--primary)]">
+                                        Xüsusiyyətlər
+                                    </td>
+                                </tr>
+                                {FEATURE_LIST.filter(f => f.type === 'boolean').map((f, j) => (
+                                    <tr key={j} className="border-t border-[var(--ink-150)]">
+                                        <td className="px-5 py-3 text-[var(--ink-700)]">{f.label}</td>
+                                        {plans.map((p, i) => (
+                                            <td key={p.id} className={`text-center px-5 py-3 ${i === 1 ? 'bg-[var(--primary-soft)]/40' : ''}`}>
+                                                {cellVal(p, f)}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Extra CTA — dark + light boxes
+// ───────────────────────────────────────────────────────────────────────────
+
+const ExtraCTA = () => (
+    <section className="py-12 md:py-16">
+        <div className="container-main">
+            <div className="grid md:grid-cols-2 gap-5">
+                {/* Dark box — sales */}
+                <div className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white" style={{ background: 'var(--ink-900)' }}>
+                    <div className="absolute inset-0 pointer-events-none opacity-50" style={{
+                        background: 'radial-gradient(circle at 0% 100%, rgba(37,99,235,0.35), transparent 50%), radial-gradient(circle at 100% 0%, rgba(34,197,94,0.25), transparent 50%)',
+                    }} />
+                    <h3 className="relative text-[24px] font-bold mb-3">Təhsil müəssisəsi üçün xüsusi qiymət</h3>
+                    <p className="relative text-white/70 text-[15px] leading-relaxed mb-6">
+                        50+ müəllimi olan məktəblər və universitetlər üçün xüsusi şərtlər təklif edirik — fərdi qiymət, treninq və miqrasiya dəstəyi daxil.
+                    </p>
+                    <Link
+                        to="/elaqe"
+                        className="relative inline-flex items-center gap-2 h-12 px-6 rounded-full font-semibold text-[var(--ink-900)] bg-white hover:bg-white/95 transition-all"
+                    >
+                        Satışla danış <HiOutlineArrowRight className="w-4 h-4" />
+                    </Link>
+                </div>
+
+                {/* Light box — teacher 50% */}
+                <div className="rounded-3xl p-8 md:p-10 bg-white border border-[var(--ink-200)]">
+                    <h3 className="text-[24px] font-bold text-[var(--ink-900)] mb-3">Müəllim olmaqla 50% endirim</h3>
+                    <p className="text-[var(--ink-500)] text-[15px] leading-relaxed mb-6">
+                        Şəxsi müəllim hesabınızı təsdiqləməklə Peşəkar planda 50% endirim qazanın. Sənədi yükləyin, 24 saat ərzində təsdiq alırıq.
+                    </p>
+                    <Link
+                        to="/elaqe"
+                        className="inline-flex items-center gap-2 h-12 px-6 rounded-full font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all"
+                    >
+                        Endirim üçün müraciət et <HiOutlineArrowRight className="w-4 h-4" />
+                    </Link>
+                </div>
+            </div>
+        </div>
+    </section>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// FAQ
+// ───────────────────────────────────────────────────────────────────────────
+
+const PlansFAQ = () => {
+    const items = [
+        { q: 'Planı istənilən vaxt dəyişə bilərəmmi?', a: 'Bəli. Yüksək plana keçəndə fərq dərhal hesablanır. Aşağı plana keçəndə isə cari dövr başa çatdıqdan sonra dəyişiklik tətbiq olunur.' },
+        { q: 'Pulsuz sınaq müddətindən sonra avtomatik ödəniş çıxılır?', a: 'Xeyr. Sınaq müddəti bitdikdən sonra avtomatik olaraq Başlanğıc plana keçirilirsiniz. Davam etmək istəsəniz, ödənişi özünüz təsdiqləyirsiniz.' },
+        { q: 'Hansı ödəniş üsullarını qəbul edirsiniz?', a: 'Visa, Mastercard, MilliÖn, Hesab.az və bank köçürməsi. Mərkəz planı üçün rəsmi faktura təqdim edilir.' },
+        { q: 'AZN-dən başqa valyuta ilə ödəyə bilərəmmi?', a: 'Bəli. Beynəlxalq kartlardan USD və EUR ilə ödəniş qəbul edirik. Konvertasiya bankınız tərəfindən aparılır.' },
+        { q: 'Endirim kuponları və promo kodlar varmı?', a: 'Müəllim təsdiqi ilə 50%, illik ödənişlə 20% endirim mümkündür. Ayrıca yaz/payız tədris ilinin başlanğıcında xüsusi kampaniyalar elan olunur.' },
+        { q: 'Pul qaytarma siyasətiniz necədir?', a: 'İlk 30 gün ərzində soruşmadan tam pul qaytarması. Daha sonra istifadə olunmamış müddət üçün proporsional qaytarma.' },
+    ];
+    const [open, setOpen] = useState(0);
+    return (
+        <section className="py-20 md:py-24 bg-[var(--ink-50)]">
+            <div className="container-main max-w-3xl">
+                <div className="text-center max-w-[720px] mx-auto mb-12">
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">FAQ</span>
+                    <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)]">
+                        Plan və ödənişlərlə bağlı suallar
+                    </h2>
+                </div>
+                <div className="bg-white border border-[var(--ink-200)] rounded-2xl divide-y divide-[var(--ink-150)] overflow-hidden">
+                    {items.map((it, i) => (
+                        <div key={i}>
+                            <button
+                                onClick={() => setOpen(open === i ? -1 : i)}
+                                className="w-full flex items-center justify-between text-left px-6 py-5 hover:bg-[var(--ink-100)] transition-colors"
+                            >
+                                <span className="font-semibold text-[var(--ink-900)] text-[15.5px]">{it.q}</span>
+                                <span className={`w-7 h-7 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0 transition-transform ${open === i ? 'rotate-45' : ''}`}>
+                                    <HiOutlinePlus className="w-4 h-4" />
+                                </span>
+                            </button>
+                            {open === i && (
+                                <div className="px-6 pb-5 text-[14.5px] text-[var(--ink-500)] leading-relaxed">{it.a}</div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Confirmation modal
+// ───────────────────────────────────────────────────────────────────────────
+
+const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, onConfirm }) => {
+    if (!confirmModal) return null;
+    const { plan, action, wallet, isFreeSwitch } = confirmModal;
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                <button onClick={() => setConfirmModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <HiOutlineX className="w-5 h-5" />
+                </button>
+                <div className="p-6">
+                    <h3 className="text-lg font-bold text-[var(--ink-900)] mb-1">
+                        {action === 'renew' ? 'Planı uzat' : isFreeSwitch ? 'Ödənişsiz keçid' : 'Plana keçid'}
+                    </h3>
+                    <p className="text-sm text-[var(--ink-500)] mb-5">
+                        <span className="font-semibold text-[var(--ink-800)]">{plan.name}</span> planına keçmək istədiyinizdən əminsiniz?
+                    </p>
+
+                    {action === 'switch' && wallet.creditAzn > 0 ? (
+                        <div className={`rounded-xl p-4 mb-5 text-sm space-y-2 ${isFreeSwitch ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                            <div className="flex justify-between text-gray-600">
+                                <span>Plan qiyməti ({selectedMonths} ay)</span>
+                                <span>{(plan.price * selectedMonths).toFixed(2)} AZN</span>
+                            </div>
+                            <div className={`flex justify-between font-semibold ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                <span>Cari plan krediti</span>
+                                <span>−{wallet.creditAzn.toFixed(2)} AZN</span>
+                            </div>
+                            <div className={`flex justify-between font-bold pt-2 border-t ${isFreeSwitch ? 'border-emerald-200 text-emerald-800' : 'border-amber-200 text-gray-900'}`}>
+                                <span>Ödəniləcək</span>
+                                <span>{isFreeSwitch ? 'Pulsuz' : wallet.chargeAmount.toFixed(2) + ' AZN'}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600 pt-1">
+                                <span>Müddət</span>
+                                <span>{wallet.durationDays} gün</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-gray-50 rounded-xl p-4 mb-5 text-sm">
+                            <div className="flex justify-between font-semibold text-gray-800">
+                                <span>Ödəniləcək məbləğ</span>
+                                <span>{(plan.price * selectedMonths).toFixed(2)} AZN</span>
+                            </div>
+                            <div className="flex justify-between text-gray-500 mt-1">
+                                <span>Müddət</span>
+                                <span>{selectedMonths * 30} gün</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setConfirmModal(null)}
+                            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                        >
+                            Ləğv et
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-colors ${
+                                isFreeSwitch ? 'bg-[var(--accent)] hover:bg-[var(--brand-green-600)]' : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)]'
+                            }`}
+                        >
+                            {isFreeSwitch ? 'Keçid et' : 'Ödənişə keç'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Main
+// ───────────────────────────────────────────────────────────────────────────
 
 const Pricing = ({ isEmbedded = false }) => {
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedMonths, setSelectedMonths] = useState(1);
     const [paying, setPaying] = useState(null);
-    const [confirmModal, setConfirmModal] = useState(null); // { plan, wallet, isFreeSwitch, action }
+    const [confirmModal, setConfirmModal] = useState(null);
+    const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
     const { user, subscription, refreshSubscription } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
+        const fetchPlans = async () => {
+            try {
+                const response = await api.get('/subscription-plans');
+                setPlans(response.data.sort((a, b) => a.price - b.price));
+            } catch {
+                toast.error('Planları yükləyərkən xəta baş verdi');
+            } finally {
+                setLoading(false);
+            }
+        };
         fetchPlans();
         refreshSubscription();
     }, []);
-
-    const fetchPlans = async () => {
-        try {
-            const response = await api.get('/subscription-plans');
-            setPlans(response.data.sort((a, b) => a.price - b.price));
-        } catch {
-            toast.error('Planları yükləyərkən xəta baş verdi');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const getDiscountedPrice = (price) => {
         const opt = MONTHS_OPTIONS.find(o => o.value === selectedMonths);
@@ -63,7 +543,6 @@ const Pricing = ({ isEmbedded = false }) => {
         return +(price * (1 - opt.discount / 100)).toFixed(2);
     };
 
-    // Returns value wallet info for switching to a different plan
     const getWalletInfo = (plan) => {
         const baseCharge = plan.price * selectedMonths;
         const baseDuration = selectedMonths * 30;
@@ -101,9 +580,7 @@ const Pricing = ({ isEmbedded = false }) => {
         setConfirmModal({ plan, action, wallet, isFreeSwitch });
     };
 
-    const [paymentWindowOpen, setPaymentWindowOpen] = useState(false);
-
-    // When user returns to this tab after paying in Kapital Bank tab — auto-verify
+    // Verify payment on window focus
     useEffect(() => {
         if (!paymentWindowOpen) return;
         const onFocus = async () => {
@@ -115,7 +592,7 @@ const Pricing = ({ isEmbedded = false }) => {
                     localStorage.removeItem('pendingPaymentOrderId');
                     setPaymentWindowOpen(false);
                     await refreshSubscription();
-                    toast.success('Abunəlik aktivləşdirildi! 🎉');
+                    toast.success('Abunəlik aktivləşdirildi!');
                 }
             } catch {}
         };
@@ -146,297 +623,73 @@ const Pricing = ({ isEmbedded = false }) => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent flex items-center justify-center rounded-full animate-spin"></div>
+            <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--paper-cream)' }}>
+                <div className="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
 
-    return (
-        <div className={`bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 sm:px-6 lg:px-8 ${isEmbedded ? 'py-20' : 'min-h-screen py-20'}`}>
-
-        {/* ── Confirmation Modal ── */}
-        {confirmModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-                    <button onClick={() => setConfirmModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
-                        <HiOutlineX className="w-5 h-5" />
-                    </button>
-                    <div className="p-6">
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">
-                            {confirmModal.action === 'renew' ? 'Planı uzat' : confirmModal.isFreeSwitch ? 'Ödənişsiz keçid' : 'Plana keçid'}
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-5">
-                            <span className="font-semibold text-gray-800">{confirmModal.plan.name}</span> planına keçmək istədiyinizdən əminsiniz?
-                        </p>
-
-                        {/* Credit breakdown */}
-                        {confirmModal.action === 'switch' && confirmModal.wallet.creditAzn > 0 ? (
-                            <div className={`rounded-xl p-4 mb-5 text-sm space-y-2 ${confirmModal.isFreeSwitch ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Plan qiyməti ({selectedMonths} ay)</span>
-                                    <span>{(confirmModal.plan.price * selectedMonths).toFixed(2)} AZN</span>
-                                </div>
-                                <div className={`flex justify-between font-semibold ${confirmModal.isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                    <span>Cari plan krediti</span>
-                                    <span>−{confirmModal.wallet.creditAzn.toFixed(2)} AZN</span>
-                                </div>
-                                <div className={`flex justify-between font-bold pt-2 border-t ${confirmModal.isFreeSwitch ? 'border-emerald-200 text-emerald-800' : 'border-amber-200 text-gray-900'}`}>
-                                    <span>Ödəniləcək</span>
-                                    <span>{confirmModal.isFreeSwitch ? 'Pulsuz 🎉' : confirmModal.wallet.chargeAmount.toFixed(2) + ' AZN'}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600 pt-1">
-                                    <span>Müddət</span>
-                                    <span>{confirmModal.wallet.durationDays} gün</span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="bg-gray-50 rounded-xl p-4 mb-5 text-sm">
-                                <div className="flex justify-between font-semibold text-gray-800">
-                                    <span>Ödəniləcək məbləğ</span>
-                                    <span>{(confirmModal.plan.price * selectedMonths).toFixed(2)} AZN</span>
-                                </div>
-                                <div className="flex justify-between text-gray-500 mt-1">
-                                    <span>Müddət</span>
-                                    <span>{selectedMonths * 30} gün</span>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setConfirmModal(null)}
-                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-                            >
-                                Ləğv et
-                            </button>
-                            <button
-                                onClick={() => handleSubscribe(confirmModal.plan.id)}
-                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-colors ${
-                                    confirmModal.isFreeSwitch
-                                        ? 'bg-emerald-500 hover:bg-emerald-600'
-                                        : 'bg-indigo-600 hover:bg-indigo-700'
-                                }`}
-                            >
-                                {confirmModal.isFreeSwitch ? 'Keçid Et' : 'Ödənişə Keç'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
-            <div className="max-w-7xl mx-auto">
-                <div className="text-center max-w-3xl mx-auto mb-10 space-y-4">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 tracking-tight">
-                        Sizə uyğun planı seçin
-                    </h1>
-                    <p className="text-lg text-gray-500">
-                        Bütün xüsusiyyətlərimizdən faydalanaraq tədris prosesinizi tamamilə rəqəmsallaşdırın.
-                    </p>
-                </div>
-
-                {/* Months selector */}
-                <div className="flex justify-center mb-16">
-                    <div className="inline-flex bg-white border border-gray-200 rounded-2xl p-1 gap-1 shadow-sm">
-                        {MONTHS_OPTIONS.map(opt => (
-                            <button
-                                key={opt.value}
-                                onClick={() => setSelectedMonths(opt.value)}
-                                className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                                    selectedMonths === opt.value
-                                        ? 'bg-indigo-600 text-white shadow-md'
-                                        : 'text-gray-600 hover:bg-gray-50'
-                                }`}
-                            >
-                                {opt.label}
-                                {opt.discount && (
-                                    <span className={`absolute -top-2 -right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                                        selectedMonths === opt.value ? 'bg-green-400 text-white' : 'bg-green-100 text-green-700'
-                                    }`}>
-                                        -{opt.discount}%
-                                    </span>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap justify-center gap-8 items-stretch">
-                    {plans.map((plan, index) => {
-                        const isCurrentPlan = subscription?.plan?.id === plan.id;
-                        const isMostPopular = index === 1 || (plan.price > 0 && plan.price < 50);
+    const content = (
+        <>
+            <BillingToggle months={selectedMonths} setMonths={setSelectedMonths} />
+            <div className="container-main">
+                <div className="grid md:grid-cols-3 gap-5 max-w-[1100px] mx-auto">
+                    {plans.map((plan, i) => {
+                        const featured = i === 1;
+                        const isCurrent = subscription?.plan?.id === plan.id;
                         const displayPrice = plan.price > 0 ? getDiscountedPrice(plan.price) : 0;
-                        const totalPrice = +(displayPrice * selectedMonths).toFixed(2);
-                        const hasDiscount = plan.price > 0 && displayPrice < plan.price;
                         const action = getPlanAction(plan);
-                        const wallet = action === 'switch' ? getWalletInfo(plan) : { creditAzn: 0, isFree: false, chargeAmount: plan.price * selectedMonths, durationDays: selectedMonths * 30 };
+                        const wallet = action === 'switch'
+                            ? getWalletInfo(plan)
+                            : { creditAzn: 0, isFree: false, chargeAmount: plan.price * selectedMonths, durationDays: selectedMonths * 30 };
                         const isFreeSwitch = action === 'switch' && wallet.isFree;
-                        const remainingDays = isCurrentPlan && subscription?.endDate
+                        const remainingDays = isCurrent && subscription?.endDate
                             ? Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000))
                             : null;
-
                         return (
-                            <div
+                            <PlanCard
                                 key={plan.id}
-                                className={`relative flex flex-col w-full max-w-sm rounded-3xl bg-white shadow-xl transition-transform duration-300 hover:-translate-y-2 cursor-pointer border-2 ${isMostPopular ? 'border-indigo-500 shadow-indigo-200 z-10 scale-105 md:scale-110' : 'border-transparent shadow-gray-200'}`}
-                            >
-                                {isMostPopular && (
-                                    <div className="absolute top-0 inset-x-0 flex justify-center -mt-4">
-                                        <span className="bg-indigo-500 text-white text-xs font-bold uppercase tracking-widest py-1 px-4 rounded-full shadow-md">
-                                            Ən Populyar
-                                        </span>
-                                    </div>
-                                )}
-
-                                <div className="p-8 pb-0">
-                                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                                        <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
-                                        {isCurrentPlan && (
-                                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${remainingDays <= 7 ? 'bg-red-100 text-red-700' : remainingDays <= 30 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                                                {remainingDays === 0 ? 'Bu gün bitir' : `${remainingDays} gün qalır`}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-gray-500 min-h-[40px] leading-relaxed">{plan.description}</p>
-
-                                    <div className="my-6">
-                                        {plan.price > 0 ? (
-                                            <>
-                                                <div className="flex items-baseline gap-1">
-                                                    {action === 'switch' && wallet.creditAzn > 0 && !isFreeSwitch ? (
-                                                        <>
-                                                            <span className="text-4xl font-extrabold text-gray-900">{wallet.chargeAmount.toFixed(2)}</span>
-                                                            <span className="text-lg font-semibold text-gray-500">AZN</span>
-                                                            <span className="text-sm text-gray-400 line-through ml-1">{totalPrice} AZN</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <span className="text-4xl font-extrabold text-gray-900">{isFreeSwitch ? '0' : displayPrice}</span>
-                                                            <span className="text-lg font-semibold text-gray-500">AZN</span>
-                                                            {!isFreeSwitch && <span className="text-sm text-gray-400 ml-1">/ ay</span>}
-                                                            {hasDiscount && !isFreeSwitch && (
-                                                                <span className="text-sm text-gray-400 line-through ml-1">{plan.price}</span>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-
-                                                {/* Credit breakdown box */}
-                                                {action === 'switch' && wallet.creditAzn > 0 && (
-                                                    <div className={`mt-3 p-3 rounded-xl border ${isFreeSwitch ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-                                                        <div className="space-y-1 text-xs">
-                                                            <div className="flex justify-between text-gray-600">
-                                                                <span>Plan qiyməti</span>
-                                                                <span>{totalPrice.toFixed(2)} AZN</span>
-                                                            </div>
-                                                            <div className={`flex justify-between font-semibold ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                                                <span>Cari plan krediti</span>
-                                                                <span>−{wallet.creditAzn.toFixed(2)} AZN</span>
-                                                            </div>
-                                                            <div className={`flex justify-between font-bold pt-1 border-t ${isFreeSwitch ? 'border-emerald-200 text-emerald-800' : 'border-amber-200 text-gray-900'}`}>
-                                                                <span>Ödəniləcək</span>
-                                                                <span>{isFreeSwitch ? 'Pulsuz' : wallet.chargeAmount.toFixed(2) + ' AZN'}</span>
-                                                            </div>
-                                                            {wallet.durationDays !== selectedMonths * 30 && (
-                                                                <div className={`flex justify-between font-semibold pt-0.5 ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                                                    <span>Müddət</span>
-                                                                    <span>{wallet.durationDays} gün</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {action !== 'switch' && selectedMonths > 1 && (
-                                                    <p className="text-xs text-gray-400 mt-1">
-                                                        Cəmi: <span className="font-semibold text-gray-700">{totalPrice} AZN</span> / {selectedMonths} ay
-                                                    </p>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-4xl font-extrabold text-gray-900">0</span>
-                                                <span className="text-lg font-semibold text-gray-500">AZN</span>
-                                                <span className="text-sm text-gray-400 ml-1">/ həmişə</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {plan.price === 0 ? (
-                                        <div className="w-full py-3 px-4 rounded-xl bg-gray-50 border border-gray-200 text-center text-sm text-gray-400 font-medium">
-                                            Baza plan — hər zaman mövcuddur
-                                        </div>
-                                    ) : (
-                                    <button
-                                        onClick={() => openConfirm(plan, action, wallet, isFreeSwitch)}
-                                        disabled={paying === plan.id}
-                                        className={`w-full py-3.5 px-4 rounded-xl font-bold text-center transition-all duration-200 flex items-center justify-center gap-2 ${
-                                            paying === plan.id
-                                                ? 'bg-indigo-400 text-white cursor-wait'
-                                                : action === 'renew'
-                                                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                                                    : isFreeSwitch
-                                                        ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                                        : isMostPopular
-                                                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200'
-                                                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'
-                                        }`}
-                                    >
-                                        {paying === plan.id ? 'İşlənir...'
-                                            : action === 'renew' ? <><HiOutlineCreditCard className="w-4 h-4" /> Uzat</>
-                                            : isFreeSwitch ? '✓ Ödənişsiz Keçid Et'
-                                            : action === 'switch' ? <><HiOutlineCreditCard className="w-4 h-4" /> Plana Keçid Et</>
-                                            : <><HiOutlineCreditCard className="w-4 h-4" /> Abunə Ol</>
-                                        }
-                                    </button>
-                                    )}
-
-                                    {action === 'renew' && (
-                                        <p className="text-xs text-gray-400 text-center mt-2">Bitmə tarixi uzadılacaq</p>
-                                    )}
-                                </div>
-
-                                <div className="p-8 flex-1 flex flex-col justify-start">
-                                    <ul className="space-y-4 text-sm text-gray-600">
-                                        {featureList.map((feature, i) => {
-                                            const hasValue = plan[feature.key];
-                                            let displayValue = null;
-                                            let isIncluded = false;
-
-                                            if (feature.type === 'boolean') {
-                                                isIncluded = hasValue === true;
-                                            } else if (feature.type === 'number') {
-                                                displayValue = hasValue === -1 ? 'Limitsiz' : hasValue;
-                                                isIncluded = hasValue === -1 || hasValue > 0;
-                                            }
-
-                                            return (
-                                                <li key={i} className={`flex items-start gap-3 ${!isIncluded ? 'opacity-50' : ''}`}>
-                                                    <div className="flex-shrink-0 mt-0.5">
-                                                        {isIncluded ? (
-                                                            <HiCheckCircle className={`w-5 h-5 ${isMostPopular ? 'text-indigo-500' : 'text-teal-500'}`} />
-                                                        ) : (
-                                                            <HiXCircle className="w-5 h-5 text-gray-300" />
-                                                        )}
-                                                    </div>
-                                                    <span className={isIncluded ? 'font-medium text-gray-800' : 'text-gray-400 line-through'}>
-                                                        {feature.label}
-                                                        {feature.type === 'number' && displayValue && (
-                                                            <span className="ml-1.5 font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
-                                                                {displayValue}
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </div>
-                            </div>
+                                plan={plan}
+                                featured={featured}
+                                months={selectedMonths}
+                                isCurrent={isCurrent}
+                                action={action}
+                                wallet={wallet}
+                                isFreeSwitch={isFreeSwitch}
+                                displayPrice={displayPrice}
+                                remainingDays={remainingDays}
+                                paying={paying === plan.id}
+                                onSubscribe={() => openConfirm(plan, action, wallet, isFreeSwitch)}
+                            />
                         );
                     })}
                 </div>
             </div>
+            <CompareTable plans={plans} />
+            <ExtraCTA />
+            <PlansFAQ />
+            <ConfirmModal
+                confirmModal={confirmModal}
+                setConfirmModal={setConfirmModal}
+                selectedMonths={selectedMonths}
+                onConfirm={() => handleSubscribe(confirmModal.plan.id)}
+            />
+        </>
+    );
+
+    if (isEmbedded) {
+        return <div className="py-12">{content}</div>;
+    }
+
+    return (
+        <div style={{ background: 'var(--paper-cream)' }}>
+            <Helmet>
+                <title>Planlar — testup.az</title>
+                <meta name="description" content="testup.az qiymət planları — pulsuz başlayın, ehtiyacınız böyüdükcə miqyaslandırın. Aylıq və illik abunəlik seçimləri." />
+                <link rel="canonical" href="https://testup.az/planlar" />
+            </Helmet>
+            <PlansHero />
+            <div className="pt-10 md:pt-12">{content}</div>
         </div>
     );
 };

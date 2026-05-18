@@ -1,48 +1,170 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineEye, HiOutlineClock, HiOutlineVideoCamera } from 'react-icons/hi';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import {
+    HiOutlineEye, HiOutlineClock, HiOutlineVideoCamera, HiOutlineAcademicCap,
+    HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineRefresh, HiOutlineShare,
+    HiOutlineArrowRight, HiOutlineSparkles, HiOutlineChartBar, HiOutlineLibrary,
+    HiOutlineMinus,
+} from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
-import QuestionNav from '../../components/ui/QuestionNav';
+import LatexPreview from '../../components/ui/LatexPreview';
+import { fmtDate } from '../../utils/date';
 
-const MOTIVATION = {
-    excellent: {
-        emojis: ['🏆', '🌟', '🎯'],
-        headline: ['Möhtəşəm nəticə!', 'Üstadsan!', 'Fantastik!'],
-        gradient: 'from-emerald-500 to-teal-600',
-    },
-    good: {
-        emojis: ['👏', '💪', '⭐'],
-        headline: ['Yaxşı iş çıxartdın!', 'Əla gedişat!', 'Gözəl nəticə!'],
-        gradient: 'from-blue-500 to-indigo-600',
-    },
-    pass: {
-        emojis: ['📈', '🔥', '💡'],
-        headline: ['Keçid balını aldın!', 'İrəliləyirsən!', 'Yaxşı başlanğıc!'],
-        messages: [
-            'Bəzi mövzularda boşluqlar var, amma bunları bağlamaq sənin əlindədir. Hər sual bir fürsətdir.',
-            'Bu nəticə hazırlığına dair bir siqnaldır. Zəif olduğun yerləri tap, üzərində işlə — fərq böyük olacaq.',
-            'Bu nəticə bir başlanğıcdır. Özünə inan, çalışmağa davam et — daha yaxşısını etmək sənin əlindədir.',
-        ],
-        gradient: 'from-amber-500 to-orange-500',
-    },
-    fail: {
-        emojis: ['📚', '🌱', '🎯'],
-        headline: ['Təslim olma!', 'Hər uğursuzluq dərsdir.', 'Başlanğıc buradan keçir.'],
-        gradient: 'from-rose-500 to-red-600',
-    },
+// ───────────────────────────────────────────────────────────────────────────
+// Helpers
+// ───────────────────────────────────────────────────────────────────────────
+
+const fmtSeconds = (s) => {
+    if (!s || s <= 0) return null;
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    if (m === 0) return `${sec} san`;
+    if (sec === 0) return `${m} dəq`;
+    return `${m} dəq ${sec} san`;
 };
 
-const getLevel = (pct) => {
-    if (pct >= 90) return 'excellent';
-    if (pct >= 75) return 'good';
-    if (pct >= 50) return 'pass';
-    return 'fail';
+const getGrade = (pct) => {
+    if (pct >= 90) return 'A';
+    if (pct >= 80) return 'B';
+    if (pct >= 70) return 'C';
+    if (pct >= 60) return 'D';
+    return 'F';
 };
 
-const pick = (arr, seed) => arr[seed % arr.length];
+const ringColorFor = (pct) => {
+    if (pct >= 90) return '#22C55E';
+    if (pct >= 75) return 'var(--primary)';
+    if (pct >= 60) return '#F59E0B';
+    return '#EF4444';
+};
 
-const StarRating = ({ value, onChange, disabled = false, small = false }) => {
+const headlineFor = (pct) => {
+    if (pct == null) return 'Nəticə hələ hazırlanır';
+    if (pct >= 90) return 'Möhtəşəm nəticə! Bilik səviyyəniz təsdiqləndi.';
+    if (pct >= 75) return 'Yaxşı iş çıxartdınız! İrəliyə doğru.';
+    if (pct >= 60) return 'Keçid balını topladınız — daha da yaxşılaşmaq mümkündür.';
+    return 'Bir az daha hazırlıq lazımdır. Səhv cavabları nəzərdən keçirin.';
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Score ring with grade badge
+// ───────────────────────────────────────────────────────────────────────────
+
+const ScoreRing = ({ pct, passed }) => {
+    const r = 96;
+    const c = 2 * Math.PI * r;
+    const offset = c - (pct / 100) * c;
+    const color = ringColorFor(pct);
+    const grade = getGrade(pct);
+    return (
+        <div className="relative w-[220px] h-[220px] shrink-0">
+            <svg width="220" height="220" viewBox="0 0 220 220" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="110" cy="110" r={r} fill="none" stroke="var(--ink-150)" strokeWidth="14" />
+                <circle
+                    cx="110" cy="110" r={r}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="14"
+                    strokeLinecap="round"
+                    strokeDasharray={c}
+                    strokeDashoffset={offset}
+                    style={{ transition: 'stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="text-[44px] font-extrabold leading-none" style={{ color }}>{pct.toFixed(0)}%</div>
+                <div className="text-[11px] text-[var(--ink-500)] mt-1.5 font-bold uppercase tracking-[0.12em]">Ümumi nəticə</div>
+            </div>
+            <div
+                className="absolute -bottom-1 -right-1 w-12 h-12 rounded-2xl bg-white border-2 flex items-center justify-center text-[22px] font-extrabold shadow-[var(--sh-md)]"
+                style={{ borderColor: color, color }}
+            >
+                {grade}
+            </div>
+        </div>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Stat cards (4-up)
+// ───────────────────────────────────────────────────────────────────────────
+
+const StatCard = ({ Icon, label, value, sub, tone }) => {
+    const tones = {
+        blue:  'bg-[var(--primary-soft)] text-[var(--primary)]',
+        green: 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]',
+        red:   'bg-red-50 text-red-600',
+        amber: 'bg-amber-50 text-amber-600',
+        slate: 'bg-[var(--ink-100)] text-[var(--ink-700)]',
+    };
+    return (
+        <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tones[tone] || tones.blue}`}>
+                    <Icon className="w-5 h-5" />
+                </div>
+                {sub && (
+                    <span className="text-[11px] font-bold text-[var(--ink-500)] bg-[var(--ink-100)] px-2 py-0.5 rounded-full">
+                        {sub}
+                    </span>
+                )}
+            </div>
+            <div className="text-[26px] font-extrabold text-[var(--ink-900)] leading-none">{value}</div>
+            <div className="text-[12.5px] text-[var(--ink-500)] mt-1.5">{label}</div>
+        </div>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Section breakdown (subject-level)
+// ───────────────────────────────────────────────────────────────────────────
+
+const SectionBreakdown = ({ subjectStats }) => {
+    if (!subjectStats?.length) return null;
+    return (
+        <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6">
+            <h3 className="text-[17px] font-bold text-[var(--ink-900)] flex items-center gap-2 mb-1">
+                <HiOutlineChartBar className="w-5 h-5 text-[var(--primary)]" />
+                Fənn üzrə bölgü
+            </h3>
+            <p className="text-[13px] text-[var(--ink-500)] mb-5">Hansı fənlərdə güclüsünüz, hansılarda işləmək lazımdır</p>
+            <div className="flex flex-col gap-4">
+                {subjectStats.map((s, i) => {
+                    const pct = s.maxScore > 0 ? Math.round((s.totalScore / s.maxScore) * 100) : 0;
+                    const cls = pct >= 80
+                        ? 'bg-[var(--brand-green-600)]'
+                        : pct >= 50
+                            ? 'bg-amber-400'
+                            : 'bg-red-400';
+                    return (
+                        <div key={s.subjectName || i}>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="text-[14px] font-semibold text-[var(--ink-800)]">{s.subjectName || 'Digər'}</div>
+                                <div className="text-[12.5px] text-[var(--ink-500)]">
+                                    <strong className="text-[var(--ink-900)]">{s.correctCount ?? 0}</strong> / {s.questionCount ?? 0} sual ·{' '}
+                                    <strong className="text-[var(--ink-900)]">{pct}%</strong>
+                                </div>
+                            </div>
+                            <div className="h-2 w-full bg-[var(--ink-150)] rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full ${cls} rounded-full transition-all duration-700`}
+                                    style={{ width: `${pct}%` }}
+                                />
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Star rating
+// ───────────────────────────────────────────────────────────────────────────
+
+const StarRating = ({ value, onChange, disabled }) => {
     const [hovered, setHovered] = useState(0);
     return (
         <div className="flex gap-0.5">
@@ -54,142 +176,190 @@ const StarRating = ({ value, onChange, disabled = false, small = false }) => {
                     onMouseEnter={() => !disabled && setHovered(star)}
                     onMouseLeave={() => !disabled && setHovered(0)}
                     disabled={disabled}
-                    className={`${small ? 'text-2xl' : 'text-3xl'} transition-transform focus:outline-none ${disabled ? 'cursor-not-allowed opacity-60' : 'hover:scale-110'}`}
+                    className={`text-2xl transition-transform focus:outline-none ${disabled ? 'cursor-not-allowed opacity-60' : 'hover:scale-110'}`}
                 >
-                    <span className={(hovered || value) >= star ? 'text-yellow-400' : 'text-gray-200'}>★</span>
+                    <span className={(hovered || value) >= star ? 'text-amber-400' : 'text-[var(--ink-200)]'}>★</span>
                 </button>
             ))}
         </div>
     );
 };
 
-const MultiDonutChart = ({ correct, wrong, skipped, pending, total, percent }) => {
-    const r = 70;
-    const circ = 2 * Math.PI * r;
-    const safeTotal = total || 1;
-    const segments = [
-        { value: correct, color: '#22c55e' },
-        { value: wrong,   color: '#ef4444' },
-        { value: pending, color: '#f59e0b' },
-        { value: skipped, color: '#9ca3af' },
+// ───────────────────────────────────────────────────────────────────────────
+// Question review (filter tabs + expandable list)
+// ───────────────────────────────────────────────────────────────────────────
+
+const statusOf = (q) => {
+    const hasAnswer = (
+        q.studentSelectedOptionId != null ||
+        (q.studentSelectedOptionIds && q.studentSelectedOptionIds.length > 0) ||
+        q.studentAnswerText?.trim() ||
+        q.studentAnswerImage ||
+        q.studentMatchingAnswerJson
+    );
+    if (!q.isGraded) return 'pending';
+    if (!hasAnswer) return 'skipped';
+    if (q.awardedScore >= q.points) return 'correct';
+    if (q.awardedScore > 0) return 'partial';
+    return 'wrong';
+};
+
+const QuestionReview = ({ questions, sessionId, navigate }) => {
+    const [filter, setFilter] = useState('all');
+
+    const items = useMemo(() => (questions || []).map(q => ({ ...q, _status: statusOf(q) })), [questions]);
+    const counts = useMemo(() => ({
+        all:     items.length,
+        correct: items.filter(q => q._status === 'correct').length,
+        wrong:   items.filter(q => q._status === 'wrong').length,
+        partial: items.filter(q => q._status === 'partial').length,
+        skipped: items.filter(q => q._status === 'skipped').length,
+    }), [items]);
+
+    const filtered = useMemo(() => {
+        if (filter === 'all')     return items;
+        if (filter === 'wrong')   return items.filter(q => q._status === 'wrong' || q._status === 'partial');
+        return items.filter(q => q._status === filter);
+    }, [items, filter]);
+
+    if (!items.length) return null;
+
+    const tabs = [
+        { k: 'all',     label: 'Hamısı',  count: counts.all },
+        { k: 'correct', label: 'Düz',     count: counts.correct },
+        { k: 'wrong',   label: 'Səhv',    count: counts.wrong + counts.partial },
+        { k: 'skipped', label: 'Boş',     count: counts.skipped },
     ];
-    let cumulative = 0;
-    const arcs = segments.map(seg => {
-        const pct = seg.value / safeTotal;
-        const dash = circ * pct;
-        const gap  = circ - dash;
-        const offset = circ * (1 - cumulative);
-        cumulative += pct;
-        return { ...seg, dash, gap, offset };
-    });
-    const textColor = percent >= 90 ? 'text-emerald-600' : percent >= 75 ? 'text-indigo-600' : percent >= 50 ? 'text-amber-600' : 'text-red-600';
+
     return (
-        <div className="relative inline-flex shrink-0">
-            <svg className="w-36 h-36 -rotate-90" viewBox="0 0 160 160">
-                <circle cx="80" cy="80" r={r} stroke="#f3f4f6" strokeWidth="14" fill="transparent" />
-                {arcs.map((arc, i) => arc.value > 0 && (
-                    <circle key={i} cx="80" cy="80" r={r}
-                        stroke={arc.color} strokeWidth="14" fill="transparent"
-                        strokeDasharray={`${arc.dash} ${arc.gap}`}
-                        strokeDashoffset={arc.offset}
-                        style={{ transition: 'stroke-dashoffset 1s ease' }}
-                    />
+        <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-1">
+                <HiOutlineLibrary className="w-5 h-5 text-[var(--primary)]" />
+                <h3 className="text-[17px] font-bold text-[var(--ink-900)]">Sual-sual nəzərdən keçir</h3>
+            </div>
+            <p className="text-[13px] text-[var(--ink-500)] mb-4">Hər sualı, sizin cavabı və düzgün cavabı görün.</p>
+
+            {/* Filter tabs */}
+            <div className="flex flex-wrap gap-2 mb-5 pb-5 border-b border-[var(--ink-150)]">
+                {tabs.map(t => {
+                    const active = filter === t.k;
+                    return (
+                        <button
+                            key={t.k}
+                            onClick={() => setFilter(t.k)}
+                            className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-semibold transition-all ${
+                                active
+                                    ? 'bg-[var(--primary)] text-white shadow-[0_8px_20px_-10px_rgba(37,99,235,0.6)]'
+                                    : 'bg-[var(--ink-100)] text-[var(--ink-600)] hover:bg-[var(--ink-150)]'
+                            }`}
+                        >
+                            {t.label}
+                            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-white text-[var(--ink-500)]'}`}>
+                                {t.count}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Questions list */}
+            <div className="flex flex-col gap-4">
+                {filtered.length === 0 ? (
+                    <div className="text-center py-10 text-[var(--ink-400)] text-[14px]">
+                        Bu kateqoriyada sual yoxdur.
+                    </div>
+                ) : filtered.slice(0, 10).map((q, idx) => (
+                    <ReviewItem key={q.id} q={q} index={idx + 1} />
                 ))}
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-2xl font-black ${textColor}`}>{percent}%</span>
-                <span className="text-[10px] text-gray-400 font-medium">nəticə</span>
             </div>
-        </div>
-    );
-};
 
-const DonutChart = ({ percent, color }) => {
-    const r = 70;
-    const circumference = 2 * Math.PI * r;
-    const offset = circumference - (circumference * percent) / 100;
-    const colorMap = {
-        green:  { stroke: '#22c55e', text: 'text-green-600' },
-        blue:   { stroke: '#6366f1', text: 'text-indigo-600' },
-        yellow: { stroke: '#f59e0b', text: 'text-amber-600' },
-        red:    { stroke: '#ef4444', text: 'text-red-600' },
-    };
-    const c = colorMap[color] || colorMap.green;
-    return (
-        <div className="relative inline-flex shrink-0">
-            <svg className="w-36 h-36 -rotate-90" viewBox="0 0 160 160">
-                <circle cx="80" cy="80" r={r} stroke="#f3f4f6" strokeWidth="14" fill="transparent" />
-                <circle cx="80" cy="80" r={r} stroke={c.stroke} strokeWidth="14" fill="transparent"
-                    strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
-                    style={{ transition: 'stroke-dashoffset 1s ease' }}
-                />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-2xl font-black ${c.text}`}>{percent}%</span>
-                <span className="text-[10px] text-gray-400 font-medium">nəticə</span>
-            </div>
-        </div>
-    );
-};
-
-const SUBJECT_PALETTE = [
-    { stroke: '#6366f1', text: 'text-indigo-600',  label: 'text-indigo-500'  },
-    { stroke: '#10b981', text: 'text-emerald-600', label: 'text-emerald-500' },
-    { stroke: '#f59e0b', text: 'text-amber-600',   label: 'text-amber-500'   },
-    { stroke: '#f43f5e', text: 'text-rose-600',    label: 'text-rose-500'    },
-];
-
-const SubjectDonut = ({ stat, colorIndex }) => {
-    const c = SUBJECT_PALETTE[colorIndex % SUBJECT_PALETTE.length];
-    const pct = stat.maxScore > 0 ? Math.round((stat.totalScore / stat.maxScore) * 100) : 0;
-    const r = 52;
-    const circumference = 2 * Math.PI * r;
-    const offset = circumference - (circumference * pct) / 100;
-    const total = stat.questionCount;
-
-    return (
-        <div className="flex flex-col items-center gap-1">
-            <span className="text-[11px] font-bold text-gray-600 text-center leading-tight max-w-[90px] truncate">
-                {stat.subjectName || 'Digər'}
-            </span>
-            <div className="relative inline-flex">
-                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r={r} stroke="#f3f4f6" strokeWidth="12" fill="transparent" />
-                    <circle cx="60" cy="60" r={r} stroke={c.stroke} strokeWidth="12" fill="transparent"
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={offset}
-                        style={{ transition: 'stroke-dashoffset 1s ease' }}
-                    />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-xl font-black ${c.text}`}>{pct}%</span>
-                    <span className="text-[9px] text-gray-400 font-medium">nəticə</span>
+            {filtered.length > 10 && (
+                <div className="text-center mt-5">
+                    <button
+                        onClick={() => navigate(`/test/review/${sessionId}`, { state: { fromResult: true } })}
+                        className="inline-flex items-center gap-1.5 h-10 px-5 rounded-full text-[13px] font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)] transition-colors"
+                    >
+                        Qalan {filtered.length - 10} sualı tam baxışda gör <HiOutlineArrowRight className="w-3.5 h-3.5" />
+                    </button>
                 </div>
-            </div>
-            {/* Mini breakdown row */}
-            <div className="flex flex-wrap justify-center gap-x-2 gap-y-0.5">
-                {[
-                    { count: stat.correctCount,      color: 'bg-green-500', label: 'D' },
-                    { count: stat.wrongCount,        color: 'bg-red-400',   label: 'Y' },
-                    { count: stat.pendingManualCount,color: 'bg-amber-400', label: 'G' },
-                    { count: stat.skippedCount,      color: 'bg-gray-300',  label: 'B' },
-                ].filter(x => x.count > 0).map(x => (
-                    <span key={x.label} className="flex items-center gap-0.5 text-[10px] text-gray-500 font-medium">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${x.color}`} />
-                        {x.count}
-                    </span>
-                ))}
-            </div>
-            {stat.maxScore > 0 && (
-                <p className="text-[11px] font-bold text-gray-600">
-                    {(stat.totalScore ?? 0).toFixed(1)} / {stat.maxScore} bal
-                </p>
             )}
-            <p className="text-[10px] text-gray-400">{total} sual</p>
         </div>
     );
 };
+
+const ReviewItem = ({ q, index }) => {
+    const status = q._status;
+    const statusMeta = {
+        correct: { Icon: HiOutlineCheckCircle, label: 'Düzgün',   cls: 'text-[var(--brand-green-600)] bg-[var(--accent-soft)] border-[var(--brand-green-100)]' },
+        wrong:   { Icon: HiOutlineXCircle,     label: 'Səhv',     cls: 'text-red-700 bg-red-50 border-red-200' },
+        partial: { Icon: HiOutlineXCircle,     label: 'Qismən',   cls: 'text-amber-700 bg-amber-50 border-amber-200' },
+        skipped: { Icon: HiOutlineMinus,       label: 'Boş',      cls: 'text-[var(--ink-500)] bg-[var(--ink-100)] border-[var(--ink-200)]' },
+        pending: { Icon: HiOutlineClock,       label: 'Yoxlanılır', cls: 'text-amber-700 bg-amber-50 border-amber-200' },
+    }[status] || { Icon: HiOutlineMinus, label: '—', cls: 'text-[var(--ink-500)] bg-[var(--ink-100)]' };
+
+    const isChoice = q.questionType === 'MCQ' || q.questionType === 'TRUE_FALSE' || q.questionType === 'MULTI_SELECT';
+
+    return (
+        <div className="border border-[var(--ink-200)] rounded-2xl p-5">
+            <div className="flex items-center justify-between gap-3 mb-3">
+                <span className="inline-flex items-center text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--ink-500)] bg-[var(--ink-100)] px-2.5 py-1 rounded-full">
+                    SUAL {index}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 text-[11.5px] font-bold px-2.5 py-1 rounded-full border ${statusMeta.cls}`}>
+                    <statusMeta.Icon className="w-3.5 h-3.5" /> {statusMeta.label}
+                </span>
+            </div>
+            <div className="text-[15px] font-semibold text-[var(--ink-900)] leading-relaxed mb-3">
+                <LatexPreview content={q.content} />
+            </div>
+
+            {isChoice && q.options && (
+                <div className="flex flex-col gap-2">
+                    {q.options.map((opt) => {
+                        const isUserSel = q.questionType === 'MULTI_SELECT'
+                            ? (q.studentSelectedOptionIds || []).includes(opt.id)
+                            : q.studentSelectedOptionId === opt.id;
+                        const isCorrect = opt.isCorrect;
+
+                        let cls = 'border-[var(--ink-200)] bg-white text-[var(--ink-700)]';
+                        if (isCorrect) cls = 'border-[var(--brand-green-600)] bg-[var(--accent-soft)] text-[var(--ink-900)]';
+                        else if (isUserSel && !isCorrect) cls = 'border-red-400 bg-red-50 text-[var(--ink-900)]';
+
+                        return (
+                            <div key={opt.id} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border ${cls}`}>
+                                <span className="w-6 h-6 inline-flex items-center justify-center rounded-md text-[11.5px] font-bold bg-white border border-[var(--ink-200)] text-[var(--ink-600)] shrink-0">
+                                    {String.fromCharCode(65 + (opt.orderIndex ?? 0))}
+                                </span>
+                                <div className="flex-1 text-[13.5px] font-medium">
+                                    <LatexPreview content={opt.content} />
+                                </div>
+                                {isCorrect && (
+                                    <span className="text-[11px] font-bold text-[var(--brand-green-600)] shrink-0">✓ Düzgün</span>
+                                )}
+                                {isUserSel && !isCorrect && (
+                                    <span className="text-[11px] font-bold text-red-600 shrink-0">Sizin cavabınız</span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {!isChoice && q.correctAnswer && (
+                <div className="bg-[var(--accent-soft)] border border-[var(--brand-green-100)] rounded-xl p-3.5 mt-1">
+                    <p className="text-[11px] font-bold text-[var(--brand-green-600)] uppercase tracking-[0.1em] mb-1.5">Düzgün cavab</p>
+                    <div className="text-[14px] font-medium text-[var(--ink-900)]">
+                        <LatexPreview content={q.correctAnswer} />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Main
+// ───────────────────────────────────────────────────────────────────────────
 
 const ExamResultSummary = () => {
     const { sessionId } = useParams();
@@ -204,7 +374,6 @@ const ExamResultSummary = () => {
     const [submissionData, setSubmissionData] = useState(submission || null);
     const [loading, setLoading] = useState(!submission);
     const [reviewQuestions, setReviewQuestions] = useState(null);
-    const [reviewExamSubject, setReviewExamSubject] = useState(null);
 
     useEffect(() => {
         if (!sessionId) return;
@@ -218,9 +387,8 @@ const ExamResultSummary = () => {
                     setRated(res.data.rating != null);
                     return res.data;
                 })
-                .catch(err => {
+                .catch(() => {
                     if (isInitial) {
-                        console.error('Failed to fetch submission:', err);
                         toast.error('Nəticə yüklənə bilmədi');
                     }
                     return null;
@@ -228,18 +396,14 @@ const ExamResultSummary = () => {
                 .finally(() => { if (isInitial) setLoading(false); });
         };
 
-        // Only do the initial load if not passed via location.state
         const initialPromise = submission ? Promise.resolve(submission) : fetchData(true);
 
         let interval = null;
         initialPromise.then(data => {
-            const isFullyGraded = data?.isFullyGraded;
-            if (!isFullyGraded) {
+            if (!data?.isFullyGraded) {
                 interval = setInterval(() => {
                     fetchData(false).then(updated => {
-                        if (updated?.isFullyGraded) {
-                            clearInterval(interval);
-                        }
+                        if (updated?.isFullyGraded) clearInterval(interval);
                     });
                 }, 20000);
             }
@@ -254,7 +418,6 @@ const ExamResultSummary = () => {
             .then(res => {
                 const sorted = [...res.data.questions].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
                 setReviewQuestions(sorted);
-                setReviewExamSubject(res.data.examSubject);
             })
             .catch(() => {});
     }, [sessionId]);
@@ -275,263 +438,279 @@ const ExamResultSummary = () => {
         }
     };
 
+    const handleShare = () => {
+        if (navigator.share) {
+            navigator.share({
+                title: displaySubmission?.examTitle || 'İmtahan nəticəsi',
+                url: window.location.href,
+            }).catch(() => {});
+        } else if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(window.location.href);
+            toast.success('Link kopyalandı');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--paper-cream)' }}>
+                <div className="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     const scorePercent = displaySubmission?.maxScore > 0
         ? Math.round((displaySubmission.totalScore / displaySubmission.maxScore) * 100)
         : null;
-
-    const seed = useMemo(() => parseInt(sessionId || '0', 10) || 0, [sessionId]);
-    const level = scorePercent !== null ? getLevel(scorePercent) : null;
-    const motiv = level ? MOTIVATION[level] : null;
-    const emoji    = motiv ? pick(motiv.emojis, seed) : '🎉';
-    const headline = motiv ? pick(motiv.headline, seed) : 'İmtahan bitdi!';
-    const gradient = motiv ? motiv.gradient : 'from-indigo-500 to-purple-600';
-
-    const getDonutColor = (pct) => {
-        if (pct >= 90) return 'green';
-        if (pct >= 75) return 'blue';
-        if (pct >= 50) return 'yellow';
-        return 'red';
-    };
-
-    const getBadge = (pct) => {
-        if (pct >= 90) return { label: 'Əla',   bg: 'bg-white/25 text-white' };
-        if (pct >= 75) return { label: 'Yaxşı', bg: 'bg-white/25 text-white' };
-        if (pct >= 50) return { label: 'Kafi',  bg: 'bg-white/25 text-white' };
-        return              { label: 'Zəif',    bg: 'bg-white/25 text-white' };
-    };
-
-    const formatDuration = (seconds) => {
-        if (!seconds || seconds <= 0) return null;
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        if (m === 0) return `${s} san`;
-        return s > 0 ? `${m}d ${s}s` : `${m} dəq`;
-    };
 
     const timeTaken = (() => {
         if (!displaySubmission?.startedAt || !displaySubmission?.submittedAt) return null;
         const diffSec = Math.round(
             (new Date(displaySubmission.submittedAt) - new Date(displaySubmission.startedAt)) / 1000
         );
-        return formatDuration(diffSec);
+        return fmtSeconds(diffSec);
     })();
 
-    const badge = scorePercent !== null ? getBadge(scorePercent) : null;
-    const hasMultiSubject = displaySubmission?.subjectStats?.length >= 2;
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center px-4">
-                <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-gray-100 p-8 text-center">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-3" />
-                    <p className="text-gray-600 font-medium">Nəticə yüklənir...</p>
-                </div>
-            </div>
-        );
-    }
+    const passed = scorePercent != null && scorePercent >= 75;
+    const headline = headlineFor(scorePercent);
+    const correct = displaySubmission?.correctCount || 0;
+    const wrong = displaySubmission?.wrongCount || 0;
+    const skipped = displaySubmission?.skippedCount || 0;
+    const pending = displaySubmission?.pendingManualCount || 0;
+    const totalQuestions = correct + wrong + skipped + pending;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center py-4 px-4">
-            <div className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-
-                {/* ── Compact header ── */}
-                <div className={`bg-gradient-to-r ${gradient} px-5 py-4 text-white flex items-center gap-3`}>
-                    <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-xl shrink-0">
-                        {emoji}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <h1 className="text-sm font-bold leading-tight">{headline}</h1>
-                        <p className="text-white/65 text-xs truncate mt-0.5">
-                            {displaySubmission?.examTitle || 'İmtahan'} tamamlandı
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                        {badge && (
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${badge.bg}`}>
-                                {badge.label}
-                            </span>
-                        )}
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white/90">
-                            {displaySubmission?.isFullyGraded ? '✓ Tam' : '⏳ Gözləyir'}
+        <div className="min-h-screen pb-16" style={{ background: 'var(--paper-cream)' }}>
+            {/* ── Header ── */}
+            <header className="border-b border-[var(--ink-150)] bg-[color-mix(in_srgb,var(--paper-cream),white_30%)]/90 backdrop-blur sticky top-0 z-20">
+                <div className="container-main py-4 flex items-center justify-between gap-3 flex-wrap">
+                    <Link to="/" className="inline-flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-[var(--primary)] text-white flex items-center justify-center">
+                            <HiOutlineCheckCircle className="w-5 h-5" />
+                        </div>
+                        <span className="font-extrabold text-[18px] tracking-tight text-[var(--ink-900)]">
+                            testup<span className="text-[var(--brand-green-600)]">.az</span>
                         </span>
+                    </Link>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleShare}
+                            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[13px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                            title="Paylaş"
+                        >
+                            <HiOutlineShare className="w-4 h-4" /> Paylaş
+                        </button>
+                        <Link
+                            to="/imtahanlar"
+                            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[13px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                        >
+                            İmtahanlara qayıt
+                        </Link>
                     </div>
                 </div>
+            </header>
 
-                {/* ── Score row ── */}
-                {scorePercent !== null ? (
-                    hasMultiSubject ? (
-                        /* Multi-subject: one donut per subject */
-                        <div className="px-5 py-4 border-b border-gray-100">
-                            <div className="flex justify-around gap-2 mb-3">
-                                {displaySubmission.subjectStats.map((stat, i) => (
-                                    <SubjectDonut key={stat.subjectName} stat={stat} colorIndex={i} />
-                                ))}
+            <div className="container-main max-w-6xl py-8 md:py-10 space-y-6">
+                {/* ── Hero ── */}
+                <section
+                    className="relative overflow-hidden bg-white border border-[var(--ink-200)] rounded-3xl px-6 py-8 md:px-10 md:py-10"
+                    style={{
+                        backgroundImage: passed
+                            ? 'radial-gradient(circle at 0% 100%, rgba(34,197,94,0.10), transparent 60%), radial-gradient(circle at 100% 0%, rgba(37,99,235,0.08), transparent 60%)'
+                            : 'radial-gradient(circle at 0% 100%, rgba(239,68,68,0.08), transparent 60%), radial-gradient(circle at 100% 0%, rgba(245,158,11,0.08), transparent 60%)',
+                    }}
+                >
+                    <div className="flex flex-col lg:flex-row items-center gap-8">
+                        {scorePercent != null ? (
+                            <ScoreRing pct={scorePercent} passed={passed} />
+                        ) : (
+                            <div className="w-[220px] h-[220px] rounded-full bg-[var(--ink-50)] border-4 border-[var(--ink-150)] flex items-center justify-center shrink-0">
+                                <HiOutlineClock className="w-14 h-14 text-[var(--ink-400)]" />
                             </div>
-                            {/* Combined breakdown + time */}
-                            {displaySubmission?.correctCount != null && (
-                                <div className="grid grid-cols-4 gap-1 mt-1">
-                                    {[
-                                        { label: 'Doğru',    count: displaySubmission.correctCount,      color: 'bg-green-500' },
-                                        { label: 'Yanlış',   count: displaySubmission.wrongCount,        color: 'bg-red-500'   },
-                                        { label: 'Gözləyir',count: displaySubmission.pendingManualCount, color: 'bg-amber-400' },
-                                        { label: 'Boş',      count: displaySubmission.skippedCount,      color: 'bg-gray-300'  },
-                                    ].map(item => (
-                                        <div key={item.label} className="flex flex-col items-center bg-gray-50 rounded-lg px-1 py-1.5 gap-0.5">
-                                            <span className={`w-2 h-2 rounded-full ${item.color}`} />
-                                            <span className="text-[11px] font-bold text-gray-800">{item.count}</span>
-                                            <span className="text-[9px] text-gray-400">{item.label}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            {displaySubmission?.maxScore > 0 && (
-                                <p className="text-center text-sm font-bold text-indigo-600 mt-2">
-                                    Ümumi: {(displaySubmission.totalScore ?? 0).toFixed(1)} / {displaySubmission.maxScore} bal
-                                </p>
-                            )}
-                            {(timeTaken || displaySubmission?.durationMinutes) && (
-                                <p className="text-[11px] text-gray-400 flex items-center justify-center gap-1 mt-2">
-                                    <HiOutlineClock className="w-3 h-3" />
-                                    {timeTaken && <span>{timeTaken}</span>}
-                                    {timeTaken && displaySubmission?.durationMinutes && <span className="text-gray-300">·</span>}
-                                    {displaySubmission?.durationMinutes && <span>Limit: {displaySubmission.durationMinutes} dəq</span>}
-                                </p>
-                            )}
-                        </div>
-                    ) : (
-                        /* Single subject: donut left + breakdown right */
-                        <div className="px-5 py-4 flex items-center gap-4 border-b border-gray-100">
-                            {displaySubmission?.correctCount != null ? (
-                                <MultiDonutChart
-                                    correct={displaySubmission.correctCount}
-                                    wrong={displaySubmission.wrongCount}
-                                    skipped={displaySubmission.skippedCount}
-                                    pending={displaySubmission.pendingManualCount}
-                                    total={(displaySubmission.correctCount || 0) + (displaySubmission.wrongCount || 0) + (displaySubmission.skippedCount || 0) + (displaySubmission.pendingManualCount || 0)}
-                                    percent={scorePercent}
-                                />
-                            ) : (
-                                <DonutChart percent={scorePercent} color={getDonutColor(scorePercent)} />
-                            )}
+                        )}
 
-                            <div className="flex-1 min-w-0">
-                                <div className="mb-2">
-                                    <p className="text-xl font-black text-gray-900 leading-tight">
-                                        {(displaySubmission.totalScore ?? 0).toFixed(1)}
-                                        <span className="text-gray-400 text-sm font-medium"> / {displaySubmission.maxScore} bal</span>
-                                    </p>
-                                    {(timeTaken || displaySubmission?.durationMinutes) && (
-                                        <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
-                                            <HiOutlineClock className="w-3 h-3" />
-                                            {timeTaken && <span>{timeTaken}</span>}
-                                            {timeTaken && displaySubmission?.durationMinutes && <span className="text-gray-300">·</span>}
-                                            {displaySubmission?.durationMinutes && <span>Limit: {displaySubmission.durationMinutes} dəq</span>}
-                                        </p>
-                                    )}
-                                </div>
-                                {displaySubmission?.correctCount != null && (
-                                    <div className="grid grid-cols-2 gap-1">
-                                        {[
-                                            { label: 'Doğru',    count: displaySubmission.correctCount,      color: 'bg-green-500' },
-                                            { label: 'Yanlış',   count: displaySubmission.wrongCount,        color: 'bg-red-500'   },
-                                            { label: 'Gözləyir',count: displaySubmission.pendingManualCount, color: 'bg-amber-400' },
-                                            { label: 'Boş',      count: displaySubmission.skippedCount,      color: 'bg-gray-300'  },
-                                        ].map(item => (
-                                            <div key={item.label} className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-2 py-1.5">
-                                                <span className={`w-2 h-2 rounded-full shrink-0 ${item.color}`} />
-                                                <span className="text-[11px] text-gray-500 flex-1 truncate">{item.label}</span>
-                                                <span className="text-[11px] font-bold text-gray-800">{item.count}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                        <div className="flex-1 text-center lg:text-left min-w-0">
+                            <div className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-[12px] font-bold mb-4 border"
+                                style={{
+                                    background: passed ? 'var(--accent-soft)' : '#FEF3C7',
+                                    color:      passed ? 'var(--brand-green-600)' : '#92400E',
+                                    borderColor:passed ? 'var(--brand-green-100)' : '#FDE68A',
+                                }}>
+                                {passed ? (
+                                    <><HiOutlineAcademicCap className="w-4 h-4" /> Keçid uğurlu · 75%+</>
+                                ) : (
+                                    <><HiOutlineRefresh className="w-4 h-4" /> Yenidən cəhd üçün hazırlaşın</>
+                                )}
+                            </div>
+                            <h1 className="text-[26px] md:text-[34px] font-extrabold tracking-tight leading-[1.1] text-[var(--ink-900)] text-balance">
+                                {headline}
+                            </h1>
+                            <p className="text-[15px] text-[var(--ink-500)] mt-3 leading-relaxed max-w-[600px] mx-auto lg:mx-0">
+                                <strong className="text-[var(--ink-800)]">{displaySubmission?.examTitle || 'İmtahan'}</strong>
+                                {displaySubmission?.examSubject && <> · {displaySubmission.examSubject}</>}
+                                {displaySubmission?.submittedAt && <> · {fmtDate(displaySubmission.submittedAt)}</>}
+                                {' tarixində tamamlandı. '}
+                                {passed
+                                    ? 'Aşağıda hər sual üzrə ətraflı analizi görə bilərsiniz.'
+                                    : 'Səhv cavablarınızı təkrar nəzərdən keçirin və yenidən cəhd edin.'}
+                            </p>
+
+                            <div className="mt-6 flex flex-wrap gap-2.5 justify-center lg:justify-start">
+                                <button
+                                    onClick={() => navigate(`/test/review/${sessionId}`, { state: { fromResult: true } })}
+                                    className="h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                                >
+                                    <HiOutlineEye className="w-4 h-4" /> Cavablarıma bax
+                                </button>
+                                <Link
+                                    to="/imtahanlar"
+                                    className="h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--ink-800)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                                >
+                                    Digər imtahanlar
+                                </Link>
+                                {displaySubmission?.explanationVideoUrl && (
+                                    <a
+                                        href={displaySubmission.explanationVideoUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-all"
+                                    >
+                                        <HiOutlineVideoCamera className="w-4 h-4" /> İzah videosu
+                                    </a>
                                 )}
                             </div>
                         </div>
-                    )
-                ) : (
-                    <div className="px-5 py-5 text-center border-b border-gray-100">
-                        <p className="text-4xl mb-2">📋</p>
-                        <p className="text-gray-600 font-medium text-sm">
-                            Nəticəniz müəllim tərəfindən yoxlandıqdan sonra profilinizə əlavə olunacaq.
-                        </p>
                     </div>
-                )}
+                </section>
 
-                {/* ── Question Nav ── */}
-                {reviewQuestions && reviewQuestions.length > 0 && (
-                    <div className="px-5 pb-2">
-                        <QuestionNav
-                            questions={reviewQuestions}
-                            examSubject={reviewExamSubject}
-                            onClickQ={(q) => navigate(`/test/review/${sessionId}`, {
-                                state: { fromResult: true, scrollToQuestionId: q.id }
-                            })}
+                {/* ── 4-Stat strip ── */}
+                {scorePercent != null && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <StatCard
+                            Icon={HiOutlineAcademicCap}
+                            label="Toplanan bal"
+                            value={
+                                <>
+                                    {(displaySubmission.totalScore ?? 0).toFixed(1)}
+                                    <span className="text-[14px] text-[var(--ink-400)] font-bold ml-1">/ {displaySubmission.maxScore}</span>
+                                </>
+                            }
+                            sub={`${scorePercent}%`}
+                            tone="blue"
+                        />
+                        <StatCard
+                            Icon={HiOutlineCheckCircle}
+                            label="Düzgün cavab"
+                            value={correct}
+                            sub={totalQuestions ? `${Math.round((correct / totalQuestions) * 100)}%` : null}
+                            tone="green"
+                        />
+                        <StatCard
+                            Icon={HiOutlineXCircle}
+                            label="Səhv cavab"
+                            value={wrong}
+                            sub={totalQuestions && wrong > 0 ? `${Math.round((wrong / totalQuestions) * 100)}%` : null}
+                            tone="red"
+                        />
+                        <StatCard
+                            Icon={HiOutlineClock}
+                            label="Sərf olunan vaxt"
+                            value={timeTaken || '—'}
+                            sub={displaySubmission?.durationMinutes ? `Limit: ${displaySubmission.durationMinutes} dəq` : null}
+                            tone="amber"
                         />
                     </div>
                 )}
 
-                {/* ── Actions ── */}
-                <div className="px-5 py-4 space-y-2.5">
-                    {/* View answers */}
-                    <button
-                        onClick={() => navigate(`/test/review/${sessionId}`, { state: { fromResult: true } })}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl font-semibold text-sm transition-colors"
-                    >
-                        <HiOutlineEye className="w-4 h-4" />
-                        Cavablarıma Bax
-                    </button>
+                {/* ── Skipped / Pending banner ── */}
+                {(skipped > 0 || pending > 0) && (
+                    <div className="flex flex-wrap gap-3">
+                        {pending > 0 && (
+                            <div className="flex-1 min-w-[240px] bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                    <HiOutlineClock className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-amber-800 text-[14px]">{pending} sual yoxlanılır</p>
+                                    <p className="text-[12.5px] text-amber-700">Müəllim yoxladıqdan sonra balınız yenilənəcək</p>
+                                </div>
+                            </div>
+                        )}
+                        {skipped > 0 && (
+                            <div className="flex-1 min-w-[240px] bg-[var(--ink-50)] border border-[var(--ink-200)] rounded-2xl p-4 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-[var(--ink-100)] text-[var(--ink-600)] flex items-center justify-center shrink-0">
+                                    <HiOutlineMinus className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-[var(--ink-800)] text-[14px]">{skipped} sual boş buraxılıb</p>
+                                    <p className="text-[12.5px] text-[var(--ink-500)]">Cavablar bölməsində bu sualları görə bilərsiniz</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
-                    {/* Explanation video (only if teacher provided one) */}
-                    {displaySubmission?.explanationVideoUrl && (
-                        <a
-                            href={displaySubmission.explanationVideoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl font-semibold text-sm transition-colors"
-                        >
-                            <HiOutlineVideoCamera className="w-4 h-4" />
-                            İzah Videosuna Bax
-                        </a>
-                    )}
+                {/* ── Section breakdown ── */}
+                {displaySubmission?.subjectStats?.length > 1 && (
+                    <SectionBreakdown subjectStats={displaySubmission.subjectStats} />
+                )}
 
+                {/* ── Rating + Question Review side-by-side on large ── */}
+                <div className="grid lg:grid-cols-[1fr_320px] gap-5">
+                    <QuestionReview questions={reviewQuestions} sessionId={sessionId} navigate={navigate} />
 
-                    {/* Rating inline */}
-                    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2.5">
-                        <span className="text-xs text-gray-500 font-medium shrink-0">
-                            {rated ? 'Reytinqiniz' : 'Reytinq verin'}
-                        </span>
-                        <div className="flex-1 flex items-center gap-2">
+                    <aside className="flex flex-col gap-5">
+                        {/* Rating card */}
+                        <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6">
+                            <div className="flex items-center gap-2 mb-3">
+                                <HiOutlineSparkles className="w-5 h-5 text-amber-500" />
+                                <h3 className="text-[16px] font-bold text-[var(--ink-900)]">
+                                    {rated ? 'Reytinqiniz' : 'İmtahanı qiymətləndir'}
+                                </h3>
+                            </div>
+                            <p className="text-[13px] text-[var(--ink-500)] mb-4">
+                                {rated
+                                    ? 'Geribildiriminizə görə təşəkkür edirik.'
+                                    : 'Bu imtahanı necə qiymətləndirirsiniz? Müəllimə kömək olacaq.'}
+                            </p>
                             {rated ? (
-                                <>
-                                    <span className="text-yellow-400 text-lg leading-none">
-                                        {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-amber-400 text-3xl leading-none">
+                                        {'★'.repeat(rating)}<span className="text-[var(--ink-200)]">{'★'.repeat(5 - rating)}</span>
                                     </span>
-                                    <span className="text-xs text-green-600 font-medium">Qeydə alındı!</span>
-                                </>
+                                    <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--brand-green-600)] bg-[var(--accent-soft)] px-2 py-0.5 rounded-full">
+                                        <HiOutlineCheckCircle className="w-3 h-3" /> Qeydə alındı
+                                    </span>
+                                </div>
                             ) : (
-                                <>
-                                    <StarRating value={rating} onChange={handleRate} disabled={false} small />
-                                    {isRating && <span className="text-xs text-gray-400">Göndərilir...</span>}
-                                </>
+                                <div className="flex items-center gap-3">
+                                    <StarRating value={rating} onChange={handleRate} disabled={isRating} />
+                                    {isRating && <span className="text-[12px] text-[var(--ink-400)]">Göndərilir...</span>}
+                                </div>
                             )}
                         </div>
-                    </div>
 
-                    {/* Nav buttons */}
-                    <div className="grid grid-cols-2 gap-2">
-                        <button
-                            onClick={() => navigate('/')}
-                            className="py-2.5 px-4 border border-gray-200 rounded-xl font-semibold text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            Ana Səhifə
-                        </button>
-                        <button
-                            onClick={() => navigate('/profil')}
-                            className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm transition-colors"
-                        >
-                            Profilimə Bax
-                        </button>
-                    </div>
+                        {/* Quick actions */}
+                        <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6 flex flex-col gap-2.5">
+                            <Link
+                                to="/profil"
+                                className="h-11 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all"
+                            >
+                                Profilimə bax <HiOutlineArrowRight className="w-3.5 h-3.5" />
+                            </Link>
+                            <Link
+                                to="/imtahanlar"
+                                className="h-11 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-semibold text-[var(--ink-800)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                            >
+                                Yeni imtahan tap
+                            </Link>
+                            <Link
+                                to="/"
+                                className="h-11 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-semibold text-[var(--ink-700)] hover:bg-[var(--ink-100)] transition-all"
+                            >
+                                Ana səhifə
+                            </Link>
+                        </div>
+                    </aside>
                 </div>
             </div>
         </div>

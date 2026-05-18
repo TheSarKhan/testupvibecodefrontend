@@ -14,8 +14,8 @@ const TYPE_LABELS = {
     FILL_IN_THE_BLANK: 'Boşluq', MATCHING: 'Uyğunlaşdırma',
 };
 const TYPE_COLORS = {
-    MCQ: 'bg-indigo-50 text-indigo-700', TRUE_FALSE: 'bg-blue-50 text-blue-700',
-    MULTI_SELECT: 'bg-violet-50 text-violet-700', OPEN_AUTO: 'bg-green-50 text-green-700',
+    MCQ: 'bg-blue-50 text-blue-700', TRUE_FALSE: 'bg-blue-50 text-blue-700',
+    MULTI_SELECT: 'bg-emerald-50 text-emerald-700', OPEN_AUTO: 'bg-green-50 text-green-700',
     OPEN_MANUAL: 'bg-orange-50 text-orange-700', FILL_IN_THE_BLANK: 'bg-yellow-50 text-yellow-700',
     MATCHING: 'bg-pink-50 text-pink-700',
 };
@@ -147,9 +147,9 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
     const SubjectButton = ({ s }) => (
         <button
             onClick={() => openSubject(s)}
-            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-gray-100 transition-colors text-left"
         >
-            <div className={`p-2 rounded-xl shrink-0 ${s.isGlobal ? 'bg-purple-50 text-purple-600' : 'bg-indigo-50 text-indigo-600'}`}>
+            <div className={`p-2 rounded-xl shrink-0 ${s.isGlobal ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                 {s.isGlobal ? <HiOutlineGlobe className="w-4 h-4" /> : <HiOutlineBookOpen className="w-4 h-4" />}
             </div>
             <div className="flex-1 min-w-0">
@@ -196,7 +196,7 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     placeholder="Sual, variant və ya cavabda axtar..."
-                                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400"
+                                    className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400"
                                 />
                             </div>
 
@@ -245,26 +245,26 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <button
                                         onClick={selectAllFiltered}
-                                        className="text-xs font-semibold px-3 py-1.5 border border-indigo-200 text-indigo-700 rounded-full hover:bg-indigo-50"
+                                        className="text-xs font-semibold px-3 py-1.5 border border-blue-200 text-blue-700 rounded-full hover:bg-blue-50"
                                     >
                                         Filtrlənənləri seç ({filteredQuestions.length})
                                     </button>
                                     <button
                                         onClick={() => pickRandom(10)}
-                                        className="text-xs font-semibold px-3 py-1.5 border border-violet-200 text-violet-700 rounded-full hover:bg-violet-50"
+                                        className="text-xs font-semibold px-3 py-1.5 border border-emerald-200 text-emerald-700 rounded-full hover:bg-emerald-50"
                                     >
                                         Təsadüfi 10
                                     </button>
                                     {selectedIds.size > 0 && (
                                         <button
                                             onClick={clearSelection}
-                                            className="text-xs font-semibold px-3 py-1.5 border border-gray-200 text-gray-600 rounded-full hover:bg-gray-50"
+                                            className="text-xs font-semibold px-3 py-1.5 border border-gray-200 text-gray-600 rounded-full hover:bg-gray-100"
                                         >
                                             Seçimi təmizlə
                                         </button>
                                     )}
                                     <span className="text-xs text-gray-500 ml-auto">
-                                        Seçilib: <b className="text-indigo-700">{selectedIds.size}</b>
+                                        Seçilib: <b className="text-blue-700">{selectedIds.size}</b>
                                     </span>
                                 </div>
                             )}
@@ -276,7 +276,7 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                     {!selectedSubject ? (
                         loadingSubjects ? (
                             <div className="flex justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                             </div>
                         ) : subjects.length === 0 ? (
                             <div className="text-center py-12 text-gray-400">
@@ -288,8 +288,8 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                 {globalSubjects.length > 0 && (
                                     <div>
                                         <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-                                            <HiOutlineGlobe className="w-3.5 h-3.5 text-purple-500" />
-                                            <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Ümumi baza</span>
+                                            <HiOutlineGlobe className="w-3.5 h-3.5 text-emerald-500" />
+                                            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Ümumi baza</span>
                                         </div>
                                         <div className="divide-y divide-gray-50">
                                             {globalSubjects.map(s => <SubjectButton key={s.id} s={s} />)}
@@ -299,8 +299,8 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                 {ownSubjects.length > 0 && (
                                     <div>
                                         <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-                                            <HiOutlineUser className="w-3.5 h-3.5 text-indigo-500" />
-                                            <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">Şəxsi baza</span>
+                                            <HiOutlineUser className="w-3.5 h-3.5 text-blue-500" />
+                                            <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Şəxsi baza</span>
                                         </div>
                                         <div className="divide-y divide-gray-50">
                                             {ownSubjects.map(s => <SubjectButton key={s.id} s={s} />)}
@@ -312,7 +312,7 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                     ) : (
                         loadingQuestions ? (
                             <div className="flex justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                             </div>
                         ) : filteredQuestions.length === 0 ? (
                             <div className="text-center py-12 text-gray-400 text-sm">
@@ -327,11 +327,11 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                     <div
                                         key={q.id}
                                         onClick={() => allowMulti ? toggle(q.id) : (onSelect?.(q), onClose?.())}
-                                        className={`flex items-start gap-3 px-5 py-4 transition-colors cursor-pointer group ${checked ? 'bg-indigo-50/60' : 'hover:bg-indigo-50/30'}`}
+                                        className={`flex items-start gap-3 px-5 py-4 transition-colors cursor-pointer group ${checked ? 'bg-blue-50/60' : 'hover:bg-blue-50/30'}`}
                                     >
                                         {allowMulti && (
                                             <div className={`mt-1 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                                checked ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 bg-white'
+                                                checked ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 bg-white'
                                             }`}>
                                                 {checked && <HiOutlineCheck className="w-3.5 h-3.5" strokeWidth={3} />}
                                             </div>
@@ -378,13 +378,13 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
 
                 {/* Sticky bulk action bar */}
                 {selectedSubject && allowMulti && selectedIds.size > 0 && (
-                    <div className="px-5 py-3 border-t border-gray-100 bg-gradient-to-r from-indigo-50 to-violet-50 flex items-center justify-between">
-                        <p className="text-sm font-semibold text-indigo-800">
+                    <div className="px-5 py-3 border-t border-gray-100 bg-gradient-to-r from-blue-50 to-emerald-50 flex items-center justify-between">
+                        <p className="text-sm font-semibold text-blue-800">
                             {selectedIds.size} sual seçildi
                         </p>
                         <button
                             onClick={confirmBulk}
-                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
+                            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
                         >
                             İmtahana əlavə et →
                         </button>

@@ -16,11 +16,11 @@ import {
 import toast from 'react-hot-toast';
 
 const TYPES = [
-    { value: 'STANDARD',  label: 'Standart (DİM)', color: 'indigo' },
+    { value: 'STANDARD',  label: 'Standart (DİM)', color: 'blue' },
     { value: 'OLIMPIYADA', label: 'Olimpiada',     color: 'amber'  },
 ];
 const TYPE_LABEL = { STANDARD: 'Standart (DİM)', OLIMPIYADA: 'Olimpiada' };
-const TYPE_COLOR = { STANDARD: 'indigo', OLIMPIYADA: 'amber' };
+const TYPE_COLOR = { STANDARD: 'blue', OLIMPIYADA: 'amber' };
 
 const TypeSelector = ({ value, onChange }) => (
     <div className="grid grid-cols-2 gap-2 mt-3">
@@ -28,14 +28,14 @@ const TypeSelector = ({ value, onChange }) => (
             <button key={t.value} type="button" onClick={() => onChange(t.value)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
                     value === t.value
-                        ? t.color === 'indigo'
-                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                        ? t.color === 'blue'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
                             : 'border-amber-500 bg-amber-50 text-amber-700'
                         : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                 }`}>
                 <span className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${
                     value === t.value
-                        ? t.color === 'indigo' ? 'border-indigo-500 bg-indigo-500' : 'border-amber-500 bg-amber-500'
+                        ? t.color === 'blue' ? 'border-blue-500 bg-blue-500' : 'border-amber-500 bg-amber-500'
                         : 'border-gray-300'
                 }`} />
                 {t.label}
@@ -107,7 +107,7 @@ const AdminSubtitles = () => {
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
-    const tColor = TYPE_COLOR[template?.templateType] || 'indigo';
+    const tColor = TYPE_COLOR[template?.templateType] || 'blue';
 
     return (
         <div className="p-8 max-w-3xl">
@@ -118,7 +118,7 @@ const AdminSubtitles = () => {
             </button>
 
             {/* Template header */}
-            <div className={`mb-6 p-5 rounded-2xl border-2 ${tColor === 'amber' ? 'border-amber-200 bg-amber-50' : 'border-indigo-100 bg-indigo-50'}`}>
+            <div className={`mb-6 p-5 rounded-2xl border-2 ${tColor === 'amber' ? 'border-amber-200 bg-amber-50' : 'border-blue-100 bg-blue-50'}`}>
                 {editingTitle ? (
                     <div className="space-y-3">
                         <input
@@ -127,12 +127,12 @@ const AdminSubtitles = () => {
                             onChange={e => setTitleDraft(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Escape') setEditingTitle(false); }}
                             placeholder="Şablon adı"
-                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-400 bg-white"
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 bg-white"
                         />
                         <TypeSelector value={typeDraft} onChange={setTypeDraft} />
                         <div className="flex items-center gap-2 pt-1">
                             <button onClick={handleUpdateTemplate}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
                                 <HiOutlineCheck className="w-4 h-4" /> Saxla
                             </button>
                             <button onClick={() => setEditingTitle(false)}
@@ -146,7 +146,7 @@ const AdminSubtitles = () => {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <span className={`text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                                    tColor === 'amber' ? 'bg-amber-200 text-amber-800' : 'bg-indigo-200 text-indigo-800'
+                                    tColor === 'amber' ? 'bg-amber-200 text-amber-800' : 'bg-blue-200 text-blue-800'
                                 }`}>
                                     {TYPE_LABEL[template?.templateType] || 'Standart'}
                                 </span>
@@ -156,7 +156,7 @@ const AdminSubtitles = () => {
                         </div>
                         <button
                             onClick={() => { setTitleDraft(template?.title || ''); setTypeDraft(template?.templateType || 'STANDARD'); setEditingTitle(true); }}
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors flex-shrink-0"
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors flex-shrink-0"
                             title="Başlığı redaktə et"
                         >
                             <HiOutlinePencilAlt className="w-4 h-4" />
@@ -169,25 +169,25 @@ const AdminSubtitles = () => {
             <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-bold text-gray-800">Altbaşlıqlar</h2>
                 <button onClick={() => { setCreating(true); setNewSubtitle(''); }}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
                     <HiOutlinePlus className="w-4 h-4" /> Yeni Altbaşlıq
                 </button>
             </div>
 
             {creating && (
-                <div className="mb-4 bg-white rounded-2xl border-2 border-indigo-200 p-5 flex items-center gap-3">
+                <div className="mb-4 bg-white rounded-2xl border-2 border-blue-200 p-5 flex items-center gap-3">
                     <input autoFocus value={newSubtitle} onChange={e => setNewSubtitle(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false); }}
                         placeholder="Altbaşlıq, məs: Buraxılış 11-ci sinif"
-                        className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-400" />
-                    <button onClick={handleCreate} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">Yarat</button>
-                    <button onClick={() => setCreating(false)} className="px-4 py-2.5 text-gray-500 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Ləğv et</button>
+                        className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400" />
+                    <button onClick={handleCreate} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">Yarat</button>
+                    <button onClick={() => setCreating(false)} className="px-4 py-2.5 text-gray-500 text-sm border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">Ləğv et</button>
                 </div>
             )}
 
             {loading ? (
                 <div className="flex justify-center py-20">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
                 </div>
             ) : subtitles.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-dashed border-gray-200 py-20 text-center text-gray-400">
@@ -202,29 +202,29 @@ const AdminSubtitles = () => {
                                 <div className="flex items-center gap-3 px-5 py-4">
                                     <input autoFocus value={editValue} onChange={e => setEditValue(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter') handleUpdate(s.id); if (e.key === 'Escape') setEditingId(null); }}
-                                        className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-400" />
-                                    <button onClick={() => handleUpdate(s.id)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">Saxla</button>
-                                    <button onClick={() => setEditingId(null)} className="px-4 py-2 text-gray-500 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Ləğv et</button>
+                                        className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-400" />
+                                    <button onClick={() => handleUpdate(s.id)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">Saxla</button>
+                                    <button onClick={() => setEditingId(null)} className="px-4 py-2 text-gray-500 text-sm border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">Ləğv et</button>
                                 </div>
                             ) : (
-                                <div className="flex items-center px-5 py-4 cursor-pointer hover:bg-gray-50/80 transition-colors group"
+                                <div className="flex items-center px-5 py-4 cursor-pointer hover:bg-gray-100/80 transition-colors group"
                                     onClick={() => navigate(`/admin/sablonlar/${templateId}/${s.id}`)}>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-gray-900 text-base group-hover:text-indigo-700 transition-colors">{s.subtitle}</h3>
+                                        <h3 className="font-bold text-gray-900 text-base group-hover:text-blue-700 transition-colors">{s.subtitle}</h3>
                                         <p className="text-sm text-gray-400 mt-0.5">
                                             {(s.sections || []).length === 0 ? 'Fənn yoxdur' : `${s.sections.length} fənn`}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-1 ml-3">
                                         <button onClick={e => { e.stopPropagation(); setEditingId(s.id); setEditValue(s.subtitle); }}
-                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                             <HiOutlinePencilAlt className="w-4 h-4" />
                                         </button>
                                         <button onClick={e => { e.stopPropagation(); handleDelete(s.id, s.subtitle); }}
                                             className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                                             <HiOutlineTrash className="w-4 h-4" />
                                         </button>
-                                        <HiOutlineChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 ml-1 transition-colors" />
+                                        <HiOutlineChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-400 ml-1 transition-colors" />
                                     </div>
                                 </div>
                             )}

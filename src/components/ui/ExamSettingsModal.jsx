@@ -113,7 +113,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                             required
                             value={formData.title}
                             onChange={handleChange}
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             placeholder="Məsələn: Azərbaycan Tarixi - Yekun İmtahan"
                         />
                     </div>
@@ -129,7 +129,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                         value={formData.description || ''}
                         onChange={handleChange}
                         rows="2"
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="İmtahan haqqında qısa məlumat..."
                     />
                 </div>
@@ -148,7 +148,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                             name="explanationVideoUrl"
                             value={formData.explanationVideoUrl || ''}
                             onChange={handleChange}
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             placeholder="https://youtube.com/watch?v=..."
                         />
                     </div>
@@ -175,7 +175,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                                 required
                                 value={formData.subject || (formData.subjects?.[0] || '')}
                                 onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value, subjects: [e.target.value] }))}
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm appearance-none bg-white"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none bg-white"
                             >
                                 {subjects.length === 0 ? (
                                     <option value={formData.subject || formData.subjects?.[0]}>{formData.subject || formData.subjects?.[0]}</option>
@@ -206,7 +206,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                                 value={formData.duration}
                                 onChange={handleChange}
                                 disabled={!hasPermission('selectExamDuration')}
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-400 cursor-not-allowed"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-400 cursor-not-allowed"
                                 placeholder={hasPermission('selectExamDuration') ? "90" : "Limitli (0)"}
                             />
                         </div>
@@ -226,7 +226,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                                 required
                                 value={formData.visibility}
                                 onChange={handleChange}
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm appearance-none bg-white"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none bg-white"
                             >
                                 <option value="PUBLIC">Açıq (Hər kəs)</option>
                                 <option value="PRIVATE">Gizli (Kodla giriş)</option>
@@ -236,7 +236,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                 </div>
 
                 {formData.visibility === 'PRIVATE' && (
-                    <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-700">
+                    <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
                         Giriş kodu imtahan yaradıldıqdan sonra imtahan səhifəsindən yaradıla bilər.
                     </div>
                 )}
@@ -252,9 +252,9 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                     {formData.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mb-2">
                             {formData.tags.map(tag => (
-                                <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
                                     #{tag}
-                                    <button type="button" onClick={() => removeTag(tag)} className="text-indigo-400 hover:text-indigo-600 focus:outline-none">
+                                    <button type="button" onClick={() => removeTag(tag)} className="text-blue-400 hover:text-blue-600 focus:outline-none">
                                         <HiOutlineX className="w-3 h-3" />
                                     </button>
                                 </span>
@@ -274,7 +274,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                                 onKeyDown={e => {
                                     if (e.key === 'Escape') { setShowSuggestions(false); }
                                 }}
-                                className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 sm:text-sm outline-none"
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:text-sm outline-none"
                                 placeholder="Teq axtar və seç..."
                                 autoComplete="off"
                             />
@@ -289,7 +289,7 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                                             key={tag}
                                             type="button"
                                             onMouseDown={e => { e.preventDefault(); addTag(tag); }}
-                                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                                         >
                                             #{tag}
                                         </button>
@@ -307,10 +307,10 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                 </div>
 
                 <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
-                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:outline-none">
+                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-100 focus:outline-none">
                         Ləğv et
                     </button>
-                    <button type="submit" className={`px-6 py-2 text-sm font-medium text-white border border-transparent rounded-xl focus:outline-none shadow-sm ${onPublish ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}>
+                    <button type="submit" className={`px-6 py-2 text-sm font-medium text-white border border-transparent rounded-xl focus:outline-none shadow-sm ${onPublish ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'}`}>
                         {onPublish ? 'Yayımla' : 'Yadda Saxla'}
                     </button>
                 </div>

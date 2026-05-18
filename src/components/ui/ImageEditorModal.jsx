@@ -349,7 +349,7 @@ const ImageEditorModal = ({ isOpen, imageBase64, onSave, onClose }) => {
                                 onClick={() => setActiveTool(id)}
                                 className={`w-full py-2 rounded-xl text-sm font-bold transition-all flex flex-col items-center gap-0.5 ${
                                     activeTool === id
-                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        ? 'bg-blue-600 text-white shadow-md'
                                         : 'text-gray-500 hover:bg-gray-200 hover:text-gray-800'
                                 }`}
                             >
@@ -370,7 +370,7 @@ const ImageEditorModal = ({ isOpen, imageBase64, onSave, onClose }) => {
                                     style={{ backgroundColor: c }}
                                     className={`aspect-square rounded-md border-2 transition-all ${
                                         color === c
-                                            ? 'border-indigo-500 scale-110 shadow'
+                                            ? 'border-blue-500 scale-110 shadow'
                                             : 'border-gray-300 hover:scale-105'
                                     }`}
                                 />
@@ -390,7 +390,7 @@ const ImageEditorModal = ({ isOpen, imageBase64, onSave, onClose }) => {
                         <div className="w-full px-0.5 space-y-1">
                             <div className="flex items-center justify-between">
                                 <span className="text-[9px] text-gray-400 font-semibold uppercase">Ölçü</span>
-                                <span className="text-[9px] font-bold text-indigo-600">{brushSize}</span>
+                                <span className="text-[9px] font-bold text-blue-600">{brushSize}</span>
                             </div>
                             <input
                                 type="range"
@@ -398,7 +398,7 @@ const ImageEditorModal = ({ isOpen, imageBase64, onSave, onClose }) => {
                                 max={20}
                                 value={brushSize}
                                 onChange={e => setBrushSize(Number(e.target.value))}
-                                className="w-full accent-indigo-600"
+                                className="w-full accent-blue-600"
                             />
                             {/* Size preview dot */}
                             <div className="flex justify-center">

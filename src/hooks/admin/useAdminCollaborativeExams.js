@@ -48,3 +48,51 @@ export function useRejectCollaborator() {
         },
     });
 }
+
+// ── Per-question (hybrid) review ────────────────────────────────────────────
+
+export function useApproveQuestion() {
+    return useMutation({
+        mutationFn: (questionId) =>
+            api.post(`/admin/questions/${questionId}/approve`).then(r => r.data),
+    });
+}
+
+export function useRejectQuestion() {
+    return useMutation({
+        mutationFn: ({ questionId, comment }) =>
+            api.post(`/admin/questions/${questionId}/reject`, { comment }).then(r => r.data),
+    });
+}
+
+export function useFinalizeReview() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (collaboratorId) =>
+            api.post(`/admin/collaborators/${collaboratorId}/finalize`).then(r => r.data),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: adminKeys.collaborativeExams });
+            qc.invalidateQueries({ queryKey: adminKeys.collaborativeExamsPendingCount });
+        },
+    });
+}
+
+// One-click publish/unpublish for a collaborative exam — flips sitePublished, status, and
+// visibility together so the student catalog actually surfaces the exam.
+export function usePublishCollaborative() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (examId) =>
+            api.post(`/admin/collaborative-exams/${examId}/publish`).then(r => r.data),
+        onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.collaborativeExams }),
+    });
+}
+
+export function useUnpublishCollaborative() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (examId) =>
+            api.post(`/admin/collaborative-exams/${examId}/unpublish`).then(r => r.data),
+        onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.collaborativeExams }),
+    });
+}

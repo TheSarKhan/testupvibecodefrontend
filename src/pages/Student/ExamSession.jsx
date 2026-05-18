@@ -305,7 +305,7 @@ const ExamSession = () => {
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
         );
     }
@@ -334,7 +334,7 @@ const ExamSession = () => {
                         <h1 className="text-xl font-bold text-gray-900">{sessionData.examTitle}</h1>
                         <p className="text-sm text-gray-500 flex items-center gap-2">
                             {resolveSubjectLabel(currentSection?.subjectGroup) && (
-                                <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">{resolveSubjectLabel(currentSection?.subjectGroup)}</span>
+                                <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">{resolveSubjectLabel(currentSection?.subjectGroup)}</span>
                             )}
                             Sual {currentSectionIndex + 1} / {sections.length}
                         </p>
@@ -349,7 +349,7 @@ const ExamSession = () => {
                         <button
                             onClick={handleManualSubmit}
                             disabled={isSubmitting}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-70"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-70"
                         >
                             {isSubmitting ? 'Göndərilir...' : 'İmtahanı Bitir'}
                         </button>
@@ -361,10 +361,10 @@ const ExamSession = () => {
                 {/* Subject section header */}
                 {resolveSubjectLabel(currentSection?.subjectGroup) && (
                     <div className="mb-4 flex items-center gap-2">
-                        <span className="bg-indigo-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-sm">
+                        <span className="bg-blue-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-sm">
                             {resolveSubjectLabel(currentSection?.subjectGroup)}
                         </span>
-                        <div className="h-px flex-1 bg-indigo-100" />
+                        <div className="h-px flex-1 bg-blue-100" />
                     </div>
                 )}
 
@@ -417,7 +417,7 @@ const ExamSession = () => {
                         {navGroups.map((group, gi) => (
                             <div key={gi} className="flex items-center gap-1 flex-shrink-0">
                                 {group.label && (
-                                    <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 whitespace-nowrap flex-shrink-0">
+                                    <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-md border border-blue-100 whitespace-nowrap flex-shrink-0">
                                         {group.label}
                                     </span>
                                 )}
@@ -435,7 +435,7 @@ const ExamSession = () => {
                                                 onClick={() => setCurrentSectionIndex(item.sectionIdx)}
                                                 title={isText ? 'Mətn' : 'Dinləmə'}
                                                 className={`flex-shrink-0 flex items-center justify-center rounded-lg w-8 h-9 transition-colors ${
-                                                    isActive ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 ring-offset-1'
+                                                    isActive ? 'bg-blue-600 text-white ring-2 ring-blue-300 ring-offset-1'
                                                     : hasAll ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
                                                     : hasPartial ? 'bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200'
                                                     : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'
@@ -455,7 +455,7 @@ const ExamSession = () => {
                                             onClick={() => setCurrentSectionIndex(item.sectionIdx)}
                                             title={`Sual ${item.displayNum}`}
                                             className={`flex-shrink-0 flex items-center justify-center font-bold text-sm rounded-lg w-9 h-9 transition-colors ${
-                                                isActive ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 ring-offset-1'
+                                                isActive ? 'bg-blue-600 text-white ring-2 ring-blue-300 ring-offset-1'
                                                 : hasAnswer ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200'
                                                 : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'
                                             }`}
@@ -520,16 +520,16 @@ const PassageContentCard = ({ passage, listenCounts, setListenCounts, onZoomImag
     };
 
     return (
-        <div className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden ${isText ? 'border-teal-200' : 'border-purple-200'}`}>
-            <div className={`px-6 py-3 flex items-center gap-3 ${isText ? 'bg-teal-50' : 'bg-purple-50'}`}>
+        <div className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden ${isText ? 'border-teal-200' : 'border-emerald-200'}`}>
+            <div className={`px-6 py-3 flex items-center gap-3 ${isText ? 'bg-teal-50' : 'bg-emerald-50'}`}>
                 {isText
                     ? <HiOutlineDocumentText className="w-5 h-5 text-teal-600" />
-                    : <HiOutlineVolumeUp className="w-5 h-5 text-purple-600" />}
-                <span className={`font-bold text-sm ${isText ? 'text-teal-700' : 'text-purple-700'}`}>
+                    : <HiOutlineVolumeUp className="w-5 h-5 text-emerald-600" />}
+                <span className={`font-bold text-sm ${isText ? 'text-teal-700' : 'text-emerald-700'}`}>
                     {passage.title || (isText ? 'Mətn Parçası' : 'Dinləmə')}
                 </span>
                 {isLimited && (
-                    <span className={`ml-auto text-xs font-bold px-2 py-1 rounded-full ${limitReached ? 'bg-red-100 text-red-600' : 'bg-purple-100 text-purple-700'}`}>
+                    <span className={`ml-auto text-xs font-bold px-2 py-1 rounded-full ${limitReached ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
                         {limitReached ? 'Limit dolub' : `${listenCount} / ${passage.listenLimit} dinləmə`}
                     </span>
                 )}
@@ -582,7 +582,7 @@ const QuestionCard = ({ question, questionNumber, answer, onAnswerChange, active
                                 {questionNumber}
                             </span>
                         )}
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-50 text-indigo-700">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700">
                             {question.points} Bal
                         </span>
                     </div>
@@ -621,9 +621,9 @@ const QuestionCard = ({ question, questionNumber, answer, onAnswerChange, active
                                                 onAnswerChange(question.id, { optionIds: [opt.id] });
                                             }
                                         }}
-                                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'} flex items-center gap-4`}
+                                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'} flex items-center gap-4`}
                                     >
-                                        <div className={`${question.questionType === 'MULTI_SELECT' ? 'w-6 h-6 rounded-md' : 'w-6 h-6 rounded-full'} border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300'}`}>
+                                        <div className={`${question.questionType === 'MULTI_SELECT' ? 'w-6 h-6 rounded-md' : 'w-6 h-6 rounded-full'} border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300'}`}>
                                             {isSelected && (
                                                 question.questionType === 'MULTI_SELECT'
                                                     ? <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -752,7 +752,7 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
                                 }}
                                 className={`inline-flex items-center justify-center mx-2 min-w-[110px] h-9 px-3 rounded-xl border-2 align-middle transition-all cursor-pointer
                                     ${blanks[i]
-                                        ? 'bg-indigo-100 border-indigo-400 text-indigo-800 font-semibold'
+                                        ? 'bg-blue-100 border-blue-400 text-blue-800 font-semibold'
                                         : selectedBlankIdx === i
                                             ? 'bg-yellow-100 border-yellow-500 border-solid ring-2 ring-yellow-300'
                                             : dragOver === i
@@ -761,7 +761,7 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
                                     }`}
                             >
                                 {blanks[i]
-                                    ? <span className="flex items-center gap-1.5 text-base">{blanks[i]} <span className="text-xs text-indigo-400">✕</span></span>
+                                    ? <span className="flex items-center gap-1.5 text-base">{blanks[i]} <span className="text-xs text-blue-400">✕</span></span>
                                     : <span className="text-sm font-semibold">{i + 1}</span>
                                 }
                             </span>
@@ -786,7 +786,7 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
                                     className={`px-4 py-2.5 rounded-xl border-2 font-medium text-base select-none transition-all
                                         ${isUsed
                                             ? 'opacity-30 cursor-default border-gray-200 bg-gray-100 text-gray-400'
-                                            : 'cursor-grab border-indigo-200 bg-white text-indigo-700 hover:border-indigo-500 hover:bg-indigo-50 hover:shadow-md active:scale-95'
+                                            : 'cursor-grab border-blue-200 bg-white text-blue-700 hover:border-blue-500 hover:bg-blue-50 hover:shadow-md active:scale-95'
                                         }`}
                                 >
                                     {chip.text}
@@ -888,7 +888,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                                 data-left={pair.id}
                                 className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer min-h-[38px] flex flex-col justify-center ${
                                     isActive ? 'border-yellow-400 bg-yellow-50 shadow-md ring-2 ring-yellow-200' :
-                                    isConnected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'
+                                    isConnected ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
                                 }`}
                                 onClick={() => {
                                     setActiveLeftId(isActive ? null : pair.id);
@@ -910,7 +910,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                             <div
                                 key={pair.id}
                                 data-right={pair.id}
-                                className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer min-h-[38px] flex flex-col justify-center ${isConnected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-sm'}`}
+                                className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer min-h-[38px] flex flex-col justify-center ${isConnected ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'}`}
                                 onClick={() => {
                                     if (!activeLeftId) { toast.error('Əvvəlcə soldan bir bənd seçin'); return; }
                                     const alreadyExists = existingPairs.some(m => m.leftItemId === activeLeftId && m.rightItemId === pair.id);
@@ -1009,13 +1009,13 @@ const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => setMathOpen(true)}
-                        className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                        className="text-xs font-bold px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                         title="Riyaziyyat formulu əlavə et"
                     >
                         fx Riyaziyyat
                     </button>
                 </div>
-                <div className="border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 bg-white">
+                <div className="border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
                     <MathTextEditor
                         ref={editorRef}
                         value={answer.textAnswer || ''}
@@ -1040,8 +1040,8 @@ const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {
                             </button>
                         </div>
                     ) : (
-                        <label className="flex items-center gap-2 cursor-pointer px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors w-fit">
-                            <HiOutlinePlus className="w-5 h-5 text-indigo-500" />
+                        <label className="flex items-center gap-2 cursor-pointer px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-400 hover:bg-blue-50/30 transition-colors w-fit">
+                            <HiOutlinePlus className="w-5 h-5 text-blue-500" />
                             <span className="text-sm font-medium text-gray-600">Şəkil yüklə</span>
                             <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                         </label>

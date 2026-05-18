@@ -4,7 +4,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-image-crop/dist/ReactCrop.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineX, HiOutlinePlus, HiOutlineMinus, HiOutlineScissors, HiOutlinePencil, HiOutlineCheck } from 'react-icons/hi';
+import { HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineX, HiOutlinePlus, HiOutlineMinus, HiOutlineScissors, HiOutlinePencil, HiOutlineCheck, HiOutlineDocumentText, HiOutlinePhotograph } from 'react-icons/hi';
 import ImageAnnotatorModal from './ImageAnnotatorModal';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -213,7 +213,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => openAnnotator(pendingSingleCrop, 'single')}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 text-xs font-semibold rounded-lg transition-colors"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-700 hover:text-blue-700 text-xs font-semibold rounded-lg transition-colors"
                                         >
                                             <HiOutlinePencil className="w-3.5 h-3.5" /> Düzəlt
                                         </button>
@@ -239,23 +239,23 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                     <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white">
                                         <button
                                             onClick={() => handleSetCropMode('simple')}
-                                            className={`px-3 py-1 text-xs font-bold transition-colors ${
+                                            className={`px-3 py-1 text-xs font-bold transition-colors flex items-center gap-1 ${
                                                 cropMode === 'simple'
-                                                    ? 'bg-indigo-600 text-white'
-                                                    : 'text-gray-600 hover:bg-gray-50'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'text-gray-600 hover:bg-gray-100'
                                             }`}
                                         >
-                                            📝 Sadə
+                                            <HiOutlineDocumentText className="w-3.5 h-3.5" /> Sadə
                                         </button>
                                         <button
                                             onClick={() => handleSetCropMode('advanced')}
-                                            className={`px-3 py-1 text-xs font-bold transition-colors border-l border-gray-200 ${
+                                            className={`px-3 py-1 text-xs font-bold transition-colors border-l border-gray-200 flex items-center gap-1 ${
                                                 cropMode === 'advanced'
                                                     ? 'bg-emerald-600 text-white'
-                                                    : 'text-gray-600 hover:bg-gray-50'
+                                                    : 'text-gray-600 hover:bg-gray-100'
                                             }`}
                                         >
-                                            🖼 Variant şəkilləri
+                                            <HiOutlinePhotograph className="w-3.5 h-3.5" /> Variant şəkilləri
                                         </button>
                                     </div>
 
@@ -274,7 +274,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                                 className={`px-3 py-1 text-xs font-bold transition-colors ${n > 3 ? 'border-l border-gray-200' : ''} ${
                                                     optionCount === n
                                                         ? 'bg-amber-500 text-white'
-                                                        : 'text-gray-600 hover:bg-gray-50'
+                                                        : 'text-gray-600 hover:bg-gray-100'
                                                 }`}
                                             >
                                                 {n}
@@ -289,8 +289,8 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                             onClick={() => setOptionTextMode('label')}
                                             className={`px-3 py-1 text-xs font-bold transition-colors ${
                                                 optionTextMode === 'label'
-                                                    ? 'bg-indigo-600 text-white'
-                                                    : 'text-gray-600 hover:bg-gray-50'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'text-gray-600 hover:bg-gray-100'
                                             }`}
                                         >
                                             Avtomatik ad
@@ -299,8 +299,8 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                             onClick={() => setOptionTextMode('empty')}
                                             className={`px-3 py-1 text-xs font-bold transition-colors border-l border-gray-200 ${
                                                 optionTextMode === 'empty'
-                                                    ? 'bg-indigo-600 text-white'
-                                                    : 'text-gray-600 hover:bg-gray-50'
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'text-gray-600 hover:bg-gray-100'
                                             }`}
                                         >
                                             Boş
@@ -324,8 +324,8 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                         onClick={() => setCropTarget('question')}
                                         className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
                                             cropTarget === 'question'
-                                                ? 'bg-indigo-600 text-white'
-                                                : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-400'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-400'
                                         }`}
                                     >
                                         📄 Yeni sual
@@ -371,7 +371,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                             const v = parseInt(e.target.value);
                                             if (v >= 1 && v <= (numPages || 1)) { setPageNumber(v); resetCrop(); }
                                         }}
-                                        className="w-14 text-center px-2 py-1 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-400"
+                                        className="w-14 text-center px-2 py-1 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:border-blue-400"
                                     />
                                     <span className="text-sm text-gray-500">/ {numPages || '--'}</span>
                                     <button type="button" disabled={pageNumber >= numPages} onClick={() => changePage(1)} className="p-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-40">
@@ -389,7 +389,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                             ? 'bg-emerald-600 hover:bg-emerald-700'
                                             : limitReached && cropTarget === 'question'
                                                 ? 'bg-red-400'
-                                                : 'bg-indigo-600 hover:bg-indigo-700'
+                                                : 'bg-blue-600 hover:bg-blue-700'
                                     }`}
                                 >
                                     <HiOutlineScissors className="w-4 h-4" />
@@ -405,7 +405,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                             <div className="flex-1 min-h-0 flex flex-col bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
                                 <div className="px-3 py-2 border-b border-gray-200 bg-white flex items-center justify-between shrink-0">
                                     <span className="font-bold text-gray-800 text-sm">Kəsilmiş Suallar</span>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${limitReached ? 'bg-red-500 text-white' : 'bg-indigo-600 text-white'}`}>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${limitReached ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'}`}>
                                         {maxCrops !== null ? `${crops.length} / ${maxCrops}` : crops.length}
                                     </span>
                                 </div>
@@ -423,12 +423,12 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                     ) : crops.map((q, qIdx) => (
                                         <div key={q.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                                             {/* Question header */}
-                                            <div className="flex items-center justify-between px-2 py-1 bg-indigo-50 border-b border-indigo-100">
-                                                <span className="text-[10px] font-bold text-indigo-700">Sual {qIdx + 1}</span>
+                                            <div className="flex items-center justify-between px-2 py-1 bg-blue-50 border-b border-blue-100">
+                                                <span className="text-[10px] font-bold text-blue-700">Sual {qIdx + 1}</span>
                                                 <div className="flex items-center gap-1">
                                                     <button
                                                         onClick={() => openAnnotator(q.questionImage, qIdx)}
-                                                        className="p-1 text-indigo-400 hover:text-indigo-700 hover:bg-indigo-100 rounded transition-colors"
+                                                        className="p-1 text-blue-400 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors"
                                                         title="Düzəlt"
                                                     >
                                                         <HiOutlinePencil className="w-3 h-3" />
@@ -464,7 +464,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                                                     className={`rounded border text-center cursor-pointer transition-all ${
                                                                         opt
                                                                             ? 'border-emerald-200 hover:border-emerald-400'
-                                                                            : 'border-dashed border-gray-200 hover:border-indigo-300 bg-gray-50'
+                                                                            : 'border-dashed border-gray-200 hover:border-blue-300 bg-gray-50'
                                                                     }`}
                                                                     onClick={() => {
                                                                         if (opt) setPreviewImage(opt.image);
@@ -485,7 +485,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                                                     <div className="absolute inset-0 flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded">
                                                                         <button
                                                                             onClick={(e) => { e.stopPropagation(); openAnnotator(opt.image, qIdx, label); }}
-                                                                            className="p-0.5 bg-white rounded text-indigo-600 shadow"
+                                                                            className="p-0.5 bg-white rounded text-blue-600 shadow"
                                                                         >
                                                                             <HiOutlinePencil className="w-2.5 h-2.5" />
                                                                         </button>
@@ -524,13 +524,13 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                     <button
                                         onClick={handleBatchFinish}
                                         disabled={crops.length === 0}
-                                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white rounded-xl font-bold text-sm transition-all"
+                                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-xl font-bold text-sm transition-all"
                                     >
                                         Sualları Yarat ({crops.length})
                                     </button>
                                     <button
                                         onClick={onClose}
-                                        className="w-full py-1.5 border border-gray-200 text-gray-500 rounded-xl text-xs font-semibold hover:bg-gray-50 transition-colors"
+                                        className="w-full py-1.5 border border-gray-200 text-gray-500 rounded-xl text-xs font-semibold hover:bg-gray-100 transition-colors"
                                     >
                                         Ləğv et
                                     </button>

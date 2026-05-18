@@ -66,7 +66,7 @@ const QuestionNav = ({ questions, examSubject, onClickQ, className = '' }) => {
                         <button
                             type="button"
                             onClick={() => toggle(group.key)}
-                            className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                            className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 transition-colors text-left"
                         >
                             <span className="text-sm font-bold text-gray-800 flex-1">
                                 {group.label}

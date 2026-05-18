@@ -39,7 +39,7 @@ export function useUndoableAction(defaultDelayMs = 5000) {
                             toast.dismiss(t.id);
                             toast.success('Geri qaytarıldı');
                         }}
-                        className="shrink-0 text-xs font-bold text-indigo-600 hover:text-indigo-800 px-2 py-1 hover:bg-indigo-50 rounded-lg transition-colors"
+                        className="shrink-0 text-xs font-bold text-blue-600 hover:text-blue-800 px-2 py-1 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                         Geri qaytar
                     </button>

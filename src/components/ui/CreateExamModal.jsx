@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck, HiOutlineStar } from 'react-icons/hi';
+import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -54,12 +54,13 @@ const CreateExamModal = ({ isOpen, onClose }) => {
 
     const handleTypeSelect = (type) => {
         setExamType(type);
-        if (type === 'template' || type === 'olimpiyada') {
+        // GET /templates indi bütün template-ləri (köhnə olimpiada da daxil) tək cavabda
+        // qaytarır — paralel fetch artıq lazım deyil.
+        if (type === 'template') {
             setLoadingTemplates(true);
-            const endpoint = type === 'olimpiyada' ? '/templates/olimpiyada' : '/templates';
-            api.get(endpoint)
-                .then(res => setTemplates(res.data))
-                .catch(() => {})
+            api.get('/templates')
+                .then(r => setTemplates(r.data || []))
+                .catch(() => setTemplates([]))
                 .finally(() => setLoadingTemplates(false));
         }
         setStep(2);
@@ -67,6 +68,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
 
     const handleTemplateSelect = (tmpl) => {
         setSelectedTemplate(tmpl);
+        setExamType('template');
         setLoadingSubtitles(true);
         api.get(`/templates/${tmpl.id}/subtitles`)
             .then(res => setSubtitles(res.data))
@@ -94,7 +96,6 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         if (sections.length === 0) return;
         onClose();
         setTimeout(reset, 300);
-        const isOlimpiyada = examType === 'olimpiyada';
         const sectionsData = sections.map(s => ({
             id: s.id,
             templateTitle: selectedTemplate.title,
@@ -107,7 +108,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         }));
         navigate('/imtahanlar/yarat', {
             state: {
-                type: isOlimpiyada ? 'olimpiyada' : 'template',
+                type: 'template',
                 subject: sections[0].subjectName,
                 templateId: selectedTemplate.id,
                 sectionsData,
@@ -130,8 +131,8 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         <div className="space-y-4">
             <p className="text-gray-600 mb-6">Yaratmaq istədiyiniz imtahan növünü seçin:</p>
             <button onClick={() => handleTypeSelect('free')}
-                className="w-full text-left p-5 rounded-xl border-2 border-indigo-100 hover:border-indigo-500 bg-white hover:bg-indigo-50/50 transition-all flex items-start gap-4 group">
-                <div className="p-3 bg-indigo-100 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                className="w-full text-left p-5 rounded-xl border-2 border-blue-100 hover:border-blue-500 bg-white hover:bg-blue-50/50 transition-all flex items-start gap-4 group">
+                <div className="p-3 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
                     <HiOutlineDocumentText className="w-6 h-6" />
                 </div>
                 <div>
@@ -142,7 +143,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
             <button onClick={() => hasPermission('useTemplateExams') ? handleTypeSelect('template') : null}
                 className={`w-full text-left p-5 rounded-xl border-2 transition-all flex items-start gap-4 group relative ${
                     hasPermission('useTemplateExams')
-                        ? 'border-purple-100 hover:border-purple-500 bg-white hover:bg-purple-50/50'
+                        ? 'border-emerald-100 hover:border-emerald-500 bg-white hover:bg-emerald-50/50'
                         : 'border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed'
                 }`}>
                 {!hasPermission('useTemplateExams') && (
@@ -152,7 +153,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                 )}
                 <div className={`p-3 rounded-lg transition-colors ${
                     hasPermission('useTemplateExams')
-                        ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'
+                        ? 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white'
                         : 'bg-gray-200 text-gray-500'
                 }`}>
                     <HiOutlineTemplate className="w-6 h-6" />
@@ -165,32 +166,6 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                     )}
                 </div>
             </button>
-            <button onClick={() => hasPermission('useTemplateExams') ? handleTypeSelect('olimpiyada') : null}
-                className={`w-full text-left p-5 rounded-xl border-2 transition-all flex items-start gap-4 group relative ${
-                    hasPermission('useTemplateExams')
-                        ? 'border-amber-100 hover:border-amber-500 bg-white hover:bg-amber-50/50'
-                        : 'border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed'
-                }`}>
-                {!hasPermission('useTemplateExams') && (
-                    <div className="absolute top-3 right-3 text-gray-400">
-                        <HiLockClosed className="w-5 h-5" />
-                    </div>
-                )}
-                <div className={`p-3 rounded-lg transition-colors ${
-                    hasPermission('useTemplateExams')
-                        ? 'bg-amber-100 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
-                        : 'bg-gray-200 text-gray-500'
-                }`}>
-                    <HiOutlineStar className="w-6 h-6" />
-                </div>
-                <div>
-                    <h4 className="text-lg font-bold text-gray-900">Olimpiada Şablonu</h4>
-                    <p className="text-gray-500 text-sm mt-1">Olimpiada formatında fərqli çəkili suallar və cəza formulalı imtahan yaradın.</p>
-                    {!hasPermission('useTemplateExams') && (
-                        <p className="text-xs text-red-500 mt-2 font-medium">Bu funksiya üçün Pro plana keçin.</p>
-                    )}
-                </div>
-            </button>
         </div>
     );
 
@@ -198,7 +173,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     const renderStep2Free = () => (
         <div className="space-y-5">
             <div>
-                <button onClick={() => setStep(1)} className="text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-4 inline-flex items-center gap-1">
+                <button onClick={() => setStep(1)} className="text-sm font-medium text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center gap-1">
                     <HiOutlineArrowLeft className="w-4 h-4" /> Geriyə qayıt
                 </button>
                 <p className="text-gray-600 text-sm">İmtahan üçün fənn seçin:</p>
@@ -219,8 +194,8 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                     : 'border-gray-100 bg-white hover:border-gray-300 hover:shadow-sm'
                             }`}
                             style={isSelected ? {
-                                borderColor: color || '#6366f1',
-                                backgroundColor: color ? `${color}12` : '#eef2ff',
+                                borderColor: color || '#3b82f6',
+                                backgroundColor: color ? `${color}12` : '#eff6ff',
                             } : {}}
                         >
                             {/* Color circle */}
@@ -230,7 +205,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                             />
                             <span
                                 className={`text-xs text-center leading-tight font-semibold ${isSelected ? '' : 'text-gray-700'}`}
-                                style={isSelected ? { color: color || '#6366f1' } : {}}
+                                style={isSelected ? { color: color || '#3b82f6' } : {}}
                             >
                                 {name}
                             </span>
@@ -238,7 +213,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                             {isSelected && (
                                 <span
                                     className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center"
-                                    style={{ backgroundColor: color || '#6366f1' }}
+                                    style={{ backgroundColor: color || '#3b82f6' }}
                                 >
                                     <HiOutlineCheck className="w-2.5 h-2.5 text-white" />
                                 </span>
@@ -250,7 +225,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
 
             <div className="pt-3 border-t border-gray-100 flex justify-end">
                 <button onClick={handleContinueFree} disabled={!selectedSubject}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-semibold transition-colors">
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-semibold transition-colors">
                     Davam et <HiOutlineArrowRight className="w-5 h-5" />
                 </button>
             </div>
@@ -260,13 +235,13 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     // ── Step 2 (template): template select ────────────────────────────────────
     const renderStep2Template = () => (
         <div className="space-y-4">
-            <button onClick={() => setStep(1)} className="text-sm font-medium text-purple-600 hover:text-purple-800 inline-flex items-center gap-1">
+            <button onClick={() => setStep(1)} className="text-sm font-medium text-emerald-600 hover:text-emerald-800 inline-flex items-center gap-1">
                 <HiOutlineArrowLeft className="w-4 h-4" /> Geriyə qayıt
             </button>
             <p className="text-gray-600 font-medium">Şablon seçin:</p>
             {loadingTemplates ? (
                 <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
                 </div>
             ) : templates.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
@@ -277,8 +252,8 @@ const CreateExamModal = ({ isOpen, onClose }) => {
             ) : (
                 <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                     {templates.map(tmpl => (
-                        <button key={tmpl.id} onClick={() => handleTemplateSelect(tmpl)}
-                            className="w-full text-left p-4 rounded-xl border-2 border-purple-100 hover:border-purple-400 hover:bg-purple-50/50 transition-all">
+                        <button key={`${tmpl.templateType || 'STD'}-${tmpl.id}`} onClick={() => handleTemplateSelect(tmpl)}
+                            className="w-full text-left p-4 rounded-xl border-2 border-emerald-100 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all">
                             <div className="font-bold text-gray-900">{tmpl.title}</div>
                             <div className="text-xs text-gray-400 mt-0.5">
                                 {tmpl.subtitleCount === 0 ? 'Altbaşlıq yoxdur' : `${tmpl.subtitleCount} altbaşlıq`}
@@ -293,7 +268,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     // ── Step 3 (template): subtitle select ────────────────────────────────────
     const renderStep3Template = () => (
         <div className="space-y-4">
-            <button onClick={() => setStep(2)} className="text-sm font-medium text-purple-600 hover:text-purple-800 inline-flex items-center gap-1">
+            <button onClick={() => setStep(2)} className="text-sm font-medium text-emerald-600 hover:text-emerald-800 inline-flex items-center gap-1">
                 <HiOutlineArrowLeft className="w-4 h-4" /> Geriyə qayıt
             </button>
             <div>
@@ -302,7 +277,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
             </div>
             {loadingSubtitles ? (
                 <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
                 </div>
             ) : subtitles.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
@@ -312,7 +287,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                 <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                     {subtitles.map(sub => (
                         <button key={sub.id} onClick={() => handleSubtitleSelect(sub)}
-                            className="w-full text-left p-4 rounded-xl border-2 border-purple-100 hover:border-purple-400 hover:bg-purple-50/50 transition-all">
+                            className="w-full text-left p-4 rounded-xl border-2 border-emerald-100 hover:border-emerald-400 hover:bg-emerald-50/50 transition-all">
                             <div className="font-bold text-gray-900">{sub.subtitle}</div>
                             <div className="text-xs text-gray-400 mt-0.5">
                                 {(sub.sections || []).length === 0 ? 'Fənn yoxdur' : `${sub.sections.length} fənn`}
@@ -333,7 +308,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         return (
             <div className="space-y-4">
                 <button onClick={() => { setStep(3); setSelectedSectionIds(new Set()); }}
-                    className="text-sm font-medium text-purple-600 hover:text-purple-800 inline-flex items-center gap-1">
+                    className="text-sm font-medium text-emerald-600 hover:text-emerald-800 inline-flex items-center gap-1">
                     <HiOutlineArrowLeft className="w-4 h-4" /> Geriyə qayıt
                 </button>
                 <div>
@@ -357,14 +332,14 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                     <button key={section.id} onClick={() => toggleSectionId(section.id)}
                                         className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                                             isSelected
-                                                ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
-                                                : 'border-gray-100 hover:border-indigo-300 hover:bg-indigo-50/20'
+                                                ? 'border-blue-500 bg-blue-50/60 shadow-sm'
+                                                : 'border-gray-100 hover:border-blue-300 hover:bg-blue-50/20'
                                         }`}>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2.5">
                                                 <span
                                                     className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                                        isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300 bg-white'
+                                                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300 bg-white'
                                                     }`}
                                                 >
                                                     {isSelected && <HiOutlineCheck className="w-3 h-3 text-white" />}
@@ -377,7 +352,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                             </div>
                                             <span
                                                 className="text-sm font-bold px-2.5 py-0.5 rounded-full"
-                                                style={{ backgroundColor: meta?.color ? `${meta.color}18` : '#eef2ff', color: meta?.color || '#6366f1' }}
+                                                style={{ backgroundColor: meta?.color ? `${meta.color}18` : '#eff6ff', color: meta?.color || '#3b82f6' }}
                                             >
                                                 {section.questionCount} sual
                                             </span>
@@ -386,7 +361,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                             <div className="flex flex-wrap gap-1 mt-2.5 pl-8">
                                                 {section.typeCounts.map((tc, j) => (
                                                     <span key={j} className={`text-[11px] px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
-                                                        tc.passageType === 'LISTENING' ? 'bg-purple-100 text-purple-700' :
+                                                        tc.passageType === 'LISTENING' ? 'bg-emerald-100 text-emerald-700' :
                                                         tc.passageType === 'TEXT'      ? 'bg-teal-100 text-teal-700' :
                                                         'bg-gray-100 text-gray-600'}`}>
                                                         {tc.passageType && <HiOutlineVolumeUp className="w-3 h-3" />}
@@ -395,7 +370,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                                 ))}
                                             </div>
                                         )}
-                                        <code className="mt-1.5 pl-8 block text-xs font-mono text-indigo-400">{section.formula}</code>
+                                        <code className="mt-1.5 pl-8 block text-xs font-mono text-blue-400">{section.formula}</code>
                                     </button>
                                 );
                             })}
@@ -405,7 +380,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                 {selectedSectionIds.size > 0 ? `${selectedSectionIds.size} fənn seçildi` : 'Heç bir fənn seçilməyib'}
                             </span>
                             <button onClick={handleSectionsConfirm} disabled={selectedSectionIds.size === 0}
-                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-semibold transition-colors">
+                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-semibold transition-colors">
                                 Davam et <HiOutlineArrowRight className="w-5 h-5" />
                             </button>
                         </div>
@@ -418,11 +393,6 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     const getTitle = () => {
         if (step === 1) return 'Yeni İmtahan Növü';
         if (examType === 'free') return 'Fənn Seçimi';
-        if (examType === 'olimpiyada') {
-            if (step === 2) return 'Olimpiada Şablonu';
-            if (step === 3) return 'Altbaşlıq Seçimi';
-            return 'Fənn Bölməsi';
-        }
         if (step === 2) return 'Şablon Seçimi';
         if (step === 3) return 'Altbaşlıq Seçimi';
         return 'Fənn Bölməsi';

@@ -142,7 +142,7 @@ const AdminSubscriptionPlans = () => {
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-sm text-sm"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-sm text-sm"
                 >
                     <HiOutlinePlus className="w-5 h-5" /> Şablon Yarat
                 </button>
@@ -150,7 +150,7 @@ const AdminSubscriptionPlans = () => {
 
             {loading ? (
                 <div className="flex justify-center py-10">
-                    <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent flex items-center justify-center rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent flex items-center justify-center rounded-full animate-spin"></div>
                 </div>
             ) : plans.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
@@ -163,12 +163,12 @@ const AdminSubscriptionPlans = () => {
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-                                    <p className="text-2xl font-black text-indigo-600 mt-1">{plan.price} ₼ <span className="text-sm text-gray-400 font-medium">/ay</span></p>
+                                    <p className="text-2xl font-black text-blue-600 mt-1">{plan.price} ₼ <span className="text-sm text-gray-400 font-medium">/ay</span></p>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={() => handleOpenModal(plan)}
-                                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                         title="Redaktə et"
                                     >
                                         <HiOutlinePencilAlt className="w-5 h-5" />
@@ -242,7 +242,7 @@ const AdminSubscriptionPlans = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {/* Left Column: Basic Info & Limits */}
                                 <div className="space-y-5">
-                                    <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider border-b pb-2">Əsas Məlumatlar</h3>
+                                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2">Əsas Məlumatlar</h3>
                                     
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1">Plan Adı *</label>
@@ -252,7 +252,7 @@ const AdminSubscriptionPlans = () => {
                                             value={form.name}
                                             onChange={handleChange}
                                             required
-                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400"
                                         />
                                     </div>
                                     <div>
@@ -265,7 +265,7 @@ const AdminSubscriptionPlans = () => {
                                             required
                                             min="0"
                                             step="0.01"
-                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400"
                                         />
                                     </div>
                                     <div>
@@ -277,7 +277,7 @@ const AdminSubscriptionPlans = () => {
                                             onChange={handleChange}
                                             required
                                             min="0"
-                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400"
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400"
                                         />
                                         <p className="text-xs text-gray-400 mt-1">0=Free, 1=Basic, 2=Limitsiz, 3+ = yeni planlar</p>
                                     </div>
@@ -288,27 +288,27 @@ const AdminSubscriptionPlans = () => {
                                             value={form.description}
                                             onChange={handleChange}
                                             rows="2"
-                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 resize-none"
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 resize-none"
                                         />
                                     </div>
 
-                                    <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider border-b pb-2 pt-4">Limitlər (-1 = Limitsiz)</h3>
+                                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 pt-4">Limitlər (-1 = Limitsiz)</h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-700 mb-1">Aylıq İmtahan *</label>
-                                            <input type="number" required name="monthlyExamLimit" value={form.monthlyExamLimit} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400" />
+                                            <input type="number" required name="monthlyExamLimit" value={form.monthlyExamLimit} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400" />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-700 mb-1">Max Sual/İmtahan *</label>
-                                            <input type="number" required name="maxQuestionsPerExam" value={form.maxQuestionsPerExam} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400" />
+                                            <input type="number" required name="maxQuestionsPerExam" value={form.maxQuestionsPerExam} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400" />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-700 mb-1">Max Yadda Saxlanılan *</label>
-                                            <input type="number" required name="maxSavedExamsLimit" value={form.maxSavedExamsLimit} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400" />
+                                            <input type="number" required name="maxSavedExamsLimit" value={form.maxSavedExamsLimit} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400" />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-700 mb-1">Max İştirakçı *</label>
-                                            <input type="number" required name="maxParticipantsPerExam" value={form.maxParticipantsPerExam} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400" />
+                                            <input type="number" required name="maxParticipantsPerExam" value={form.maxParticipantsPerExam} onChange={handleChange} className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400" />
                                         </div>
                                         <div className="col-span-2">
                                             <label className="block text-xs font-semibold text-gray-700 mb-2">Aylıq AI Sual Limiti</label>
@@ -328,7 +328,7 @@ const AdminSubscriptionPlans = () => {
                                                                 ...prev,
                                                                 monthlyAiQuestionLimit: opt.value === 'limited' ? '10' : opt.value
                                                             }))}
-                                                            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border-2 transition-colors ${isActive ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                                                            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border-2 transition-colors ${isActive ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
                                                         >
                                                             {opt.label}
                                                         </button>
@@ -341,7 +341,7 @@ const AdminSubscriptionPlans = () => {
                                                     min="1"
                                                     value={form.monthlyAiQuestionLimit}
                                                     onChange={e => setForm(prev => ({ ...prev, monthlyAiQuestionLimit: e.target.value }))}
-                                                    className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400"
+                                                    className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400"
                                                     placeholder="Məs: 30"
                                                 />
                                             )}
@@ -351,7 +351,7 @@ const AdminSubscriptionPlans = () => {
 
                                 {/* Right Column: Features */}
                                 <div>
-                                    <h3 className="text-sm font-bold text-indigo-600 uppercase tracking-wider border-b pb-2 mb-4">Xüsusiyyətlər (On/Off)</h3>
+                                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider border-b pb-2 mb-4">Xüsusiyyətlər (On/Off)</h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4">
                                         {featureLabels.map(feature => (
                                             <label key={feature.key} className="flex items-center gap-3 cursor-pointer group">
@@ -363,7 +363,7 @@ const AdminSubscriptionPlans = () => {
                                                         onChange={handleChange}
                                                         className="peer sr-only"
                                                     />
-                                                    <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                                                    <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </div>
                                                 <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
                                                     {feature.label}
@@ -378,7 +378,7 @@ const AdminSubscriptionPlans = () => {
                                 <button type="button" onClick={handleCloseModal} className="px-5 py-2.5 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition-colors">
                                     Ləğv et
                                 </button>
-                                <button type="submit" disabled={saving} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-sm disabled:opacity-70">
+                                <button type="submit" disabled={saving} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-sm disabled:opacity-70">
                                     {saving ? 'Saxlanılır...' : 'Saxla'}
                                 </button>
                             </div>

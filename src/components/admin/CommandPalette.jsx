@@ -130,12 +130,12 @@ const CommandPalette = ({ open, onClose }) => {
                                     onClick={() => { item.action(); onClose(); }}
                                     onMouseEnter={() => setActiveIdx(idx)}
                                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                                        idx === activeIdx ? 'bg-indigo-50' : 'hover:bg-gray-50'
+                                        idx === activeIdx ? 'bg-blue-50' : 'hover:bg-gray-100'
                                     }`}
                                 >
-                                    <Icon className={`w-4 h-4 shrink-0 ${idx === activeIdx ? 'text-indigo-600' : 'text-gray-400'}`} />
+                                    <Icon className={`w-4 h-4 shrink-0 ${idx === activeIdx ? 'text-blue-600' : 'text-gray-400'}`} />
                                     <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-semibold truncate ${idx === activeIdx ? 'text-indigo-700' : 'text-gray-800'}`}>{item.label}</p>
+                                        <p className={`text-sm font-semibold truncate ${idx === activeIdx ? 'text-blue-700' : 'text-gray-800'}`}>{item.label}</p>
                                         {item.sublabel && (
                                             <p className="text-xs text-gray-400 truncate">{item.sublabel}</p>
                                         )}

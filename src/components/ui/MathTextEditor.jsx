@@ -60,7 +60,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
             return text.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => {
                 try {
                     const mathHtml = katex.renderToString(latex.trim(), { throwOnError: false, displayMode: false });
-                    return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-indigo-50/50 px-1 rounded" contenteditable="false" data-latex="${latex.trim()}">${mathHtml}</span>`;
+                    return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${latex.trim()}">${mathHtml}</span>`;
                 } catch { return `$$${latex}$$`; }
             });
         }
@@ -78,7 +78,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
             if (math !== null) {
                 try {
                     const mathHtml = katex.renderToString(math, { throwOnError: false, displayMode: false });
-                    html += `<span class="math-node mx-1 inline-block align-middle cursor-default bg-indigo-50/50 px-1 rounded" contenteditable="false" data-latex="${math}">${mathHtml}</span>`;
+                    html += `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${math}">${mathHtml}</span>`;
                 } catch { html += part; }
             } else {
                 html += part
@@ -201,7 +201,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
             try {
                 const mathHtml = katex.renderToString(latexString, { throwOnError: false, displayMode: false });
                 const span = document.createElement('span');
-                span.className = "math-node mx-1 inline-block align-middle cursor-default bg-indigo-50/50 px-1 rounded";
+                span.className = "math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded";
                 span.contentEditable = "false";
                 span.setAttribute('data-latex', latexString);
                 span.innerHTML = mathHtml;
@@ -232,7 +232,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
     const btnClass = (active) =>
         `px-2 py-1 rounded text-xs font-bold transition-colors border ${
             active
-                ? 'bg-indigo-600 text-white border-indigo-600'
+                ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
         }`;
 
@@ -252,7 +252,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
     }
 
     return (
-        <div className="flex flex-col border border-gray-200 rounded-xl overflow-hidden focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400 transition-all">
+        <div className="flex flex-col border border-gray-200 rounded-xl overflow-hidden focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400 transition-all">
             {showToolbar && (
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 flex-wrap">
                     <button type="button" onMouseDown={(e) => { e.preventDefault(); execFormat('bold'); }}
@@ -289,7 +289,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                         value={fontSize}
                         onChange={(e) => applyFontSize(e.target.value)}
                         onMouseDown={(e) => e.stopPropagation()}
-                        className="text-xs border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-700 focus:outline-none focus:border-indigo-400 cursor-pointer"
+                        className="text-xs border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-700 focus:outline-none focus:border-blue-400 cursor-pointer"
                         title="Hərf ölçüsü"
                     >
                         {FONT_SIZES.map(s => (

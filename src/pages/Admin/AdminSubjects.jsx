@@ -173,7 +173,7 @@ const AdminSubjects = () => {
     if (loading) {
         return (
             <div className="flex justify-center py-20">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
         );
     }
@@ -189,13 +189,13 @@ const AdminSubjects = () => {
             <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
                 <button
                     onClick={() => setActiveTab('subjects')}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'subjects' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'subjects' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                     Fənnlər
                 </button>
                 <button
                     onClick={() => setActiveTab('tags')}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'tags' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'tags' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                     Teqlər
                 </button>
@@ -212,13 +212,13 @@ const AdminSubjects = () => {
                             value={newName}
                             onChange={e => setNewName(e.target.value)}
                             placeholder="Yeni fənn adı..."
-                            className="flex-1 min-w-0 text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            className="flex-1 min-w-0 text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             maxLength={80}
                         />
                         <button
                             type="submit"
                             disabled={!newName.trim() || adding}
-                            className="flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
+                            className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
                         >
                             <HiOutlinePlus className="w-4 h-4" />
                         </button>
@@ -241,7 +241,7 @@ const AdminSubjects = () => {
                                         <li key={subject.id}>
                                             <button
                                                 onClick={() => setSelectedId(subject.id)}
-                                                className={`w-full flex items-center gap-2.5 px-4 py-3 text-left transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
+                                                className={`w-full flex items-center gap-2.5 px-4 py-3 text-left transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                             >
                                                 {/* Color dot */}
                                                 <span
@@ -249,12 +249,12 @@ const AdminSubjects = () => {
                                                     style={{ backgroundColor: subject.color || '#e5e7eb' }}
                                                 />
                                                 <div className="flex-1 min-w-0">
-                                                    <p className={`text-sm font-medium truncate ${isSelected ? 'text-indigo-700' : 'text-gray-800'}`}>
+                                                    <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-700' : 'text-gray-800'}`}>
                                                         {subject.name}
                                                     </p>
                                                     <p className="text-xs text-gray-400">{topicCount} mövzu</p>
                                                 </div>
-                                                {isSelected && <HiOutlineChevronRight className="w-4 h-4 text-indigo-400 shrink-0" />}
+                                                {isSelected && <HiOutlineChevronRight className="w-4 h-4 text-blue-400 shrink-0" />}
                                                 {!subject.default && (
                                                     <button
                                                         onClick={e => { e.stopPropagation(); handleDeleteSubject(subject); }}
@@ -290,7 +290,7 @@ const AdminSubjects = () => {
                             <div>
                                 <h2 className="text-lg font-bold text-gray-900">{selectedSubject.name}</h2>
                                 {selectedSubject.default && (
-                                    <span className="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                    <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-wide">
                                         Default
                                     </span>
                                 )}
@@ -300,7 +300,7 @@ const AdminSubjects = () => {
                         {/* Metadata editor */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                             <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
-                                <HiOutlineColorSwatch className="w-4 h-4 text-indigo-500" />
+                                <HiOutlineColorSwatch className="w-4 h-4 text-blue-500" />
                                 Metadata
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -327,8 +327,8 @@ const AdminSubjects = () => {
                                             type="text"
                                             value={metaColor}
                                             onChange={e => setMetaColor(e.target.value)}
-                                            placeholder="#6366f1"
-                                            className="flex-1 text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-indigo-500 font-mono"
+                                            placeholder="#3b82f6"
+                                            className="flex-1 text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 font-mono"
                                         />
                                     </div>
                                 </div>
@@ -342,7 +342,7 @@ const AdminSubjects = () => {
                                             onChange={e => setMetaDesc(e.target.value)}
                                             placeholder="Fənn haqqında qısa məlumat..."
                                             rows={2}
-                                            className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                                            className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                                             maxLength={300}
                                         />
                                     </div>
@@ -353,7 +353,7 @@ const AdminSubjects = () => {
                                 <button
                                     onClick={handleSaveMeta}
                                     disabled={savingMeta}
-                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
                                 >
                                     <HiOutlinePencil className="w-4 h-4" />
                                     {savingMeta ? 'Saxlanılır...' : 'Yadda saxla'}
@@ -418,13 +418,13 @@ const AdminSubjects = () => {
                                         onChange={e => setNewTopicName(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTopic(); } }}
                                         placeholder="Mövzu adı (məs. Cəbr)"
-                                        className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         maxLength={80}
                                     />
                                     <select
                                         value={newTopicGrade}
                                         onChange={e => setNewTopicGrade(e.target.value)}
-                                        className="text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-36"
+                                        className="text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-36"
                                     >
                                         {GRADE_LEVELS.map(g => (
                                             <option key={g.value} value={g.value}>{g.label}</option>

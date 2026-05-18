@@ -102,7 +102,7 @@ const AdminTemplateSections = () => {
 
             <div className="mb-6 flex items-start justify-between">
                 <div>
-                    <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">
+                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">
                         {info.templateTitle}{info.templateTitle && info.subtitleName ? ' · ' : ''}{info.subtitleName}
                     </p>
                     <h1 className="text-2xl font-bold text-gray-900">Fənnlər</h1>
@@ -110,7 +110,7 @@ const AdminTemplateSections = () => {
                 </div>
                 {editingIdx !== -1 && (
                     <button onClick={() => setEditingIdx(-1)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
                         <HiOutlinePlus className="w-4 h-4" /> Fənn əlavə et
                     </button>
                 )}
@@ -118,7 +118,7 @@ const AdminTemplateSections = () => {
 
             {loading ? (
                 <div className="flex justify-center py-20">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -156,14 +156,14 @@ const AdminTemplateSections = () => {
                                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                                         <span className="font-bold text-gray-900">{s.subjectName}</span>
                                         <span className="text-xs text-gray-400 font-medium">{s.questionCount || total} sual</span>
-                                        <code className="text-xs font-mono text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded">{s.formula}</code>
+                                        <code className="text-xs font-mono text-blue-500 bg-blue-50 px-2 py-0.5 rounded">{s.formula}</code>
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
                                         {(s.typeCounts || []).map((tc, j) => {
                                             const pt = tc.passageType ? PASSAGE_TYPES[tc.passageType] : null;
                                             return (
                                                 <span key={j} className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-lg gap-1 ${
-                                                    pt?.color === 'purple' ? 'bg-purple-100 text-purple-700' :
+                                                    pt?.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' :
                                                     pt?.color === 'teal'   ? 'bg-teal-100 text-teal-700' :
                                                     'bg-gray-100 text-gray-600'}`}>
                                                     {pt && <pt.Icon className="w-3 h-3" />}
@@ -177,7 +177,7 @@ const AdminTemplateSections = () => {
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                     <button onClick={() => setEditingIdx(i)}
-                                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                         <HiOutlinePencilAlt className="w-4 h-4" />
                                     </button>
                                     <button onClick={() => handleDelete(i)}
@@ -202,7 +202,7 @@ const AdminTemplateSections = () => {
                         <div className="bg-white rounded-2xl border border-dashed border-gray-200 py-16 text-center text-gray-400">
                             <p className="font-medium">Hələ fənn yoxdur</p>
                             <button onClick={() => setEditingIdx(-1)}
-                                className="mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                                className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors">
                                 + Fənn əlavə et
                             </button>
                         </div>

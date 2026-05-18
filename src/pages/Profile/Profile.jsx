@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../../context/AuthContext';
@@ -6,15 +6,22 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import avatarTeacher from '../../assets/avatar-teacher.svg';
 import avatarStudent from '../../assets/avatar-student.svg';
+import { fmtDate, fmtDateShort } from '../../utils/date';
 import {
     HiOutlineAcademicCap, HiOutlineChartBar, HiOutlineClock,
     HiOutlineCheckCircle, HiOutlinePencilAlt, HiOutlineEye,
     HiOutlineDocumentText, HiOutlineStar, HiOutlineLockClosed,
     HiOutlineGlobe, HiOutlineClipboardList, HiOutlineExclamationCircle,
-    HiOutlineKey, HiOutlineX, HiOutlineEyeOff, HiOutlineCamera, HiOutlineTrash
+    HiOutlineKey, HiOutlineX, HiOutlineEyeOff, HiOutlineCamera, HiOutlineTrash,
+    HiOutlineFlag, HiOutlineBookOpen, HiOutlineSparkles, HiOutlineFire,
+    HiOutlineLightningBolt, HiOutlinePlus, HiOutlineArrowRight,
+    HiOutlineSearch, HiOutlineBookmark, HiOutlineRefresh,
 } from 'react-icons/hi';
 
-// ---- helpers ----
+// ───────────────────────────────────────────────────────────────────────────
+// Helpers
+// ───────────────────────────────────────────────────────────────────────────
+
 const fmtScore = (v) => {
     if (v === null || v === undefined) return '0';
     const n = Math.round(v * 100) / 100;
@@ -23,29 +30,28 @@ const fmtScore = (v) => {
 
 const pct = (score, max) => (max > 0 ? Math.round((score / max) * 100) : 0);
 
-const pctColor = (p) =>
-    p >= 80 ? 'bg-green-500' : p >= 50 ? 'bg-yellow-400' : 'bg-red-400';
-
-const pctTextColor = (p) =>
-    p >= 80 ? 'text-green-600' : p >= 50 ? 'text-yellow-600' : 'text-red-500';
+const bucketColor = (p) => p >= 80 ? 'var(--brand-green-600)' : p >= 50 ? '#F59E0B' : '#EF4444';
+const bucketBg = (p) => p >= 80 ? 'bg-[var(--brand-green-600)]' : p >= 50 ? 'bg-amber-400' : 'bg-red-400';
+const bucketText = (p) => p >= 80 ? 'text-[var(--brand-green-600)]' : p >= 50 ? 'text-amber-600' : 'text-red-600';
 
 const statusConfig = {
-    DRAFT:     { label: 'Qaralama',   cls: 'bg-gray-100 text-gray-600' },
-    PUBLISHED: { label: 'Dərc edilib', cls: 'bg-blue-100 text-blue-700' },
-    ACTIVE:    { label: 'Aktiv',       cls: 'bg-green-100 text-green-700' },
-    COMPLETED: { label: 'Tamamlandı', cls: 'bg-purple-100 text-purple-700' },
-    CANCELLED: { label: 'Ləğv edildi', cls: 'bg-red-100 text-red-600' },
-    ARCHIVED:  { label: 'Arxivdə',    cls: 'bg-orange-100 text-orange-600' },
+    DRAFT:     { label: 'Qaralama',    cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    PUBLISHED: { label: 'Dərc edilib', cls: 'bg-[var(--primary-soft)] text-[var(--primary-hover)] border-[var(--brand-blue-100)]' },
+    ACTIVE:    { label: 'Aktiv',       cls: 'bg-[var(--accent-soft)] text-[var(--brand-green-600)] border-[var(--brand-green-100)]' },
+    COMPLETED: { label: 'Tamamlandı',  cls: 'bg-[var(--accent-soft)] text-[var(--brand-green-600)] border-[var(--brand-green-100)]' },
+    CANCELLED: { label: 'Ləğv edildi', cls: 'bg-red-50 text-red-700 border-red-200' },
+    ARCHIVED:  { label: 'Arxivdə',     cls: 'bg-[var(--ink-100)] text-[var(--ink-600)] border-[var(--ink-200)]' },
 };
-
-const fmtDate = (d) => new Date(d).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short', year: 'numeric' });
 
 const fmtDuration = (mins) => {
     if (!mins) return '—';
     return mins >= 60 ? `${Math.floor(mins / 60)}s ${mins % 60}d` : `${mins} dəq`;
 };
 
-// ---- Avatar ----
+// ───────────────────────────────────────────────────────────────────────────
+// Avatar
+// ───────────────────────────────────────────────────────────────────────────
+
 const Avatar = ({ name, picture, defaultAvatar, onUpload, onUploadGlobal }) => {
     const fileRef = useRef(null);
     const [uploading, setUploading] = useState(false);
@@ -92,37 +98,40 @@ const Avatar = ({ name, picture, defaultAvatar, onUpload, onUploadGlobal }) => {
 
     return (
         <div className="relative group shrink-0">
-            <div className="h-24 w-24 rounded-full overflow-hidden shadow-xl ring-4 ring-white">
+            <div
+                className="w-24 h-24 rounded-2xl overflow-hidden shadow-[var(--sh-md)] ring-4 ring-white"
+                style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--brand-green-600) 100%)' }}
+            >
                 {src
-                    ? <img src={src} alt={name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                    : <div className="h-full w-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-3xl">
-                        {name?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
+                    ? <img src={src} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    : (
+                        <div className="w-full h-full flex items-center justify-center text-white font-extrabold text-[36px]">
+                            {name?.trim()?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+                    )
                 }
             </div>
-            {/* Upload overlay */}
             <button
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading || deleting}
-                className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                className="absolute inset-0 rounded-2xl bg-black/55 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                 title="Şəkli dəyiş"
             >
                 {uploading
-                    ? <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     : <HiOutlineCamera className="w-6 h-6 text-white" />
                 }
             </button>
-            {/* Delete button — only shown when user has a custom picture (not default) */}
             {picture && (
                 <button
                     onClick={handleDelete}
                     disabled={deleting}
                     title="Şəkli sil"
-                    className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
                 >
                     {deleting
-                        ? <div className="h-3 w-3 border border-white border-t-transparent rounded-full animate-spin" />
-                        : <HiOutlineX className="w-3 h-3" />
+                        ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+                        : <HiOutlineX className="w-3.5 h-3.5" />
                     }
                 </button>
             )}
@@ -131,22 +140,27 @@ const Avatar = ({ name, picture, defaultAvatar, onUpload, onUploadGlobal }) => {
     );
 };
 
-// ---- PasswordField (defined outside modal to prevent remount on re-render) ----
+// ───────────────────────────────────────────────────────────────────────────
+// Change-password modal
+// ───────────────────────────────────────────────────────────────────────────
+
 const PasswordField = ({ id, label, value, showKey, show, setShow, setForm }) => (
     <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
+        <label className="block text-[12.5px] font-bold uppercase tracking-[0.08em] text-[var(--ink-600)] mb-1.5">{label}</label>
         <div className="relative">
+            <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-400)] w-4 h-4 pointer-events-none" />
             <input
                 type={show[showKey] ? 'text' : 'password'}
                 value={value}
                 onChange={e => setForm(f => ({ ...f, [id]: e.target.value }))}
-                className="w-full pr-10 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 required
+                className="w-full h-12 pl-11 pr-11 rounded-xl bg-[var(--ink-50)] border border-[var(--ink-200)] text-[14px] text-[var(--ink-900)] outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)] transition-colors"
             />
             <button
                 type="button"
                 onClick={() => setShow(s => ({ ...s, [showKey]: !s[showKey] }))}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-400)] hover:text-[var(--ink-700)]"
+                tabIndex={-1}
             >
                 {show[showKey] ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
             </button>
@@ -154,7 +168,6 @@ const PasswordField = ({ id, label, value, showKey, show, setShow, setForm }) =>
     </div>
 );
 
-// ---- ChangePasswordModal ----
 const ChangePasswordModal = ({ onClose }) => {
     const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [show, setShow] = useState({ current: false, new: false, confirm: false });
@@ -162,19 +175,13 @@ const ChangePasswordModal = ({ onClose }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (form.newPassword !== form.confirmPassword) {
-            toast.error('Yeni şifrələr uyğun gəlmir');
-            return;
-        }
-        if (form.newPassword.length < 6) {
-            toast.error('Yeni şifrə ən azı 6 simvol olmalıdır');
-            return;
-        }
+        if (form.newPassword !== form.confirmPassword) { toast.error('Yeni şifrələr uyğun gəlmir'); return; }
+        if (form.newPassword.length < 6) { toast.error('Yeni şifrə ən azı 6 simvol olmalıdır'); return; }
         setSaving(true);
         try {
             await api.post('/auth/change-password', {
                 currentPassword: form.currentPassword,
-                newPassword: form.newPassword
+                newPassword: form.newPassword,
             });
             toast.success('Şifrə uğurla dəyişdirildi');
             onClose();
@@ -185,58 +192,66 @@ const ChangePasswordModal = ({ onClose }) => {
         }
     };
 
+    const strength = Math.min(
+        (form.newPassword.length >= 8 ? 1 : 0) +
+        (/[A-Z]/.test(form.newPassword) && /[a-z]/.test(form.newPassword) ? 1 : 0) +
+        (/[0-9]/.test(form.newPassword) ? 1 : 0) +
+        (/[^A-Za-z0-9]/.test(form.newPassword) ? 1 : 0), 4
+    );
+    const strengthLabels = ['Çox zəif', 'Zəif', 'Orta', 'Yaxşı', 'Güclü'];
+    const strengthColors = ['bg-red-400', 'bg-red-400', 'bg-amber-400', 'bg-[var(--primary)]', 'bg-[var(--brand-green-600)]'];
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-7 border border-[var(--ink-200)]" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-indigo-100 rounded-xl">
-                            <HiOutlineKey className="w-5 h-5 text-indigo-600" />
+                        <div className="w-10 h-10 bg-[var(--primary-soft)] text-[var(--primary)] rounded-xl flex items-center justify-center">
+                            <HiOutlineKey className="w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-black text-gray-900">Şifrəni Dəyiş</h2>
+                        <h2 className="text-[18px] font-extrabold text-[var(--ink-900)] tracking-tight">Şifrəni dəyiş</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+                    <button onClick={onClose} className="w-9 h-9 rounded-full text-[var(--ink-400)] hover:bg-[var(--ink-100)] hover:text-[var(--ink-700)] flex items-center justify-center transition-colors">
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     <PasswordField id="currentPassword" label="Cari Şifrə" value={form.currentPassword} showKey="current" show={show} setShow={setShow} setForm={setForm} />
-                    <PasswordField id="newPassword" label="Yeni Şifrə" value={form.newPassword} showKey="new" show={show} setShow={setShow} setForm={setForm} />
-                    <PasswordField id="confirmPassword" label="Yeni Şifrəni Təsdiqlə" value={form.confirmPassword} showKey="confirm" show={show} setShow={setShow} setForm={setForm} />
+                    <PasswordField id="newPassword"     label="Yeni Şifrə" value={form.newPassword}     showKey="new"     show={show} setShow={setShow} setForm={setForm} />
+                    <PasswordField id="confirmPassword" label="Yeni Şifrəni təsdiqlə" value={form.confirmPassword} showKey="confirm" show={show} setShow={setShow} setForm={setForm} />
 
-                    {/* Password strength hint */}
                     {form.newPassword && (
-                        <div className="flex gap-1.5 mt-1">
-                            {[1, 2, 3, 4].map(i => {
-                                const strength = Math.min(
-                                    (form.newPassword.length >= 6 ? 1 : 0) +
-                                    (/[A-Z]/.test(form.newPassword) ? 1 : 0) +
-                                    (/[0-9]/.test(form.newPassword) ? 1 : 0) +
-                                    (/[^A-Za-z0-9]/.test(form.newPassword) ? 1 : 0), 4
-                                );
-                                return (
-                                    <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= strength
-                                        ? strength <= 1 ? 'bg-red-400' : strength <= 2 ? 'bg-yellow-400' : strength <= 3 ? 'bg-blue-400' : 'bg-green-500'
-                                        : 'bg-gray-100'
-                                    }`} />
-                                );
-                            })}
+                        <div>
+                            <div className="flex gap-1.5">
+                                {[1, 2, 3, 4].map(i => (
+                                    <span
+                                        key={i}
+                                        className={`h-1.5 flex-1 rounded-full transition-colors ${i <= strength ? strengthColors[Math.min(strength, 4)] : 'bg-[var(--ink-150)]'}`}
+                                    />
+                                ))}
+                            </div>
+                            <p className="text-[11.5px] text-[var(--ink-500)] mt-1.5">
+                                <strong className={strength >= 3 ? 'text-[var(--brand-green-600)]' : strength >= 2 ? 'text-amber-600' : 'text-red-600'}>
+                                    {strengthLabels[strength]}
+                                </strong>
+                                {form.newPassword.length < 6 && ' · Ən azı 6 simvol'}
+                            </p>
                         </div>
                     )}
 
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex gap-2.5 pt-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm"
+                            className="flex-1 h-11 rounded-full border border-[var(--ink-200)] text-[var(--ink-700)] font-semibold text-[13.5px] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
                         >
                             Ləğv et
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors text-sm disabled:opacity-60"
+                            className="flex-1 h-11 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-bold text-[13.5px] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all disabled:opacity-60"
                         >
                             {saving ? 'Saxlanılır...' : 'Dəyiş'}
                         </button>
@@ -247,27 +262,43 @@ const ChangePasswordModal = ({ onClose }) => {
     );
 };
 
-// ---- StatCard ----
-const StatCard = ({ icon, label, value, sub, color = 'indigo' }) => {
-    const colors = {
-        indigo: 'bg-indigo-50 text-indigo-600',
-        green:  'bg-green-50 text-green-600',
-        yellow: 'bg-yellow-50 text-yellow-600',
-        purple: 'bg-purple-50 text-purple-600',
-    };
-    return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4 shadow-sm">
-            <div className={`${colors[color]} p-3 rounded-xl`}>{icon}</div>
-            <div>
-                <p className="text-2xl font-black text-gray-900">{value}</p>
-                <p className="text-sm font-medium text-gray-500">{label}</p>
-                {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-            </div>
-        </div>
-    );
-};
+// ───────────────────────────────────────────────────────────────────────────
+// Building blocks
+// ───────────────────────────────────────────────────────────────────────────
 
-// ==== STUDENT PROFILE ====
+const HeroGradient = () => (
+    <div
+        className="relative h-32 md:h-40 overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, var(--brand-blue-700) 0%, var(--primary) 60%, var(--brand-green-600) 130%)' }}
+    >
+        <div className="absolute -top-16 -right-16 w-72 h-72 bg-white/10 rounded-full" />
+        <div className="absolute -bottom-24 -left-12 w-80 h-80 bg-white/10 rounded-full" />
+        <div
+            className="absolute inset-0 opacity-30 pointer-events-none"
+            style={{
+                backgroundImage: 'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
+                backgroundSize: '40px 40px',
+            }}
+        />
+    </div>
+);
+
+const StatCard = ({ Icon, label, value, color, soft }) => (
+    <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-5 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: soft, color }}>
+            <Icon className="w-5 h-5" />
+        </div>
+        <div className="min-w-0">
+            <div className="text-[24px] font-extrabold text-[var(--ink-900)] leading-none truncate">{value}</div>
+            <div className="text-[12.5px] text-[var(--ink-500)] mt-1.5">{label}</div>
+        </div>
+    </div>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// STUDENT PROFILE
+// ───────────────────────────────────────────────────────────────────────────
+
 const StudentProfile = ({ user }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -282,38 +313,29 @@ const StudentProfile = ({ user }) => {
     const [profilePicture, setProfilePicture] = useState('');
     const [removingDepot, setRemovingDepot] = useState(null);
 
-    const refreshResults = async (silent = false) => {
-        try {
-            const { data } = await api.get('/submissions/my-results');
-            setResults(data);
-        } catch {
-            if (!silent) toast.error('Nəticələr yenilənmədi');
-        }
-    };
-
     useEffect(() => {
-        const loadData = async () => {
+        const load = async () => {
             try {
-                const [resData, onData, meData, depotData] = await Promise.all([
+                const [res, on, me, dep] = await Promise.all([
                     api.get('/submissions/my-results'),
                     api.get('/submissions/ongoing').catch(() => ({ data: [] })),
                     api.get('/users/me').catch(() => ({ data: {} })),
                     api.get('/depot').catch(() => ({ data: [] })),
                 ]);
-                setResults(resData.data);
-                setOngoing(onData.data || []);
-                setProfilePicture(meData.data?.profilePicture || '');
-                setDepot(depotData.data || []);
+                setResults(res.data);
+                setOngoing(on.data || []);
+                setProfilePicture(me.data?.profilePicture || '');
+                setDepot(dep.data || []);
             } catch {
                 toast.error('Profil məlumatları yüklənmədi');
             } finally {
                 setLoading(false);
             }
         };
-        loadData();
-
-        // Re-fetch results silently when user returns to this tab
-        const onFocus = () => refreshResults(true);
+        load();
+        const onFocus = () => {
+            api.get('/submissions/my-results').then(r => setResults(r.data)).catch(() => {});
+        };
         window.addEventListener('focus', onFocus);
         return () => window.removeEventListener('focus', onFocus);
     }, []);
@@ -325,170 +347,180 @@ const StudentProfile = ({ user }) => {
             setDepot(prev => prev.filter(e => e.shareLink !== shareLink));
             toast.success('Depodan silindi');
         } catch {
-            toast.error('Depotdan silinmədi');
+            toast.error('Depodan silinmədi');
         } finally {
             setRemovingDepot(null);
         }
     };
 
+    const resultPct = (r) => pct(r.totalScore, r.maxScore);
     const filtered = results
         .filter(r => r.examTitle?.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
 
-    const resultPct = (r) => pct(r.totalScore, r.maxScore);
-
     const completed = results.filter(r => r.submittedAt);
     const totalExams = completed.length;
-    const avgPct = totalExams > 0
-        ? Math.round(completed.reduce((s, r) => s + resultPct(r), 0) / totalExams)
-        : 0;
-    const bestPct = totalExams > 0
-        ? Math.max(...completed.map(r => resultPct(r)))
-        : 0;
-    const pending = results.filter(r => !r.isFullyGraded && r.submittedAt).length;
+    const avgPct = totalExams > 0 ? Math.round(completed.reduce((s, r) => s + resultPct(r), 0) / totalExams) : 0;
+    const bestPct = totalExams > 0 ? Math.max(...completed.map(r => resultPct(r))) : 0;
+    const pendingCount = results.filter(r => !r.isFullyGraded && r.submittedAt).length;
 
-    // Score trend: last 7 completed exams sorted by date
     const trendData = [...completed]
         .sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt))
         .slice(-7);
 
-    // Achievements
     const achievements = [
-        totalExams >= 1  && { icon: '🎯', label: 'İlk İmtahan', desc: 'İlk imtahanı tamamladı' },
-        totalExams >= 5  && { icon: '📚', label: 'Dəyişməz', desc: '5 imtahan tamamladı' },
-        totalExams >= 10 && { icon: '🏆', label: 'Çempion', desc: '10 imtahan tamamladı' },
-        bestPct >= 90    && { icon: '⭐', label: 'Əla Nəticə', desc: '90%+ bal qazandı' },
-        bestPct === 100  && { icon: '💎', label: 'Mükəmməl', desc: '100% bal qazandı' },
-        avgPct >= 75     && { icon: '🔥', label: 'Yüksək Orta', desc: 'Orta balı 75%+' },
-    ].filter(Boolean);
+        { Icon: HiOutlineFlag,            label: 'İlk imtahan', desc: 'İlk imtahanı tamamladı',  got: totalExams >= 1,  color: '#2563EB' },
+        { Icon: HiOutlineBookOpen,        label: 'Dəyişməz',    desc: '5 imtahan tamamladı',     got: totalExams >= 5,  color: '#0891B2' },
+        { Icon: HiOutlineSparkles,        label: 'Çempion',     desc: '10 imtahan tamamladı',    got: totalExams >= 10, color: '#F59E0B' },
+        { Icon: HiOutlineStar,            label: 'Əla nəticə',  desc: '90%+ bal qazandı',        got: bestPct >= 90,    color: '#F59E0B' },
+        { Icon: HiOutlineCheckCircle,     label: 'Mükəmməl',    desc: '100% bal qazandı',        got: bestPct === 100,  color: '#16A34A' },
+        { Icon: HiOutlineFire,            label: 'Yüksək orta', desc: 'Orta balı 75%+',          got: avgPct >= 75,     color: '#EF4444' },
+    ];
+    const gotCount = achievements.filter(a => a.got).length;
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-16">
-            <Helmet>
-                <title>Profilim — testup.az</title>
-            </Helmet>
-
+        <div className="min-h-screen pb-16" style={{ background: 'var(--paper-cream)' }}>
+            <Helmet><title>Profilim — testup.az</title></Helmet>
             {showPwModal && <ChangePasswordModal onClose={() => setShowPwModal(false)} />}
 
-            {/* Header banner */}
-            <div className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 pt-10 pb-28 overflow-hidden">
-                <div className="absolute -top-8 -right-8 h-40 w-40 rounded-full bg-white/5" />
-                <div className="absolute top-4 right-24 h-20 w-20 rounded-full bg-white/5" />
-                <div className="absolute -bottom-6 left-12 h-28 w-28 rounded-full bg-white/5" />
-            </div>
+            <HeroGradient />
 
-            <div className="container-main max-w-5xl -mt-20 space-y-6 relative z-10">
+            <div className="container-main max-w-5xl">
                 {/* Profile card */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                    <Avatar name={user?.fullName} picture={profilePicture} defaultAvatar={avatarStudent} onUpload={setProfilePicture} onUploadGlobal={setGlobalPicture} />
-                    <div className="flex-1">
-                        <h1 className="text-2xl font-black text-gray-900">{user?.fullName}</h1>
-                        <p className="text-gray-500 mt-0.5">{user?.email}</p>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold">
-                                <HiOutlineAcademicCap className="w-3.5 h-3.5" /> Şagird
-                            </span>
-                            {pending > 0 && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full text-xs font-bold">
-                                    <HiOutlineClock className="w-3.5 h-3.5" /> {pending} yoxlanılır
+                <div className="bg-white border border-[var(--ink-200)] rounded-3xl p-6 md:p-7 -mt-16 mb-6 shadow-[var(--sh-md)]">
+                    <div className="flex flex-col md:flex-row md:items-center gap-5">
+                        <Avatar
+                            name={user?.fullName}
+                            picture={profilePicture}
+                            defaultAvatar={avatarStudent}
+                            onUpload={setProfilePicture}
+                            onUploadGlobal={setGlobalPicture}
+                        />
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-[22px] md:text-[26px] font-extrabold text-[var(--ink-900)] tracking-tight truncate">
+                                {user?.fullName}
+                            </h1>
+                            <p className="text-[13.5px] text-[var(--ink-500)] mt-0.5 truncate">{user?.email}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-3">
+                                <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--primary-hover)] bg-[var(--primary-soft)] border border-[var(--brand-blue-100)] px-2.5 py-1 rounded-full">
+                                    <HiOutlineAcademicCap className="w-3.5 h-3.5" /> Şagird
                                 </span>
-                            )}
-                            {totalExams > 0 && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold">
-                                    <HiOutlineCheckCircle className="w-3.5 h-3.5" /> {totalExams} imtahan tamamlandı
-                                </span>
-                            )}
+                                {pendingCount > 0 && (
+                                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                                        <HiOutlineClock className="w-3.5 h-3.5" /> {pendingCount} yoxlanılır
+                                    </span>
+                                )}
+                                {totalExams > 0 && (
+                                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--brand-green-600)] bg-[var(--accent-soft)] border border-[var(--brand-green-100)] px-2.5 py-1 rounded-full">
+                                        <HiOutlineCheckCircle className="w-3.5 h-3.5" /> {totalExams} imtahan tamamlandı
+                                    </span>
+                                )}
+                            </div>
                         </div>
+                        <button
+                            onClick={() => setShowPwModal(true)}
+                            className="shrink-0 inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[12.5px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                        >
+                            <HiOutlineKey className="w-3.5 h-3.5" /> Şifrəni dəyiş
+                        </button>
                     </div>
-                    <button
-                        onClick={() => setShowPwModal(true)}
-                        className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 text-sm font-semibold rounded-xl transition-colors"
-                    >
-                        <HiOutlineKey className="w-4 h-4" /> Şifrəni Dəyiş
-                    </button>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard icon={<HiOutlineDocumentText className="w-6 h-6" />} label="İmtahan" value={totalExams} color="indigo" />
-                    <StatCard icon={<HiOutlineChartBar className="w-6 h-6" />} label="Orta nəticə" value={`${avgPct}%`} color="purple" />
-                    <StatCard icon={<HiOutlineStar className="w-6 h-6" />} label="Ən yüksək" value={`${bestPct}%`} color="green" />
-                    <StatCard icon={<HiOutlineClock className="w-6 h-6" />} label="Yoxlanılır" value={pending} color="yellow" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <StatCard Icon={HiOutlineDocumentText} label="İmtahan"      value={totalExams}        color="#2563EB" soft="#EFF4FF" />
+                    <StatCard Icon={HiOutlineChartBar}     label="Orta nəticə"  value={`${avgPct}%`}      color="#16A34A" soft="#ECFDF3" />
+                    <StatCard Icon={HiOutlineStar}         label="Ən yüksək"    value={`${bestPct}%`}     color="#F59E0B" soft="#FEF3C7" />
+                    <StatCard Icon={HiOutlineClock}        label="Yoxlanılır"   value={pendingCount}      color="#7C3AED" soft="#F3EEFE" />
                 </div>
 
-                {/* Score trend + Achievements row */}
+                {/* Trend + Achievements */}
                 {totalExams > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Score trend chart */}
-                        {trendData.length > 1 && (
-                            <div className="md:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-                                <h2 className="text-base font-black text-gray-900 mb-5">Son Nəticələr</h2>
-                                {/* Bar chart — fixed px heights so % bars render correctly */}
-                                <div className="flex items-end gap-2" style={{ height: '90px' }}>
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 mb-6">
+                        {trendData.length >= 1 && (
+                            <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6">
+                                <h3 className="text-[15px] font-bold text-[var(--ink-900)]">Son nəticələr</h3>
+                                <p className="text-[12.5px] text-[var(--ink-500)] mt-0.5 mb-5">Son {trendData.length} imtahanın faiz nəticəsi</p>
+                                <div className="flex items-end justify-around gap-2 h-[160px] pt-5">
                                     {trendData.map((r, i) => {
                                         const p = resultPct(r);
-                                        const barPx = Math.max(6, Math.round(p * 0.82)); // max ~82px at 100%
+                                        const color = bucketColor(p);
+                                        const h = Math.max((p / 100) * 100, 4);
                                         return (
-                                            <div key={i} className="flex-1 flex flex-col items-end group relative">
-                                                <span className="text-[10px] font-bold text-gray-500 absolute -top-5 left-0 right-0 text-center opacity-0 group-hover:opacity-100 transition-opacity">{p}%</span>
-                                                <div className="w-full rounded-t-lg transition-all" style={{
-                                                    height: `${barPx}px`,
-                                                    backgroundColor: p >= 80 ? '#22c55e' : p >= 50 ? '#f59e0b' : '#f87171'
-                                                }} />
+                                            <div key={i} className="flex-1 flex flex-col items-center gap-2 max-w-[60px]">
+                                                <div className="relative w-full flex-1 flex items-end">
+                                                    <div
+                                                        className="w-full rounded-t-lg transition-all duration-700 relative"
+                                                        style={{ height: `${h}%`, background: color, minHeight: '6px' }}
+                                                    >
+                                                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-[var(--ink-700)]">{p}%</span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] text-[var(--ink-500)] font-mono">
+                                                    {fmtDateShort(r.submittedAt)}
+                                                </span>
                                             </div>
                                         );
                                     })}
                                 </div>
-                                <div className="flex gap-2 mt-1.5">
-                                    {trendData.map((r, i) => (
-                                        <div key={i} className="flex-1 text-center text-[10px] text-gray-400 truncate">
-                                            {new Date(r.submittedAt).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short' })}
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex items-center gap-4 mt-4 text-xs text-gray-400">
-                                    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-green-500 inline-block" /> 80%+</span>
-                                    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-yellow-400 inline-block" /> 50–79%</span>
-                                    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-400 inline-block" /> 50%-dən az</span>
+                                <div className="flex items-center justify-center gap-5 mt-5 pt-4 border-t border-[var(--ink-150)] text-[11.5px] text-[var(--ink-500)]">
+                                    <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[var(--brand-green-600)]" /> 80%+</span>
+                                    <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> 50–79%</span>
+                                    <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" /> &lt; 50%</span>
                                 </div>
                             </div>
                         )}
 
-                        {/* Achievements */}
-                        {achievements.length > 0 && (
-                            <div className={`bg-white rounded-3xl border border-gray-100 shadow-sm p-6 ${trendData.length <= 1 ? 'md:col-span-3' : ''}`}>
-                                <h2 className="text-base font-black text-gray-900 mb-4">Nailiyyətlər</h2>
-                                <div className="space-y-3">
-                                    {achievements.slice(0, 4).map((a, i) => (
-                                        <div key={i} className="flex items-center gap-3 p-2.5 bg-indigo-50/50 rounded-xl">
-                                            <span className="text-2xl">{a.icon}</span>
-                                            <div>
-                                                <p className="text-xs font-bold text-gray-800">{a.label}</p>
-                                                <p className="text-xs text-gray-400">{a.desc}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                        <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6">
+                            <div className="flex items-center justify-between mb-1">
+                                <h3 className="text-[15px] font-bold text-[var(--ink-900)]">Nailiyyətlər</h3>
+                                <span className="text-[11.5px] font-bold text-[var(--ink-500)] bg-[var(--ink-100)] px-2 py-0.5 rounded-full">{gotCount} / {achievements.length}</span>
                             </div>
-                        )}
+                            <p className="text-[12.5px] text-[var(--ink-500)] mb-4">Qazandığınız nailiyyətlər</p>
+                            <div className="flex flex-col gap-2.5">
+                                {achievements.map((a, i) => (
+                                    <div
+                                        key={i}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-opacity ${a.got ? '' : 'opacity-50'}`}
+                                        style={a.got ? { background: `${a.color}10`, borderColor: `${a.color}22` } : { background: 'var(--ink-50)', borderColor: 'var(--ink-150)' }}
+                                    >
+                                        <span
+                                            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                                            style={a.got ? { background: a.color, color: '#fff' } : { background: 'var(--ink-200)', color: 'var(--ink-400)' }}
+                                        >
+                                            <a.Icon className="w-4 h-4" />
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[13px] font-bold text-[var(--ink-900)] truncate">{a.label}</div>
+                                            <div className="text-[11.5px] text-[var(--ink-500)] truncate">{a.desc}</div>
+                                        </div>
+                                        {a.got && (
+                                            <span className="w-5 h-5 rounded-full bg-[var(--brand-green-600)] text-white flex items-center justify-center shrink-0">
+                                                <HiOutlineCheckCircle className="w-3 h-3" />
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {/* Ongoing exams */}
                 {ongoing.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-                        <p className="text-sm font-bold text-amber-800 mb-3 flex items-center gap-2">
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
+                        <p className="text-[13px] font-bold text-amber-800 mb-3 flex items-center gap-2">
                             <HiOutlineExclamationCircle className="w-5 h-5" /> Davam edən imtahanlar
                         </p>
-                        <div className="space-y-2">
+                        <div className="flex flex-col gap-2">
                             {ongoing.map(o => (
                                 <div key={o.submissionId} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 border border-amber-100">
-                                    <span className="font-semibold text-gray-800">{o.examTitle}</span>
+                                    <span className="font-semibold text-[var(--ink-800)] text-[14px] truncate">{o.examTitle}</span>
                                     <button
                                         onClick={() => navigate(`/test/${o.submissionId}`)}
-                                        className="text-xs font-bold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-lg hover:bg-amber-200 transition-colors"
+                                        className="inline-flex items-center gap-1 text-[12px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-full transition-colors"
                                     >
-                                        Davam et →
+                                        Davam et <HiOutlineArrowRight className="w-3 h-3" />
                                     </button>
                                 </div>
                             ))}
@@ -496,83 +528,80 @@ const StudentProfile = ({ user }) => {
                     </div>
                 )}
 
-                {/* Tabs */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-                            <button
-                                onClick={() => setActiveTab('results')}
-                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'results' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
+                {/* Tabs + content */}
+                <div className="bg-white border border-[var(--ink-200)] rounded-2xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-[var(--ink-150)] flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-1 bg-[var(--ink-100)] rounded-full p-1">
+                            <TabBtn active={activeTab === 'results'} onClick={() => setActiveTab('results')} Icon={HiOutlineClipboardList} count={results.length}>
                                 Nəticələrim
-                                {results.length > 0 && <span className="ml-1.5 text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">{results.length}</span>}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('depot')}
-                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'depot' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
+                            </TabBtn>
+                            <TabBtn active={activeTab === 'depot'} onClick={() => setActiveTab('depot')} Icon={HiOutlineBookmark} count={depot.length}>
                                 Depom
-                                {depot.length > 0 && <span className="ml-1.5 text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">{depot.length}</span>}
-                            </button>
+                            </TabBtn>
                         </div>
                         {activeTab === 'results' && (
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                placeholder="İmtahan axtar..."
-                                className="w-full sm:w-56 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            />
+                            <div className="flex items-center gap-2 px-3 py-2 bg-[var(--ink-50)] border border-[var(--ink-200)] rounded-xl focus-within:border-[var(--primary)] focus-within:bg-white transition-all min-w-[200px]">
+                                <HiOutlineSearch className="w-4 h-4 text-[var(--ink-400)]" />
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="İmtahan axtar..."
+                                    className="flex-1 bg-transparent outline-none text-[13px] text-[var(--ink-800)] placeholder-[var(--ink-400)]"
+                                />
+                            </div>
                         )}
                     </div>
 
                     {activeTab === 'depot' ? (
                         depot.length === 0 ? (
-                            <div className="py-16 text-center text-gray-400">
-                                <HiOutlineClipboardList className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                                <p className="font-medium">Depounuz boşdur</p>
-                                <p className="text-sm mt-1">İmtahanlar səhifəsindəki 🔖 düyməsi ilə imtahan əlavə edin</p>
-                            </div>
+                            <EmptyState
+                                Icon={HiOutlineBookmark}
+                                title="Depo boşdur"
+                                subtitle="İmtahanlar səhifəsində bookmark ikonu ilə imtahanları əlavə edin"
+                                cta={{ label: 'İmtahanlara bax', onClick: () => navigate('/imtahanlar') }}
+                            />
                         ) : (
-                            <div className="divide-y divide-gray-50">
+                            <div className="divide-y divide-[var(--ink-150)]">
                                 {depot.map(exam => (
-                                    <div key={exam.id} className="px-6 py-5 hover:bg-gray-50/60 transition-colors">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <h3 className="font-bold text-gray-900 truncate">{exam.title}</h3>
-                                                    {exam.isPaid ? (
-                                                        <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                                                            {Number(exam.price).toFixed(2)} ₼ · Ödənilib
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-                                                            Pulsuz
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-400">
-                                                    <span>{exam.questionCount} sual</span>
-                                                    {exam.durationMinutes && <span>⏱ {exam.durationMinutes} dəq</span>}
-                                                    <span>Əlavə edilib: {new Date(exam.savedAt).toLocaleDateString('az-AZ')}</span>
-                                                </div>
+                                    <div key={exam.id} className="px-5 py-4 hover:bg-[var(--ink-100)] transition-colors flex items-center gap-4">
+                                        <div className="w-11 h-11 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
+                                            <HiOutlineBookmark className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h3 className="text-[14.5px] font-bold text-[var(--ink-900)] truncate">{exam.title}</h3>
+                                                {exam.isPaid ? (
+                                                    <span className="text-[10.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                                        {Number(exam.price).toFixed(2)} ₼ · Ödənilib
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10.5px] font-bold text-[var(--brand-green-600)] bg-[var(--accent-soft)] border border-[var(--brand-green-100)] px-2 py-0.5 rounded-full">
+                                                        Pulsuz
+                                                    </span>
+                                                )}
                                             </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <button
-                                                    onClick={() => navigate(`/imtahan/${exam.shareLink}`)}
-                                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors border border-indigo-100"
-                                                >
-                                                    Başla →
-                                                </button>
-                                                <button
-                                                    onClick={() => handleRemoveFromDepot(exam.shareLink)}
-                                                    disabled={removingDepot === exam.shareLink}
-                                                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
-                                                    title="Depodan sil"
-                                                >
-                                                    <HiOutlineTrash className="w-4 h-4" />
-                                                </button>
+                                            <div className="flex flex-wrap gap-3 mt-1.5 text-[11.5px] text-[var(--ink-500)]">
+                                                <span className="inline-flex items-center gap-1"><HiOutlineDocumentText className="w-3 h-3" /> {exam.questionCount} sual</span>
+                                                {exam.durationMinutes && <span className="inline-flex items-center gap-1"><HiOutlineClock className="w-3 h-3" /> {exam.durationMinutes} dəq</span>}
+                                                <span>Əlavə: {fmtDate(exam.savedAt)}</span>
                                             </div>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <button
+                                                onClick={() => navigate(`/imtahan/${exam.shareLink}`)}
+                                                className="inline-flex items-center gap-1 h-9 px-4 rounded-full text-[12.5px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all"
+                                            >
+                                                Başla <HiOutlineArrowRight className="w-3 h-3" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleRemoveFromDepot(exam.shareLink)}
+                                                disabled={removingDepot === exam.shareLink}
+                                                className="w-9 h-9 rounded-full text-[var(--ink-400)] hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors disabled:opacity-50"
+                                                title="Depodan sil"
+                                            >
+                                                <HiOutlineTrash className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -580,15 +609,17 @@ const StudentProfile = ({ user }) => {
                         )
                     ) : loading ? (
                         <div className="flex justify-center py-16">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+                            <div className="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="py-16 text-center text-gray-400">
-                            <HiOutlineDocumentText className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                            <p className="font-medium">{search ? 'Nəticə tapılmadı' : 'Hələ heç bir imtahanda iştirak etməmisiniz'}</p>
-                        </div>
+                        <EmptyState
+                            Icon={HiOutlineDocumentText}
+                            title={search ? 'Nəticə tapılmadı' : 'Hələ heç bir imtahanda iştirak etməmisiniz'}
+                            subtitle={search ? 'Başqa açar söz cəhd edin' : 'İmtahanlara qoşulun və nəticələriniz burada görünəcək'}
+                            cta={!search ? { label: 'İmtahanlara bax', onClick: () => navigate('/imtahanlar') } : null}
+                        />
                     ) : (
-                        <div className="divide-y divide-gray-50">
+                        <div className="divide-y divide-[var(--ink-150)]">
                             {filtered.map(r => {
                                 const p = resultPct(r);
                                 const durActual = r.submittedAt && r.startedAt
@@ -596,47 +627,49 @@ const StudentProfile = ({ user }) => {
                                     : null;
                                 const showCount = r.correctCount != null && r.questionCount != null;
                                 return (
-                                    <div key={r.id} className="px-6 py-5 hover:bg-gray-50/60 transition-colors">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-bold text-gray-900 truncate">{r.examTitle}</h3>
-                                                <div className="flex flex-wrap items-center gap-3 mt-2">
-                                                    {/* Score bar */}
-                                                    <div className="flex items-center gap-2 min-w-[160px]">
-                                                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                            <div className={`h-full rounded-full ${pctColor(p)}`} style={{ width: `${p}%` }} />
-                                                        </div>
-                                                        <span className={`text-xs font-bold ${pctTextColor(p)}`}>{p}%</span>
+                                    <div
+                                        key={r.id}
+                                        onClick={() => navigate(`/test/result/${r.id}`)}
+                                        className="px-5 py-4 hover:bg-[var(--ink-100)] transition-colors cursor-pointer flex items-center gap-4 group"
+                                    >
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-[14.5px] font-bold text-[var(--ink-900)] truncate group-hover:text-[var(--primary)] transition-colors">{r.examTitle}</h3>
+                                            <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                                <div className="flex items-center gap-2 min-w-[160px]">
+                                                    <div className="flex-1 h-1.5 bg-[var(--ink-150)] rounded-full overflow-hidden max-w-[180px]">
+                                                        <div className={`h-full rounded-full ${bucketBg(p)}`} style={{ width: `${p}%` }} />
                                                     </div>
-                                                    {showCount && (
-                                                        <span className="text-sm text-gray-600 font-semibold">
-                                                            {r.correctCount} / {r.questionCount} sual
-                                                        </span>
-                                                    )}
+                                                    <span className={`text-[13px] font-extrabold tabular-nums ${bucketText(p)}`}>{p}%</span>
                                                 </div>
-                                                <div className="flex flex-wrap gap-3 mt-2.5 text-xs text-gray-400">
-                                                    <span className="flex items-center gap-1">
-                                                        <HiOutlineClock className="w-3.5 h-3.5" />
-                                                        {durActual ? fmtDuration(durActual) : '—'}
+                                                {showCount && (
+                                                    <span className="text-[12px] text-[var(--ink-500)] font-mono">
+                                                        {r.correctCount} / {r.questionCount} sual
                                                     </span>
-                                                    <span>{fmtDate(r.submittedAt)}</span>
-                                                    <span className={`font-bold px-2 py-0.5 rounded-full ${r.isFullyGraded ? 'bg-green-50 text-green-600' : 'bg-yellow-50 text-yellow-600'}`}>
-                                                        {r.isFullyGraded ? '✓ Yoxlanılıb' : '⏳ Yoxlanılır'}
-                                                    </span>
-                                                    {r.rating && (
-                                                        <span className="flex items-center gap-0.5 text-yellow-500 font-bold">
-                                                            {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                )}
                                             </div>
-                                            <button
-                                                onClick={() => navigate(`/test/review/${r.id}`)}
-                                                className="shrink-0 text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors border border-indigo-100"
-                                            >
-                                                Bax
-                                            </button>
+                                            <div className="flex flex-wrap gap-3 mt-2 text-[11.5px] text-[var(--ink-500)]">
+                                                <span className="inline-flex items-center gap-1">
+                                                    <HiOutlineClock className="w-3 h-3" />
+                                                    {durActual ? fmtDuration(durActual) : '—'}
+                                                </span>
+                                                <span>{fmtDate(r.submittedAt)}</span>
+                                                <span className={`inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-full ${
+                                                    r.isFullyGraded
+                                                        ? 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]'
+                                                        : 'bg-amber-50 text-amber-700'
+                                                }`}>
+                                                    {r.isFullyGraded ? <><HiOutlineCheckCircle className="w-3 h-3" /> Yoxlanılıb</> : <><HiOutlineClock className="w-3 h-3" /> Yoxlanılır</>}
+                                                </span>
+                                                {r.rating && (
+                                                    <span className="text-amber-500 font-bold">
+                                                        {'★'.repeat(r.rating)}<span className="text-[var(--ink-200)]">{'★'.repeat(5 - r.rating)}</span>
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
+                                        <span className="inline-flex items-center gap-1 h-9 px-4 rounded-full text-[12.5px] font-bold text-[var(--primary)] bg-[var(--primary-soft)] group-hover:bg-[var(--primary)] group-hover:text-white shrink-0 transition-all">
+                                            <HiOutlineEye className="w-3.5 h-3.5" /> Bax
+                                        </span>
                                     </div>
                                 );
                             })}
@@ -648,7 +681,10 @@ const StudentProfile = ({ user }) => {
     );
 };
 
-// ==== TEACHER PROFILE ====
+// ───────────────────────────────────────────────────────────────────────────
+// TEACHER PROFILE
+// ───────────────────────────────────────────────────────────────────────────
+
 const TeacherProfile = ({ user }) => {
     const navigate = useNavigate();
     const { setProfilePicture: setGlobalPicture, subscription } = useAuth();
@@ -661,6 +697,26 @@ const TeacherProfile = ({ user }) => {
     const [profilePicture, setProfilePicture] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
 
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [ex, me, pn] = await Promise.all([
+                    api.get('/exams'),
+                    api.get('/users/me').catch(() => ({ data: {} })),
+                    api.get('/submissions/teacher/pending').catch(() => ({ data: [] })),
+                ]);
+                setExams(ex.data);
+                setProfilePicture(me.data?.profilePicture || '');
+                setPending(pn.data || []);
+            } catch {
+                toast.error('İmtahanlar yüklənmədi');
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, []);
+
     const handleDeleteExam = async (examId) => {
         try {
             await api.delete(`/exams/${examId}`);
@@ -668,31 +724,11 @@ const TeacherProfile = ({ user }) => {
             setPending(prev => prev.filter(s => s.examId !== examId));
             toast.success('İmtahan silindi');
         } catch {
-            toast.error('Şəkil silinmədi');
+            toast.error('İmtahan silinmədi');
         } finally {
             setConfirmDelete(null);
         }
     };
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const [examsData, meData, pendingData] = await Promise.all([
-                    api.get('/exams'),
-                    api.get('/users/me').catch(() => ({ data: {} })),
-                    api.get('/submissions/teacher/pending').catch(() => ({ data: [] }))
-                ]);
-                setExams(examsData.data);
-                setProfilePicture(meData.data?.profilePicture || '');
-                setPending(pendingData.data || []);
-            } catch {
-                toast.error('İmtahanlar yüklənmədi');
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadData();
-    }, []);
 
     const filtered = exams.filter(e => {
         const matchSearch = e.title?.toLowerCase().includes(search.toLowerCase());
@@ -705,102 +741,115 @@ const TeacherProfile = ({ user }) => {
     const draftExams = exams.filter(e => e.status === 'DRAFT').length;
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-16">
-            <Helmet>
-                <title>Profilim — testup.az</title>
-            </Helmet>
-
+        <div className="min-h-screen pb-16" style={{ background: 'var(--paper-cream)' }}>
+            <Helmet><title>Profilim — testup.az</title></Helmet>
             {showPwModal && <ChangePasswordModal onClose={() => setShowPwModal(false)} />}
 
-            {/* Header banner */}
-            <div className="relative bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 pt-10 pb-28 overflow-hidden">
-                <div className="absolute -top-8 -right-8 h-40 w-40 rounded-full bg-white/5" />
-                <div className="absolute top-4 right-24 h-20 w-20 rounded-full bg-white/5" />
-                <div className="absolute -bottom-6 left-12 h-28 w-28 rounded-full bg-white/5" />
-            </div>
+            <HeroGradient />
 
-            <div className="container-main max-w-5xl -mt-20 space-y-6 relative z-10">
+            <div className="container-main max-w-5xl">
                 {/* Profile card */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                    <Avatar name={user?.fullName} picture={profilePicture} defaultAvatar={avatarTeacher} onUpload={setProfilePicture} onUploadGlobal={setGlobalPicture} />
-                    <div className="flex-1">
-                        <h1 className="text-2xl font-black text-gray-900">{user?.fullName}</h1>
-                        <p className="text-gray-500 mt-0.5">{user?.email}</p>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 text-violet-700 rounded-full text-xs font-bold">
-                                <HiOutlinePencilAlt className="w-3.5 h-3.5" /> Müəllim
-                            </span>
-                            {activeExams > 0 && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold">
-                                    <HiOutlineCheckCircle className="w-3.5 h-3.5" /> {activeExams} aktiv imtahan
+                <div className="bg-white border border-[var(--ink-200)] rounded-3xl p-6 md:p-7 -mt-16 mb-6 shadow-[var(--sh-md)]">
+                    <div className="flex flex-col md:flex-row md:items-center gap-5">
+                        <Avatar
+                            name={user?.fullName}
+                            picture={profilePicture}
+                            defaultAvatar={avatarTeacher}
+                            onUpload={setProfilePicture}
+                            onUploadGlobal={setGlobalPicture}
+                        />
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-[22px] md:text-[26px] font-extrabold text-[var(--ink-900)] tracking-tight truncate">
+                                {user?.fullName}
+                            </h1>
+                            <p className="text-[13.5px] text-[var(--ink-500)] mt-0.5 truncate">{user?.email}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-3">
+                                <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--brand-green-600)] bg-[var(--accent-soft)] border border-[var(--brand-green-100)] px-2.5 py-1 rounded-full">
+                                    <HiOutlinePencilAlt className="w-3.5 h-3.5" /> Müəllim
                                 </span>
-                            )}
+                                {activeExams > 0 && (
+                                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--primary-hover)] bg-[var(--primary-soft)] border border-[var(--brand-blue-100)] px-2.5 py-1 rounded-full">
+                                        <HiOutlineCheckCircle className="w-3.5 h-3.5" /> {activeExams} aktiv imtahan
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <button
-                            onClick={() => setShowPwModal(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 hover:text-violet-600 hover:border-violet-300 hover:bg-violet-50 text-sm font-semibold rounded-xl transition-colors"
-                        >
-                            <HiOutlineKey className="w-4 h-4" /> Şifrəni Dəyiş
-                        </button>
-                        <Link
-                            to="/imtahanlar"
-                            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
-                        >
-                            + Yeni İmtahan
-                        </Link>
+                        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                            <button
+                                onClick={() => setShowPwModal(true)}
+                                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[12.5px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                            >
+                                <HiOutlineKey className="w-3.5 h-3.5" /> Şifrəni dəyiş
+                            </button>
+                            <Link
+                                to="/imtahanlar/yarat"
+                                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[12.5px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                            >
+                                <HiOutlinePlus className="w-3.5 h-3.5" /> Yeni imtahan
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
-                {/* Subscription Info */}
+                {/* Subscription info */}
                 {subscription?.plan && (() => {
                     const totalDays = Math.max(1, Math.ceil((new Date(subscription.endDate) - new Date(subscription.startDate)) / 86400000));
                     const remainingDays = Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000));
                     const usedPct = Math.min(100, Math.round(((totalDays - remainingDays) / totalDays) * 100));
                     const isExpiringSoon = remainingDays <= 7;
                     const isExpiringSoonish = remainingDays <= 30 && remainingDays > 7;
-                    const barColor = isExpiringSoon ? 'bg-red-500' : isExpiringSoonish ? 'bg-amber-400' : 'bg-indigo-500';
-                    const textColor = isExpiringSoon ? 'text-red-600' : isExpiringSoonish ? 'text-amber-600' : 'text-indigo-600';
-                    const bgColor = isExpiringSoon ? 'from-red-50 to-rose-50 border-red-100' : isExpiringSoonish ? 'from-amber-50 to-yellow-50 border-amber-100' : 'from-indigo-50 to-purple-50 border-indigo-100';
+                    const barColor = isExpiringSoon ? '#EF4444' : isExpiringSoonish ? '#F59E0B' : 'var(--primary)';
+                    const textColor = isExpiringSoon ? 'text-red-600' : isExpiringSoonish ? 'text-amber-600' : 'text-[var(--primary)]';
                     return (
-                        <div className={`bg-gradient-to-r ${bgColor} rounded-3xl shadow-sm border p-6`}>
+                        <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6 mb-6">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-white rounded-2xl shadow-sm">
-                                        <HiOutlineCheckCircle className={`w-8 h-8 ${textColor}`} />
+                                    <div
+                                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                                        style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }}
+                                    >
+                                        <HiOutlineCheckCircle className="w-6 h-6" />
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <h2 className="text-lg font-black text-gray-900">{subscription.plan.name}</h2>
-                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${subscription.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            <h2 className="text-[16px] font-extrabold text-[var(--ink-900)] tracking-tight">{subscription.plan.name}</h2>
+                                            <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full border ${
+                                                subscription.isActive
+                                                    ? 'bg-[var(--accent-soft)] text-[var(--brand-green-600)] border-[var(--brand-green-100)]'
+                                                    : 'bg-red-50 text-red-700 border-red-200'
+                                            }`}>
                                                 {subscription.isActive ? 'Aktivdir' : 'Aktiv deyil'}
                                             </span>
                                             {isExpiringSoon && (
-                                                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 animate-pulse">
+                                                <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 animate-pulse">
                                                     Tezliklə bitir!
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="text-sm text-gray-500 mt-0.5">
+                                        <p className="text-[12.5px] text-[var(--ink-500)] mt-1">
                                             {fmtDate(subscription.startDate)} — {fmtDate(subscription.endDate)}
                                         </p>
                                     </div>
                                 </div>
-                                <Link to="/planlar" className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap text-sm">
-                                    {isExpiringSoon ? 'Uzat' : 'Planı Dəyiş'}
+                                <Link
+                                    to="/planlar"
+                                    className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[12.5px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                                >
+                                    {isExpiringSoon ? 'Uzat' : 'Planı dəyiş'} <HiOutlineArrowRight className="w-3.5 h-3.5" />
                                 </Link>
                             </div>
-                            {/* Time progress bar */}
                             <div>
                                 <div className="flex justify-between items-center mb-1.5">
-                                    <span className="text-xs text-gray-500 font-medium">Müddət</span>
-                                    <span className={`text-xs font-bold ${textColor}`}>
+                                    <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--ink-500)]">Müddət</span>
+                                    <span className={`text-[12.5px] font-bold ${textColor}`}>
                                         {remainingDays === 0 ? 'Bu gün bitir' : `${remainingDays} gün qalır`}
                                     </span>
                                 </div>
-                                <div className="h-2 bg-white/70 rounded-full overflow-hidden">
-                                    <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${usedPct}%` }} />
+                                <div className="h-2 bg-[var(--ink-150)] rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-700"
+                                        style={{ width: `${usedPct}%`, background: barColor }}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -808,45 +857,45 @@ const TeacherProfile = ({ user }) => {
                 })()}
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard icon={<HiOutlineClipboardList className="w-6 h-6" />} label="Cəmi imtahan" value={totalExams} color="indigo" />
-                    <StatCard icon={<HiOutlineCheckCircle className="w-6 h-6" />} label="Aktiv / Dərc" value={activeExams} color="green" />
-                    <StatCard icon={<HiOutlineDocumentText className="w-6 h-6" />} label="Qaralama" value={draftExams} color="yellow" />
-                    <StatCard icon={<HiOutlineExclamationCircle className="w-6 h-6" />} label="Yoxlanılmağı gözləyir" value={pending.length} color="purple" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <StatCard Icon={HiOutlineClipboardList}     label="Cəmi imtahan"           value={totalExams}     color="#2563EB" soft="#EFF4FF" />
+                    <StatCard Icon={HiOutlineCheckCircle}       label="Aktiv / Dərc"           value={activeExams}    color="#16A34A" soft="#ECFDF3" />
+                    <StatCard Icon={HiOutlineDocumentText}      label="Qaralama"               value={draftExams}     color="#F59E0B" soft="#FEF3C7" />
+                    <StatCard Icon={HiOutlineExclamationCircle} label="Yoxlama gözləyir"       value={pending.length} color="#7C3AED" soft="#F3EEFE" />
                 </div>
 
                 {/* Pending gradings */}
                 {pending.length > 0 && (
-                    <div className="bg-white rounded-3xl border border-orange-100 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-orange-100 bg-orange-50 flex items-center gap-3">
-                            <div className="p-2 bg-orange-100 rounded-xl">
-                                <HiOutlineExclamationCircle className="w-5 h-5 text-orange-600" />
+                    <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden mb-6">
+                        <div className="px-5 py-4 border-b border-amber-100 bg-amber-50 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                                <HiOutlineExclamationCircle className="w-5 h-5" />
                             </div>
-                            <div>
-                                <h2 className="text-base font-black text-gray-900">Yoxlanılmağı Gözləyən Göndərişlər</h2>
-                                <p className="text-xs text-orange-600 font-medium">{pending.length} göndəriş manual yoxlama tələb edir</p>
+                            <div className="flex-1">
+                                <h2 className="text-[14.5px] font-extrabold text-[var(--ink-900)]">Yoxlanılmağı gözləyən göndərişlər</h2>
+                                <p className="text-[11.5px] text-amber-700 font-medium">{pending.length} göndəriş manual yoxlama tələb edir</p>
                             </div>
                         </div>
-                        <div className="divide-y divide-gray-50">
+                        <div className="divide-y divide-[var(--ink-150)]">
                             {pending.slice(0, 5).map(s => (
-                                <div key={s.id} className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50/60 transition-colors">
+                                <div key={s.id} className="px-5 py-4 flex items-center justify-between gap-4 hover:bg-[var(--ink-100)] transition-colors">
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-gray-900 text-sm truncate">{s.examTitle}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                                        <p className="text-[14px] font-bold text-[var(--ink-900)] truncate">{s.examTitle}</p>
+                                        <p className="text-[11.5px] text-[var(--ink-500)] mt-0.5 flex items-center gap-2">
                                             <span>{s.studentName}</span>
                                             {s.submittedAt && <span>· {fmtDate(s.submittedAt)}</span>}
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => navigate(`/test/review/${s.id}`)}
-                                        className="shrink-0 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 px-4 py-2 rounded-xl transition-colors"
+                                        className="shrink-0 inline-flex items-center gap-1 h-9 px-4 rounded-full text-[12.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
                                     >
-                                        Yoxla →
+                                        Yoxla <HiOutlineArrowRight className="w-3 h-3" />
                                     </button>
                                 </div>
                             ))}
                             {pending.length > 5 && (
-                                <div className="px-6 py-3 text-xs text-center text-gray-400 font-medium">
+                                <div className="px-5 py-3 text-[11.5px] text-center text-[var(--ink-500)] font-medium">
                                     +{pending.length - 5} daha göndəriş
                                 </div>
                             )}
@@ -855,141 +904,125 @@ const TeacherProfile = ({ user }) => {
                 )}
 
                 {/* Exams list */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <h2 className="text-lg font-black text-gray-900">Mənim İmtahanlarım</h2>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            {/* Status filter */}
-                            <select
-                                value={statusFilter}
-                                onChange={e => setStatusFilter(e.target.value)}
-                                className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-                            >
-                                <option value="ALL">Bütün statuslar</option>
-                                {Object.entries(statusConfig).map(([k, v]) => (
-                                    <option key={k} value={k}>{v.label}</option>
-                                ))}
-                            </select>
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                placeholder="İmtahan axtar..."
-                                className="w-full sm:w-52 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            />
+                <div className="bg-white border border-[var(--ink-200)] rounded-2xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-[var(--ink-150)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h2 className="text-[15px] font-bold text-[var(--ink-900)]">Mənim imtahanlarım</h2>
+                        <div className="flex flex-col sm:flex-row gap-2.5">
+                            <div className="relative">
+                                <select
+                                    value={statusFilter}
+                                    onChange={e => setStatusFilter(e.target.value)}
+                                    className="appearance-none h-10 pl-3.5 pr-9 bg-white border border-[var(--ink-200)] rounded-xl text-[13px] font-semibold text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)] cursor-pointer"
+                                >
+                                    <option value="ALL">Bütün statuslar</option>
+                                    {Object.entries(statusConfig).map(([k, v]) => (
+                                        <option key={k} value={k}>{v.label}</option>
+                                    ))}
+                                </select>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-400)] pointer-events-none">▾</span>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-2 bg-[var(--ink-50)] border border-[var(--ink-200)] rounded-xl focus-within:border-[var(--primary)] focus-within:bg-white transition-all min-w-[200px]">
+                                <HiOutlineSearch className="w-4 h-4 text-[var(--ink-400)]" />
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="İmtahan axtar..."
+                                    className="flex-1 bg-transparent outline-none text-[13px] text-[var(--ink-800)] placeholder-[var(--ink-400)]"
+                                />
+                            </div>
                         </div>
                     </div>
 
                     {loading ? (
                         <div className="flex justify-center py-16">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+                            <div className="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="py-16 text-center text-gray-400">
-                            <HiOutlineDocumentText className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                            <p className="font-medium">{search ? 'Nəticə tapılmadı' : 'Hələ heç bir imtahan yaratmamısınız'}</p>
-                            {!search && (
-                                <Link to="/imtahanlar" className="mt-4 inline-block px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">
-                                    İlk imtahanı yarat
-                                </Link>
-                            )}
-                        </div>
+                        <EmptyState
+                            Icon={HiOutlineDocumentText}
+                            title={search ? 'Nəticə tapılmadı' : 'Hələ heç bir imtahan yaratmamısınız'}
+                            subtitle={search ? 'Başqa açar söz cəhd edin' : 'İlk imtahanınızı yaradın və şagirdlərinizlə paylaşın'}
+                            cta={!search ? { label: 'İlk imtahanı yarat', onClick: () => navigate('/imtahanlar/yarat') } : null}
+                        />
                     ) : (
-                        <div className="divide-y divide-gray-50">
+                        <div className="divide-y divide-[var(--ink-150)]">
                             {filtered.map(exam => {
-                                const st = statusConfig[exam.status] || { label: exam.status, cls: 'bg-gray-100 text-gray-600' };
+                                const st = statusConfig[exam.status] || { label: exam.status, cls: 'bg-[var(--ink-100)] text-[var(--ink-600)] border-[var(--ink-200)]' };
                                 const qCount = (exam.questions?.length || 0) + (exam.passages?.flatMap(p => p.questions || []).length || 0);
                                 return (
-                                    <div key={exam.id} className="px-6 py-5 hover:bg-gray-50/60 transition-colors">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <h3 className="font-bold text-gray-900 truncate">{exam.title}</h3>
-                                                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                                                </div>
-                                                <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-500">
-                                                    {(exam.subjects?.length > 0 || exam.subject) && (
-                                                        <span className="flex items-center gap-1">
-                                                            <HiOutlineAcademicCap className="w-3.5 h-3.5" />
-                                                            {(exam.subjects || []).join(', ') || exam.subject}
-                                                        </span>
-                                                    )}
-                                                    {qCount > 0 && (
-                                                        <span className="flex items-center gap-1">
-                                                            <HiOutlineDocumentText className="w-3.5 h-3.5" />
-                                                            {qCount} sual
-                                                        </span>
-                                                    )}
-                                                    {exam.durationMinutes && (
-                                                        <span className="flex items-center gap-1">
-                                                            <HiOutlineClock className="w-3.5 h-3.5" />
-                                                            {fmtDuration(exam.durationMinutes)}
-                                                        </span>
-                                                    )}
-                                                    <span className="flex items-center gap-1">
-                                                        {exam.visibility === 'PUBLIC'
-                                                            ? <><HiOutlineGlobe className="w-3.5 h-3.5" /> İctimai</>
-                                                            : <><HiOutlineLockClosed className="w-3.5 h-3.5" /> Gizli</>
-                                                        }
+                                    <div key={exam.id} className="px-5 py-4 hover:bg-[var(--ink-100)] transition-colors flex items-start justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h3 className="text-[14.5px] font-bold text-[var(--ink-900)] truncate">{exam.title}</h3>
+                                                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-3 mt-2 text-[11.5px] text-[var(--ink-500)]">
+                                                {(exam.subjects?.length > 0 || exam.subject) && (
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <HiOutlineAcademicCap className="w-3 h-3" />
+                                                        {(exam.subjects || []).join(', ') || exam.subject}
                                                     </span>
-                                                    <span>{fmtDate(exam.createdAt)}</span>
+                                                )}
+                                                {qCount > 0 && (
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <HiOutlineDocumentText className="w-3 h-3" />
+                                                        {qCount} sual
+                                                    </span>
+                                                )}
+                                                {exam.durationMinutes && (
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <HiOutlineClock className="w-3 h-3" />
+                                                        {fmtDuration(exam.durationMinutes)}
+                                                    </span>
+                                                )}
+                                                <span className="inline-flex items-center gap-1">
+                                                    {exam.visibility === 'PUBLIC'
+                                                        ? <><HiOutlineGlobe className="w-3 h-3" /> İctimai</>
+                                                        : <><HiOutlineLockClosed className="w-3 h-3" /> Gizli</>
+                                                    }
+                                                </span>
+                                                <span>{fmtDate(exam.createdAt)}</span>
+                                            </div>
+                                            {exam.tags?.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                    {exam.tags.map(tag => (
+                                                        <span key={tag} className="text-[10.5px] bg-[var(--primary-soft)] text-[var(--primary-hover)] px-2 py-0.5 rounded-full">{tag}</span>
+                                                    ))}
                                                 </div>
-                                                {exam.tags?.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                                        {exam.tags.map(tag => (
-                                                            <span key={tag} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">{tag}</span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                <button
-                                                    onClick={() => navigate(`/imtahanlar/${exam.id}/statistika`)}
-                                                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
-                                                    title="Statistika"
-                                                >
-                                                    <HiOutlineChartBar className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => navigate(`/imtahanlar/edit/${exam.id}`)}
-                                                    className="p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-xl transition-colors"
-                                                    title="Redaktə et"
-                                                >
-                                                    <HiOutlinePencilAlt className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => navigate(`/imtahanlar/${exam.id}`)}
-                                                    className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-colors"
-                                                    title="Bax"
-                                                >
-                                                    <HiOutlineEye className="w-5 h-5" />
-                                                </button>
-                                                {confirmDelete === exam.id ? (
-                                                    <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-xl px-2 py-1">
-                                                        <span className="text-xs text-red-600 font-semibold whitespace-nowrap">Silinsin?</span>
-                                                        <button
-                                                            onClick={() => handleDeleteExam(exam.id)}
-                                                            className="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg transition-colors"
-                                                        >
-                                                            Bəli
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setConfirmDelete(null)}
-                                                            className="text-xs font-bold text-gray-500 hover:text-gray-700 px-1 py-1 rounded-lg transition-colors"
-                                                        >
-                                                            Xeyr
-                                                        </button>
-                                                    </div>
-                                                ) : (
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <IconBtn onClick={() => navigate(`/imtahanlar/${exam.id}/statistika`)} title="Statistika" hover="hover:text-[var(--primary)] hover:bg-[var(--primary-soft)]">
+                                                <HiOutlineChartBar className="w-4 h-4" />
+                                            </IconBtn>
+                                            <IconBtn onClick={() => navigate(`/imtahanlar/edit/${exam.id}`)} title="Redaktə et" hover="hover:text-[var(--brand-green-600)] hover:bg-[var(--accent-soft)]">
+                                                <HiOutlinePencilAlt className="w-4 h-4" />
+                                            </IconBtn>
+                                            <IconBtn onClick={() => navigate(`/imtahanlar/${exam.id}`)} title="Bax" hover="hover:text-[var(--primary)] hover:bg-[var(--primary-soft)]">
+                                                <HiOutlineEye className="w-4 h-4" />
+                                            </IconBtn>
+                                            {confirmDelete === exam.id ? (
+                                                <div className="inline-flex items-center gap-1 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                                                    <span className="text-[10.5px] text-red-700 font-bold whitespace-nowrap">Silinsin?</span>
                                                     <button
-                                                        onClick={() => setConfirmDelete(exam.id)}
-                                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
-                                                        title="Sil"
+                                                        onClick={() => handleDeleteExam(exam.id)}
+                                                        className="text-[10.5px] font-bold text-white bg-red-500 hover:bg-red-600 px-2 py-0.5 rounded-full transition-colors"
                                                     >
-                                                        <HiOutlineTrash className="w-5 h-5" />
+                                                        Bəli
                                                     </button>
-                                                )}
-                                            </div>
+                                                    <button
+                                                        onClick={() => setConfirmDelete(null)}
+                                                        className="text-[10.5px] font-bold text-[var(--ink-500)] hover:text-[var(--ink-800)] px-1 py-0.5 transition-colors"
+                                                    >
+                                                        Xeyr
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <IconBtn onClick={() => setConfirmDelete(exam.id)} title="Sil" hover="hover:text-red-500 hover:bg-red-50">
+                                                    <HiOutlineTrash className="w-4 h-4" />
+                                                </IconBtn>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -1002,7 +1035,61 @@ const TeacherProfile = ({ user }) => {
     );
 };
 
-// ==== MAIN ====
+// ───────────────────────────────────────────────────────────────────────────
+// Helpers
+// ───────────────────────────────────────────────────────────────────────────
+
+const TabBtn = ({ active, onClick, Icon, count, children }) => (
+    <button
+        onClick={onClick}
+        className={`inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-semibold transition-all ${
+            active
+                ? 'bg-white text-[var(--ink-900)] shadow-[var(--sh-sm)]'
+                : 'text-[var(--ink-500)] hover:text-[var(--ink-700)]'
+        }`}
+    >
+        <Icon className="w-3.5 h-3.5" />
+        {children}
+        {count != null && count > 0 && (
+            <span className={`text-[11px] font-bold ml-1 px-1.5 py-0.5 rounded-full ${active ? 'bg-[var(--primary-soft)] text-[var(--primary)]' : 'bg-white text-[var(--ink-500)]'}`}>
+                {count}
+            </span>
+        )}
+    </button>
+);
+
+const IconBtn = ({ children, onClick, title, hover }) => (
+    <button
+        onClick={onClick}
+        title={title}
+        className={`w-9 h-9 rounded-lg text-[var(--ink-400)] ${hover} transition-colors flex items-center justify-center`}
+    >
+        {children}
+    </button>
+);
+
+const EmptyState = ({ Icon, title, subtitle, cta }) => (
+    <div className="text-center py-14 px-5">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-[var(--ink-100)] text-[var(--ink-400)] flex items-center justify-center mb-4">
+            <Icon className="w-7 h-7" />
+        </div>
+        <h4 className="text-[16px] font-bold text-[var(--ink-900)]">{title}</h4>
+        <p className="text-[13.5px] text-[var(--ink-500)] mt-1 max-w-md mx-auto">{subtitle}</p>
+        {cta && (
+            <button
+                onClick={cta.onClick}
+                className="mt-5 h-11 px-5 inline-flex items-center justify-center gap-2 rounded-full font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+            >
+                {cta.label} <HiOutlineArrowRight className="w-4 h-4" />
+            </button>
+        )}
+    </div>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// Main
+// ───────────────────────────────────────────────────────────────────────────
+
 const Profile = () => {
     const { user, isTeacher } = useAuth();
     if (!user) return null;

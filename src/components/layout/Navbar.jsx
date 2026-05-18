@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     HiOutlineMenu, HiOutlineX, HiOutlineChevronDown,
-    HiOutlineUser, HiOutlineLogout,
+    HiOutlineUser, HiOutlineLogout, HiOutlineCog,
     HiOutlineAcademicCap, HiOutlinePencilAlt,
     HiOutlineBell, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineSpeakerphone, HiOutlineCreditCard,
 } from 'react-icons/hi';
@@ -12,6 +12,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
+import { fmtDateShort } from '../../utils/date';
 
 const Navbar = () => {
     const { isAuthenticated, user, logout, isTeacher, isAdmin, isStudent, profilePicture } = useAuth();
@@ -109,7 +110,7 @@ const Navbar = () => {
                     toast.custom((t) => (
                         <div
                             className={`${t.visible ? 'animate-enter' : 'animate-leave'}
-                            max-w-md w-full bg-white shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all cursor-pointer hover:bg-gray-50`}
+                            max-w-md w-full bg-white shadow-xl rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all cursor-pointer hover:bg-gray-100`}
                             onClick={() => {
                                 toast.dismiss(t.id);
                                 markRead(newNotif.id);
@@ -125,9 +126,9 @@ const Navbar = () => {
                                     <div className="flex-shrink-0 pt-0.5">
                                         {newNotif.type === 'EXAM_CREATED' && <HiOutlinePencilAlt className="h-10 w-10 text-emerald-500 bg-emerald-100 p-2 rounded-full" />}
                                         {newNotif.type === 'PAYMENT_SUCCESS' && <HiOutlineCreditCard className="h-10 w-10 text-blue-500 bg-blue-100 p-2 rounded-full" />}
-                                        {newNotif.type === 'ANNOUNCEMENT' && <HiOutlineSpeakerphone className="h-10 w-10 text-purple-500 bg-purple-100 p-2 rounded-full" />}
+                                        {newNotif.type === 'ANNOUNCEMENT' && <HiOutlineSpeakerphone className="h-10 w-10 text-emerald-500 bg-emerald-100 p-2 rounded-full" />}
                                         {newNotif.type === 'WARNING' && <HiOutlineExclamationCircle className="h-10 w-10 text-red-500 bg-red-100 p-2 rounded-full" />}
-                                        {(!newNotif.type || newNotif.type === 'SYSTEM' || newNotif.type === 'EXAM_GRADED') && <HiOutlineBell className="h-10 w-10 text-indigo-500 bg-indigo-100 p-2 rounded-full" />}
+                                        {(!newNotif.type || newNotif.type === 'SYSTEM' || newNotif.type === 'EXAM_GRADED') && <HiOutlineBell className="h-10 w-10 text-blue-500 bg-blue-100 p-2 rounded-full" />}
                                     </div>
                                     <div className="ml-3 flex-1">
                                         <p className="text-sm font-bold text-gray-900">{newNotif.title}</p>
@@ -141,7 +142,7 @@ const Navbar = () => {
                                         e.stopPropagation();
                                         toast.dismiss(t.id);
                                     }}
-                                    className="w-full border border-transparent rounded-none rounded-r-2xl p-4 flex items-center justify-center text-sm font-bold text-indigo-600 hover:text-indigo-500 focus:outline-none"
+                                    className="w-full border border-transparent rounded-none rounded-r-2xl p-4 flex items-center justify-center text-sm font-bold text-blue-600 hover:text-blue-500 focus:outline-none"
                                 >
                                     Bağla
                                 </button>
@@ -225,16 +226,19 @@ const Navbar = () => {
         if (diff < 1) return 'İndicə';
         if (diff < 60) return `${diff} dəq əvvəl`;
         if (diff < 1440) return `${Math.floor(diff / 60)} saat əvvəl`;
-        return d.toLocaleDateString('az-AZ', { day: '2-digit', month: 'short' });
+        return fmtDateShort(d);
     };
 
     const UserAvatar = ({ size = 'sm' }) => {
-        const cls = size === 'sm' ? 'h-8 w-8 text-sm' : 'h-10 w-10 text-base';
+        const cls = size === 'sm' ? 'h-8 w-8 text-[12.5px]' : 'h-10 w-10 text-[14px]';
         return (
-            <div className={`${cls} rounded-full overflow-hidden flex-shrink-0 ring-2 ring-indigo-100`}>
+            <div className={`${cls} rounded-full overflow-hidden flex-shrink-0`}>
                 {profilePicture
                     ? <img src={profilePicture} alt={user?.fullName} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                    : <div className="h-full w-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                    : <div
+                        className="h-full w-full flex items-center justify-center text-white font-extrabold"
+                        style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--brand-green-600) 100%)' }}
+                    >
                         {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                 }
@@ -244,7 +248,7 @@ const Navbar = () => {
 
     return (
         <nav
-            className="sticky top-0 z-50 bg-white/75 backdrop-blur-xl border-b border-gray-200/60"
+            className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-[var(--ink-150)]"
             style={{ boxShadow: '0 1px 24px -8px rgba(15, 23, 42, 0.08)' }}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -262,12 +266,12 @@ const Navbar = () => {
                     {/* Desktop nav links with sliding indicator */}
                     <div
                         ref={navContainerRef}
-                        className="hidden md:flex relative items-center gap-1 bg-gray-50/70 border border-gray-200/60 rounded-2xl p-1.5"
+                        className="hidden md:flex relative items-center gap-1 bg-[var(--paper-cream)]/70 border border-[var(--ink-150)] rounded-full p-1.5"
                     >
                         {/* Sliding active indicator */}
                         <span
                             aria-hidden="true"
-                            className="absolute top-1.5 bottom-1.5 bg-white rounded-xl shadow-sm ring-1 ring-indigo-100 pointer-events-none"
+                            className="absolute top-1.5 bottom-1.5 bg-white rounded-full shadow-[var(--sh-sm)] ring-1 ring-[var(--brand-blue-100)] pointer-events-none"
                             style={{
                                 left: indicator.left,
                                 width: indicator.width,
@@ -282,8 +286,8 @@ const Navbar = () => {
                                     key={link.to}
                                     to={link.to}
                                     data-active={active ? 'true' : 'false'}
-                                    className={`relative z-10 px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                                        active ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'
+                                    className={`relative z-10 px-4 py-2 rounded-full text-[13px] font-semibold tracking-tight transition-colors duration-200 ${
+                                        active ? 'text-[var(--primary)]' : 'text-[var(--ink-500)] hover:text-[var(--ink-900)]'
                                     }`}
                                 >
                                     {link.label}
@@ -300,24 +304,41 @@ const Navbar = () => {
                                 <div className="relative" ref={notifDesktopRef}>
                                     <button
                                         onClick={openNotifications}
-                                        className="relative p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                                        aria-label="Bildirişlər"
+                                        className="relative w-[38px] h-[38px] rounded-full inline-flex items-center justify-center text-[var(--ink-600)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] border border-transparent hover:border-[var(--brand-blue-100)] transition-colors"
                                     >
-                                        <HiOutlineBell className="h-5 w-5" />
+                                        <HiOutlineBell className="h-[18px] w-[18px]" />
                                         {unreadCount > 0 && (
-                                            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                                                {unreadCount > 9 ? '9+' : unreadCount}
-                                            </span>
+                                            unreadCount > 9 ? (
+                                                <span
+                                                    className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-extrabold rounded-full inline-flex items-center justify-center leading-none"
+                                                    style={{ boxShadow: '0 0 0 2px var(--paper, white)' }}
+                                                >
+                                                    9+
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"
+                                                    style={{ boxShadow: '0 0 0 2px white' }}
+                                                />
+                                            )
                                         )}
                                     </button>
 
                                     {notifOpen && (
-                                        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-                                            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                                                <h3 className="font-bold text-gray-900 text-sm">Bildirişlər</h3>
+                                        <div className="absolute right-0 top-full mt-3 w-[340px] bg-white rounded-3xl shadow-[var(--sh-lg)] border border-[var(--ink-200)] z-50 overflow-hidden">
+                                            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--ink-150)]">
+                                                <h3 className="font-extrabold text-[var(--ink-900)] text-[14px] tracking-tight inline-flex items-center gap-2">
+                                                    <HiOutlineBell className="w-4 h-4 text-[var(--primary)]" />
+                                                    Bildirişlər
+                                                    {unreadCount > 0 && (
+                                                        <span className="text-[10px] font-bold bg-[var(--primary-soft)] text-[var(--primary-hover)] px-2 py-0.5 rounded-full">{unreadCount}</span>
+                                                    )}
+                                                </h3>
                                                 {unreadCount > 0 && (
                                                     <button
                                                         onClick={markAllRead}
-                                                        className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1"
+                                                        className="text-[11.5px] text-[var(--primary)] hover:text-[var(--primary-hover)] font-bold inline-flex items-center gap-1"
                                                     >
                                                         <HiOutlineCheckCircle className="w-3.5 h-3.5" /> Hamısını oxu
                                                     </button>
@@ -326,31 +347,34 @@ const Navbar = () => {
 
                                             <div className="max-h-80 overflow-y-auto">
                                                 {notifications.length === 0 ? (
-                                                    <div className="py-10 text-center text-gray-400">
-                                                        <HiOutlineBell className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                                                        <p className="text-sm">Bildiriş yoxdur</p>
+                                                    <div className="py-12 text-center text-[var(--ink-400)]">
+                                                        <span className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-[var(--ink-50)] inline-flex items-center justify-center">
+                                                            <HiOutlineBell className="w-6 h-6 text-[var(--ink-300)]" />
+                                                        </span>
+                                                        <p className="text-[13px] font-semibold text-[var(--ink-500)]">Bildiriş yoxdur</p>
+                                                        <p className="text-[11.5px] text-[var(--ink-400)] mt-0.5">Yeni bildirişlər burada görünəcək</p>
                                                     </div>
                                                 ) : (
                                                     notifications.map(n => (
                                                         <div
                                                             key={n.id}
                                                             onClick={() => markRead(n.id)}
-                                                            className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-indigo-50/40' : ''}`}
+                                                            className={`px-5 py-3 border-b border-[var(--ink-100)] last:border-b-0 cursor-pointer hover:bg-[var(--paper-cream)]/60 transition-colors ${!n.isRead ? 'bg-[var(--primary-soft)]/40' : ''}`}
                                                         >
                                                             <div className="flex items-start gap-2.5">
-                                                                <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${!n.isRead ? 'bg-indigo-500' : 'bg-transparent'}`} />
+                                                                <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${!n.isRead ? 'bg-[var(--primary)]' : 'bg-transparent'}`} />
                                                                 <div className="flex-1 min-w-0" onClick={() => {
                                                                     if (n.actionUrl) {
                                                                         navigate(n.actionUrl);
                                                                         setNotifOpen(false);
                                                                     }
                                                                 }}>
-                                                                    <p className={`text-sm font-semibold ${!n.isRead ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
-                                                                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.message}</p>
-                                                                    <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-2">
+                                                                    <p className={`text-[13px] font-bold tracking-tight ${!n.isRead ? 'text-[var(--ink-900)]' : 'text-[var(--ink-600)]'}`}>{n.title}</p>
+                                                                    <p className="text-[12px] text-[var(--ink-500)] mt-0.5 leading-relaxed">{n.message}</p>
+                                                                    <p className="text-[10.5px] text-[var(--ink-400)] mt-1.5 flex items-center gap-2">
                                                                         {fmtTime(n.createdAt)}
                                                                         {n.type && n.type !== 'SYSTEM' && (
-                                                                            <span className="bg-gray-100 text-gray-600 px-1.5 rounded uppercase text-[9px] font-bold tracking-wider">
+                                                                            <span className="bg-[var(--ink-100)] text-[var(--ink-600)] px-1.5 py-0.5 rounded-full uppercase text-[9px] font-bold tracking-wider">
                                                                                 {n.type.replace('_', ' ')}
                                                                             </span>
                                                                         )}
@@ -369,67 +393,113 @@ const Navbar = () => {
                                 <div className="relative" ref={dropdownRef}>
                                     <button
                                         onClick={() => { setDropdownOpen(v => !v); setNotifOpen(false); }}
-                                        className="flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all"
+                                        className="inline-flex items-center gap-2.5 pl-1 pr-3.5 py-1 rounded-full bg-white border border-[var(--ink-200)] hover:border-[var(--ink-300)] hover:bg-[var(--paper-cream)]/60 transition-all"
                                     >
                                         <UserAvatar size="sm" />
-                                        <div className="text-left hidden lg:block">
-                                            <p className="text-sm font-semibold text-gray-800 leading-none">{user?.fullName}</p>
-                                            <p className="text-xs text-gray-400 mt-0.5 leading-none">
+                                        <div className="text-left hidden lg:flex flex-col leading-[1.2]">
+                                            <span className="text-[12.5px] font-bold text-[var(--ink-900)] tracking-tight">{user?.fullName}</span>
+                                            <span className="text-[10.5px] text-[var(--ink-500)] font-medium">
                                                 {isAdmin ? 'Admin' : isTeacher ? 'Müəllim' : 'Şagird'}
-                                            </p>
+                                            </span>
                                         </div>
-                                        <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                                        <HiOutlineChevronDown className={`w-3.5 h-3.5 text-[var(--ink-400)] transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
                                     </button>
 
                                     {dropdownOpen && (
-                                        <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-1.5 z-50">
-                                            <div className="px-4 py-3 flex items-center gap-3">
-                                                <UserAvatar size="md" />
+                                        <div className="absolute right-0 top-full mt-3 w-72 bg-white rounded-3xl shadow-[var(--sh-lg)] border border-[var(--ink-200)] z-50 overflow-hidden">
+                                            {/* Header — identity */}
+                                            <div className="px-4 pt-4 pb-3 flex items-center gap-3">
+                                                {/* Avatar with role micro-badge */}
+                                                <div className="relative shrink-0">
+                                                    <UserAvatar size="md" />
+                                                    <span
+                                                        className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full inline-flex items-center justify-center ring-2 ring-white ${
+                                                            isAdmin
+                                                                ? 'bg-[var(--brand-green-600)] text-white'
+                                                                : isTeacher
+                                                                    ? 'bg-[var(--primary)] text-white'
+                                                                    : 'bg-[var(--brand-green-600)] text-white'
+                                                        }`}
+                                                        title={isAdmin ? 'Admin' : isTeacher ? 'Müəllim' : 'Şagird'}
+                                                    >
+                                                        {isAdmin
+                                                            ? <HiOutlineCog className="w-3 h-3" />
+                                                            : isTeacher
+                                                                ? <HiOutlinePencilAlt className="w-3 h-3" />
+                                                                : <HiOutlineAcademicCap className="w-3 h-3" />}
+                                                    </span>
+                                                </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-bold text-gray-900 truncate">{user?.fullName}</p>
-                                                    <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                                                    <p className="text-[14px] font-extrabold text-[var(--ink-900)] tracking-tight truncate">{user?.fullName}</p>
+                                                    <p className="text-[11.5px] text-[var(--ink-500)] truncate">{user?.email}</p>
                                                 </div>
                                             </div>
+                                            <div className="mx-4 h-px bg-[var(--ink-150)]" />
 
-                                            <div className="mx-3 mb-2 mt-0.5">
-                                                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${isAdmin ? 'bg-purple-50 text-purple-700' : isTeacher ? 'bg-violet-50 text-violet-700' : 'bg-indigo-50 text-indigo-700'}`}>
-                                                    {isAdmin
-                                                        ? <><span className="text-[10px] font-black">⚙</span> Admin</>
-                                                        : isTeacher
-                                                            ? <><HiOutlinePencilAlt className="w-3 h-3" /> Müəllim</>
-                                                            : <><HiOutlineAcademicCap className="w-3 h-3" /> Şagird</>
-                                                    }
-                                                </span>
-                                            </div>
-
-                                            <div className="border-t border-gray-100 pt-1">
+                                            {/* Quick links */}
+                                            <div className="px-2 pt-1.5 pb-2 space-y-0.5">
                                                 {isAdmin && (
                                                     <Link
                                                         to="/admin"
                                                         onClick={() => setDropdownOpen(false)}
-                                                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 transition-colors font-semibold"
+                                                        className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-bold text-[var(--brand-green-700)] hover:bg-[var(--brand-green-50)] transition-colors"
                                                     >
-                                                        <span className="w-4 h-4 shrink-0 text-center text-xs font-black">⚙</span>
-                                                        Admin Panel
+                                                        <span className="w-8 h-8 rounded-xl bg-[var(--brand-green-50)] text-[var(--brand-green-600)] inline-flex items-center justify-center shrink-0 group-hover:bg-white">
+                                                            <HiOutlineCog className="w-4 h-4" />
+                                                        </span>
+                                                        <span>Admin Panel</span>
+                                                        <HiOutlineChevronDown className="ml-auto -rotate-90 w-3.5 h-3.5 text-[var(--ink-400)] group-hover:text-[var(--brand-green-600)]" />
                                                     </Link>
                                                 )}
                                                 <Link
                                                     to="/profil"
                                                     onClick={() => setDropdownOpen(false)}
-                                                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors"
+                                                    className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-[var(--ink-700)] hover:bg-[var(--paper-cream)]/70 hover:text-[var(--primary)] transition-colors"
                                                 >
-                                                    <HiOutlineUser className="w-4 h-4 shrink-0" />
-                                                    Profilim
+                                                    <span className="w-8 h-8 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] inline-flex items-center justify-center shrink-0 group-hover:bg-white">
+                                                        <HiOutlineUser className="w-4 h-4" />
+                                                    </span>
+                                                    <span>Profilim</span>
+                                                    <HiOutlineChevronDown className="ml-auto -rotate-90 w-3.5 h-3.5 text-[var(--ink-400)] group-hover:text-[var(--primary)]" />
                                                 </Link>
+                                                {isTeacher && !isAdmin && (
+                                                    <Link
+                                                        to="/imtahanlar"
+                                                        onClick={() => setDropdownOpen(false)}
+                                                        className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-[var(--ink-700)] hover:bg-[var(--paper-cream)]/70 hover:text-[var(--primary)] transition-colors"
+                                                    >
+                                                        <span className="w-8 h-8 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] inline-flex items-center justify-center shrink-0 group-hover:bg-white">
+                                                            <HiOutlinePencilAlt className="w-4 h-4" />
+                                                        </span>
+                                                        <span>İmtahanlarım</span>
+                                                        <HiOutlineChevronDown className="ml-auto -rotate-90 w-3.5 h-3.5 text-[var(--ink-400)] group-hover:text-[var(--primary)]" />
+                                                    </Link>
+                                                )}
+                                                {isStudent && (
+                                                    <Link
+                                                        to="/imtahanlarim"
+                                                        onClick={() => setDropdownOpen(false)}
+                                                        className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-[var(--ink-700)] hover:bg-[var(--paper-cream)]/70 hover:text-[var(--primary)] transition-colors"
+                                                    >
+                                                        <span className="w-8 h-8 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] inline-flex items-center justify-center shrink-0 group-hover:bg-white">
+                                                            <HiOutlineAcademicCap className="w-4 h-4" />
+                                                        </span>
+                                                        <span>İmtahanlarım</span>
+                                                        <HiOutlineChevronDown className="ml-auto -rotate-90 w-3.5 h-3.5 text-[var(--ink-400)] group-hover:text-[var(--primary)]" />
+                                                    </Link>
+                                                )}
                                             </div>
 
-                                            <div className="border-t border-gray-100 pt-1 mt-1">
+                                            {/* Logout */}
+                                            <div className="px-2 pb-2 pt-1.5 border-t border-[var(--ink-150)]">
                                                 <button
                                                     onClick={handleLogout}
-                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors rounded-b-2xl"
+                                                    className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-red-500 hover:bg-red-50 transition-colors"
                                                 >
-                                                    <HiOutlineLogout className="w-4 h-4 shrink-0" />
-                                                    Çıxış
+                                                    <span className="w-8 h-8 rounded-xl bg-red-50 text-red-500 inline-flex items-center justify-center shrink-0 group-hover:bg-white">
+                                                        <HiOutlineLogout className="w-4 h-4" />
+                                                    </span>
+                                                    <span>Çıxış</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -440,52 +510,64 @@ const Navbar = () => {
                             <div className="flex items-center gap-2">
                                 <Link
                                     to="/login"
-                                    className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-indigo-600 rounded-lg transition-colors"
+                                    className="h-10 px-4 inline-flex items-center text-[13px] font-semibold text-[var(--ink-700)] hover:text-[var(--primary)] rounded-full transition-colors"
                                 >
                                     Daxil ol
                                 </Link>
                                 <Link
                                     to="/register"
-                                    className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200/60"
+                                    className="h-10 px-5 inline-flex items-center text-[13px] font-bold bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-full transition-all shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)]"
                                 >
-                                    Qeydiyyat
+                                    Pulsuz başla
                                 </Link>
                             </div>
                         )}
                     </div>
 
                     {/* Mobile: bell + menu button */}
-                    <div className="md:hidden flex items-center gap-1">
+                    <div className="md:hidden flex items-center gap-1.5">
                         {isAuthenticated && (
                             <div className="relative" ref={notifMobileRef}>
                                 <button
                                     onClick={openNotifications}
-                                    className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                    aria-label="Bildirişlər"
+                                    className="relative w-[38px] h-[38px] rounded-full inline-flex items-center justify-center text-[var(--ink-600)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)] border border-transparent hover:border-[var(--brand-blue-100)] transition-colors"
                                 >
-                                    <HiOutlineBell className="h-5 w-5" />
+                                    <HiOutlineBell className="h-[18px] w-[18px]" />
                                     {unreadCount > 0 && (
-                                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                                            {unreadCount > 9 ? '9+' : unreadCount}
-                                        </span>
+                                        unreadCount > 9 ? (
+                                            <span
+                                                className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-extrabold rounded-full inline-flex items-center justify-center leading-none"
+                                                style={{ boxShadow: '0 0 0 2px white' }}
+                                            >9+</span>
+                                        ) : (
+                                            <span
+                                                className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"
+                                                style={{ boxShadow: '0 0 0 2px white' }}
+                                            />
+                                        )
                                     )}
                                 </button>
 
                                 {notifOpen && (
-                                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-                                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                                            <h3 className="font-bold text-gray-900 text-sm">Bildirişlər</h3>
+                                    <div className="absolute right-0 top-full mt-3 w-[300px] bg-white rounded-3xl shadow-[var(--sh-lg)] border border-[var(--ink-200)] z-50 overflow-hidden">
+                                        <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--ink-150)]">
+                                            <h3 className="font-extrabold text-[var(--ink-900)] text-[13.5px] tracking-tight inline-flex items-center gap-2">
+                                                <HiOutlineBell className="w-4 h-4 text-[var(--primary)]" />
+                                                Bildirişlər
+                                            </h3>
                                             {unreadCount > 0 && (
-                                                <button onClick={markAllRead} className="text-xs text-indigo-600 font-semibold">Hamısını oxu</button>
+                                                <button onClick={markAllRead} className="text-[11px] text-[var(--primary)] font-bold">Hamısını oxu</button>
                                             )}
                                         </div>
                                         <div className="max-h-72 overflow-y-auto">
                                             {notifications.length === 0 ? (
-                                                <div className="py-8 text-center text-gray-400 text-sm">Bildiriş yoxdur</div>
+                                                <div className="py-10 text-center text-[var(--ink-400)] text-[12.5px]">Bildiriş yoxdur</div>
                                             ) : notifications.map(n => (
                                                 <div key={n.id} onClick={() => markRead(n.id)}
-                                                    className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-indigo-50/40' : ''}`}>
+                                                    className={`px-5 py-3 border-b border-[var(--ink-100)] last:border-b-0 cursor-pointer hover:bg-[var(--paper-cream)]/60 transition-colors ${!n.isRead ? 'bg-[var(--primary-soft)]/40' : ''}`}>
                                                     <div className="flex items-start gap-2">
-                                                        <div className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${!n.isRead ? 'bg-indigo-500' : 'bg-transparent'}`} />
+                                                        <div className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${!n.isRead ? 'bg-[var(--primary)]' : 'bg-transparent'}`} />
                                                         <div className="flex-1 min-w-0" onClick={() => {
                                                             if (n.actionUrl) {
                                                                 navigate(n.actionUrl);
@@ -493,9 +575,9 @@ const Navbar = () => {
                                                                 setMobileOpen(false);
                                                             }
                                                         }}>
-                                                            <p className="text-xs font-semibold text-gray-800">{n.title}</p>
-                                                            <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
-                                                            <p className="text-[10px] text-gray-400 mt-1">{fmtTime(n.createdAt)}</p>
+                                                            <p className="text-[12.5px] font-bold tracking-tight text-[var(--ink-900)]">{n.title}</p>
+                                                            <p className="text-[11.5px] text-[var(--ink-500)] mt-0.5">{n.message}</p>
+                                                            <p className="text-[10px] text-[var(--ink-400)] mt-1">{fmtTime(n.createdAt)}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -506,7 +588,8 @@ const Navbar = () => {
                             </div>
                         )}
                         <button
-                            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                            aria-label="Menyu"
+                            className="w-[38px] h-[38px] rounded-full inline-flex items-center justify-center text-[var(--ink-600)] hover:bg-[var(--ink-100)] border border-transparent hover:border-[var(--ink-200)] transition-colors"
                             onClick={() => setMobileOpen(!mobileOpen)}
                         >
                             {mobileOpen ? <HiOutlineX className="h-5 w-5" /> : <HiOutlineMenu className="h-5 w-5" />}
@@ -517,13 +600,13 @@ const Navbar = () => {
 
             {/* Mobile menu */}
             {mobileOpen && (
-                <div className="md:hidden border-t border-gray-100 bg-white">
+                <div className="md:hidden border-t border-[var(--ink-150)] bg-white">
                     {isAuthenticated && (
-                        <div className="flex items-center gap-3 px-4 py-4 bg-gray-50 border-b border-gray-100">
+                        <div className="flex items-center gap-3 px-4 py-4 bg-[var(--paper-cream)] border-b border-[var(--ink-150)]">
                             <UserAvatar size="md" />
                             <div className="min-w-0">
-                                <p className="font-bold text-gray-900 text-sm truncate">{user?.fullName}</p>
-                                <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                                <p className="font-extrabold text-[var(--ink-900)] text-[14px] tracking-tight truncate">{user?.fullName}</p>
+                                <p className="text-[11.5px] text-[var(--ink-500)] truncate">{user?.email}</p>
                             </div>
                         </div>
                     )}
@@ -535,9 +618,9 @@ const Navbar = () => {
                                 end={link.end}
                                 onClick={() => setMobileOpen(false)}
                                 className={({ isActive }) =>
-                                    `block px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive
-                                        ? 'bg-indigo-50 text-indigo-600'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-indigo-600'
+                                    `block px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors ${isActive
+                                        ? 'bg-[var(--primary-soft)] text-[var(--primary)]'
+                                        : 'text-[var(--ink-600)] hover:bg-[var(--ink-100)] hover:text-[var(--ink-900)]'
                                     }`
                                 }
                             >
@@ -546,39 +629,39 @@ const Navbar = () => {
                         ))}
 
                         {isAuthenticated ? (
-                            <div className="border-t border-gray-100 pt-2 mt-2 space-y-0.5">
+                            <div className="border-t border-[var(--ink-150)] pt-2 mt-2 space-y-0.5">
                                 {isAdmin && (
                                     <Link
                                         to="/admin"
                                         onClick={() => setMobileOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-purple-700 hover:bg-purple-50 transition-colors"
+                                        className="flex items-center gap-3 px-4 py-2.5 rounded-full text-[13px] font-bold text-[var(--brand-green-700)] hover:bg-[var(--brand-green-50)] transition-colors"
                                     >
-                                        <span className="w-4 h-4 text-xs font-black">⚙</span> Admin Panel
+                                        <HiOutlineCog className="w-4 h-4" /> Admin Panel
                                     </Link>
                                 )}
                                 <Link
                                     to="/profil"
                                     onClick={() => setMobileOpen(false)}
-                                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition-colors"
+                                    className="flex items-center gap-3 px-4 py-2.5 rounded-full text-[13px] font-semibold text-[var(--ink-700)] hover:bg-[var(--paper-cream)] hover:text-[var(--primary)] transition-colors"
                                 >
                                     <HiOutlineUser className="w-4 h-4" /> Profilim
                                 </Link>
                                 <button
                                     onClick={handleLogout}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[13px] font-semibold text-red-500 hover:bg-red-50 transition-colors"
                                 >
                                     <HiOutlineLogout className="w-4 h-4" /> Çıxış
                                 </button>
                             </div>
                         ) : (
-                            <div className="border-t border-gray-100 pt-2 mt-2 space-y-1">
+                            <div className="border-t border-[var(--ink-150)] pt-2 mt-2 space-y-1.5">
                                 <Link to="/login" onClick={() => setMobileOpen(false)}
-                                    className="block px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                    className="block h-11 px-4 inline-flex items-center rounded-full text-[13px] font-semibold text-[var(--ink-700)] hover:bg-[var(--ink-100)]">
                                     Daxil ol
                                 </Link>
                                 <Link to="/register" onClick={() => setMobileOpen(false)}
-                                    className="block px-4 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white text-center hover:bg-indigo-700 transition-colors">
-                                    Qeydiyyat
+                                    className="block h-11 inline-flex items-center justify-center rounded-full text-[13px] font-bold bg-[var(--primary)] text-white text-center hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-colors w-full">
+                                    Pulsuz başla
                                 </Link>
                             </div>
                         )}

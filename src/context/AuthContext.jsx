@@ -85,13 +85,18 @@ export const AuthProvider = ({ children }) => {
         initializeAuth();
     }, []);
 
+    const isAuthenticated = !!user;
+    const isAdmin = user?.role === 'ADMIN';
+    const isTeacher = user?.role === 'TEACHER';
+    const isStudent = user?.role === 'STUDENT';
+
     const refreshSubscription = async () => {
         if (!user?.id || (!isTeacher && !isAdmin)) return;
         try {
             const res = await api.get(`/user-subscriptions/user/${user.id}/active`);
-
             setSubscription(res.data);
-        } catch (err) {
+        } catch {
+            // silent — subscription endpoint may 404 for users without a plan
         }
     };
 
@@ -163,11 +168,6 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setSubscription(null);
     };
-
-    const isAuthenticated = !!user;
-    const isAdmin = user?.role === 'ADMIN';
-    const isTeacher = user?.role === 'TEACHER';
-    const isStudent = user?.role === 'STUDENT';
 
     // Helper to check feature permission based on active plan
     const hasPermission = (featureKey) => {

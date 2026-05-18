@@ -85,7 +85,7 @@ const AssignExamModal = ({ user, onClose }) => {
                             placeholder="İmtahan adı ilə axtar..."
                             value={search}
                             onChange={handleSearchChange}
-                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 bg-gray-50"
+                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 bg-gray-50"
                             autoFocus
                         />
                         {search && (
@@ -99,7 +99,7 @@ const AssignExamModal = ({ user, onClose }) => {
                 <div className="flex-1 overflow-y-auto px-7 py-3 space-y-2">
                     {loading ? (
                         <div className="flex justify-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                         </div>
                     ) : exams.length === 0 ? (
                         <div className="text-center py-12">
@@ -134,7 +134,7 @@ const AssignExamModal = ({ user, onClose }) => {
                                     className={`ml-4 shrink-0 px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-1.5 ${
                                         isAssigned
                                             ? 'bg-emerald-100 text-emerald-700 cursor-default'
-                                            : 'bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-60'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60'
                                     }`}
                                 >
                                     {isAssigning ? (
@@ -155,7 +155,7 @@ const AssignExamModal = ({ user, onClose }) => {
                         <button
                             disabled={page === 0}
                             onClick={() => setPage(p => Math.max(0, p - 1))}
-                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40 transition-colors"
                         >
                             <HiOutlineChevronLeft className="w-4 h-4" />
                         </button>
@@ -167,7 +167,7 @@ const AssignExamModal = ({ user, onClose }) => {
                                 <button
                                     key={n}
                                     onClick={() => setPage(n)}
-                                    className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${n === page ? 'bg-indigo-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                    className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${n === page ? 'bg-blue-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-100'}`}
                                 >
                                     {n + 1}
                                 </button>
@@ -176,7 +176,7 @@ const AssignExamModal = ({ user, onClose }) => {
                         <button
                             disabled={page >= totalPages - 1}
                             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40 transition-colors"
                         >
                             <HiOutlineChevronRight className="w-4 h-4" />
                         </button>

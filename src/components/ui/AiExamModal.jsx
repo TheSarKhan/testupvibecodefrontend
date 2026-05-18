@@ -105,7 +105,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-5 text-white">
+                <div className="bg-gradient-to-r from-blue-600 to-emerald-600 px-6 py-5 text-white">
                     <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
@@ -113,7 +113,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                             </div>
                             <div className="flex-1">
                                 <h2 className="text-lg font-extrabold leading-tight">AI ilə İmtahan Yarat</h2>
-                                <p className="text-xs text-indigo-200 mt-0.5">
+                                <p className="text-xs text-blue-200 mt-0.5">
                                     Groq LLaMA 3.3{selectedSubject ? ` · ${selectedSubject}` : ''}
                                 </p>
                             </div>
@@ -150,7 +150,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                                 value={selectedSubject}
                                 onChange={e => setSelectedSubject(e.target.value)}
                                 disabled={loading || loadingSubjects}
-                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 disabled:opacity-60 transition-colors"
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors"
                             >
                                 {loadingSubjects
                                     ? <option>Yüklənir...</option>
@@ -166,7 +166,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                                 value={selectedTopic}
                                 onChange={e => setSelectedTopic(e.target.value)}
                                 disabled={loading || topics.length === 0}
-                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 disabled:opacity-60 transition-colors"
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors"
                             >
                                 <option value="">Ümumi</option>
                                 {topics.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
@@ -189,8 +189,8 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                                                 ? 'bg-green-500 border-green-500 text-white shadow-sm'
                                                 : d.key === 'HARD'
                                                     ? 'bg-red-500 border-red-500 text-white shadow-sm'
-                                                    : 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                                            : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600'
+                                                    : 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
                                     }`}
                                 >
                                     {d.label}
@@ -204,14 +204,14 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                         <div className="flex items-center justify-between mb-2">
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Sual tipləri</label>
                             {totalCount > 0 && (
-                                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
                                     Cəmi: {totalCount} sual
                                 </span>
                             )}
                         </div>
                         <div className="space-y-2">
                             {QUESTION_TYPES.map(qt => (
-                                <div key={qt.key} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${counts[qt.key] > 0 ? 'border-indigo-200 bg-indigo-50/60' : 'border-gray-100 bg-gray-50'}`}>
+                                <div key={qt.key} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${counts[qt.key] > 0 ? 'border-blue-200 bg-blue-50/60' : 'border-gray-100 bg-gray-50'}`}>
                                     <div>
                                         <p className="text-sm font-bold text-gray-800">{qt.label}</p>
                                         <p className="text-xs text-gray-400">{qt.sublabel}</p>
@@ -220,17 +220,17 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                                         <button
                                             onClick={() => changeCount(qt.key, -1)}
                                             disabled={loading || counts[qt.key] === 0}
-                                            className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold text-lg flex items-center justify-center hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-30 transition-all"
+                                            className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold text-lg flex items-center justify-center hover:border-blue-300 hover:text-blue-600 disabled:opacity-30 transition-all"
                                         >
                                             −
                                         </button>
-                                        <span className={`w-8 text-center text-sm font-extrabold ${counts[qt.key] > 0 ? 'text-indigo-700' : 'text-gray-400'}`}>
+                                        <span className={`w-8 text-center text-sm font-extrabold ${counts[qt.key] > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
                                             {counts[qt.key]}
                                         </span>
                                         <button
                                             onClick={() => changeCount(qt.key, 1)}
                                             disabled={loading || counts[qt.key] >= 15}
-                                            className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold text-lg flex items-center justify-center hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-30 transition-all"
+                                            className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold text-lg flex items-center justify-center hover:border-blue-300 hover:text-blue-600 disabled:opacity-30 transition-all"
                                         >
                                             +
                                         </button>
@@ -242,9 +242,9 @@ const AiExamModal = ({ onClose, onGenerate }) => {
 
                     {/* Loading state */}
                     {loading && (
-                        <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
-                            <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin shrink-0" />
-                            <p className="text-sm font-medium text-indigo-700">{loadingMsg}</p>
+                        <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                            <p className="text-sm font-medium text-blue-700">{loadingMsg}</p>
                         </div>
                     )}
                 </div>
@@ -254,14 +254,14 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                     <button
                         onClick={onClose}
                         disabled={loading}
-                        className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                        className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
                     >
                         Ləğv et
                     </button>
                     <button
                         onClick={handleGenerate}
                         disabled={loading || totalCount === 0 || !selectedSubject || (aiUsage && aiUsage.remaining === 0) || (aiUsage && aiUsage.remaining !== -1 && totalCount > aiUsage.remaining)}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md shadow-indigo-200/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md shadow-blue-200/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                         {aiUsage && aiUsage.remaining === 0 ? (
                             <>Aylıq limit bitdi</>

@@ -40,7 +40,7 @@ const ExamView = () => {
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
         );
     }
@@ -67,13 +67,13 @@ const ExamView = () => {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => navigate(`/imtahanlar/${exam.id}/statistika`)}
-                            className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
+                            className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
                         >
                             Statistika
                         </button>
                         <button
                             onClick={() => navigate(`/imtahanlar/edit/${exam.id}`)}
-                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
                         >
                             <HiOutlinePencilAlt className="w-5 h-5" />
                             Düzəliş et
@@ -95,7 +95,7 @@ const ExamView = () => {
                         </div>
                     </div>
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                             <HiOutlineDocumentText className="w-6 h-6" />
                         </div>
                         <div>
@@ -104,7 +104,7 @@ const ExamView = () => {
                         </div>
                     </div>
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
+                        <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
                             <HiOutlineCheckCircle className="w-6 h-6" />
                         </div>
                         <div>
@@ -249,16 +249,16 @@ const ExamView = () => {
                                         });
 
                                         return (
-                                            <div className="mt-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
-                                                <p className="text-sm font-semibold text-purple-700 mb-4">Uyğunluq Cütləri:</p>
+                                            <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl border border-emerald-200">
+                                                <p className="text-sm font-semibold text-emerald-700 mb-4">Uyğunluq Cütləri:</p>
                                                 <div className="grid grid-cols-2 gap-6">
                                                     {/* Left Column */}
                                                     <div className="space-y-3">
-                                                        <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-3">Sol tərəf</p>
+                                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-3">Sol tərəf</p>
                                                         {leftItems.map((item, idx) => (
                                                             <div
                                                                 key={`left-${idx}`}
-                                                                className="p-4 bg-white rounded-lg border-2 border-purple-200 text-gray-800 font-medium text-center"
+                                                                className="p-4 bg-white rounded-lg border-2 border-emerald-200 text-gray-800 font-medium text-center"
                                                             >
                                                                 <LatexPreview content={item} />
                                                             </div>
@@ -267,11 +267,11 @@ const ExamView = () => {
 
                                                     {/* Right Column */}
                                                     <div className="space-y-3">
-                                                        <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-3">Sağ tərəf</p>
+                                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-3">Sağ tərəf</p>
                                                         {rightItems.map((item, idx) => (
                                                             <div
                                                                 key={`right-${idx}`}
-                                                                className="p-4 bg-white rounded-lg border-2 border-purple-200 text-gray-800 font-medium text-center"
+                                                                className="p-4 bg-white rounded-lg border-2 border-emerald-200 text-gray-800 font-medium text-center"
                                                             >
                                                                 <LatexPreview content={item} />
                                                             </div>
@@ -280,7 +280,7 @@ const ExamView = () => {
                                                 </div>
 
                                                 {/* Show Correct Pairs */}
-                                                <div className="mt-6 pt-6 border-t border-purple-200">
+                                                <div className="mt-6 pt-6 border-t border-emerald-200">
                                                     <p className="text-sm font-semibold text-green-700 mb-3">✓ Düzgün Uyğunluqlar:</p>
                                                     <div className="space-y-2">
                                                         {Object.entries(correctPairs).map(([left, rights], idx) => (
@@ -305,8 +305,8 @@ const ExamView = () => {
 
                                     {/* Open Ended */}
                                     {q.questionType === 'OPEN_AUTO' && (
-                                        <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-                                            <p className="text-sm text-indigo-700 font-semibold mb-2">Nümunəvi Cavab:</p>
+                                        <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                                            <p className="text-sm text-blue-700 font-semibold mb-2">Nümunəvi Cavab:</p>
                                             <div className="text-gray-800">
                                                 <LatexPreview content={q.correctAnswer} />
                                             </div>

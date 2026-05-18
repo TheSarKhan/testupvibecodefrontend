@@ -52,7 +52,7 @@ const UserSelector = ({ selectedIds, onChange }) => {
                     className="flex-1 bg-transparent text-sm outline-none text-gray-700 placeholder-gray-400"
                 />
                 {selectedIds.length > 0 && (
-                    <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
                         {selectedIds.length} seçilib
                     </span>
                 )}
@@ -62,7 +62,7 @@ const UserSelector = ({ selectedIds, onChange }) => {
             <div className="divide-y divide-gray-50 max-h-56 overflow-y-auto">
                 {loading ? (
                     <div className="flex justify-center py-6">
-                        <div className="animate-spin h-5 w-5 border-b-2 border-indigo-600 rounded-full" />
+                        <div className="animate-spin h-5 w-5 border-b-2 border-blue-600 rounded-full" />
                     </div>
                 ) : users.length === 0 ? (
                     <p className="text-center text-sm text-gray-400 py-6">İstifadəçi tapılmadı</p>
@@ -70,11 +70,11 @@ const UserSelector = ({ selectedIds, onChange }) => {
                     <>
                         <div
                             onClick={toggleAll}
-                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer bg-gray-50/80"
+                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 cursor-pointer bg-gray-50/80"
                         >
                             <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                                 users.every(u => selectedIds.includes(u.id))
-                                    ? 'bg-indigo-600 border-indigo-600'
+                                    ? 'bg-blue-600 border-blue-600'
                                     : 'border-gray-300'
                             }`}>
                                 {users.every(u => selectedIds.includes(u.id)) && <HiCheck className="w-3 h-3 text-white" />}
@@ -85,11 +85,11 @@ const UserSelector = ({ selectedIds, onChange }) => {
                             <div
                                 key={user.id}
                                 onClick={() => toggle(user.id)}
-                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-50 cursor-pointer transition-colors"
+                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition-colors"
                             >
                                 <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                                     selectedIds.includes(user.id)
-                                        ? 'bg-indigo-600 border-indigo-600'
+                                        ? 'bg-blue-600 border-blue-600'
                                         : 'border-gray-300'
                                 }`}>
                                     {selectedIds.includes(user.id) && <HiCheck className="w-3 h-3 text-white" />}
@@ -99,8 +99,8 @@ const UserSelector = ({ selectedIds, onChange }) => {
                                     <p className="text-xs text-gray-400 truncate">{user.email}</p>
                                 </div>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                    user.role === 'ADMIN' ? 'bg-purple-100 text-purple-700'
-                                    : user.role === 'TEACHER' ? 'bg-indigo-100 text-indigo-700'
+                                    user.role === 'ADMIN' ? 'bg-emerald-100 text-emerald-700'
+                                    : user.role === 'TEACHER' ? 'bg-blue-100 text-blue-700'
                                     : 'bg-emerald-100 text-emerald-700'
                                 }`}>
                                     {user.role === 'ADMIN' ? 'Admin' : user.role === 'TEACHER' ? 'Müəllim' : 'Tələbə'}

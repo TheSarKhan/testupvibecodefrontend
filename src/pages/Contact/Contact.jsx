@@ -1,38 +1,122 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-    HiOutlineMail, HiOutlineLocationMarker, HiOutlineChatAlt2,
-    HiOutlineCheckCircle, HiOutlineArrowRight, HiOutlineLightningBolt,
-    HiOutlineChevronDown,
+    HiOutlineMail, HiOutlineShieldCheck, HiOutlinePhone, HiOutlineLocationMarker,
+    HiOutlineArrowRight, HiOutlinePlus, HiOutlineCheck,
+    HiOutlineLibrary, HiOutlinePlay, HiOutlineUsers,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 
-const InfoCard = ({ icon: Icon, iconBg, iconColor, title, value, sub }) => (
-    <div className="flex items-start gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-        <div className={`w-11 h-11 ${iconBg} rounded-xl flex items-center justify-center shrink-0`}>
-            <Icon className={`w-5 h-5 ${iconColor}`} />
-        </div>
-        <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{title}</p>
-            <p className="font-bold text-gray-900 text-sm">{value}</p>
-            {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-        </div>
+// ───────────────────────────────────────────────────────────────────────────
+// Shared
+// ───────────────────────────────────────────────────────────────────────────
+
+const SectionHead = ({ eyebrow, title, sub }) => (
+    <div className="text-center max-w-[720px] mx-auto mb-12">
+        <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">{eyebrow}</span>
+        <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)] text-balance">{title}</h2>
+        {sub && <p className="mt-4 text-[17px] text-[var(--ink-500)] leading-relaxed">{sub}</p>}
     </div>
 );
 
-const Contact = () => {
-    const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
-    const [sending, setSending] = useState(false);
-    const [openFaq, setOpenFaq] = useState(null);
+// ───────────────────────────────────────────────────────────────────────────
+// Hero
+// ───────────────────────────────────────────────────────────────────────────
 
-    const handleSubmit = async (e) => {
+const ContactHero = () => (
+    <section
+        className="relative pt-16 md:pt-20 pb-12 md:pb-14 overflow-hidden border-b border-[var(--ink-150)]"
+        style={{ background: 'linear-gradient(180deg, var(--brand-blue-50) 0%, transparent 100%)' }}
+    >
+        <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+                backgroundImage: 'linear-gradient(rgba(15,23,42,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.045) 1px, transparent 1px)',
+                backgroundSize: '56px 56px',
+                maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 80%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 80%)',
+            }}
+        />
+        <div className="container-main relative">
+            <div className="flex items-center gap-2 text-[13.5px] text-[var(--ink-500)] mb-5">
+                <Link to="/" className="hover:text-[var(--primary)]">Ana Səhifə</Link>
+                <span className="text-[var(--ink-300)]">/</span>
+                <span className="text-[var(--ink-800)] font-semibold">Əlaqə</span>
+            </div>
+            <div className="text-center max-w-[720px] mx-auto">
+                <span className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] text-[13px] font-semibold border border-blue-100">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
+                    Adətən 2 saat ərzində cavab veririk
+                </span>
+                <h1 className="mt-5 text-[36px] md:text-[52px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
+                    Bizimlə əlaqə saxlayın
+                </h1>
+                <p className="mt-4 text-[18px] text-[var(--ink-500)] max-w-[580px] mx-auto leading-relaxed">
+                    Sualınız, təklifiniz və ya əməkdaşlıq fikriniz var? Komandamız sizinlə danışmaqdan məmnun olacaq.
+                </p>
+            </div>
+        </div>
+    </section>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// Info card (mailto / tel / etc)
+// ───────────────────────────────────────────────────────────────────────────
+
+const InfoCard = ({ href, Icon, green, label, value, sub }) => {
+    const className = 'flex items-start gap-4 bg-white rounded-2xl border border-[var(--ink-200)] p-5 hover:border-[var(--primary)] hover:shadow-[var(--sh-sm)] transition-all';
+    const inner = (
+        <>
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                green ? 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]' : 'bg-[var(--primary-soft)] text-[var(--primary)]'
+            }`}>
+                <Icon className="w-5 h-5" />
+            </div>
+            <div>
+                <p className="text-[11.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-400)]">{label}</p>
+                <p className="text-[16px] font-semibold text-[var(--ink-900)] mt-0.5 leading-tight">{value}</p>
+                {sub && <p className="text-[13.5px] text-[var(--ink-500)] mt-1">{sub}</p>}
+            </div>
+        </>
+    );
+    return href ? <a href={href} className={className}>{inner}</a> : <div className={className}>{inner}</div>;
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Contact form + info column
+// ───────────────────────────────────────────────────────────────────────────
+
+const ContactBody = () => {
+    const [form, setForm] = useState({
+        name: '', email: '', phone: '', org: '', topic: 'sales', subject: '', message: '',
+    });
+    const [submitted, setSubmitted] = useState(false);
+    const [sending, setSending] = useState(false);
+
+    const topics = [
+        { key: 'sales',   label: 'Satış / Plan' },
+        { key: 'support', label: 'Texniki dəstək' },
+        { key: 'partner', label: 'Tərəfdaşlıq' },
+        { key: 'media',   label: 'Mətbuat' },
+        { key: 'other',   label: 'Digər' },
+    ];
+
+    const submit = async (e) => {
         e.preventDefault();
         setSending(true);
         try {
-            await api.post('/contact', formData);
-            toast.success('Mesajınız göndərildi. Tezliklə geri dönəcəyik!');
-            setFormData({ name: '', email: '', subject: '', message: '' });
+            await api.post('/contact', {
+                name: form.name,
+                email: form.email,
+                subject: form.subject || topics.find(t => t.key === form.topic)?.label || 'Əlaqə',
+                message: form.message,
+                phone: form.phone,
+                org: form.org,
+                topic: form.topic,
+            });
+            setSubmitted(true);
         } catch {
             toast.error('Mesaj göndərilmədi. Yenidən cəhd edin.');
         } finally {
@@ -40,200 +124,341 @@ const Contact = () => {
         }
     };
 
-    const faqs = [
-        { q: 'Qeydiyyat pulludur?', a: 'Xeyr, qeydiyyat tamamilə pulsuz. İmtahan yaratmaq da pulsuz.' },
-        { q: 'Şagirdlər qeydiyyatdan keçməlidir?', a: 'Xeyr. Şagirdlər yalnız linki açıb adlarını daxil edərək imtahana qoşulur.' },
-        { q: 'Riyazi simvollar dəstəklənir?', a: 'Bəli. Xüsusi riyazi klaviatura ilə kəsrlər, inteqrallar, kvadrat kökləri asanlıqla daxil edilir.' },
-        { q: 'Sual bazasını necə istifadə edim?', a: '"Sual Bazası" bölməsindən fənn yaradın, suallarınızı əlavə edin. İmtahan yaradarkən bazadan seçin.' },
-    ];
-
     return (
-        <div className="bg-white min-h-screen">
+        <section className="py-16 md:py-20">
+            <div className="container-main">
+                <div className="grid lg:grid-cols-[1.05fr_1fr] gap-10">
+                    {/* Left — info & map */}
+                    <div>
+                        <h2 className="text-[26px] md:text-[30px] font-bold tracking-tight text-[var(--ink-900)] mb-2">
+                            Necə kömək edə bilərik?
+                        </h2>
+                        <p className="text-[var(--ink-500)] text-[15px] mb-7 max-w-[520px] leading-relaxed">
+                            Aşağıdakı kanallardan birini seçin və ya formu doldurun. İş günlərində 2 saat ərzində, həftəsonu isə ertəsi gün cavab veririk.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <InfoCard
+                                href="mailto:salam@testup.az"
+                                Icon={HiOutlineMail}
+                                label="Email"
+                                value="salam@testup.az"
+                                sub="Ümumi məlumatlar və satış üçün"
+                            />
+                            <InfoCard
+                                href="mailto:destek@testup.az"
+                                Icon={HiOutlineShieldCheck}
+                                green
+                                label="Texniki dəstək"
+                                value="destek@testup.az"
+                                sub="Pulsuz plan üçün 24 saat içində cavab"
+                            />
+                            <InfoCard
+                                href="tel:+994123456789"
+                                Icon={HiOutlinePhone}
+                                label="Telefon"
+                                value="+994 12 345 67 89"
+                                sub="B.e — Cümə · 09:00 – 18:00"
+                            />
+                            <InfoCard
+                                href="https://wa.me/994504000000"
+                                Icon={WhatsAppIcon}
+                                green
+                                label="WhatsApp"
+                                value="+994 50 400 00 00"
+                                sub="Peşəkar plan istifadəçiləri üçün"
+                            />
+                            <InfoCard
+                                Icon={HiOutlineLocationMarker}
+                                label="Ofis"
+                                value="Bakı, Azərbaycan"
+                                sub="Nizami küç. 203, 4-cü mərtəbə · AZ1010"
+                            />
+                        </div>
+
+                        {/* Map card */}
+                        <div className="relative mt-4 h-[280px] rounded-2xl overflow-hidden border border-[var(--ink-200)]">
+                            <div
+                                className="absolute inset-0 flex items-center justify-center"
+                                style={{
+                                    background: 'radial-gradient(circle at 30% 40%, rgba(37,99,235,0.15), transparent 60%), radial-gradient(circle at 70% 60%, rgba(34,197,94,0.1), transparent 60%), linear-gradient(135deg, #E8EEF7 0%, #DCE5F0 100%)',
+                                }}
+                            >
+                                {/* Subtle grid overlay */}
+                                <div
+                                    className="absolute inset-0 opacity-50"
+                                    style={{
+                                        backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
+                                        backgroundSize: '28px 28px',
+                                    }}
+                                />
+                                {/* Pin */}
+                                <div className="relative w-14 h-14 rounded-full bg-[var(--primary)] text-white flex items-center justify-center shadow-[0_12px_30px_-8px_rgba(37,99,235,0.6)] z-10">
+                                    <span
+                                        className="absolute -inset-2 rounded-full bg-[var(--primary)] opacity-25 animate-ping"
+                                        style={{ animationDuration: '2.4s' }}
+                                    />
+                                    <HiOutlineLocationMarker className="w-6 h-6 relative" />
+                                </div>
+                            </div>
+                            <div className="absolute bottom-4 left-4 bg-white rounded-xl shadow-[var(--sh-md)] px-4 py-3 text-[13px]">
+                                <div className="font-bold text-[var(--ink-900)]">testup.az HQ</div>
+                                <div className="text-[var(--ink-500)] mt-0.5">Nizami küçəsi 203, Bakı</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right — form */}
+                    <div className="bg-white border border-[var(--ink-200)] rounded-3xl p-7 md:p-9 shadow-[var(--sh-sm)]">
+                        {!submitted ? (
+                            <form onSubmit={submit}>
+                                <h3 className="text-[22px] font-bold text-[var(--ink-900)] mb-1">Bizə yazın</h3>
+                                <p className="text-[14px] text-[var(--ink-500)] mb-6">Forma göndərildikdən sonra qəbz emailinizə gələcək.</p>
+
+                                {/* Topic */}
+                                <div className="mb-5">
+                                    <label className="block text-[13px] font-semibold text-[var(--ink-700)] mb-2">Mövzu</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {topics.map(t => (
+                                            <button
+                                                key={t.key}
+                                                type="button"
+                                                onClick={() => setForm({ ...form, topic: t.key })}
+                                                className={`px-3.5 py-2 rounded-full border text-[13px] font-medium transition-all ${
+                                                    form.topic === t.key
+                                                        ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
+                                                        : 'bg-white text-[var(--ink-700)] border-[var(--ink-200)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
+                                                }`}
+                                            >
+                                                {t.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Name + Email */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                    <Field
+                                        label={<>Ad Soyad <span className="text-[var(--brand-green-600)]">*</span></>}
+                                        required
+                                        placeholder="Aysel Səfərova"
+                                        value={form.name}
+                                        onChange={v => setForm({ ...form, name: v })}
+                                    />
+                                    <Field
+                                        type="email"
+                                        label={<>Email <span className="text-[var(--brand-green-600)]">*</span></>}
+                                        required
+                                        placeholder="aysel@example.az"
+                                        value={form.email}
+                                        onChange={v => setForm({ ...form, email: v })}
+                                    />
+                                </div>
+
+                                {/* Phone + Org */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                    <Field
+                                        type="tel"
+                                        label="Telefon"
+                                        placeholder="+994 50 ..."
+                                        value={form.phone}
+                                        onChange={v => setForm({ ...form, phone: v })}
+                                    />
+                                    <Field
+                                        label="Təşkilat / Məktəb"
+                                        placeholder="Məsələn: 23 №-li məktəb"
+                                        value={form.org}
+                                        onChange={v => setForm({ ...form, org: v })}
+                                    />
+                                </div>
+
+                                <div className="mb-4">
+                                    <Field
+                                        label="Mövzu başlığı"
+                                        placeholder="Qısaca mövzunu yazın"
+                                        value={form.subject}
+                                        onChange={v => setForm({ ...form, subject: v })}
+                                    />
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-[13px] font-semibold text-[var(--ink-700)] mb-1.5">
+                                        Mesajınız <span className="text-[var(--brand-green-600)]">*</span>
+                                    </label>
+                                    <textarea
+                                        required
+                                        placeholder="Bizə nə demək istəyirsiniz? Mümkün qədər ətraflı yazın."
+                                        rows={4}
+                                        value={form.message}
+                                        onChange={e => setForm({ ...form, message: e.target.value })}
+                                        className="w-full px-4 py-3 bg-[var(--ink-50)] border border-[var(--ink-200)] rounded-xl text-[14.5px] text-[var(--ink-900)] focus:outline-none focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)] transition-colors resize-y placeholder:text-[var(--ink-400)]"
+                                    />
+                                </div>
+
+                                <p className="text-[12.5px] text-[var(--ink-500)] mb-5">
+                                    Forma göndərməklə{' '}
+                                    <a href="#" className="text-[var(--primary)] font-semibold">məxfilik siyasətini</a>{' '}
+                                    qəbul etmiş olursunuz.
+                                </p>
+
+                                <button
+                                    type="submit"
+                                    disabled={sending}
+                                    className="w-full h-14 inline-flex items-center justify-center gap-2 rounded-full font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-60 shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                                >
+                                    {sending ? 'Göndərilir...' : <>Mesajı göndər <HiOutlineArrowRight className="w-4 h-4" /></>}
+                                </button>
+                            </form>
+                        ) : (
+                            <div className="text-center py-10">
+                                <div className="w-[72px] h-[72px] mx-auto mb-5 rounded-full bg-[var(--accent-soft)] text-[var(--brand-green-600)] flex items-center justify-center">
+                                    <HiOutlineCheck className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-[20px] font-bold text-[var(--ink-900)] mb-2">Mesajınız göndərildi!</h3>
+                                <p className="text-[var(--ink-500)] text-[15px] mb-7">
+                                    <span className="text-[var(--ink-800)] font-semibold">{form.email || 'Sizin email'}</span>-ə qəbz göndərdik. Komandamız 2 saat ərzində sizinlə əlaqə saxlayacaq.
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        setSubmitted(false);
+                                        setForm({ name: '', email: '', phone: '', org: '', topic: 'sales', subject: '', message: '' });
+                                    }}
+                                    className="h-12 px-6 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--ink-800)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                                >
+                                    Yeni mesaj göndər
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const Field = ({ type = 'text', label, required, placeholder, value, onChange }) => (
+    <div className="flex flex-col gap-1.5">
+        <label className="text-[13px] font-semibold text-[var(--ink-700)]">{label}</label>
+        <input
+            type={type}
+            required={required}
+            placeholder={placeholder}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            className="h-[46px] px-4 bg-[var(--ink-50)] border border-[var(--ink-200)] rounded-xl text-[14.5px] text-[var(--ink-900)] focus:outline-none focus:border-[var(--primary)] focus:bg-white focus:ring-4 focus:ring-[var(--primary-soft)] transition-colors placeholder:text-[var(--ink-400)]"
+        />
+    </div>
+);
+
+const WhatsAppIcon = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.6 6.32A8.92 8.92 0 0 0 11.18 4 8.94 8.94 0 0 0 3.42 17.4L2 22l4.74-1.24a8.94 8.94 0 0 0 4.44 1.13c4.93 0 8.94-4 8.94-8.94a8.83 8.83 0 0 0-2.52-6.63zm-6.42 13.75a7.42 7.42 0 0 1-3.79-1.03l-.27-.16-2.81.74.75-2.74-.18-.28a7.42 7.42 0 0 1-1.14-3.95 7.43 7.43 0 0 1 12.7-5.27 7.36 7.36 0 0 1 2.19 5.26 7.44 7.44 0 0 1-7.45 7.43z" />
+    </svg>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// Support channels
+// ───────────────────────────────────────────────────────────────────────────
+
+const SupportChannels = () => {
+    const cards = [
+        { Icon: HiOutlineLibrary, title: 'Bilik Bazası',     desc: '200+ məqalə, addım-addım təlimatlar və video təlimlər. İstifadəyə başlamağın ən sürətli yolu.', cta: 'Bilik bazasına keç' },
+        { Icon: HiOutlinePlay,    title: 'Video təlimlər',    desc: 'İlk imtahanı yaratmaqdan sertifikat şablonuna qədər — 5-10 dəqiqəlik video təlimlər.',           cta: 'YouTube kanalına keç', green: true },
+        { Icon: HiOutlineUsers,   title: 'Müəllim icması',    desc: '2 400+ müəllimin olduğu Telegram qrupu. Suallarınıza tez-tez digər müəllimlər cavab verir.',     cta: 'İcmaya qoşul' },
+    ];
+    return (
+        <section className="py-20 md:py-24 bg-[var(--ink-50)]">
+            <div className="container-main">
+                <SectionHead
+                    eyebrow="Sürətli kömək"
+                    title="Sual göndərməyə ehtiyac olmaya bilər"
+                    sub="Çox vaxt cavab artıq aşağıdakı resurslardan birindədir."
+                />
+                <div className="grid md:grid-cols-3 gap-5">
+                    {cards.map((c, i) => (
+                        <div
+                            key={i}
+                            className="bg-white border border-[var(--ink-200)] rounded-2xl p-7 text-center hover:-translate-y-1 hover:shadow-[var(--sh-md)] hover:border-[var(--primary)] transition-all"
+                        >
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mx-auto ${
+                                c.green ? 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]' : 'bg-[var(--primary-soft)] text-[var(--primary)]'
+                            }`}>
+                                <c.Icon className="w-6 h-6" />
+                            </div>
+                            <h4 className="text-[17px] font-bold text-[var(--ink-900)] mb-2">{c.title}</h4>
+                            <p className="text-[14px] text-[var(--ink-500)] leading-relaxed mb-4">{c.desc}</p>
+                            <a href="#" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[var(--primary)] hover:gap-2 transition-all">
+                                {c.cta} <HiOutlineArrowRight className="w-3.5 h-3.5" />
+                            </a>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// FAQ
+// ───────────────────────────────────────────────────────────────────────────
+
+const ContactFAQ = () => {
+    const items = [
+        { q: 'Cavabı nə qədər müddətə alaram?',                   a: 'İş günləri ərzində ortalama 2 saat. Həftəsonu və bayramlarda növbəti iş günündə cavab veririk. Texniki problemlər üçün Peşəkar plan istifadəçiləri prioritet sırada yer alır.' },
+        { q: 'Demo görüş təyin edə bilərəmmi?',                   a: 'Bəli. Mərkəz planı və 50+ müəllimi olan təşkilatlar üçün şəxsi demo görüş təyin edirik. Forma vasitəsilə müraciət edin, biz vaxt təklif edək.' },
+        { q: 'Texniki problem ilə üzləşmişəm — nə etməliyəm?',    a: 'destek@testup.az ünvanına yazın və ya istifadəçi panelinizdən "Dəstək" düyməsini sıxın. Mümkünsə ekran şəkili əlavə edin — bu prosesi xeyli sürətləndirir.' },
+        { q: 'Mətbuatla əlaqə saxlamaq istəyirəm.',                a: 'Mətbuat materialları və müsahibə müraciətləri üçün press@testup.az ünvanına yazın. Loqo və əsas məlumat paketini istənildikdə göndəririk.' },
+    ];
+    const [open, setOpen] = useState(0);
+    return (
+        <section className="py-20 md:py-24">
+            <div className="container-main max-w-3xl">
+                <div className="text-center max-w-[720px] mx-auto mb-12">
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">FAQ</span>
+                    <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)]">
+                        Əlaqə ilə bağlı suallar
+                    </h2>
+                </div>
+                <div className="bg-white border border-[var(--ink-200)] rounded-2xl divide-y divide-[var(--ink-150)] overflow-hidden">
+                    {items.map((it, i) => (
+                        <div key={i}>
+                            <button
+                                onClick={() => setOpen(open === i ? -1 : i)}
+                                className="w-full flex items-center justify-between text-left px-6 py-5 hover:bg-[var(--ink-100)] transition-colors"
+                            >
+                                <span className="font-semibold text-[var(--ink-900)] text-[15.5px]">{it.q}</span>
+                                <span className={`w-7 h-7 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0 transition-transform ${open === i ? 'rotate-45' : ''}`}>
+                                    <HiOutlinePlus className="w-4 h-4" />
+                                </span>
+                            </button>
+                            {open === i && (
+                                <div className="px-6 pb-5 text-[14.5px] text-[var(--ink-500)] leading-relaxed">{it.a}</div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Main
+// ───────────────────────────────────────────────────────────────────────────
+
+const Contact = () => {
+    return (
+        <div style={{ background: 'var(--paper-cream)' }}>
             <Helmet>
                 <title>Əlaqə — testup.az</title>
-                <meta name="description" content="testup.az ilə əlaqə saxlayın. Texniki dəstək, suallar və əməkdaşlıq üçün bizimlə əlaqə saxlaya bilərsiniz." />
+                <meta name="description" content="testup.az ilə əlaqə saxlayın. Texniki dəstək, satış, tərəfdaşlıq və mətbuat üçün bizimlə əlaqə kanalları." />
                 <link rel="canonical" href="https://testup.az/elaqe" />
             </Helmet>
 
-            {/* ── Hero ── */}
-            <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-indigo-50/40 to-purple-50/20 pt-16 pb-20">
-                <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-200/25 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute top-32 -left-16 w-64 h-64 bg-purple-200/20 rounded-full blur-3xl pointer-events-none" />
-                <div className="container-main relative z-10 text-center max-w-2xl mx-auto">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-indigo-100 text-indigo-600 text-xs font-semibold mb-8 shadow-sm">
-                        <HiOutlineLightningBolt className="w-3.5 h-3.5" />
-                        24 saatdan az müddətdə cavab
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-5">
-                        Əlaqə
-                    </h1>
-                    <p className="text-lg text-gray-600 leading-relaxed">
-                        Sualınız, təklifiniz və ya texniki probleminiz var?
-                        Bizimlə əlaqə saxlamaqdan çəkinməyin — tezliklə geri dönəcəyik.
-                    </p>
-                </div>
-            </section>
-
-            {/* ── Main content ── */}
-            <section className="py-20 bg-white">
-                <div className="container-main">
-                    <div className="grid lg:grid-cols-5 gap-12 max-w-6xl mx-auto">
-
-                        {/* Left — info */}
-                        <div className="lg:col-span-2 space-y-6">
-                            <div>
-                                <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Əlaqə məlumatları</p>
-                                <h2 className="text-2xl font-extrabold text-gray-900 mb-3">Bizimlə əlaqə saxlayın</h2>
-                                <p className="text-sm text-gray-500 leading-relaxed">
-                                    Texniki problem, sual, iş birliyi təklifi — hər mövzuda yazın. Ən qısa zamanda cavab veririk.
-                                </p>
-                            </div>
-
-                            <InfoCard
-                                icon={HiOutlineMail}
-                                iconBg="bg-indigo-50" iconColor="text-indigo-600"
-                                title="E-poçt"
-                                value="info@testup.az"
-                                sub="Ən sürətli cavab yolu"
-                            />
-                            <InfoCard
-                                icon={HiOutlineLocationMarker}
-                                iconBg="bg-purple-50" iconColor="text-purple-600"
-                                title="Ünvan"
-                                value="Bakı şəhəri, Azərbaycan"
-                                sub="Azərbaycanlı komanda"
-                            />
-                            <InfoCard
-                                icon={HiOutlineChatAlt2}
-                                iconBg="bg-green-50" iconColor="text-green-600"
-                                title="Cavab müddəti"
-                                value="24 saatdan az"
-                                sub="İş günlərində"
-                            />
-
-                            {/* Trust */}
-                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100">
-                                <p className="text-xs font-bold text-indigo-700 mb-3">Niyə testup.az?</p>
-                                {[
-                                    'Qeydiyyat pulsuz',
-                                    'Azərbaycan dilində dəstək',
-                                    'Yerli komanda, sürətli həll',
-                                ].map(t => (
-                                    <div key={t} className="flex items-center gap-2 text-sm text-gray-700 mb-2 last:mb-0">
-                                        <HiOutlineCheckCircle className="w-4 h-4 text-indigo-500 shrink-0" />
-                                        {t}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Right — form */}
-                        <div className="lg:col-span-3">
-                            <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/60 p-8">
-                                <h3 className="text-xl font-extrabold text-gray-900 mb-1">Bizə yazın</h3>
-                                <p className="text-sm text-gray-400 mb-6">Aşağıdakı formu doldurun, qısa zamanda cavab alacaqsınız.</p>
-
-                                <form onSubmit={handleSubmit} className="space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Adınız *</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.name}
-                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-sm"
-                                                placeholder="Adınız Soyadınız"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">E-poçt *</label>
-                                            <input
-                                                type="email"
-                                                required
-                                                value={formData.email}
-                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-sm"
-                                                placeholder="email@nümunə.az"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Mövzu</label>
-                                        <select
-                                            value={formData.subject}
-                                            onChange={e => setFormData({ ...formData, subject: e.target.value })}
-                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition text-sm bg-white text-gray-700"
-                                        >
-                                            <option value="">Mövzu seçin...</option>
-                                            <option value="texniki">Texniki problem</option>
-                                            <option value="sual">Ümumi sual</option>
-                                            <option value="eməkdaşlıq">Əməkdaşlıq təklifi</option>
-                                            <option value="digər">Digər</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Mesajınız *</label>
-                                        <textarea
-                                            rows={5}
-                                            required
-                                            value={formData.message}
-                                            onChange={e => setFormData({ ...formData, message: e.target.value })}
-                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition resize-none text-sm"
-                                            placeholder="Sualınızı, probleminizi və ya təklifinizi ətraflı yazın..."
-                                        />
-                                    </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={sending}
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200/60 disabled:opacity-60 text-sm"
-                                    >
-                                        {sending ? (
-                                            <>
-                                                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                                Göndərilir...
-                                            </>
-                                        ) : (
-                                            <>Mesajı göndər <HiOutlineArrowRight className="w-4 h-4" /></>
-                                        )}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── FAQ ── */}
-            <section className="py-20 bg-gray-50/60">
-                <div className="container-main max-w-3xl mx-auto">
-                    <div className="text-center mb-10">
-                        <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Tez-tez verilən suallar</p>
-                        <h2 className="text-2xl font-extrabold text-gray-900">Cavab axtarırsınız?</h2>
-                    </div>
-                    <div className="space-y-3">
-                        {faqs.map((faq, i) => (
-                            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                                <button
-                                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                                    className="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-gray-50 transition-colors cursor-pointer"
-                                >
-                                    <span className="font-bold text-gray-900 text-sm">{faq.q}</span>
-                                    <HiOutlineChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`} />
-                                </button>
-                                {openFaq === i && (
-                                    <div className="px-5 pb-5 text-sm text-gray-500 leading-relaxed border-t border-gray-50 pt-3">
-                                        {faq.a}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+            <ContactHero />
+            <ContactBody />
+            <SupportChannels />
+            <ContactFAQ />
         </div>
     );
 };

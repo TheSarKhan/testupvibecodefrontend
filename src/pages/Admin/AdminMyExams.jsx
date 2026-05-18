@@ -122,7 +122,7 @@ const AdminMyExams = () => {
                 </div>
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors"
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors"
                 >
                     <HiOutlinePlusCircle className="w-5 h-5" />
                     Yeni İmtahan
@@ -139,10 +139,10 @@ const AdminMyExams = () => {
                             placeholder="İmtahan adı ilə axtar..."
                             value={searchInput}
                             onChange={e => setSearchInput(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 bg-white"
+                            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 bg-white"
                         />
                     </div>
-                    <button type="submit" className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors">
+                    <button type="submit" className="px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
                         Axtar
                     </button>
                 </form>
@@ -151,7 +151,7 @@ const AdminMyExams = () => {
                         <button
                             key={s.value}
                             onClick={() => { setStatusFilter(s.value); setPage(0); }}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${statusFilter === s.value ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${statusFilter === s.value ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
                         >
                             {s.label}
                         </button>
@@ -163,14 +163,14 @@ const AdminMyExams = () => {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="flex justify-center py-20">
-                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
                     </div>
                 ) : exams.length === 0 ? (
                     <div className="text-center py-20">
                         <p className="text-gray-400 mb-3">Hələ imtahan yaratmamısınız</p>
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 text-sm font-semibold"
+                            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-semibold"
                         >
                             <HiOutlinePlusCircle className="w-4 h-4" />
                             İlk imtahanı yarat
@@ -189,7 +189,7 @@ const AdminMyExams = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {exams.map(exam => (
-                                <tr key={exam.id} className="hover:bg-gray-50 transition-colors">
+                                <tr key={exam.id} className="hover:bg-gray-100 transition-colors">
                                     <td className="px-6 py-4">
                                         <p className="font-semibold text-gray-900 leading-tight">{exam.title}</p>
                                         <p className="text-xs text-gray-400 mt-0.5">{exam.questionCount} sual · {(exam.subjects || []).join(', ') || exam.subject}</p>
@@ -205,7 +205,7 @@ const AdminMyExams = () => {
                                             title={exam.sitePublished ? 'Saytdan çıxar' : 'Saytda paylaş'}
                                             className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors ${
                                                 exam.sitePublished
-                                                    ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                                                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                                                     : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                                             }`}
                                         >
@@ -226,14 +226,14 @@ const AdminMyExams = () => {
                                                     placeholder="Pulsuz"
                                                     value={getPriceDisplay(exam)}
                                                     onChange={e => handlePriceChange(exam.id, e.target.value)}
-                                                    className="w-24 pl-6 pr-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-400"
+                                                    className="w-24 pl-6 pr-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-400"
                                                 />
                                             </div>
                                             {priceInputs[exam.id] !== undefined && (
                                                 <button
                                                     onClick={() => handlePriceSave(exam.id)}
                                                     disabled={savingPrice[exam.id]}
-                                                    className="px-2 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                                                    className="px-2 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                                                 >
                                                     {savingPrice[exam.id] ? '...' : 'Saxla'}
                                                 </button>
@@ -251,7 +251,7 @@ const AdminMyExams = () => {
                                             </button>
                                             <button
                                                 onClick={() => navigate(`/imtahanlar/edit/${exam.id}`)}
-                                                className="p-1.5 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                                                 title="Redaktə et"
                                             >
                                                 <HiOutlinePencil className="w-4 h-4" />
@@ -260,7 +260,7 @@ const AdminMyExams = () => {
                                                 href={`/imtahan/${exam.shareLink}`}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="p-1.5 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                                                 title="İmtahana bax"
                                             >
                                                 <HiOutlineExternalLink className="w-4 h-4" />

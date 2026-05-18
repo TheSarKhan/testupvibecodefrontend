@@ -1,251 +1,402 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-    HiOutlineLightBulb, HiOutlineAcademicCap, HiOutlineShieldCheck,
-    HiOutlineCalculator, HiOutlineClipboardCheck, HiOutlinePencilAlt,
-    HiOutlineEye, HiOutlineChip, HiOutlineArrowRight, HiOutlineCheckCircle,
-    HiOutlineHeart, HiOutlineGlobe, HiOutlineSparkles, HiOutlineUserGroup,
-    HiOutlineDuplicate, HiOutlineChartBar,
+    HiOutlineArrowRight, HiOutlineUsers, HiOutlineGlobe,
+    HiOutlineAcademicCap, HiOutlineHeart, HiOutlineShieldCheck,
+    HiOutlineLightBulb,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
-import Pricing from '../Pricing/Pricing';
+import aboutImage from '../../assets/about.png';
 
-const ValueCard = ({ icon: Icon, title, desc, from, to }) => (
-    <div className={`rounded-2xl p-6 bg-gradient-to-br ${from} ${to} flex gap-4 cursor-pointer`}>
-        <div className="bg-white/70 p-2.5 rounded-xl h-fit shadow-sm shrink-0">
-            <Icon className="w-5 h-5 text-gray-700" />
-        </div>
-        <div>
-            <h3 className="font-bold text-gray-900 mb-1.5">{title}</h3>
-            <p className="text-sm text-gray-600 leading-relaxed">{desc}</p>
-        </div>
+// ───────────────────────────────────────────────────────────────────────────
+// Shared bits
+// ───────────────────────────────────────────────────────────────────────────
+
+const Eyebrow = ({ children }) => (
+    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">{children}</span>
+);
+
+const SectionHead = ({ eyebrow, title, sub }) => (
+    <div className="text-center max-w-[720px] mx-auto mb-14">
+        <Eyebrow>{eyebrow}</Eyebrow>
+        <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)] text-balance">{title}</h2>
+        {sub && <p className="mt-4 text-[17px] md:text-lg text-[var(--ink-500)] leading-relaxed">{sub}</p>}
     </div>
 );
 
-const InnovCard = ({ icon: Icon, iconColor, bg, title, desc }) => (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-        <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-4`}>
-            <Icon className={`w-5 h-5 ${iconColor}`} />
+// ───────────────────────────────────────────────────────────────────────────
+// Sections
+// ───────────────────────────────────────────────────────────────────────────
+
+const AboutHero = ({ isAuthenticated }) => (
+    <section
+        className="relative pt-16 md:pt-20 pb-16 md:pb-20 overflow-hidden border-b border-[var(--ink-150)]"
+        style={{ background: 'linear-gradient(180deg, var(--brand-blue-50) 0%, transparent 100%)' }}
+    >
+        {/* Grid background */}
+        <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+                backgroundImage: 'linear-gradient(rgba(15,23,42,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.045) 1px, transparent 1px)',
+                backgroundSize: '56px 56px',
+                maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 80%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 80%)',
+            }}
+        />
+
+        <div className="container-main relative">
+            {/* Breadcrumbs */}
+            <div className="flex items-center gap-2 text-[13.5px] text-[var(--ink-500)] mb-5">
+                <Link to="/" className="hover:text-[var(--primary)]">Ana Səhifə</Link>
+                <span className="text-[var(--ink-300)]">/</span>
+                <span className="text-[var(--ink-800)] font-semibold">Haqqımızda</span>
+            </div>
+
+            <div className="grid lg:grid-cols-[1.2fr_1fr] gap-10 lg:gap-14 items-center">
+                {/* Left */}
+                <div>
+                    <span className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] text-[13px] font-semibold border border-blue-100">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
+                        Bakı, Azərbaycan · 2023-dən bəri
+                    </span>
+
+                    <h1 className="mt-6 text-[36px] sm:text-[44px] md:text-[56px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
+                        Azərbaycanın hər müəlliminə peşəkar imtahan alətləri
+                    </h1>
+
+                    <p className="mt-6 text-[18px] md:text-[19px] leading-[1.6] text-[var(--ink-500)] max-w-[560px]">
+                        testup.az müəllimlərin və təlim mərkəzlərinin işini sadələşdirmək, şagirdlərin isə öz biliklərini ədalətli və müasir formada qiymətləndirmək məqsədilə Bakıda qurulmuş bir təhsil texnologiyaları platformasıdır.
+                    </p>
+
+                    <div className="mt-8 flex flex-wrap items-center gap-3">
+                        {isAuthenticated ? (
+                            <Link
+                                to="/imtahanlar"
+                                className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                            >
+                                İmtahanlara bax <HiOutlineArrowRight className="w-4 h-4" />
+                            </Link>
+                        ) : (
+                            <Link
+                                to="/register"
+                                className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                            >
+                                Pulsuz başla <HiOutlineArrowRight className="w-4 h-4" />
+                            </Link>
+                        )}
+                        <Link
+                            to="/elaqe"
+                            className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--ink-800)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                        >
+                            Bizimlə əlaqə
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Right — about image with floating stat chips */}
+                <div className="relative">
+                    {/* Blurred blue glow */}
+                    <div
+                        className="absolute inset-0 -m-8 rounded-full blur-3xl opacity-60 pointer-events-none"
+                        style={{ background: 'radial-gradient(circle at 50% 50%, var(--brand-blue-100), transparent 60%)' }}
+                    />
+                    <div className="relative rounded-3xl overflow-hidden bg-white border border-[var(--ink-200)] shadow-[var(--sh-lg)]">
+                        <img src={aboutImage} alt="testup.az komandası" className="w-full h-auto block" />
+                    </div>
+
+                    {/* Floating chips */}
+                    <div className="hidden md:flex absolute -top-4 -left-4 items-center gap-3 bg-white rounded-2xl border border-[var(--ink-200)] shadow-[var(--sh-lg)] px-5 py-3.5" style={{ transform: 'rotate(-3deg)' }}>
+                        <div className="w-11 h-11 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
+                            <HiOutlineUsers className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="text-[15px] font-bold text-[var(--ink-900)]">12 000+ müəllim</div>
+                            <div className="text-[12.5px] text-[var(--ink-500)]">Aktiv istifadəçi</div>
+                        </div>
+                    </div>
+
+                    <div className="hidden md:flex absolute -bottom-5 -right-3 items-center gap-3 bg-white rounded-2xl border border-[var(--ink-200)] px-5 py-3.5" style={{ transform: 'rotate(2deg)', boxShadow: 'var(--sh-lg), var(--sh-glow-blue)' }}>
+                        <div className="w-11 h-11 rounded-xl bg-[var(--accent-soft)] text-[var(--brand-green-600)] flex items-center justify-center shrink-0">
+                            <HiOutlineAcademicCap className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="text-[15px] font-bold text-[var(--ink-900)]">340 000 imtahan</div>
+                            <div className="text-[12.5px] text-[var(--ink-500)]">Bu il keçirilib</div>
+                        </div>
+                    </div>
+
+                    <div className="hidden lg:flex absolute -bottom-4 left-8 items-center gap-3 bg-white rounded-2xl border border-[var(--ink-200)] shadow-[var(--sh-lg)] px-5 py-3.5" style={{ transform: 'rotate(1deg)' }}>
+                        <div className="w-11 h-11 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
+                            <HiOutlineGlobe className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="text-[15px] font-bold text-[var(--ink-900)]">63 şəhər</div>
+                            <div className="text-[12.5px] text-[var(--ink-500)]">Azərbaycan boyu</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
-        <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
-    </div>
+    </section>
 );
+
+const Mission = () => {
+    const values = [
+        {
+            Icon: HiOutlineLightBulb,
+            title: 'Sadəlik',
+            desc: 'Texnologiya texniki bilik tələb etməməlidir. Müəllim öz işinə fokuslanmalı, alət isə görünməz qalmalıdır.',
+            tone: 'bg-[var(--primary-soft)] text-[var(--primary)]',
+        },
+        {
+            Icon: HiOutlineShieldCheck,
+            title: 'Ədalət',
+            desc: 'Hər şagirdin bərabər şərtlərdə qiymətləndirilməsi üçün anti-köçürmə, vaxt nəzarəti və qarışdırma alətləri quruluşumuza yerləşdirilib.',
+            tone: 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]',
+        },
+        {
+            Icon: HiOutlineHeart,
+            title: 'Tələbə mərkəzli',
+            desc: 'Qiymətləndirmə cəza deyil, inkişaf vasitəsidir. Şagirdə öz zəif tərəfini görmək imkanı veririk.',
+            tone: 'bg-[var(--primary-soft)] text-[var(--primary)]',
+        },
+    ];
+    return (
+        <section className="py-20 md:py-24">
+            <div className="container-main">
+                <SectionHead
+                    eyebrow="Missiya"
+                    title="Hər müəllimin əlində dünya səviyyəli imtahan platforması"
+                    sub="Müasir təhsil tələblərinə cavab verən, sadə və ədalətli qiymətləndirmə vasitələrini Azərbaycanın hər müəlliminə çatdırmaq."
+                />
+                <div className="grid md:grid-cols-3 gap-5">
+                    {values.map((v, i) => (
+                        <div
+                            key={i}
+                            className="bg-white border border-[var(--ink-200)] rounded-2xl p-7 hover:-translate-y-1 hover:shadow-[var(--sh-md)] hover:border-[var(--brand-blue-100)] transition-all"
+                        >
+                            <div className={`w-[52px] h-[52px] rounded-2xl flex items-center justify-center mb-5 ${v.tone}`}>
+                                <v.Icon className="w-5 h-5" />
+                            </div>
+                            <h3 className="text-[19px] font-bold text-[var(--ink-900)] mb-2">{v.title}</h3>
+                            <p className="text-[14.5px] text-[var(--ink-500)] leading-relaxed">{v.desc}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const Story = () => {
+    const items = [
+        { year: '2023 — Yaz',    title: 'İdeyanın doğulması',         desc: 'Bakıda riyaziyyat müəllimi olan həmtəsisçimiz hər həftə əl ilə test yoxlamağın saatlarını sayır. İlk MVP iki nəfərlə hazırlanır.' },
+        { year: '2024 — Yanvar', title: 'İlk 1 000 müəllim',           desc: 'Beta variant Azərbaycan müəllimləri arasında pulsuz buraxılır. İlk 6 ayda 1 000 fəal müəllim qeydiyyatdan keçir.' },
+        { year: '2025 — İyun',   title: 'Sual bankı və sertifikat',     desc: '40 000+ sualı olan sual bankı və QR-doğrulamalı sertifikat sistemi əlavə edilir. Komanda 14 nəfərə çatır.' },
+        { year: '2026 — İndi',   title: 'v3.0 və regional genişlənmə',  desc: 'Tam yenidən qurulmuş analitika, müştəri panelləri və Türkiyə bazarına ilk addımlar.' },
+        { year: '2027 — Yol',    title: 'AI köməkçi və oflayn rejim',   desc: 'Sual yaradan AI köməkçi və zəif internetlə işləyən oflayn imtahan rejimi planlaşdırılır.' },
+    ];
+    return (
+        <section className="py-20 md:py-24 bg-[var(--ink-50)]">
+            <div className="container-main">
+                <SectionHead
+                    eyebrow="Hekayəmiz"
+                    title="Bir müəllimin probleminin həllindən başlayıb"
+                    sub="Əhəmiyyətli mərhələlərimiz və qarşıdan gələn planlarımız."
+                />
+                <div className="relative max-w-[760px] mx-auto pl-8">
+                    {/* Vertical gradient line */}
+                    <div
+                        className="absolute top-2 bottom-2 left-2 w-0.5 rounded-sm"
+                        style={{ background: 'linear-gradient(180deg, var(--primary) 0%, var(--accent) 100%)' }}
+                    />
+                    {items.map((it, i) => {
+                        const even = i % 2 === 1;
+                        return (
+                            <div key={i} className="relative pb-9 pl-8">
+                                {/* Bullet */}
+                                <span
+                                    className="absolute -left-[8px] top-[6px] w-[18px] h-[18px] rounded-full bg-white"
+                                    style={{
+                                        border: `3px solid ${even ? 'var(--accent)' : 'var(--primary)'}`,
+                                        boxShadow: '0 0 0 4px var(--ink-50)',
+                                    }}
+                                />
+                                <div className={`text-[13px] font-bold uppercase tracking-[0.08em] ${even ? 'text-[var(--brand-green-600)]' : 'text-[var(--primary)]'}`}>
+                                    {it.year}
+                                </div>
+                                <div className="text-[18px] font-bold text-[var(--ink-900)] mt-1.5 mb-1.5">{it.title}</div>
+                                <p className="text-[14.5px] text-[var(--ink-500)] leading-[1.6]">{it.desc}</p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const ByNumbers = () => {
+    const stats = [
+        { num: '12K',  plus: true,  label: 'Aktiv müəllim' },
+        { num: '340K', plus: true,  label: 'Şagird qeydiyyatı' },
+        { num: '1.2M', plus: true,  label: 'Tamamlanmış imtahan' },
+        { num: '63',                  label: 'Azərbaycan şəhəri' },
+    ];
+    return (
+        <section className="py-12 md:py-16">
+            <div className="container-main">
+                <div
+                    className="relative overflow-hidden rounded-3xl text-white px-6 py-10 md:px-8 md:py-12 grid grid-cols-2 md:grid-cols-4"
+                    style={{ background: 'var(--ink-900)' }}
+                >
+                    <div className="absolute inset-0 pointer-events-none" style={{
+                        background: 'radial-gradient(circle at 0% 100%, rgba(37,99,235,0.35), transparent 50%), radial-gradient(circle at 100% 0%, rgba(34,197,94,0.25), transparent 50%)',
+                    }} />
+                    {stats.map((s, i) => (
+                        <div key={i} className={`relative text-center px-4 py-2 ${i > 0 ? 'md:border-l border-white/10' : ''}`}>
+                            <div className="text-[36px] md:text-[40px] font-bold tracking-tight leading-none">
+                                {s.num}{s.plus && <span className="text-[var(--accent)]">+</span>}
+                            </div>
+                            <div className="text-[13px] text-white/65 mt-2">{s.label}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const Team = () => {
+    const team = [
+        { i: 'EQ', n: 'Elvin Qədirov',     r: 'Həmtəsisçi, CEO' },
+        { i: 'NM', n: 'Nərmin Məmmədova',  r: 'Həmtəsisçi, CPO' },
+        { i: 'TƏ', n: 'Tural Əliyev',      r: 'Mühəndis komandasının rəhbəri' },
+        { i: 'SR', n: 'Səbinə Rüstəmova',  r: 'Təhsil məhsul üzrə menecer' },
+        { i: 'RH', n: 'Rauf Həsənli',      r: 'Dizayn rəhbəri' },
+        { i: 'AC', n: 'Aysu Cəfərova',     r: 'Müştəri uğuru' },
+        { i: 'KM', n: 'Kamran Məhərrəmov', r: 'Sual bankı redaktoru' },
+        { i: 'LƏ', n: 'Leyla Əhmədova',    r: 'Marketinq' },
+    ];
+    return (
+        <section className="py-20 md:py-24 bg-[var(--ink-50)]">
+            <div className="container-main">
+                <SectionHead
+                    eyebrow="Komanda"
+                    title="Müəllimlər, mühəndislər və dizaynerlər"
+                    sub="Bakıda kiçik və yaxından işləyən komanda — birlikdə Azərbaycan təhsilini bir az da yaxşılaşdırmaq üçün."
+                />
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    {team.map((t, i) => (
+                        <div
+                            key={i}
+                            className="bg-white border border-[var(--ink-200)] rounded-2xl p-6 text-center hover:-translate-y-1 hover:shadow-[var(--sh-md)] transition-all"
+                        >
+                            <div
+                                className="w-[84px] h-[84px] mx-auto mb-4 rounded-full flex items-center justify-center text-[26px] font-bold text-[var(--ink-900)]"
+                                style={{ background: 'linear-gradient(135deg, var(--brand-blue-100), var(--brand-green-100))' }}
+                            >
+                                {t.i}
+                            </div>
+                            <div className="text-[16px] font-bold text-[var(--ink-900)]">{t.n}</div>
+                            <div className="text-[13px] text-[var(--ink-500)] mt-1">{t.r}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const PressMentions = () => {
+    const mentions = ['Muallim.edu.az', 'Tehsilim.az', 'ATP.AZ', 'Trend.az', 'Report.az'];
+    return (
+        <section className="py-12 md:py-16">
+            <div className="container-main">
+                <div className="text-center mb-6">
+                    <Eyebrow>Mətbuatda</Eyebrow>
+                </div>
+                <div className="flex flex-wrap justify-around items-center gap-7 opacity-70">
+                    {mentions.map((m, i) => (
+                        <div
+                            key={i}
+                            className="text-[22px] font-bold tracking-[-0.02em] text-[var(--ink-500)]"
+                            style={{ fontFamily: 'var(--font-display)' }}
+                        >
+                            {m}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const CTABanner = ({ isAuthenticated }) => (
+    <section className="py-16 md:py-20">
+        <div className="container-main">
+            <div
+                className="relative overflow-hidden rounded-3xl px-6 py-14 md:px-12 md:py-16 text-center text-white"
+                style={{ background: 'linear-gradient(135deg, var(--brand-blue-700) 0%, var(--primary) 60%, var(--brand-green-600) 130%)' }}
+            >
+                <div className="absolute inset-0 pointer-events-none opacity-30" style={{
+                    backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.25), transparent 40%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.18), transparent 40%)',
+                }} />
+                <h2 className="relative text-[28px] md:text-[40px] font-bold tracking-tight leading-tight">
+                    Bir komanda, bir məqsəd — daha yaxşı təhsil
+                </h2>
+                <p className="relative mt-4 text-white/80 text-[16px] md:text-[17px] max-w-[600px] mx-auto leading-relaxed">
+                    Bu missiyaya qoşulun. Müəllimsinizsə, bu gün pulsuz hesab açın və ilk imtahanınızı yaradın.
+                </p>
+                <div className="relative mt-8 flex flex-wrap justify-center gap-3">
+                    {isAuthenticated ? (
+                        <Link
+                            to="/imtahanlar"
+                            className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--primary)] bg-white hover:bg-white/95 transition-all shadow-xl"
+                        >
+                            İmtahanlara bax <HiOutlineArrowRight className="w-4 h-4" />
+                        </Link>
+                    ) : (
+                        <Link
+                            to="/register"
+                            className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--primary)] bg-white hover:bg-white/95 transition-all shadow-xl"
+                        >
+                            Pulsuz başla <HiOutlineArrowRight className="w-4 h-4" />
+                        </Link>
+                    )}
+                    <Link
+                        to="/elaqe"
+                        className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-white bg-white/10 border border-white/30 hover:bg-white/20 backdrop-blur-sm transition-all"
+                    >
+                        Bizimlə əlaqə
+                    </Link>
+                </div>
+            </div>
+        </div>
+    </section>
+);
+
+// ───────────────────────────────────────────────────────────────────────────
+// Main
+// ───────────────────────────────────────────────────────────────────────────
 
 const About = () => {
     const { isAuthenticated } = useAuth();
-
-    const innovations = [
-        {
-            icon: HiOutlineSparkles, iconColor: 'text-violet-600', bg: 'bg-violet-50',
-            title: 'AI ilə sual yaratma — saniyələr içində',
-            desc: 'Fənn, mövzu, çətinlik seçin — AI sistemi sualları riyazi simvollarla birlikdə hazırlayır. Müəllim yalnız yoxlayır, təsdiqləyir.',
-        },
-        {
-            icon: HiOutlineUserGroup, iconColor: 'text-blue-600', bg: 'bg-blue-50',
-            title: 'Birgə imtahan — komanda işi',
-            desc: 'Admin imtahanı fənlər üzrə müəllimlərə bölür. Hər müəllim öz sahəsini hazırlayır. Yekun imtahan bir yerdə birləşir, admin təsdiqləyir.',
-        },
-        {
-            icon: HiOutlineCalculator, iconColor: 'text-indigo-600', bg: 'bg-indigo-50',
-            title: 'Riyazi simvollar klaviaturası',
-            desc: 'Kəsrlər, inteqrallar, kvadrat kökləri — xüsusi klaviatura ilə asanlıqla daxil edilir, real vaxtda göstərilir. Heç bir texniki bilik tələb olunmur.',
-        },
-        {
-            icon: HiOutlineClipboardCheck, iconColor: 'text-purple-600', bg: 'bg-purple-50',
-            title: 'Açıq suallar + insan dəqiqliyi',
-            desc: 'Sistem bacardığını görür, müəllim qalan hissəni. Esse tipli cavablar şagird tərəfindən yazılır, müəllim tərəfindən qiymətləndirilir.',
-        },
-        {
-            icon: HiOutlineChartBar, iconColor: 'text-cyan-600', bg: 'bg-cyan-50',
-            title: '4 kateqoriyalı nəticə analizi',
-            desc: 'Doğru, Yanlış, Boş, Yoxlanılmamış — hər cavab rənglənir, qrafikə çevrilir. Müəllim güclü və zəif nöqtələri bir baxışda görür.',
-        },
-        {
-            icon: HiOutlinePencilAlt, iconColor: 'text-pink-600', bg: 'bg-pink-50',
-            title: '7 sual tipi — bir interfeysdə',
-            desc: 'MCQ, çoxseçimli, doğru/yanlış, açıq, boşluqdoldurma, uyğunlaşdırma — hansı fənn olursa olsun, uyğun format platformada var.',
-        },
-        {
-            icon: HiOutlineEye, iconColor: 'text-orange-600', bg: 'bg-orange-50',
-            title: 'Linklə paylaşım — qeydiyyatsız giriş',
-            desc: 'Şagird nə profilə ehtiyac duyur, nə şifrəyə. Linki açır, adını yazır, imtahana başlayır. Bu qədər sadə.',
-        },
-        {
-            icon: HiOutlineDuplicate, iconColor: 'text-teal-600', bg: 'bg-teal-50',
-            title: 'Klonlama & şablonlar',
-            desc: 'Keçən ilin imtahanını kopyala, yenilə, yayımla. Ya da şablondan başla — hər dəfə sıfırdan qurmaq artıq keçmişdə qaldı.',
-        },
-        {
-            icon: HiOutlineChip, iconColor: 'text-amber-600', bg: 'bg-amber-50',
-            title: 'Avtomatik qiymətləndirmə',
-            desc: 'İmtahan bitən kimi ballar hazır olur. Qapalı suallar üçün müəllimin yoxlamağa qayıtmasına ehtiyac yoxdur — sistem hər şeyi görmüşdür.',
-        },
-    ];
-
     return (
-        <div className="bg-white min-h-screen">
+        <div style={{ background: 'var(--paper-cream)' }}>
             <Helmet>
                 <title>Haqqımızda — testup.az</title>
-                <meta name="description" content="testup.az haqqında: riyaziyyat klaviaturası, 7 sual tipi, avtomatik qiymətləndirmə və sual bazası ilə Azərbaycanda müəllimlər üçün ən güclü onlayn imtahan platforması." />
+                <meta name="description" content="testup.az — Bakıda qurulmuş təhsil texnologiyaları platforması. Missiyamız, hekayəmiz və komandamız haqqında." />
                 <link rel="canonical" href="https://testup.az/haqqimizda" />
             </Helmet>
 
-            {/* ── Hero ── */}
-            <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-indigo-50/40 to-purple-50/20 pt-16 pb-20">
-                <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-200/25 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute top-32 -left-16 w-64 h-64 bg-purple-200/20 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="container-main relative z-10 text-center max-w-3xl mx-auto">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-indigo-100 text-indigo-600 text-xs font-semibold mb-8 shadow-sm">
-                        <HiOutlineHeart className="w-3.5 h-3.5" />
-                        Azərbaycan təhsili üçün hazırlandı
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-5">
-                        Haqqımızda
-                    </h1>
-                    <p className="text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
-                        <strong className="text-gray-900">testup.az</strong> — müəllimin hər imtahan hazırlığında yanında olan,
-                        sualdan nəticəyə qədər hər addımı sadələşdirən, Azərbaycan tədris sisteminə uyğun qurulmuş onlayn platforma.
-                    </p>
-                </div>
-            </section>
-
-            {/* ── Mission ── */}
-            <section className="py-20 bg-white">
-                <div className="container-main">
-                    <div className="grid lg:grid-cols-2 gap-16 items-center">
-                        <div>
-                            <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Missiyamız</p>
-                            <h2 className="text-3xl font-extrabold text-gray-900 mb-6 leading-tight">
-                                Müəllimin vaxtı<br />ən dəyərli resursdur
-                            </h2>
-                            <div className="space-y-4 text-gray-600 text-[15px] leading-relaxed">
-                                <p>
-                                    Kağız çap xərcləri, əl ilə yoxlama, cavab vərəqləri — bu proseslərin hamısı müəllimin ən dəyərli resursunu aparır: vaxtını.
-                                    <strong className="text-gray-800"> testup.az bu vaxtı geri qaytarmaq üçün yarandı.</strong>
-                                </p>
-                                <p>
-                                    Platformamız Azərbaycan tədris sisteminə uyğun hazırlanıb — riyaziyyat düsturlarından tutmuş
-                                    uyğunlaşdırma suallarına qədər hər format dəstəklənir.
-                                </p>
-                                <p>
-                                    Açıq imtahanmı, yoxsa gizli qiymətləndirməmi? İkisi də eyni sadə interfeysdə mümkündür — fərq yalnız bir klikdədir.
-                                </p>
-                            </div>
-                            <div className="mt-8 flex flex-wrap gap-3">
-                                {['Pulsuz qeydiyyat', 'AI sual yaratma', 'Riyazi simvollar', 'Birgə imtahan', 'Avtomatik yoxlama'].map(t => (
-                                    <span key={t} className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
-                                        <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-500" /> {t}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4">
-                            <ValueCard
-                                icon={HiOutlineAcademicCap}
-                                title="Müəllimin vaxtı geri qaytarılır"
-                                desc="Yoxlama, bal hesablama, nəticə cədvəli — bunların hamısını sistem öz üzərinə götürür. Müəllim yalnız öyrətməyə fokuslanır."
-                                from="from-indigo-50" to="to-blue-50"
-                            />
-                            <ValueCard
-                                icon={HiOutlineSparkles}
-                                title="Hər fənn üçün uyğun format"
-                                desc="Riyazi düsturlardan dinləmə tapşırıqlarına, uyğunlaşdırmadan açıq suallara — müasir tədrisin tələb etdiyi hər format platformada mövcuddur."
-                                from="from-purple-50" to="to-pink-50"
-                            />
-                            <ValueCard
-                                icon={HiOutlineShieldCheck}
-                                title="Nəticə heç vaxt subyektiv deyil"
-                                desc="Qapalı suallar sistem tərəfindən ani yoxlanılır. Açıq suallar müəllim tərəfindən nəzərdən keçirilir. Qiymət ədalətli, şəffaf, izahatlıdır."
-                                from="from-green-50" to="to-emerald-50"
-                            />
-                            <ValueCard
-                                icon={HiOutlineGlobe}
-                                title="Azərbaycan üçün, azərbaycanca"
-                                desc="Dil, məzmun, istifadə təcrübəsi — hər şey Azərbaycan müəlliminin gündəlik həyatı nəzərə alınaraq hazırlanıb."
-                                from="from-amber-50" to="to-orange-50"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Innovations ── */}
-            <section className="py-20 bg-gray-50/60">
-                <div className="container-main">
-                    <div className="text-center max-w-2xl mx-auto mb-12">
-                        <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Fərqi yaradan xüsusiyyətlər</p>
-                        <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Hər funksionallıq bir ehtiyacdan doğub</h2>
-                        <p className="text-sm text-gray-500 leading-relaxed">
-                            Sadə görünsə də — arxasında real müəllim rəyləri, real sinif otağı problemləri var.
-                        </p>
-                    </div>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {innovations.map((item, i) => <InnovCard key={i} {...item} />)}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Who we are ── */}
-            <section className="py-20 bg-white">
-                <div className="container-main max-w-3xl mx-auto text-center">
-                    <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Komanda</p>
-                    <h2 className="text-3xl font-extrabold text-gray-900 mb-6 leading-tight">
-                        Yerli problem. Yerli həll.
-                    </h2>
-                    <p className="text-[15px] text-gray-600 leading-relaxed mb-6">
-                        testup.az, yerli tədrisin problemlərini özü yaşamış insanlar tərəfindən qurulub.
-                        Buradakı hər funksionallıq — bir müəllimin üzləşdiyi real sualın cavabıdır.
-                    </p>
-                    <p className="text-[15px] text-gray-600 leading-relaxed">
-                        Məqsədimiz tək dəfəlik deyil. Platformamızı daim inkişaf etdiririk —
-                        hər yenilik müəllim rəyinə əsaslanır, hər güncəlləmə daha yaxşı bir alət üçündür.
-                    </p>
-                </div>
-            </section>
-
-            {/* ── Pricing ── */}
-            <Pricing isEmbedded={true} />
-
-            {/* ── CTA ── */}
-            <section className="py-20 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-                <div className="container-main relative z-10 text-center max-w-xl mx-auto">
-                    <h2 className="text-3xl font-extrabold text-white mb-4 leading-tight">
-                        Müasir müəllim müasir alətlə işləyir
-                    </h2>
-                    <p className="text-indigo-200 text-sm mb-8 leading-relaxed">
-                        Qeydiyyat pulsuz. İlk imtahanı yaratmaq 5 dəqiqə çəkir. Fərqi isə şagirdləriniz görəcək.
-                    </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                        {!isAuthenticated ? (
-                            <>
-                                <Link
-                                    to="/register"
-                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 bg-white text-indigo-700 font-bold rounded-xl shadow-xl hover:bg-indigo-50 transition-colors text-sm"
-                                >
-                                    Pulsuz başlayın <HiOutlineArrowRight className="w-4 h-4" />
-                                </Link>
-                                <Link
-                                    to="/elaqe"
-                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 bg-white/10 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/20 transition-colors text-sm"
-                                >
-                                    Bizimlə əlaqə
-                                </Link>
-                            </>
-                        ) : (
-                            <Link
-                                to="/imtahanlar"
-                                className="inline-flex items-center gap-2 px-7 py-3.5 bg-white text-indigo-700 font-bold rounded-xl shadow-xl hover:bg-indigo-50 transition-colors text-sm"
-                            >
-                                İmtahanlarıma keç <HiOutlineArrowRight className="w-4 h-4" />
-                            </Link>
-                        )}
-                    </div>
-                </div>
-            </section>
+            <AboutHero isAuthenticated={isAuthenticated} />
+            <Mission />
+            <Story />
+            <ByNumbers />
+            <Team />
+            <PressMentions />
+            <CTABanner isAuthenticated={isAuthenticated} />
         </div>
     );
 };

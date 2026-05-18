@@ -31,7 +31,7 @@ const HistoryTable = () => {
 
     if (loading) return (
         <div className="flex justify-center py-16">
-            <div className="animate-spin h-8 w-8 border-b-2 border-indigo-600 rounded-full" />
+            <div className="animate-spin h-8 w-8 border-b-2 border-blue-600 rounded-full" />
         </div>
     );
 
@@ -57,7 +57,7 @@ const HistoryTable = () => {
                             </thead>
                             <tbody className="divide-y divide-gray-50 bg-white">
                                 {logs.map(log => (
-                                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={log.id} className="hover:bg-gray-100 transition-colors">
                                         <td className="px-5 py-3">
                                             <p className="font-semibold text-gray-800 truncate max-w-[200px]">{log.title}</p>
                                             {log.description && (
@@ -76,7 +76,7 @@ const HistoryTable = () => {
                                             </span>
                                         </td>
                                         <td className="px-5 py-3">
-                                            <span className="font-semibold text-indigo-700">{log.recipientCount}</span>
+                                            <span className="font-semibold text-blue-700">{log.recipientCount}</span>
                                             <span className="text-gray-400 ml-1">nəfər</span>
                                         </td>
                                         <td className="px-5 py-3 text-gray-500 text-xs">{fmtDate(log.sentAt)}</td>

@@ -54,12 +54,12 @@ import { useAdminLogs } from '../../hooks/admin/useAdminLogs';
 import Pagination from '../../components/admin/Pagination';
 
 // ─── Action metadata: icon + label + intent color ──────────────────────────
-// intent: emerald (create/success) | blue (update) | rose (delete/fail) |
-//         violet (submit/send) | amber (warn/system) | indigo (auth) | fuchsia (ai)
+// intent: emerald (create/success) | blue (update/auth) | rose (delete/fail) |
+//         teal (submit/send) | amber (warn/system) | fuchsia (ai)
 
 const ACTION_META = {
     // Auth
-    USER_LOGIN:                       { icon: HiOutlineLogin,             label: 'Giriş',                       intent: 'indigo' },
+    USER_LOGIN:                       { icon: HiOutlineLogin,             label: 'Giriş',                       intent: 'blue' },
     USER_LOGIN_FAILED:                { icon: HiOutlineExclamationCircle, label: 'Giriş uğursuz',               intent: 'rose'   },
     USER_REGISTERED:                  { icon: HiOutlineUserAdd,           label: 'Qeydiyyat',                   intent: 'emerald'},
     PASSWORD_CHANGED:                 { icon: HiOutlineKey,               label: 'Şifrə dəyişdirildi',          intent: 'blue'   },
@@ -80,13 +80,13 @@ const ACTION_META = {
     EXAM_SITE_PUBLISHED:              { icon: HiOutlineGlobeAlt,          label: 'Saytda paylaşıldı',           intent: 'emerald'},
     EXAM_SITE_UNPUBLISHED:            { icon: HiOutlineEyeOff,            label: 'Saytdan çıxarıldı',           intent: 'rose'   },
     EXAM_PRICE_CHANGED:               { icon: HiOutlineCurrencyDollar,    label: 'Qiymət dəyişdirildi',         intent: 'blue'   },
-    EXAM_ACCESS_CODE_GENERATED:       { icon: HiOutlineKey,               label: 'Giriş kodu yaradıldı',        intent: 'indigo' },
+    EXAM_ACCESS_CODE_GENERATED:       { icon: HiOutlineKey,               label: 'Giriş kodu yaradıldı',        intent: 'blue' },
     EXAM_PURCHASED:                   { icon: HiOutlineDocumentAdd,       label: 'İmtahan alındı',              intent: 'emerald'},
     EXAM_PDF_DOWNLOADED:              { icon: HiOutlineDownload,          label: 'PDF endirildi',               intent: 'amber'  },
     EXAM_RESULTS_EXPORTED:            { icon: HiOutlineDownload,          label: 'Nəticələr ixrac edildi',      intent: 'amber'  },
 
     // Exam session
-    EXAM_STARTED:                     { icon: HiOutlinePlay,              label: 'İmtahan başlandı',            intent: 'violet' },
+    EXAM_STARTED:                     { icon: HiOutlinePlay,              label: 'İmtahan başlandı',            intent: 'emerald' },
     EXAM_SUBMITTED:                   { icon: HiOutlineCheckCircle,       label: 'İmtahan təhvil verildi',      intent: 'emerald'},
 
     // Submission / grading
@@ -96,7 +96,7 @@ const ACTION_META = {
     // Collaborative
     COLLABORATIVE_EXAM_CREATED:       { icon: HiOutlineUsers,             label: 'Birgə imtahan yaradıldı',     intent: 'emerald'},
     COLLABORATIVE_COLLABORATOR_ADDED: { icon: HiOutlineUserAdd,           label: 'Müəllim əlavə edildi',        intent: 'emerald'},
-    COLLABORATIVE_DRAFT_SUBMITTED:    { icon: HiOutlineUpload,            label: 'Suallar göndərildi',          intent: 'violet' },
+    COLLABORATIVE_DRAFT_SUBMITTED:    { icon: HiOutlineUpload,            label: 'Suallar göndərildi',          intent: 'emerald' },
     COLLABORATIVE_DRAFT_APPROVED:     { icon: HiOutlineCheckCircle,       label: 'Suallar təsdiqləndi',         intent: 'emerald'},
     COLLABORATIVE_DRAFT_REJECTED:     { icon: HiOutlineXCircle,           label: 'Suallar geri qaytarıldı',     intent: 'rose'   },
 
@@ -141,11 +141,11 @@ const ACTION_META = {
 
     // Contact
     CONTACT_READ:                     { icon: HiOutlineMail,              label: 'Mesaj oxundu',                intent: 'blue'   },
-    CONTACT_REPLIED:                  { icon: HiOutlineMail,              label: 'Mesaja cavab verildi',        intent: 'violet' },
+    CONTACT_REPLIED:                  { icon: HiOutlineMail,              label: 'Mesaja cavab verildi',        intent: 'emerald' },
     CONTACT_DELETED:                  { icon: HiOutlineMail,              label: 'Mesaj silindi',               intent: 'rose'   },
 
     // Notification
-    NOTIFICATION_SENT:                { icon: HiOutlineBell,              label: 'Bildiriş göndərildi',         intent: 'violet' },
+    NOTIFICATION_SENT:                { icon: HiOutlineBell,              label: 'Bildiriş göndərildi',         intent: 'emerald' },
 
     // Payment / Subscription
     SUBSCRIPTION_PURCHASED:           { icon: HiOutlineCreditCard,        label: 'Abunəlik alındı',             intent: 'emerald'},
@@ -165,8 +165,8 @@ const ACTION_META = {
 const INTENT_STYLES = {
     emerald: { circle: 'bg-emerald-50 text-emerald-600 ring-emerald-100', badge: 'bg-emerald-50 text-emerald-700' },
     blue:    { circle: 'bg-blue-50 text-blue-600 ring-blue-100',          badge: 'bg-blue-50 text-blue-700' },
-    indigo:  { circle: 'bg-indigo-50 text-indigo-600 ring-indigo-100',    badge: 'bg-indigo-50 text-indigo-700' },
-    violet:  { circle: 'bg-violet-50 text-violet-600 ring-violet-100',    badge: 'bg-violet-50 text-violet-700' },
+    blue:  { circle: 'bg-blue-50 text-blue-600 ring-blue-100',    badge: 'bg-blue-50 text-blue-700' },
+    emerald:  { circle: 'bg-emerald-50 text-emerald-600 ring-emerald-100',    badge: 'bg-emerald-50 text-emerald-700' },
     rose:    { circle: 'bg-rose-50 text-rose-600 ring-rose-100',          badge: 'bg-rose-50 text-rose-700' },
     amber:   { circle: 'bg-amber-50 text-amber-600 ring-amber-100',       badge: 'bg-amber-50 text-amber-700' },
     fuchsia: { circle: 'bg-fuchsia-50 text-fuchsia-600 ring-fuchsia-100', badge: 'bg-fuchsia-50 text-fuchsia-700' },
@@ -185,8 +185,8 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_STYLES = {
-    AUTH:    'bg-indigo-100 text-indigo-700',
-    USER:    'bg-purple-100 text-purple-700',
+    AUTH:    'bg-blue-100 text-blue-700',
+    USER:    'bg-emerald-100 text-emerald-700',
     EXAM:    'bg-blue-100 text-blue-700',
     CONTENT: 'bg-teal-100 text-teal-700',
     AI:      'bg-fuchsia-100 text-fuchsia-700',
@@ -298,7 +298,7 @@ const AdminLogs = () => {
                 </div>
                 <button
                     onClick={fetchLogs}
-                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                     <HiOutlineRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                     Yenilə
@@ -316,7 +316,7 @@ const AdminLogs = () => {
                             placeholder="E-poçt, ad, hədəf axtar..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-gray-50"
+                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 bg-gray-50"
                         />
                     </div>
                     <div className="flex items-center gap-1">
@@ -326,7 +326,7 @@ const AdminLogs = () => {
                                 onClick={() => handlePeriodChange(p.key)}
                                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
                                     period === p.key
-                                        ? 'bg-indigo-600 text-white'
+                                        ? 'bg-blue-600 text-white'
                                         : 'text-gray-500 hover:bg-gray-100'
                                 }`}
                             >
@@ -368,7 +368,7 @@ const AdminLogs = () => {
                             placeholder="Actor email filter..."
                             value={actor}
                             onChange={e => setActor(e.target.value)}
-                            className="w-full pl-3 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300 focus:border-indigo-400 bg-white"
+                            className="w-full pl-3 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-400 bg-white"
                         />
                     </div>
                     {actor && (
@@ -465,7 +465,7 @@ const LogRow = ({ log }) => {
     const hasDetails = log.details && log.details.trim().length > 0;
 
     return (
-        <div className="px-6 py-4 hover:bg-gray-50/60 transition-colors">
+        <div className="px-6 py-4 hover:bg-gray-100/60 transition-colors">
             <div
                 onClick={() => hasDetails && setExpanded(!expanded)}
                 className={`flex items-start gap-4 ${hasDetails ? 'cursor-pointer' : ''}`}
@@ -505,7 +505,7 @@ const LogRow = ({ log }) => {
 
                 <div className="flex-shrink-0 text-right flex items-center gap-2">
                     {hasDetails && (
-                        <span className="text-[10px] text-indigo-500 font-semibold">
+                        <span className="text-[10px] text-blue-500 font-semibold">
                             {expanded ? '▲' : '▼'}
                         </span>
                     )}

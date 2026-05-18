@@ -1,11 +1,16 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter, HiOutlineX, HiOutlineChevronUp } from 'react-icons/hi';
+import {
+    HiOutlineArrowLeft, HiOutlineArrowRight, HiOutlineCheckCircle, HiOutlineXCircle,
+    HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter, HiOutlineX,
+    HiOutlineChevronUp, HiOutlineClock, HiOutlineDownload, HiOutlineLockClosed,
+} from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 import QuestionNav from '../../components/ui/QuestionNav';
+import { fmtDate } from '../../utils/date';
 
 const fmtScore = (v) => {
     if (v === null || v === undefined) return '0';
@@ -235,9 +240,9 @@ const GradingPanel = ({ question, submissionId, onGraded, initialFraction = null
     };
 
     return (
-        <div className={`mt-4 p-4 rounded-2xl border space-y-3 ${isRegrading ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-100'}`}>
-            <p className={`text-xs font-bold uppercase tracking-wide flex items-center gap-1 ${isRegrading ? 'text-amber-600' : 'text-indigo-500'}`}>
-                <HiOutlinePencil className="w-4 h-4" />
+        <div className={`mt-5 p-5 rounded-2xl border space-y-3.5 ${isRegrading ? 'bg-amber-50 border-amber-200' : 'bg-[var(--primary-soft)] border-[var(--brand-blue-100)]'}`}>
+            <p className={`text-[11.5px] font-bold uppercase tracking-[0.08em] flex items-center gap-1.5 ${isRegrading ? 'text-amber-600' : 'text-[var(--primary)]'}`}>
+                <HiOutlinePencil className="w-3.5 h-3.5" />
                 {isRegrading ? `Balı dəyişdir (${question.points} bal)` : `Bal ver (${question.points} bal)`}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -246,19 +251,19 @@ const GradingPanel = ({ question, submissionId, onGraded, initialFraction = null
                         key={f.value}
                         type="button"
                         onClick={() => setFraction(f.value)}
-                        className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                        className={`px-4 py-2 rounded-xl text-[13px] font-bold border-2 transition-all ${
                             fraction === f.value
                                 ? isRegrading
                                     ? 'bg-amber-500 text-white border-amber-500 shadow-md'
-                                    : 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                                    : 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-md'
                                 : isRegrading
                                     ? 'bg-white text-amber-700 border-amber-200 hover:border-amber-400'
-                                    : 'bg-white text-indigo-700 border-indigo-200 hover:border-indigo-400'
+                                    : 'bg-white text-[var(--primary-hover)] border-[var(--brand-blue-100)] hover:border-[var(--primary)]'
                         }`}
                     >
                         {f.label}
                         {fraction === f.value && (
-                            <span className="ml-1 text-xs opacity-75">({fmtScore(f.value * question.points)})</span>
+                            <span className="ml-1 text-[11px] opacity-75">({fmtScore(f.value * question.points)})</span>
                         )}
                     </button>
                 ))}
@@ -267,13 +272,21 @@ const GradingPanel = ({ question, submissionId, onGraded, initialFraction = null
                 value={feedback}
                 onChange={e => setFeedback(e.target.value)}
                 placeholder="Şagirdə rəy (istəyə bağlı)..."
-                className={`w-full px-3 py-2 border rounded-xl text-sm resize-none ${isRegrading ? 'border-amber-200 focus:border-amber-500' : 'border-indigo-200 focus:border-indigo-500'}`}
+                className={`w-full px-3 py-2 border rounded-xl text-[13.5px] resize-none bg-white focus:outline-none ${
+                    isRegrading
+                        ? 'border-amber-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-100'
+                        : 'border-[var(--brand-blue-100)] focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)]'
+                }`}
                 rows={2}
             />
             <button
                 onClick={handleSave}
                 disabled={saving || fraction === null}
-                className={`px-5 py-2 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50 ${isRegrading ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                className={`inline-flex items-center justify-center h-10 px-5 rounded-full text-[13px] font-bold text-white transition-all disabled:opacity-50 ${
+                    isRegrading
+                        ? 'bg-amber-500 hover:bg-amber-600 shadow-[0_8px_24px_-10px_rgba(245,158,11,0.6)]'
+                        : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)]'
+                }`}
             >
                 {saving ? 'Saxlanılır...' : isRegrading ? 'Balı Yenilə' : 'Balı Qeydə Al'}
             </button>
@@ -295,6 +308,7 @@ const ExamReview = () => {
     const [showOnlyUngraded, setShowOnlyUngraded] = useState(false);
     const [zoomImage, setZoomImage] = useState(null);
     const [showScrollTop, setShowScrollTop] = useState(false);
+    const [submissionList, setSubmissionList] = useState([]);
     const questionRefs = useRef({});
 
     useEffect(() => {
@@ -322,6 +336,27 @@ const ExamReview = () => {
         };
         fetchReview();
     }, [sessionId, navigate]);
+
+    // Teachers/admins also load the full submission list for "next student" nav.
+    useEffect(() => {
+        if (!canGrade || !review?.examId) return;
+        let cancelled = false;
+        api.get(`/submissions/exam/${review.examId}`)
+            .then(res => {
+                if (cancelled) return;
+                const submitted = (res.data || []).filter(s => s.submittedAt);
+                setSubmissionList(submitted);
+            })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [canGrade, review?.examId]);
+
+    const nextSessionId = (() => {
+        if (!canGrade || !submissionList.length) return null;
+        const currentIdx = submissionList.findIndex(s => String(s.id) === String(sessionId));
+        if (currentIdx === -1 || currentIdx >= submissionList.length - 1) return null;
+        return submissionList[currentIdx + 1].id;
+    })();
 
     useEffect(() => {
         if (!scrollToQuestionId || loading) return;
@@ -351,8 +386,8 @@ const ExamReview = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--paper-cream)' }}>
+                <div className="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -393,13 +428,26 @@ const ExamReview = () => {
     const shownPassageIds = new Set();
     let questionNumber = 0;
 
+    const ringPct = scorePercent;
+    const ringColor = ringPct >= 80 ? 'var(--brand-green-600)' : ringPct >= 50 ? '#F59E0B' : '#EF4444';
+    const submittedDate = review.submittedAt ? new Date(review.submittedAt) : null;
+    const studentName = review.studentName || review.studentFullName || review.studentEmail || '—';
+    const studentInit = studentName.trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase();
+    const duration = (() => {
+        if (!review.startedAt || !review.submittedAt) return null;
+        const diffSec = Math.abs(new Date(review.submittedAt) - new Date(review.startedAt)) / 1000;
+        const m = Math.floor(diffSec / 60);
+        const s = Math.floor(diffSec % 60);
+        return `${m} dəq ${s.toString().padStart(2, '0')} san`;
+    })();
+
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="min-h-screen pb-20" style={{ background: 'var(--paper-cream)' }}>
             {/* Scroll to top */}
             {showScrollTop && (
                 <button
                     onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    className="fixed bottom-6 right-6 z-50 w-10 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all"
+                    className="fixed bottom-6 right-6 z-50 w-11 h-11 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-full shadow-[0_12px_30px_-10px_rgba(37,99,235,0.7)] flex items-center justify-center transition-all"
                     title="Yuxarı qayıt"
                 >
                     <HiOutlineChevronUp className="w-5 h-5" />
@@ -419,54 +467,98 @@ const ExamReview = () => {
                 </div>
             )}
 
-            {/* Header */}
-            <div className="bg-white border-b sticky top-0 z-30">
-                <div className="container-main py-4 flex items-center justify-between">
+            {/* ── Sticky top bar — back / title / student chip ── */}
+            <div className="sticky top-0 z-30 border-b border-[var(--ink-150)] bg-[color-mix(in_srgb,var(--paper-cream),white_30%)]/90 backdrop-blur">
+                <div className="container-main py-4 flex items-center gap-3 flex-wrap">
                     <button
                         onClick={() => {
                             if (canGrade) navigate(`/imtahanlar/${review.examId}/statistika`);
                             else if (fromResult) navigate(`/test/result/${sessionId}`);
                             else navigate('/profil');
                         }}
-                        className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 font-medium transition-colors"
+                        className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[13px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all shrink-0"
                     >
-                        <HiOutlineArrowLeft /> {canGrade ? 'Statistikaya Qayıt' : fromResult ? 'Nəticəyə Qayıt' : 'Profilə Qayıt'}
+                        <HiOutlineArrowLeft className="w-4 h-4" />
+                        {canGrade ? 'Statistikaya qayıt' : fromResult ? 'Nəticəyə qayıt' : 'Profilə qayıt'}
                     </button>
-                    <div className="text-center">
-                        <h1 className="text-xl font-bold text-gray-900">{review.examTitle}</h1>
-                        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mt-0.5">İmtahan Baxışı</p>
+                    <div className="flex-1 text-center min-w-0 px-2">
+                        <h1 className="text-[18px] md:text-[20px] font-extrabold text-[var(--ink-900)] tracking-tight truncate">{review.examTitle}</h1>
+                        <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[var(--ink-400)] mt-0.5">İmtahan baxışı</p>
                     </div>
-                    <div className="w-32"></div>
+                    <div className="inline-flex items-center gap-2.5 pl-1.5 pr-3.5 py-1.5 bg-white border border-[var(--ink-200)] rounded-full shrink-0">
+                        <span className="w-8 h-8 rounded-full bg-[var(--brand-blue-100)] text-[var(--brand-blue-700)] inline-flex items-center justify-center font-bold text-[11.5px]">
+                            {studentInit || '?'}
+                        </span>
+                        <div className="leading-tight">
+                            <div className="text-[13px] font-bold text-[var(--ink-900)] truncate max-w-[150px]">{studentName}</div>
+                            <div className="text-[11px] text-[var(--ink-500)]">Şagird</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="container-main max-w-4xl mt-8">
-                {/* Summary Card */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-6 flex flex-col md:flex-row items-center gap-8">
-                    <div className="relative">
-                        <svg className="w-32 h-32 transform -rotate-90">
-                            <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
-                            <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent"
-                                strokeDasharray={364}
-                                strokeDashoffset={364 - (364 * scorePercent) / 100}
-                                className={scorePercent >= 80 ? 'text-green-500' : scorePercent >= 50 ? 'text-yellow-500' : 'text-red-500'}
-                            />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-2xl font-black text-gray-900">{scorePercent}%</span>
+            <div className="container-main max-w-4xl mt-7">
+                {/* ── Summary card: ring + 3 columns ── */}
+                <div className="bg-white rounded-3xl border border-[var(--ink-200)] mb-5 overflow-hidden">
+                    <div className="p-6 grid grid-cols-1 sm:grid-cols-[auto_1fr_1fr_1fr] gap-6 sm:gap-0 items-center">
+                        {/* Score ring */}
+                        <div className="relative w-[120px] h-[120px] mx-auto sm:mx-0">
+                            <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
+                                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--ink-150)" strokeWidth="9" />
+                                <circle
+                                    cx="60" cy="60" r="50" fill="none"
+                                    stroke={ringColor}
+                                    strokeWidth="9"
+                                    strokeLinecap="round"
+                                    strokeDasharray={2 * Math.PI * 50}
+                                    strokeDashoffset={(2 * Math.PI * 50) * (1 - ringPct / 100)}
+                                    style={{ transition: 'stroke-dashoffset 600ms ease' }}
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center text-[24px] font-extrabold text-[var(--ink-900)]">
+                                {ringPct}%
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex-1 grid grid-cols-2 gap-4 w-full">
-                        <div className="bg-indigo-50/50 p-4 rounded-2xl">
-                            <p className="text-xs text-indigo-400 font-bold uppercase mb-1">Toplanan Bal</p>
-                            <p className="text-2xl font-black text-indigo-700">{fmtScore(review.totalScore)} / {review.maxScore}</p>
+                        {/* Toplanan Bal */}
+                        <div className="sm:pl-6 sm:pr-6 sm:border-l border-[var(--ink-150)] text-center sm:text-left">
+                            <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-400)]">Toplanan bal</div>
+                            <div className="text-[28px] font-extrabold text-[var(--primary)] mt-1 leading-none">
+                                {fmtScore(review.totalScore)}
+                                <span className="text-[18px] text-[var(--ink-400)] font-bold ml-1">/ {review.maxScore}</span>
+                            </div>
                         </div>
-                        <div className="bg-purple-50/50 p-4 rounded-2xl">
-                            <p className="text-xs text-purple-400 font-bold uppercase mb-1">Tarix</p>
-                            <p className="text-lg font-bold text-purple-700">
-                                {new Date(review.submittedAt).toLocaleDateString('az-AZ')}
-                            </p>
+
+                        {/* Tarix */}
+                        <div className="sm:pl-6 sm:pr-6 sm:border-l border-[var(--ink-150)] text-center sm:text-left">
+                            <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-400)]">Tarix</div>
+                            <div className="text-[20px] font-bold text-[var(--ink-900)] mt-1 leading-tight">
+                                {submittedDate ? fmtDate(submittedDate) : '—'}
+                            </div>
+                            <div className="text-[12px] text-[var(--ink-500)] mt-1">
+                                {submittedDate ? submittedDate.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                {duration && <> · {duration}</>}
+                            </div>
+                        </div>
+
+                        {/* Status */}
+                        <div className="sm:pl-6 sm:border-l border-[var(--ink-150)] text-center sm:text-left">
+                            <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-400)]">Status</div>
+                            <div className="mt-2">
+                                {review.isFullyGraded ? (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--accent-soft)] text-[var(--brand-green-600)] font-bold text-[13px]">
+                                        <HiOutlineCheckCircle className="w-4 h-4" /> Tam yoxlanılıb
+                                    </span>
+                                ) : review.ungradedCount > 0 ? (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 font-bold text-[13px]">
+                                        <HiOutlineClock className="w-4 h-4" /> {review.ungradedCount} gözləyir
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ink-100)] text-[var(--ink-600)] font-bold text-[13px]">
+                                        —
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -484,26 +576,29 @@ const ExamReview = () => {
 
                 {/* Ungraded count banner (student) */}
                 {!canGrade && review.ungradedCount > 0 && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-6 py-4 mb-6 flex items-center gap-3">
-                        <span className="text-2xl">⏳</span>
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4 mb-5 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                            <HiOutlineClock className="w-5 h-5" />
+                        </div>
                         <div>
-                            <p className="font-bold text-yellow-800">{review.ungradedCount} sual hələ yoxlanılmayıb</p>
-                            <p className="text-sm text-yellow-700">Müəllim yoxladıqdan sonra balınız yenilənəcək.</p>
+                            <p className="font-bold text-amber-800 text-[15px]">{review.ungradedCount} sual hələ yoxlanılmayıb</p>
+                            <p className="text-[13px] text-amber-700 mt-0.5">Müəllim yoxladıqdan sonra balınız yenilənəcək.</p>
                         </div>
                     </div>
                 )}
 
                 {/* Teacher/Admin filter toggle */}
-                {canGrade && (
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
+                {canGrade && (review.ungradedCount > 0 || review.isFullyGraded) && (
+                    <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                             {review.ungradedCount > 0 && (
-                                <span className="bg-yellow-100 text-yellow-800 text-sm font-bold px-3 py-1 rounded-full">
+                                <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 text-[13px] font-bold px-3 py-1.5 rounded-full border border-amber-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                                     {review.ungradedCount} yoxlanılmamış
                                 </span>
                             )}
                             {review.isFullyGraded && (
-                                <span className="bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                                <span className="inline-flex items-center gap-1.5 bg-[var(--accent-soft)] text-[var(--brand-green-600)] text-[13px] font-bold px-3 py-1.5 rounded-full border border-[var(--brand-green-100)]">
                                     <HiOutlineCheckCircle className="w-4 h-4" /> Tam yoxlanılıb
                                 </span>
                             )}
@@ -511,14 +606,14 @@ const ExamReview = () => {
                         {review.ungradedCount > 0 && (
                             <button
                                 onClick={() => setShowOnlyUngraded(v => !v)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                                className={`inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[13px] font-semibold border transition-all ${
                                     showOnlyUngraded
-                                        ? 'bg-yellow-500 text-white border-yellow-500'
-                                        : 'bg-white text-gray-600 border-gray-300 hover:border-yellow-400'
+                                        ? 'bg-amber-500 text-white border-amber-500 shadow-[0_8px_24px_-10px_rgba(245,158,11,0.6)]'
+                                        : 'bg-white text-[var(--ink-700)] border-[var(--ink-200)] hover:border-amber-400 hover:text-amber-600'
                                 }`}
                             >
-                                <HiOutlineFilter className="w-4 h-4" />
-                                {showOnlyUngraded ? 'Bütün Sualları Göstər' : 'Yalnız Yoxlanılmayanlar'}
+                                <HiOutlineFilter className="w-3.5 h-3.5" />
+                                {showOnlyUngraded ? 'Bütün sualları göstər' : 'Yalnız yoxlanılmayanlar'}
                             </button>
                         )}
                     </div>
@@ -542,30 +637,30 @@ const ExamReview = () => {
                                 {showSubjectHeader && (() => {
                                     const { label, range } = subjectHeaderMap.get(q.id);
                                     return (
-                                        <div className="flex items-center gap-3 mt-4 mb-1 px-1">
-                                            <div className="flex-1 h-px bg-indigo-100" />
-                                            <span className="text-xs font-bold text-indigo-500 uppercase tracking-wider whitespace-nowrap">
+                                        <div className="flex items-center gap-3 mt-5 mb-2 px-1">
+                                            <div className="flex-1 h-px bg-[var(--brand-blue-100)]" />
+                                            <span className="text-[11.5px] font-bold text-[var(--primary)] uppercase tracking-[0.1em] whitespace-nowrap">
                                                 {label} · {range}
                                             </span>
-                                            <div className="flex-1 h-px bg-indigo-100" />
+                                            <div className="flex-1 h-px bg-[var(--brand-blue-100)]" />
                                         </div>
                                     );
                                 })()}
 
                                 {/* Passage group separator */}
                                 {showPassageSeparator && (
-                                    <div className="flex items-center gap-2 mt-6 mb-2 px-1">
-                                        <HiOutlineDocumentText className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                                        <span className="text-xs font-bold text-teal-600 uppercase tracking-wide">Mətn / Dinləmə Keçidinə Aid Suallar</span>
+                                    <div className="flex items-center gap-2 mt-7 mb-3 px-1">
+                                        <HiOutlineDocumentText className="w-4 h-4 text-teal-500 shrink-0" />
+                                        <span className="text-[11.5px] font-bold text-teal-600 uppercase tracking-[0.1em]">Mətn / Dinləmə keçidinə aid suallar</span>
                                         <div className="flex-1 h-px bg-teal-100"></div>
                                     </div>
                                 )}
 
-                                <div className={`bg-white rounded-3xl shadow-sm border overflow-hidden ${isPassageQuestion ? 'border-teal-100' : 'border-gray-100'}`}>
-                                    <div className="p-6 md:p-8">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <span className="bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full uppercase">
-                                                Sual {questionNumber} • {q.points} Bal
+                                <div className={`bg-white rounded-3xl border overflow-hidden ${isPassageQuestion ? 'border-teal-100' : 'border-[var(--ink-200)]'}`}>
+                                    <div className="p-6 md:p-7">
+                                        <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+                                            <span className="inline-flex items-center gap-2 text-[11.5px] font-bold px-3 py-1.5 rounded-full uppercase tracking-[0.08em] bg-[var(--ink-100)] text-[var(--ink-700)]">
+                                                SUAL {questionNumber} <span className="text-[var(--ink-300)]">•</span> {q.points} BAL
                                             </span>
                                             {(() => {
                                                 const hasAnswer = (
@@ -577,46 +672,46 @@ const ExamReview = () => {
                                                 );
                                                 if (!q.isGraded) {
                                                     return (
-                                                        <span className="text-yellow-600 font-bold text-sm bg-yellow-50 px-3 py-1 rounded-full">
-                                                            ⏳ Yoxlanılır...
+                                                        <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                                            <HiOutlineClock className="w-3.5 h-3.5" /> Yoxlanılır
                                                         </span>
                                                     );
                                                 }
                                                 if (!hasAnswer) {
                                                     return (
-                                                        <span className="text-gray-400 font-bold text-sm bg-gray-100 px-3 py-1 rounded-full">
+                                                        <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full bg-[var(--ink-100)] text-[var(--ink-500)]">
                                                             Boş buraxıldı
                                                         </span>
                                                     );
                                                 }
                                                 if (q.awardedScore === q.points) {
                                                     return (
-                                                        <span className="flex items-center gap-1.5 text-green-600 font-bold text-sm bg-green-50 px-3 py-1 rounded-full">
-                                                            <HiOutlineCheckCircle className="w-5 h-5" /> Düzdür
+                                                        <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full bg-[var(--accent-soft)] text-[var(--brand-green-600)] border border-[var(--brand-green-100)]">
+                                                            <HiOutlineCheckCircle className="w-3.5 h-3.5" /> Düzdür
                                                         </span>
                                                     );
                                                 }
                                                 if (q.awardedScore > 0) {
                                                     return (
-                                                        <span className="flex items-center gap-1.5 text-yellow-600 font-bold text-sm bg-yellow-50 px-3 py-1 rounded-full">
-                                                            Qismən • {fmtScore(q.awardedScore)}/{q.points}
+                                                        <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                                            Qismən · {fmtScore(q.awardedScore)} / {q.points}
                                                         </span>
                                                     );
                                                 }
                                                 return (
-                                                    <span className="flex items-center gap-1.5 text-red-600 font-bold text-sm bg-red-50 px-3 py-1 rounded-full">
-                                                        <HiOutlineXCircle className="w-5 h-5" /> Səhvdir
+                                                    <span className="inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                                                        <HiOutlineXCircle className="w-3.5 h-3.5" /> Səhvdir
                                                     </span>
                                                 );
                                             })()}
                                         </div>
 
-                                        <div className="text-lg text-gray-800 font-medium mb-6 leading-relaxed">
+                                        <div className="text-[17px] text-[var(--ink-900)] font-semibold mb-5 leading-[1.55]">
                                             <LatexPreview content={q.content} />
                                         </div>
 
                                         {q.attachedImage && (
-                                            <div className="mb-6 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 max-h-96 flex justify-center cursor-zoom-in"
+                                            <div className="mb-5 rounded-2xl overflow-hidden border border-[var(--ink-150)] bg-[var(--ink-50)] max-h-96 flex justify-center cursor-zoom-in"
                                                 onClick={() => setZoomImage(q.attachedImage)}>
                                                 <img src={q.attachedImage} alt="Question" className="object-contain" />
                                             </div>
@@ -624,38 +719,58 @@ const ExamReview = () => {
 
                                         {/* Options (MCQ / True-False / Multi-Select) */}
                                         {(q.questionType === 'MCQ' || q.questionType === 'TRUE_FALSE' || q.questionType === 'MULTI_SELECT') && (
-                                            <div className="grid gap-3">
+                                            <div className="flex flex-col gap-2.5">
                                                 {q.options.map(opt => {
                                                     const isSelected = q.questionType === 'MULTI_SELECT'
                                                         ? (q.studentSelectedOptionIds || []).includes(opt.id)
                                                         : q.studentSelectedOptionId === opt.id;
                                                     const isCorrect = opt.isCorrect;
+                                                    const isWrongUser = isSelected && !isCorrect;
 
-                                                    let borderClass = "border-gray-100";
-                                                    let bgClass = "bg-gray-50/30";
-                                                    let icon = null;
+                                                    let borderClass = 'border-[var(--ink-200)]';
+                                                    let bgClass = 'bg-white';
+                                                    let textClass = 'text-[var(--ink-800)]';
+                                                    let badge = null;
 
                                                     if (isCorrect) {
-                                                        borderClass = "border-green-500 ring-1 ring-green-500";
-                                                        bgClass = "bg-green-50";
-                                                        icon = <HiOutlineCheckCircle className="text-green-500 w-5 h-5 flex-shrink-0" />;
-                                                    } else if (isSelected && !isCorrect) {
-                                                        borderClass = "border-red-500 ring-1 ring-red-500";
-                                                        bgClass = "bg-red-50";
-                                                        icon = <HiOutlineXCircle className="text-red-500 w-5 h-5 flex-shrink-0" />;
+                                                        borderClass = 'border-[var(--brand-green-600)]';
+                                                        bgClass = 'bg-[var(--accent-soft)]';
+                                                        textClass = 'text-[var(--ink-900)]';
+                                                        badge = (
+                                                            <span className="w-6 h-6 rounded-full bg-[var(--brand-green-600)] text-white inline-flex items-center justify-center shrink-0">
+                                                                <HiOutlineCheckCircle className="w-3.5 h-3.5" />
+                                                            </span>
+                                                        );
+                                                    } else if (isWrongUser) {
+                                                        borderClass = 'border-red-400';
+                                                        bgClass = 'bg-red-50';
+                                                        textClass = 'text-[var(--ink-900)]';
+                                                        badge = (
+                                                            <span className="w-6 h-6 rounded-full bg-red-500 text-white inline-flex items-center justify-center shrink-0 font-bold text-[12px]">
+                                                                ✕
+                                                            </span>
+                                                        );
                                                     }
 
+                                                    const letterShape = q.questionType === 'MULTI_SELECT' ? 'rounded-md' : 'rounded-full';
+                                                    const letterClass = isCorrect
+                                                        ? 'bg-[var(--primary)] text-white border-transparent'
+                                                        : isSelected
+                                                            ? 'bg-[var(--primary)] text-white border-transparent'
+                                                            : 'bg-white text-[var(--ink-500)] border-[var(--ink-200)]';
+
                                                     return (
-                                                        <div key={opt.id} className={`p-4 rounded-2xl border ${borderClass} ${bgClass} flex items-center justify-between gap-4 transition-all`}>
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`w-6 h-6 border flex items-center justify-center text-xs font-bold ${q.questionType === 'MULTI_SELECT' ? 'rounded-md' : 'rounded-full'} ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 text-gray-400'}`}>
-                                                                    {String.fromCharCode(65 + opt.orderIndex)}
-                                                                </div>
-                                                                <div className="text-gray-700 font-medium">
-                                                                    <LatexPreview content={opt.content} />
-                                                                </div>
+                                                        <div
+                                                            key={opt.id}
+                                                            className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all ${borderClass} ${bgClass}`}
+                                                        >
+                                                            <span className={`w-7 h-7 inline-flex items-center justify-center text-[12.5px] font-bold border ${letterShape} ${letterClass} shrink-0`}>
+                                                                {String.fromCharCode(65 + opt.orderIndex)}
+                                                            </span>
+                                                            <div className={`flex-1 font-medium ${textClass}`}>
+                                                                <LatexPreview content={opt.content} />
                                                             </div>
-                                                            {icon}
+                                                            {badge}
                                                         </div>
                                                     );
                                                 })}
@@ -664,45 +779,57 @@ const ExamReview = () => {
 
                                         {/* Open Questions */}
                                         {(q.questionType === 'OPEN_AUTO' || q.questionType === 'OPEN_MANUAL') && (
-                                            <div className="space-y-4">
-                                                <div className="p-5 bg-indigo-50/30 rounded-2xl border border-indigo-100">
-                                                    <p className="text-xs font-bold text-indigo-400 uppercase mb-2">Şagirdin Cavabı:</p>
+                                            <div className="flex flex-col gap-3.5">
+                                                <div className="p-5 bg-[var(--primary-soft)]/60 rounded-2xl border border-[var(--brand-blue-100)]">
+                                                    <p className="text-[11px] font-bold text-[var(--primary)] uppercase tracking-[0.1em] mb-2">Şagirdin cavabı</p>
                                                     {q.studentAnswerText ? (
-                                                        <div className="text-gray-800 font-medium">
+                                                        <div className="text-[var(--ink-900)] font-medium leading-relaxed">
                                                             <LatexPreview content={q.studentAnswerText} />
                                                         </div>
                                                     ) : (
-                                                        <p className="text-gray-400 italic">[Mətn cavabı yoxdur]</p>
+                                                        <p className="text-[var(--ink-400)] italic">[Mətn cavabı yoxdur]</p>
                                                     )}
                                                     {q.studentAnswerImage && (
                                                         <div className="mt-3">
-                                                            <img src={q.studentAnswerImage} alt="Şagird cavab şəkli" className="max-h-64 rounded-xl border border-indigo-100" />
+                                                            <img
+                                                                src={q.studentAnswerImage}
+                                                                alt="Şagird cavab şəkli"
+                                                                className="max-h-64 rounded-xl border border-[var(--brand-blue-100)] cursor-zoom-in"
+                                                                onClick={() => setZoomImage(q.studentAnswerImage)}
+                                                            />
                                                         </div>
                                                     )}
                                                     {!q.studentAnswerText && !q.studentAnswerImage && (
-                                                        <p className="text-gray-400 italic mt-1">[Cavab verilməyib]</p>
+                                                        <p className="text-[var(--ink-400)] italic mt-1">[Cavab verilməyib]</p>
                                                     )}
                                                 </div>
                                                 {/* OPEN_AUTO: show correct answer after grading; OPEN_MANUAL: always show to teacher */}
                                                 {q.correctAnswer && (q.isGraded || (canGrade && q.questionType === 'OPEN_MANUAL')) && (
-                                                    <div className="p-5 bg-green-50/50 rounded-2xl border border-green-100">
-                                                        <p className="text-xs font-bold text-green-500 uppercase mb-2">
-                                                            {q.questionType === 'OPEN_AUTO' ? 'Düzgün Cavab:' : 'İstinad Cavab (Müəllim):'}
+                                                    <div className="p-5 bg-[var(--accent-soft)]/70 rounded-2xl border border-[var(--brand-green-100)]">
+                                                        <p className="text-[11px] font-bold text-[var(--brand-green-600)] uppercase tracking-[0.1em] mb-2">
+                                                            {q.questionType === 'OPEN_AUTO' ? 'Düzgün cavab' : 'İstinad cavab (müəllim)'}
                                                         </p>
-                                                        <div className="text-gray-800 font-medium">
+                                                        <div className="text-[var(--ink-900)] font-medium leading-relaxed">
                                                             <LatexPreview content={q.correctAnswer} />
                                                         </div>
                                                     </div>
                                                 )}
                                                 {q.feedback && (
-                                                    <div className="p-5 bg-yellow-50/50 rounded-2xl border border-yellow-100">
-                                                        <p className="text-xs font-bold text-yellow-600 uppercase mb-2">Müəllim Rəyi:</p>
-                                                        <p className="text-gray-800 italic">{q.feedback}</p>
+                                                    <div className="p-5 bg-amber-50/70 rounded-2xl border border-amber-200">
+                                                        <p className="text-[11px] font-bold text-amber-700 uppercase tracking-[0.1em] mb-2">Müəllim rəyi</p>
+                                                        <p className="text-[var(--ink-800)] italic leading-relaxed">{q.feedback}</p>
                                                     </div>
                                                 )}
 
-                                                {/* Teacher/Admin grading panel for OPEN_MANUAL */}
-                                                {canGrade && q.questionType === 'OPEN_MANUAL' && (() => {
+                                                {/* Teacher/Admin grading panel for OPEN_MANUAL.
+                                                   For a collab section teacher, backend returns
+                                                   gradableQuestionIds: only ids inside their
+                                                   subject assignment. Falling back to "true"
+                                                   for non-collab exams (legacy responses without
+                                                   the field) keeps the regular teacher flow. */}
+                                                {canGrade && q.questionType === 'OPEN_MANUAL'
+                                                    && (!review.gradableQuestionIds || review.gradableQuestionIds.includes(q.id))
+                                                    && (() => {
                                                     const currentFraction = q.isGraded && q.points > 0
                                                         ? Math.round((q.awardedScore / q.points) * 6) / 6 // snap to nearest 1/6
                                                         : null;
@@ -714,9 +841,9 @@ const ExamReview = () => {
                                                     return (
                                                         <>
                                                             {q.isGraded && (
-                                                                <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 border border-green-200 rounded-2xl">
-                                                                    <HiOutlineCheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                                                                    <span className="text-sm text-green-700 font-semibold">
+                                                                <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent-soft)] border border-[var(--brand-green-100)] rounded-2xl">
+                                                                    <HiOutlineCheckCircle className="w-4 h-4 text-[var(--brand-green-600)] shrink-0" />
+                                                                    <span className="text-[13.5px] text-[var(--brand-green-600)] font-bold">
                                                                         Verilmiş bal: {fmtScore(q.awardedScore)} / {q.points}
                                                                     </span>
                                                                 </div>
@@ -742,30 +869,40 @@ const ExamReview = () => {
                                             try { correctAnswers = JSON.parse(q.correctAnswer || '[]'); } catch (e) {}
                                             try { studentAnswers = JSON.parse(q.studentAnswerText || '[]'); } catch (e) {}
                                             return (
-                                                <div className="space-y-3">
-                                                    <p className="text-xs font-bold text-gray-400 uppercase mb-2">Boşluq Nəticələri:</p>
+                                                <div className="flex flex-col gap-2.5">
+                                                    <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-[0.1em] mb-1">Boşluq nəticələri</p>
                                                     {correctAnswers.map((correct, i) => {
                                                         const student = studentAnswers[i] || '';
                                                         const isCorrect = correct.trim().toLowerCase() === student.trim().toLowerCase();
                                                         return (
-                                                            <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                                                                <span className="text-sm font-bold text-gray-500 w-24 shrink-0">Boşluq {i + 1}</span>
+                                                            <div
+                                                                key={i}
+                                                                className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${
+                                                                    isCorrect ? 'bg-[var(--accent-soft)] border-[var(--brand-green-600)]' : 'bg-red-50 border-red-400'
+                                                                }`}
+                                                            >
+                                                                <span className="text-[12px] font-bold text-[var(--ink-500)] w-20 shrink-0 uppercase tracking-wider">Boşluq {i + 1}</span>
                                                                 <div className="flex-1 grid grid-cols-2 gap-3">
                                                                     <div>
-                                                                        <p className="text-xs text-gray-400 mb-1">Şagird:</p>
-                                                                        <p className={`font-semibold ${student ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                                                                        <p className="text-[10.5px] text-[var(--ink-400)] mb-1 font-bold uppercase tracking-wider">Şagird</p>
+                                                                        <p className={`font-semibold ${student ? 'text-[var(--ink-900)]' : 'text-[var(--ink-400)] italic'}`}>
                                                                             {student || '[boş]'}
                                                                         </p>
                                                                     </div>
                                                                     <div>
-                                                                        <p className="text-xs text-gray-400 mb-1">Düzgün:</p>
-                                                                        <p className="font-semibold text-green-700">{correct}</p>
+                                                                        <p className="text-[10.5px] text-[var(--ink-400)] mb-1 font-bold uppercase tracking-wider">Düzgün</p>
+                                                                        <p className="font-semibold text-[var(--brand-green-600)]">{correct}</p>
                                                                     </div>
                                                                 </div>
-                                                                {isCorrect
-                                                                    ? <HiOutlineCheckCircle className="w-5 h-5 text-green-500 shrink-0" />
-                                                                    : <HiOutlineXCircle className="w-5 h-5 text-red-500 shrink-0" />
-                                                                }
+                                                                {isCorrect ? (
+                                                                    <span className="w-7 h-7 rounded-full bg-[var(--brand-green-600)] text-white inline-flex items-center justify-center shrink-0">
+                                                                        <HiOutlineCheckCircle className="w-4 h-4" />
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="w-7 h-7 rounded-full bg-red-500 text-white inline-flex items-center justify-center shrink-0 font-bold text-[13px]">
+                                                                        ✕
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
@@ -784,15 +921,55 @@ const ExamReview = () => {
 
                 {/* All graded message */}
                 {canGrade && showOnlyUngraded && displayedQuestions.length === 0 && (
-                    <div className="text-center py-16 text-gray-500">
-                        <HiOutlineCheckCircle className="w-12 h-12 mx-auto text-green-400 mb-3" />
-                        <p className="font-semibold text-gray-700">Bütün açıq suallar yoxlanılıb!</p>
+                    <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-[var(--ink-200)] mt-5">
+                        <div className="w-16 h-16 mx-auto rounded-2xl bg-[var(--accent-soft)] text-[var(--brand-green-600)] flex items-center justify-center mb-4">
+                            <HiOutlineCheckCircle className="w-8 h-8" />
+                        </div>
+                        <p className="font-bold text-[var(--ink-900)] text-[16px]">Bütün açıq suallar yoxlanılıb!</p>
+                        <p className="text-[13.5px] text-[var(--ink-500)] mt-1 mb-5">Filteri söndürərək bütün sualları görə bilərsiniz.</p>
                         <button
                             onClick={() => setShowOnlyUngraded(false)}
-                            className="mt-4 px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700"
+                            className="h-11 px-5 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
                         >
-                            Bütün Sualları Göstər
+                            Bütün sualları göstər
                         </button>
+                    </div>
+                )}
+
+                {/* Bottom action bar */}
+                {displayedQuestions.length > 0 && (
+                    <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                        <button
+                            disabled
+                            title="Tezliklə əlavə ediləcək"
+                            className="relative h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-semibold text-[var(--ink-400)] bg-white border border-[var(--ink-200)] cursor-not-allowed opacity-70"
+                        >
+                            <HiOutlineDownload className="w-4 h-4" />
+                            PDF olaraq yüklə
+                            <span className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--ink-100)] text-[var(--ink-500)]">
+                                <HiOutlineLockClosed className="w-3 h-3" />
+                            </span>
+                        </button>
+                        {canGrade && (
+                            nextSessionId ? (
+                                <button
+                                    onClick={() => navigate(`/test/review/${nextSessionId}`)}
+                                    className="h-12 px-6 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                                >
+                                    Növbəti şagird
+                                    <HiOutlineArrowRight className="w-4 h-4" />
+                                </button>
+                            ) : (
+                                <button
+                                    disabled
+                                    title="Bu, son şagirddir"
+                                    className="h-12 px-6 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-bold text-[var(--ink-400)] bg-[var(--ink-100)] border border-[var(--ink-200)] cursor-not-allowed"
+                                >
+                                    Növbəti şagird
+                                    <HiOutlineArrowRight className="w-4 h-4" />
+                                </button>
+                            )
+                        )}
                     </div>
                 )}
             </div>

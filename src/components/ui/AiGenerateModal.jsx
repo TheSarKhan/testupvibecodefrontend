@@ -23,8 +23,8 @@ const TYPE_OPTIONS = [
 ];
 
 const TYPE_COLORS = {
-    MCQ:               'bg-indigo-50 text-indigo-700',
-    MULTI_SELECT:      'bg-violet-50 text-violet-700',
+    MCQ:               'bg-blue-50 text-blue-700',
+    MULTI_SELECT:      'bg-emerald-50 text-emerald-700',
     OPEN_AUTO:         'bg-green-50 text-green-700',
     FILL_IN_THE_BLANK: 'bg-yellow-50 text-yellow-700',
 };
@@ -208,7 +208,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
         <Modal isOpen={isOpen} onClose={onClose} title="" maxWidth="max-w-2xl">
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center shadow-md">
                     <HiOutlineSparkles className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
@@ -220,7 +220,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                         aiUsage.remaining === -1
                             ? 'bg-green-100 text-green-700'
                             : aiUsage.remaining > 5
-                                ? 'bg-violet-100 text-violet-700'
+                                ? 'bg-emerald-100 text-emerald-700'
                                 : aiUsage.remaining > 0
                                     ? 'bg-amber-100 text-amber-700'
                                     : 'bg-red-100 text-red-700'
@@ -240,7 +240,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                             <select
                                 value={topicName}
                                 onChange={e => setTopicName(e.target.value)}
-                                className="w-full appearance-none border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 pr-8"
+                                className="w-full appearance-none border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 pr-8"
                             >
                                 <option value="">Bütün mövzular</option>
                                 {topics.map(t => (
@@ -257,7 +257,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                             placeholder="Mövzu adı (istəyə bağlı)"
                             value={topicName}
                             onChange={e => setTopicName(e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                         />
                     )}
                 </div>
@@ -269,7 +269,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                         <select
                             value={questionType}
                             onChange={e => setQuestionType(e.target.value)}
-                            className="w-full appearance-none border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 pr-8"
+                            className="w-full appearance-none border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 pr-8"
                         >
                             {TYPE_OPTIONS.map(o => (
                                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -305,9 +305,9 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                     <input
                         type="range" min="1" max="10" value={count}
                         onChange={e => setCount(Number(e.target.value))}
-                        className="w-24 accent-indigo-600"
+                        className="w-24 accent-blue-600"
                     />
-                    <span className="text-sm font-bold text-indigo-600 w-5 text-center">{count}</span>
+                    <span className="text-sm font-bold text-blue-600 w-5 text-center">{count}</span>
                 </div>
             </div>
 
@@ -354,7 +354,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 <button
                     onClick={handleGenerate}
                     disabled={generating || (aiUsage && aiUsage.remaining === 0) || (aiUsage && aiUsage.remaining !== -1 && count > aiUsage.remaining)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     {aiUsage && aiUsage.remaining === 0 ? (
                         <>Aylıq limit bitdi</>

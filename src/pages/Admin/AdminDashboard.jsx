@@ -11,27 +11,27 @@ import {
 } from 'recharts';
 import { useAdminStats } from '../../hooks/admin/useAdminStats';
 import { useAdminPendingOrders, useAdminRevenue } from '../../hooks/admin/useAdminRevenue';
+import { fmtDate, fmtDateShort } from '../../utils/date';
 
 /* ─── helpers ─── */
 const monthNames = { '01':'Yan','02':'Fev','03':'Mar','04':'Apr','05':'May','06':'İyn','07':'İyl','08':'Avq','09':'Sen','10':'Okt','11':'Noy','12':'Dek' };
 const fmtAzn = (n) => (n ?? 0).toLocaleString('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const roleBadge = (role) => {
-    const map = { ADMIN:'bg-purple-100 text-purple-700', TEACHER:'bg-indigo-100 text-indigo-700', STUDENT:'bg-emerald-100 text-emerald-700' };
+    const map = { ADMIN:'bg-emerald-100 text-emerald-700', TEACHER:'bg-blue-100 text-blue-700', STUDENT:'bg-emerald-100 text-emerald-700' };
     const labels = { ADMIN:'Admin', TEACHER:'Müəllim', STUDENT:'Tələbə' };
     return <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${map[role]||'bg-gray-100 text-gray-600'}`}>{labels[role]||role}</span>;
 };
 
 const statusBadge = (status) => {
-    const map = { PUBLISHED:'bg-emerald-100 text-emerald-700', ACTIVE:'bg-blue-100 text-blue-700', DRAFT:'bg-gray-100 text-gray-600', COMPLETED:'bg-purple-100 text-purple-700' };
+    const map = { PUBLISHED:'bg-emerald-100 text-emerald-700', ACTIVE:'bg-blue-100 text-blue-700', DRAFT:'bg-gray-100 text-gray-600', COMPLETED:'bg-emerald-100 text-emerald-700' };
     const labels = { PUBLISHED:'Dərc edilib', ACTIVE:'Aktiv', DRAFT:'Qaralama', COMPLETED:'Tamamlandı' };
     return <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${map[status]||'bg-gray-100 text-gray-600'}`}>{labels[status]||status}</span>;
 };
 
 /* ─── full bar chart (Recharts) ─── */
 const BAR_COLORS = {
-    'bg-indigo-400': '#818cf8',
-    'bg-violet-400': '#a78bfa',
+    'bg-blue-400': '#60a5fa',
     'bg-emerald-400': '#34d399',
 };
 
@@ -39,7 +39,7 @@ const monthTick = (m) => monthNames[m?.split?.('-')?.[1]] || m;
 
 const BarChart = ({ data, valueKey = 'count', formatVal, color }) => {
     if (!data?.length) return <div className="flex items-center justify-center h-32 text-gray-300 text-sm">Məlumat yoxdur</div>;
-    const fill = BAR_COLORS[color] || '#818cf8';
+    const fill = BAR_COLORS[color] || '#60a5fa';
     return (
         <div className="h-32">
             <ResponsiveContainer width="100%" height="100%">
@@ -88,7 +88,7 @@ const AdminDashboard = () => {
 
     if (statsLoading) return (
         <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
         </div>
     );
 
@@ -104,7 +104,7 @@ const AdminDashboard = () => {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
                     <p className="text-gray-400 text-sm mt-0.5">
-                        {new Date().toLocaleDateString('az-AZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        {fmtDate(new Date())}
                     </p>
                 </div>
                 <Link to="/admin/qazanc" className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-sm rounded-xl transition-colors">
@@ -161,26 +161,26 @@ const AdminDashboard = () => {
                 </Link>
 
                 {/* Submissions hero */}
-                <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200/60">
+                <div className="bg-gradient-to-br from-blue-600 via-emerald-600 to-emerald-700 rounded-2xl p-6 text-white shadow-xl shadow-blue-200/60">
                     <div className="flex items-start justify-between mb-4">
                         <div>
-                            <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest">Ümumi İmtahan Cəhdi</p>
+                            <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest">Ümumi İmtahan Cəhdi</p>
                             <p className="text-4xl font-extrabold tabular-nums mt-1">{(stats?.totalSubmissions ?? 0).toLocaleString()}</p>
-                            <p className="text-indigo-300 text-xs mt-1.5">bütün zamanlar üzrə</p>
+                            <p className="text-blue-300 text-xs mt-1.5">bütün zamanlar üzrə</p>
                         </div>
-                        <HiOutlineClipboardList className="w-12 h-12 text-indigo-300 opacity-30" />
+                        <HiOutlineClipboardList className="w-12 h-12 text-blue-300 opacity-30" />
                     </div>
                     <div className="grid grid-cols-3 gap-3 mt-2">
                         <div className="bg-white/10 rounded-xl p-2.5">
-                            <p className="text-indigo-300 text-[10px] font-medium">Bu ay cəhd</p>
+                            <p className="text-blue-300 text-[10px] font-medium">Bu ay cəhd</p>
                             <p className="text-white font-bold text-sm tabular-nums">{stats?.monthlySubmissions?.at(-1)?.count ?? 0}</p>
                         </div>
                         <div className="bg-white/10 rounded-xl p-2.5">
-                            <p className="text-indigo-300 text-[10px] font-medium">Bu ay qeydiyyat</p>
+                            <p className="text-blue-300 text-[10px] font-medium">Bu ay qeydiyyat</p>
                             <p className="text-white font-bold text-sm tabular-nums">{stats?.monthlyRegistrations?.at(-1)?.count ?? 0}</p>
                         </div>
                         <div className="bg-white/10 rounded-xl p-2.5">
-                            <p className="text-indigo-300 text-[10px] font-medium">Aktiv imtahan</p>
+                            <p className="text-blue-300 text-[10px] font-medium">Aktiv imtahan</p>
                             <p className="text-white font-bold text-sm tabular-nums">{stats?.totalPublishedExams ?? 0}</p>
                         </div>
                     </div>
@@ -196,8 +196,8 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
                 {[
                     { icon: HiOutlineUsers,      label: 'Ümumi İstifadəçi', value: stats?.totalUsers,          bg: 'bg-gray-100',     color: 'text-gray-700',   to: '/admin/users' },
-                    { icon: HiOutlineShieldCheck, label: 'Adminlər',         value: totalAdmins,                bg: 'bg-purple-50',    color: 'text-purple-600', to: '/admin/users' },
-                    { icon: HiOutlineAcademicCap, label: 'Müəllimlər',       value: stats?.totalTeachers,       bg: 'bg-indigo-50',    color: 'text-indigo-600', to: '/admin/users' },
+                    { icon: HiOutlineShieldCheck, label: 'Adminlər',         value: totalAdmins,                bg: 'bg-emerald-50',    color: 'text-emerald-600', to: '/admin/users' },
+                    { icon: HiOutlineAcademicCap, label: 'Müəllimlər',       value: stats?.totalTeachers,       bg: 'bg-blue-50',    color: 'text-blue-600', to: '/admin/users' },
                     { icon: HiOutlineUserGroup,   label: 'Tələbələr',        value: stats?.totalStudents,       bg: 'bg-emerald-50',   color: 'text-emerald-600',to: '/admin/users' },
                     { icon: HiOutlineDocumentText,label: 'Cəmi İmtahan',     value: stats?.totalExams,          bg: 'bg-amber-50',     color: 'text-amber-600',  to: '/admin/muellim-imtahanlar' },
                     { icon: HiOutlineCheckCircle, label: 'Cəmi Ödəniş',      value: revenue?.totalPaidOrders ?? 0, bg: 'bg-teal-50', color: 'text-teal-600',   to: '/admin/qazanc' },
@@ -218,17 +218,17 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <div className="flex items-center gap-2 mb-4">
-                        <HiOutlineTrendingUp className="w-4 h-4 text-indigo-500" />
+                        <HiOutlineTrendingUp className="w-4 h-4 text-blue-500" />
                         <span className="font-bold text-gray-800 text-sm">Son 6 ay — Qeydiyyatlar</span>
                     </div>
-                    <BarChart data={stats?.monthlyRegistrations} valueKey="count" color="bg-indigo-400" />
+                    <BarChart data={stats?.monthlyRegistrations} valueKey="count" color="bg-blue-400" />
                 </div>
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <div className="flex items-center gap-2 mb-4">
-                        <HiOutlineClipboardList className="w-4 h-4 text-violet-500" />
+                        <HiOutlineClipboardList className="w-4 h-4 text-emerald-500" />
                         <span className="font-bold text-gray-800 text-sm">Son 6 ay — İmtahan cəhdləri</span>
                     </div>
-                    <BarChart data={stats?.monthlySubmissions} valueKey="count" color="bg-violet-400" />
+                    <BarChart data={stats?.monthlySubmissions} valueKey="count" color="bg-emerald-400" />
                 </div>
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                     <div className="flex items-center gap-2 mb-4">
@@ -258,12 +258,12 @@ const AdminDashboard = () => {
                                     <HiOutlineCurrencyDollar className="w-4 h-4 text-emerald-500" />
                                     <h3 className="font-bold text-gray-800 text-sm">Plana görə qazanc</h3>
                                 </div>
-                                <Link to="/admin/qazanc" className="text-xs text-indigo-600 hover:underline font-medium">Ətraflı →</Link>
+                                <Link to="/admin/qazanc" className="text-xs text-blue-600 hover:underline font-medium">Ətraflı →</Link>
                             </div>
                             <div className="space-y-3">
                                 {(() => {
                                     const maxR = Math.max(...revenue.revenueByPlan.map(p => p.revenue), 1);
-                                    const colors = ['bg-emerald-500', 'bg-indigo-500', 'bg-violet-500', 'bg-amber-500'];
+                                    const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500'];
                                     return revenue.revenueByPlan.map((p, i) => (
                                         <div key={p.planName}>
                                             <div className="flex items-center justify-between mb-1">
@@ -292,7 +292,7 @@ const AdminDashboard = () => {
                                     <HiOutlineCurrencyDollar className="w-4 h-4 text-emerald-500" />
                                     <h2 className="font-bold text-gray-800">Son Ödənişlər</h2>
                                 </div>
-                                <Link to="/admin/qazanc" className="text-sm text-indigo-600 hover:underline font-medium">Hamısına bax →</Link>
+                                <Link to="/admin/qazanc" className="text-sm text-blue-600 hover:underline font-medium">Hamısına bax →</Link>
                             </div>
                             <div className="divide-y divide-gray-50">
                                 {revenue.recentPayments.map((p, i) => (
@@ -307,13 +307,13 @@ const AdminDashboard = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4 shrink-0">
-                                            <span className="text-xs font-bold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full">{p.planName}</span>
+                                            <span className="text-xs font-bold px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full">{p.planName}</span>
                                             <div className="text-right">
                                                 <p className="text-sm font-bold text-emerald-700 tabular-nums">{fmtAzn(p.amount)} AZN</p>
                                                 <p className="text-xs text-gray-400">{p.durationDays} gün</p>
                                             </div>
                                             <span className="text-xs text-gray-400 hidden sm:block">
-                                                {p.createdAt ? new Date(p.createdAt).toLocaleDateString('az-AZ', { day:'2-digit', month:'short' }) : ''}
+                                                {p.createdAt ? fmtDateShort(p.createdAt) : ''}
                                             </span>
                                         </div>
                                     </div>
@@ -327,14 +327,14 @@ const AdminDashboard = () => {
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                             <h3 className="font-bold text-gray-800 text-sm mb-4">İstifadəçi Paylanması</h3>
                             <div className="flex rounded-full overflow-hidden h-3 mb-4 bg-gray-100">
-                                {totalAdmins > 0 && <div className="bg-purple-500" style={{ width: `${(totalAdmins/stats.totalUsers)*100}%` }} />}
-                                {stats.totalTeachers > 0 && <div className="bg-indigo-500" style={{ width: `${(stats.totalTeachers/stats.totalUsers)*100}%` }} />}
+                                {totalAdmins > 0 && <div className="bg-emerald-500" style={{ width: `${(totalAdmins/stats.totalUsers)*100}%` }} />}
+                                {stats.totalTeachers > 0 && <div className="bg-blue-500" style={{ width: `${(stats.totalTeachers/stats.totalUsers)*100}%` }} />}
                                 {stats.totalStudents > 0 && <div className="bg-emerald-500" style={{ width: `${(stats.totalStudents/stats.totalUsers)*100}%` }} />}
                             </div>
                             <div className="flex flex-wrap gap-5 text-sm">
                                 {[
-                                    { label:'Admin',   count: totalAdmins,         color:'bg-purple-500' },
-                                    { label:'Müəllim', count: stats.totalTeachers,  color:'bg-indigo-500' },
+                                    { label:'Admin',   count: totalAdmins,         color:'bg-emerald-500' },
+                                    { label:'Müəllim', count: stats.totalTeachers,  color:'bg-blue-500' },
                                     { label:'Tələbə',  count: stats.totalStudents,  color:'bg-emerald-500' },
                                 ].map(item => (
                                     <div key={item.label} className="flex items-center gap-2">
@@ -354,7 +354,7 @@ const AdminDashboard = () => {
                                 <HiOutlineLightningBolt className="w-4 h-4 text-amber-500" />
                                 <h2 className="font-bold text-gray-800">Son İmtahanlar</h2>
                             </div>
-                            <Link to="/admin/muellim-imtahanlar" className="text-sm text-indigo-600 hover:underline font-medium">Hamısına bax →</Link>
+                            <Link to="/admin/muellim-imtahanlar" className="text-sm text-blue-600 hover:underline font-medium">Hamısına bax →</Link>
                         </div>
                         <div className="divide-y divide-gray-50">
                             {stats?.recentExams?.length > 0 ? stats.recentExams.map(exam => (
@@ -366,7 +366,7 @@ const AdminDashboard = () => {
                                     <div className="flex items-center gap-3 shrink-0">
                                         {statusBadge(exam.status)}
                                         <span className="text-xs text-gray-400 hidden sm:block">
-                                            {exam.createdAt ? new Date(exam.createdAt).toLocaleDateString('az-AZ', { day:'2-digit', month:'short' }) : ''}
+                                            {fmtDateShort(exam.createdAt)}
                                         </span>
                                     </div>
                                 </div>
@@ -383,8 +383,8 @@ const AdminDashboard = () => {
                         <h3 className="font-bold text-gray-800 text-sm">Sürətli Baxış</h3>
                         {[
                             { label:'Bu ay qazanc',        value: `${fmtAzn(revenue?.thisMonthRevenue)} AZN`, icon: HiOutlineCurrencyDollar, color:'text-emerald-600', bg:'bg-emerald-50' },
-                            { label:'Bu ay qeydiyyat',      value: stats?.monthlyRegistrations?.at(-1)?.count ?? 0, icon: HiOutlineTrendingUp,    color:'text-indigo-600',  bg:'bg-indigo-50' },
-                            { label:'Bu ay imtahan cəhdi',  value: stats?.monthlySubmissions?.at(-1)?.count ?? 0,   icon: HiOutlineClipboardList, color:'text-violet-600',  bg:'bg-violet-50' },
+                            { label:'Bu ay qeydiyyat',      value: stats?.monthlyRegistrations?.at(-1)?.count ?? 0, icon: HiOutlineTrendingUp,    color:'text-blue-600',  bg:'bg-blue-50' },
+                            { label:'Bu ay imtahan cəhdi',  value: stats?.monthlySubmissions?.at(-1)?.count ?? 0,   icon: HiOutlineClipboardList, color:'text-emerald-600',  bg:'bg-emerald-50' },
                             { label:'Aktiv abunəlik',        value: revenue?.activeSubscriptions ?? 0,               icon: HiOutlineCheckCircle,   color:'text-teal-600',    bg:'bg-teal-50' },
                             { label:'Müəllim/Tələbə nisbəti', value: stats?.totalStudents > 0 ? `1 : ${Math.round(stats.totalStudents / Math.max(stats.totalTeachers,1))}` : '—', icon: HiOutlineClock, color:'text-amber-600', bg:'bg-amber-50' },
                         ].map(item => (
@@ -404,7 +404,7 @@ const AdminDashboard = () => {
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
                         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                             <h2 className="font-bold text-gray-800 text-sm">Son Qeydiyyatlar</h2>
-                            <Link to="/admin/users" className="text-xs text-indigo-600 hover:underline font-medium">Hamısına bax →</Link>
+                            <Link to="/admin/users" className="text-xs text-blue-600 hover:underline font-medium">Hamısına bax →</Link>
                         </div>
                         <div className="divide-y divide-gray-50">
                             {stats?.recentUsers?.map(user => (
@@ -413,7 +413,7 @@ const AdminDashboard = () => {
                                         {user.profilePicture ? (
                                             <img src={user.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
                                         ) : (
-                                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs shrink-0">
+                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
                                                 {user.fullName?.[0]?.toUpperCase()}
                                             </div>
                                         )}
@@ -425,7 +425,7 @@ const AdminDashboard = () => {
                                     <div className="flex flex-col items-end gap-1 shrink-0">
                                         {roleBadge(user.role)}
                                         <span className="text-xs text-gray-400">
-                                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString('az-AZ', { day:'2-digit', month:'short' }) : ''}
+                                            {fmtDateShort(user.createdAt)}
                                         </span>
                                     </div>
                                 </div>
@@ -440,17 +440,17 @@ const AdminDashboard = () => {
                             {[
                                 { to:'/admin/qazanc',            label:'Qazanc hesabatı',        dot:'bg-emerald-400' },
                                 { to:'/admin/planlar',           label:'Abunəlik planları',       dot:'bg-teal-400' },
-                                { to:'/admin/users',             label:'İstifadəçiləri idarə et', dot:'bg-indigo-400' },
+                                { to:'/admin/users',             label:'İstifadəçiləri idarə et', dot:'bg-blue-400' },
                                 { to:'/admin/muellim-imtahanlar',label:'İmtahanları idarə et',   dot:'bg-amber-400' },
-                                { to:'/admin/bildirişlər',       label:'Bildiriş göndər',         dot:'bg-violet-400' },
+                                { to:'/admin/bildirişlər',       label:'Bildiriş göndər',         dot:'bg-emerald-400' },
                                 { to:'/admin/loglar',            label:'Sistem logları',          dot:'bg-gray-400' },
                             ].map(link => (
                                 <Link key={link.to} to={link.to}
-                                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors font-medium group"
+                                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium group"
                                 >
                                     <div className={`w-2 h-2 rounded-full shrink-0 ${link.dot}`} />
                                     <span className="flex-1">{link.label}</span>
-                                    <span className="text-gray-300 group-hover:text-indigo-400">→</span>
+                                    <span className="text-gray-300 group-hover:text-blue-400">→</span>
                                 </Link>
                             ))}
                         </div>

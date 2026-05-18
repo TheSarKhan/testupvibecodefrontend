@@ -6,8 +6,8 @@ import {
 import toast from 'react-hot-toast';
 
 export const QUESTION_TYPE_OPTIONS = [
-    { value: 'MCQ',               label: 'Birseçimli',          short: 'MCQ',     color: 'indigo' },
-    { value: 'MULTI_SELECT',      label: 'Çoxseçimli',          short: 'Multi',   color: 'violet' },
+    { value: 'MCQ',               label: 'Birseçimli',          short: 'MCQ',     color: 'blue' },
+    { value: 'MULTI_SELECT',      label: 'Çoxseçimli',          short: 'Multi',   color: 'emerald' },
     { value: 'OPEN_AUTO',         label: 'Açıq (auto)',         short: 'Auto',    color: 'emerald' },
     { value: 'OPEN_MANUAL',       label: 'Açıq (müəllim)',      short: 'Manual',  color: 'amber' },
     { value: 'FILL_IN_THE_BLANK', label: 'Boşluq doldurma',     short: 'Boşluq',  color: 'teal' },
@@ -20,8 +20,8 @@ export const QUESTION_TYPE_SHORT = {
 };
 
 const TYPE_CHIP_COLORS = {
-    indigo:  'bg-indigo-50 text-indigo-700 ring-indigo-200',
-    violet:  'bg-violet-50 text-violet-700 ring-violet-200',
+    blue:  'bg-blue-50 text-blue-700 ring-blue-200',
+    emerald:  'bg-emerald-50 text-emerald-700 ring-emerald-200',
     emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
     amber:   'bg-amber-50 text-amber-700 ring-amber-200',
     teal:    'bg-teal-50 text-teal-700 ring-teal-200',
@@ -41,7 +41,7 @@ export const FORMULA_VARS = [
 ];
 
 export const PASSAGE_TYPES = {
-    LISTENING: { label: 'Dinləmə', Icon: HiOutlineVolumeUp,     color: 'purple' },
+    LISTENING: { label: 'Dinləmə', Icon: HiOutlineVolumeUp,     color: 'emerald' },
     TEXT:      { label: 'Mətn',    Icon: HiOutlineDocumentText, color: 'teal'   },
 };
 
@@ -81,7 +81,7 @@ const TypeChipSelect = ({ value, onChange }) => (
                     className={`text-xs font-semibold px-2.5 py-1 rounded-lg ring-1 transition-all ${
                         active
                             ? `${TYPE_CHIP_COLORS[opt.color]} shadow-sm`
-                            : 'bg-white text-gray-500 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'
+                            : 'bg-white text-gray-500 ring-gray-200 hover:ring-gray-300 hover:bg-gray-100'
                     }`}
                 >
                     {opt.label}
@@ -190,7 +190,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                         autoFocus
                         value={subjectName}
                         onChange={e => setSubjectName(e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white"
+                        className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white"
                     >
                         <option value="">— Fənn seçin —</option>
                         {subjects.map(s => <option key={s} value={s}>{s}</option>)}
@@ -208,13 +208,13 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                             const groupTotal = group.rows.reduce((s, r) => s + (parseInt(r.count) || 0), 0);
                             return (
                                 <div key={gi} className={`rounded-xl border-2 overflow-hidden ${
-                                    pt?.color === 'purple' ? 'border-purple-200' :
+                                    pt?.color === 'emerald' ? 'border-emerald-200' :
                                     pt?.color === 'teal'   ? 'border-teal-200' : 'border-gray-200'}`}>
                                     {pt && (
-                                        <div className={`flex items-center justify-between px-3 py-2 ${pt.color === 'purple' ? 'bg-purple-50' : 'bg-teal-50'}`}>
+                                        <div className={`flex items-center justify-between px-3 py-2 ${pt.color === 'emerald' ? 'bg-emerald-50' : 'bg-teal-50'}`}>
                                             <div className="flex items-center gap-2">
-                                                <pt.Icon className={`w-4 h-4 ${pt.color === 'purple' ? 'text-purple-600' : 'text-teal-600'}`} />
-                                                <span className={`text-sm font-bold ${pt.color === 'purple' ? 'text-purple-700' : 'text-teal-700'}`}>{pt.label}</span>
+                                                <pt.Icon className={`w-4 h-4 ${pt.color === 'emerald' ? 'text-emerald-600' : 'text-teal-600'}`} />
+                                                <span className={`text-sm font-bold ${pt.color === 'emerald' ? 'text-emerald-700' : 'text-teal-700'}`}>{pt.label}</span>
                                                 <span className="text-xs text-gray-500 font-medium">{groupTotal} sual</span>
                                             </div>
                                             <div className="flex items-center gap-1">
@@ -254,9 +254,9 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                                             <div className="flex flex-wrap gap-2 pt-1">
                                                 <button type="button" onClick={() => addRow(gi)}
                                                     className={`flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-dashed rounded-lg ${
-                                                        pt?.color === 'purple' ? 'border-purple-200 text-purple-600 hover:bg-purple-50' :
+                                                        pt?.color === 'emerald' ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50' :
                                                         pt?.color === 'teal'   ? 'border-teal-200 text-teal-600 hover:bg-teal-50' :
-                                                        'border-indigo-200 text-indigo-600 hover:bg-indigo-50'}`}>
+                                                        'border-blue-200 text-blue-600 hover:bg-blue-50'}`}>
                                                     <HiOutlinePlus className="w-3 h-3" /> Sual tipi əlavə et
                                                 </button>
                                                 {!pt && (
@@ -266,7 +266,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                                                             <HiOutlineDocumentText className="w-3 h-3" /> Mətn qrupu
                                                         </button>
                                                         <button type="button" onClick={() => addGroup('LISTENING')}
-                                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-dashed border-purple-200 text-purple-600 hover:bg-purple-50 rounded-lg">
+                                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold border border-dashed border-emerald-200 text-emerald-600 hover:bg-emerald-50 rounded-lg">
                                                             <HiOutlineVolumeUp className="w-3 h-3" /> Dinləmə qrupu
                                                         </button>
                                                     </>
@@ -279,7 +279,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                         })}
                         {groups.length === 0 && (
                             <button type="button" onClick={() => addGroup(null)}
-                                className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800">
+                                className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800">
                                 <HiOutlinePlus className="w-4 h-4" /> Sual tipi əlavə et
                             </button>
                         )}
@@ -292,7 +292,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                     hint="Bölmənin yekun balını hesablayan ifadə"
                     action={
                         <button type="button" onClick={() => setShowVars(v => !v)}
-                            className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium">
+                            className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 font-medium">
                             <HiOutlineInformationCircle className="w-3.5 h-3.5" />
                             {showVars ? 'Gizlət' : 'Dəyişənlər'}
                         </button>
@@ -303,8 +303,8 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                             {FORMULA_VARS.map(({ v, label }) => (
                                 <button key={v} type="button" onClick={() => insertVar(v)}
                                     title="Düstura əlavə et"
-                                    className="flex items-center gap-1.5 text-xs hover:bg-indigo-50 rounded-lg px-2 py-1.5 transition-colors text-left border border-gray-100">
-                                    <code className="bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded min-w-[1.5rem] text-center text-[11px]">{v}</code>
+                                    className="flex items-center gap-1.5 text-xs hover:bg-blue-50 rounded-lg px-2 py-1.5 transition-colors text-left border border-gray-100">
+                                    <code className="bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded min-w-[1.5rem] text-center text-[11px]">{v}</code>
                                     <span className="text-gray-600 truncate">{label}</span>
                                 </button>
                             ))}
@@ -316,7 +316,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                         onChange={e => setFormula(e.target.value)}
                         placeholder={'Məs: a*1.5 - b*0.5'}
                         rows={3}
-                        className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"
+                        className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-sm font-mono focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"
                     />
                 </Section>
 
@@ -332,7 +332,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                                 value={maxScore}
                                 onChange={e => setMaxScore(e.target.value)}
                                 placeholder="Boş qoyulsa hesablanmaz"
-                                className="w-48 border border-gray-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                                className="w-48 border border-gray-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                             />
                         </div>
 
@@ -346,7 +346,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                                 </p>
                             </div>
                             <button type="button" onClick={() => setAllowCustomPoints(v => !v)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full shrink-0 ${allowCustomPoints ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full shrink-0 ${allowCustomPoints ? 'bg-blue-600' : 'bg-gray-300'}`}>
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow ${allowCustomPoints ? 'translate-x-6' : 'translate-x-1'} transition-transform`} />
                             </button>
                         </div>
@@ -358,26 +358,26 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                                     <p className="text-xs text-gray-400 mt-0.5">Sıra nömrəsinə görə bal təyini</p>
                                 </div>
                                 <button type="button" onClick={() => setPgEnabled(v => !v)}
-                                    className={`relative inline-flex h-5 w-9 items-center rounded-full ${pgEnabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full ${pgEnabled ? 'bg-blue-600' : 'bg-gray-200'}`}>
                                     <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow ${pgEnabled ? 'translate-x-4.5' : 'translate-x-0.5'} transition-transform`} />
                                 </button>
                             </div>
                             {pgEnabled && (
-                                <div className="space-y-2 mt-3 bg-indigo-50/40 rounded-xl p-3">
+                                <div className="space-y-2 mt-3 bg-blue-50/40 rounded-xl p-3">
                                     {pgList.map((pg, i) => (
                                         <div key={i} className="flex items-center gap-2">
                                             <span className="text-xs text-gray-500 w-6 font-semibold">{i + 1}.</span>
                                             <input type="number" min={1} value={pg.from}
                                                 onChange={e => setPgList(prev => prev.map((p, j) => j === i ? { ...p, from: parseInt(e.target.value) || 1 } : p))}
-                                                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-indigo-400" />
+                                                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-blue-400" />
                                             <span className="text-xs text-gray-400">—</span>
                                             <input type="number" min={1} value={pg.to}
                                                 onChange={e => setPgList(prev => prev.map((p, j) => j === i ? { ...p, to: parseInt(e.target.value) || 1 } : p))}
-                                                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-indigo-400" />
+                                                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-blue-400" />
                                             <span className="text-xs text-gray-400">→</span>
                                             <input type="number" min={0} step={0.5} value={pg.points}
                                                 onChange={e => setPgList(prev => prev.map((p, j) => j === i ? { ...p, points: parseFloat(e.target.value) || 0 } : p))}
-                                                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-indigo-400" />
+                                                className="w-16 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:border-blue-400" />
                                             <span className="text-xs text-gray-400">bal</span>
                                             {pgList.length > 1 && (
                                                 <button type="button" onClick={() => setPgList(prev => prev.filter((_, j) => j !== i))}
@@ -388,7 +388,7 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
                                         </div>
                                     ))}
                                     <button type="button" onClick={() => setPgList(prev => [...prev, { from: (prev[prev.length-1]?.to || 0) + 1, to: (prev[prev.length-1]?.to || 0) + 5, points: 1.5 }])}
-                                        className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-semibold mt-1">
+                                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold mt-1">
                                         <HiOutlinePlus className="w-3.5 h-3.5" /> Qrup əlavə et
                                     </button>
                                 </div>
@@ -401,17 +401,17 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
             {/* Sticky footer with live preview + actions */}
             <div className="border-t border-gray-200 bg-white px-5 py-3 flex items-center justify-between gap-3">
                 <div className="text-xs text-gray-500 flex items-center gap-3 min-w-0">
-                    <span className="font-semibold text-indigo-700 whitespace-nowrap">{total} sual</span>
+                    <span className="font-semibold text-blue-700 whitespace-nowrap">{total} sual</span>
                     {subjectName && <span className="text-gray-400 truncate">· {subjectName}</span>}
                     {maxScore && <span className="text-gray-400 whitespace-nowrap">· max {maxScore} bal</span>}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     <button onClick={onCancel}
-                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-50 font-medium">
+                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-100 font-medium">
                         Ləğv et
                     </button>
                     <button onClick={handleSave} disabled={saving}
-                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 rounded-xl">
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-xl">
                         <HiOutlineCheck className="w-4 h-4" />
                         {saving ? 'Saxlanılır...' : 'Saxla'}
                         <kbd className="hidden sm:inline text-[10px] font-normal bg-white/20 px-1 py-0.5 rounded ml-1">⌘↵</kbd>

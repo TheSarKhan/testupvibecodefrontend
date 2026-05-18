@@ -13,11 +13,11 @@ import Pagination from '../../../components/admin/Pagination';
 
 const PALETTE = [
     { name: 'gray',    bg: 'bg-gray-100',    text: 'text-gray-700',    ring: 'ring-gray-300',    dot: 'bg-gray-400' },
-    { name: 'indigo',  bg: 'bg-indigo-100',  text: 'text-indigo-700',  ring: 'ring-indigo-300',  dot: 'bg-indigo-500' },
+    { name: 'blue',  bg: 'bg-blue-100',  text: 'text-blue-700',  ring: 'ring-blue-300',  dot: 'bg-blue-500' },
     { name: 'emerald', bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-300', dot: 'bg-emerald-500' },
     { name: 'amber',   bg: 'bg-amber-100',   text: 'text-amber-700',   ring: 'ring-amber-300',   dot: 'bg-amber-500' },
     { name: 'rose',    bg: 'bg-rose-100',    text: 'text-rose-700',    ring: 'ring-rose-300',    dot: 'bg-rose-500' },
-    { name: 'violet',  bg: 'bg-violet-100',  text: 'text-violet-700',  ring: 'ring-violet-300',  dot: 'bg-violet-500' },
+    { name: 'emerald',  bg: 'bg-emerald-100',  text: 'text-emerald-700',  ring: 'ring-emerald-300',  dot: 'bg-emerald-500' },
     { name: 'teal',    bg: 'bg-teal-100',    text: 'text-teal-700',    ring: 'ring-teal-300',    dot: 'bg-teal-500' },
     { name: 'sky',     bg: 'bg-sky-100',     text: 'text-sky-700',     ring: 'ring-sky-300',     dot: 'bg-sky-500' },
 ];
@@ -25,9 +25,9 @@ const PALETTE = [
 const paletteOf = (color) => PALETTE.find(p => p.name === color) || PALETTE[1];
 
 // ── Stat card ────────────────────────────────────────────────────────────────
-const StatCard = ({ icon: Icon, label, value, sub, color = 'indigo' }) => {
+const StatCard = ({ icon: Icon, label, value, sub, color = 'blue' }) => {
     const tone = {
-        indigo:  'bg-indigo-50 text-indigo-600',
+        blue:  'bg-blue-50 text-blue-600',
         emerald: 'bg-emerald-50 text-emerald-600',
         amber:   'bg-amber-50 text-amber-600',
         rose:    'bg-rose-50 text-rose-600',
@@ -83,20 +83,20 @@ const MergeModal = ({ sourceTag, allTags, onClose, onMerge, pending }) => {
                 </p>
                 <label className="block text-xs font-semibold text-gray-600 mb-2">Hədəf teq</label>
                 <select value={targetId} onChange={e => setTargetId(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 bg-white mb-4">
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 bg-white mb-4">
                     <option value="">— Teq seçin —</option>
                     {candidates.map(t => (
                         <option key={t.id} value={t.id}>{t.name} ({t.usageCount} imtahan)</option>
                     ))}
                 </select>
                 <div className="flex justify-end gap-2">
-                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
+                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100">
                         Ləğv
                     </button>
                     <button
                         disabled={!targetId || pending}
                         onClick={() => onMerge(parseInt(targetId))}
-                        className="px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl disabled:opacity-60"
+                        className="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-60"
                     >
                         {pending ? 'Birləşdirilir...' : 'Birləşdir'}
                     </button>
@@ -109,7 +109,7 @@ const MergeModal = ({ sourceTag, allTags, onClose, onMerge, pending }) => {
 // ── Main TagsTab ─────────────────────────────────────────────────────────────
 const TagsTab = () => {
     const [newName, setNewName] = useState('');
-    const [newColor, setNewColor] = useState('indigo');
+    const [newColor, setNewColor] = useState('blue');
     const [search, setSearch] = useState('');
     const inputRef = useRef(null);
 
@@ -128,7 +128,7 @@ const TagsTab = () => {
 
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState('');
-    const [editColor, setEditColor] = useState('indigo');
+    const [editColor, setEditColor] = useState('blue');
     const [mergingTag, setMergingTag] = useState(null);
     const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -155,7 +155,7 @@ const TagsTab = () => {
     const startEdit = (tag) => {
         setEditingId(tag.id);
         setEditName(tag.name);
-        setEditColor(tag.color || 'indigo');
+        setEditColor(tag.color || 'blue');
     };
 
     const saveEdit = async () => {
@@ -212,7 +212,7 @@ const TagsTab = () => {
         <div className="space-y-5">
             {/* Stats cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={HiOutlineTag} label="Cəmi teqlər" value={stats?.totalTags ?? '—'} color="indigo" />
+                <StatCard icon={HiOutlineTag} label="Cəmi teqlər" value={stats?.totalTags ?? '—'} color="blue" />
                 <StatCard icon={HiOutlineCollection} label="Teq istifadəsi" value={stats?.totalTagUsages ?? '—'} sub="exam × tag" color="emerald" />
                 <StatCard icon={HiOutlineFire} label="Ən populyar" value={stats?.topTags?.[0]?.name ?? '—'} sub={stats?.topTags?.[0] ? `${stats.topTags[0].usageCount} imtahan` : null} color="amber" />
                 <StatCard icon={HiOutlineExclamationCircle} label="Teqsiz imtahan" value={stats?.untaggedExamCount ?? '—'} sub="taglanmalıdır" color="rose" />
@@ -231,12 +231,12 @@ const TagsTab = () => {
                                 onChange={e => setNewName(e.target.value)}
                                 placeholder="Yeni teq adı..."
                                 maxLength={50}
-                                className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                                className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                             />
                             <button
                                 type="submit"
                                 disabled={createTag.isPending || !newName.trim()}
-                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl disabled:opacity-50"
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-50"
                             >
                                 <HiOutlinePlus className="w-4 h-4" /> Əlavə et
                             </button>
@@ -256,12 +256,12 @@ const TagsTab = () => {
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="Cari səhifədə axtar..."
-                                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                             />
                         </div>
                         {selectedIds.size > 0 && (
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-indigo-700">{selectedIds.size} seçildi</span>
+                                <span className="text-xs font-bold text-blue-700">{selectedIds.size} seçildi</span>
                                 <button onClick={handleBulkDelete} disabled={bulkDelete.isPending}
                                     className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg">
                                     Sil
@@ -275,7 +275,7 @@ const TagsTab = () => {
                     {/* Tag list */}
                     {loading ? (
                         <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
-                            <div className="w-5 h-5 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin mr-2" />
+                            <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mr-2" />
                             Yüklənir...
                         </div>
                     ) : filtered.length === 0 ? (
@@ -290,7 +290,7 @@ const TagsTab = () => {
                                 const isSelected = selectedIds.has(tag.id);
                                 const p = paletteOf(tag.color);
                                 return (
-                                    <div key={tag.id} className={`group px-4 py-3 transition-colors ${isSelected ? 'bg-indigo-50/40' : 'hover:bg-gray-50'}`}>
+                                    <div key={tag.id} className={`group px-4 py-3 transition-colors ${isSelected ? 'bg-blue-50/40' : 'hover:bg-gray-100'}`}>
                                         {isEditing ? (
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ const TagsTab = () => {
                                                         value={editName}
                                                         onChange={e => setEditName(e.target.value)}
                                                         onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null); }}
-                                                        className="flex-1 px-3 py-1.5 border border-indigo-300 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-500"
+                                                        className="flex-1 px-3 py-1.5 border border-blue-300 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
                                                     />
                                                     <button onClick={saveEdit} disabled={updateTag.isPending}
                                                         className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg">
@@ -317,7 +317,7 @@ const TagsTab = () => {
                                                     type="checkbox"
                                                     checked={isSelected}
                                                     onChange={() => toggleSelect(tag.id)}
-                                                    className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                                                    className="w-4 h-4 accent-blue-600 cursor-pointer"
                                                 />
                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${p.bg} ${p.text} ring-1 ${p.ring}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${p.dot}`} />
@@ -330,12 +330,12 @@ const TagsTab = () => {
                                                 </span>
                                                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => startEdit(tag)}
-                                                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                                                         title="Rename + rəng">
                                                         <HiOutlinePencilAlt className="w-4 h-4" />
                                                     </button>
                                                     <button onClick={() => setMergingTag(tag)}
-                                                        className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg"
+                                                        className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg"
                                                         title="Başqa teqə birləşdir">
                                                         <HiOutlineSwitchHorizontal className="w-4 h-4" />
                                                     </button>

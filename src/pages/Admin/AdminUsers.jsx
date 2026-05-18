@@ -9,6 +9,7 @@ import {
 } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { fmtDate } from '../../utils/date';
 import {
     useAdminUsers,
     useChangeUserRole,
@@ -31,8 +32,8 @@ const ROLES = [
 ];
 
 const ROLE_STYLE = {
-    ADMIN: { badge: 'bg-purple-100 text-purple-700 ring-purple-200', dot: 'bg-purple-500', avatar: 'bg-purple-100 text-purple-700' },
-    TEACHER: { badge: 'bg-indigo-100 text-indigo-700 ring-indigo-200', dot: 'bg-indigo-500', avatar: 'bg-indigo-100 text-indigo-700' },
+    ADMIN: { badge: 'bg-emerald-100 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500', avatar: 'bg-emerald-100 text-emerald-700' },
+    TEACHER: { badge: 'bg-blue-100 text-blue-700 ring-blue-200', dot: 'bg-blue-500', avatar: 'bg-blue-100 text-blue-700' },
     STUDENT: { badge: 'bg-emerald-100 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500', avatar: 'bg-emerald-100 text-emerald-700' },
 };
 const ROLE_LABEL = { ADMIN: 'Admin', TEACHER: 'Müəllim', STUDENT: 'Tələbə' };
@@ -201,8 +202,8 @@ const AdminUsers = () => {
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                 {[
                     { label: 'Ümumi', count: totalAll, color: 'bg-gray-900', text: 'text-white', sub: 'text-gray-300' },
-                    { label: 'Adminlər', count: roleCounts.ADMIN, color: 'bg-purple-600', text: 'text-white', sub: 'text-purple-200' },
-                    { label: 'Müəllimlər', count: roleCounts.TEACHER, color: 'bg-indigo-600', text: 'text-white', sub: 'text-indigo-200' },
+                    { label: 'Adminlər', count: roleCounts.ADMIN, color: 'bg-emerald-600', text: 'text-white', sub: 'text-emerald-200' },
+                    { label: 'Müəllimlər', count: roleCounts.TEACHER, color: 'bg-blue-600', text: 'text-white', sub: 'text-blue-200' },
                     { label: 'Tələbələr', count: roleCounts.STUDENT, color: 'bg-emerald-600', text: 'text-white', sub: 'text-emerald-200' },
                 ].map(s => (
                     <div key={s.label} className={`${s.color} rounded-2xl p-5`}>
@@ -225,7 +226,7 @@ const AdminUsers = () => {
                                 placeholder="Ad, email ilə axtar..."
                                 value={search}
                                 onChange={handleSearchChange}
-                                className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 bg-white"
+                                className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 bg-white"
                             />
                             {search && (
                                 <button onClick={() => { setSearch(''); setPage(0); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
@@ -238,7 +239,7 @@ const AdminUsers = () => {
                                 <button
                                     key={r.value}
                                     onClick={() => handleRoleFilter(r.value)}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${roleFilter === r.value ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${roleFilter === r.value ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'}`}
                                 >
                                     {r.label}
                                 </button>
@@ -257,8 +258,8 @@ const AdminUsers = () => {
 
                     {/* Bulk action bar */}
                     {selectedIds.size > 0 && (
-                        <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-                            <span className="text-sm font-bold text-indigo-700">{selectedIds.size} seçildi</span>
+                        <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl">
+                            <span className="text-sm font-bold text-blue-700">{selectedIds.size} seçildi</span>
                             <div className="flex-1" />
                             <button onClick={() => handleBulkToggle(true)} disabled={bulkToggle.isPending}
                                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-60">
@@ -305,7 +306,7 @@ const AdminUsers = () => {
                                         <th className="px-3 py-3.5">
                                             <input
                                                 type="checkbox"
-                                                className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                                                className="w-4 h-4 accent-blue-600 cursor-pointer"
                                                 checked={filteredUsers.length > 0 && filteredUsers.every(u => selectedIds.has(u.id))}
                                                 onChange={toggleSelectAll}
                                             />
@@ -324,11 +325,11 @@ const AdminUsers = () => {
                                         const isDeleting = confirmDelete === user.id;
                                         const isSelected = selectedIds.has(user.id);
                                         return (
-                                            <tr key={user.id} className={`transition-colors ${isDeleting ? 'bg-red-50' : isSelected ? 'bg-indigo-50/40' : 'hover:bg-gray-50/60'}`}>
+                                            <tr key={user.id} className={`transition-colors ${isDeleting ? 'bg-red-50' : isSelected ? 'bg-blue-50/40' : 'hover:bg-gray-100/60'}`}>
                                                 <td className="px-3 py-3.5">
                                                     <input
                                                         type="checkbox"
-                                                        className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                                                        className="w-4 h-4 accent-blue-600 cursor-pointer"
                                                         checked={isSelected}
                                                         onChange={() => toggleSelect(user.id)}
                                                     />
@@ -365,7 +366,7 @@ const AdminUsers = () => {
                                                     <select
                                                         value={user.role}
                                                         onChange={e => handleRoleChange(user.id, e.target.value)}
-                                                        className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border-0 ring-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-300 ${style.badge}`}
+                                                        className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border-0 ring-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-300 ${style.badge}`}
                                                     >
                                                         <option value="ADMIN">Admin</option>
                                                         <option value="TEACHER">Müəllim</option>
@@ -376,7 +377,7 @@ const AdminUsers = () => {
                                                 {/* Plan */}
                                                 <td className="px-5 py-3.5">
                                                     {user.activePlanName ? (
-                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200">
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 ring-1 ring-blue-200">
                                                             {user.activePlanName}
                                                         </span>
                                                     ) : (
@@ -394,7 +395,7 @@ const AdminUsers = () => {
 
                                                 {/* Date */}
                                                 <td className="px-5 py-3.5 text-gray-400 text-xs hidden md:table-cell">
-                                                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                                    {user.createdAt ? fmtDate(user.createdAt) : '—'}
                                                 </td>
 
                                                 {/* Actions */}
@@ -421,7 +422,7 @@ const AdminUsers = () => {
                                                             {user.role === 'TEACHER' && (
                                                                 <button
                                                                     onClick={() => setPlanModalUser(user)}
-                                                                    className="p-1.5 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                                    className="p-1.5 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                                     title="Plan təyin et"
                                                                 >
                                                                     <HiOutlineCurrencyDollar className="w-4 h-4" />
@@ -467,14 +468,14 @@ const AdminUsers = () => {
                         {totalAll_dist > 0 ? (
                             <>
                                 <div className="flex rounded-full overflow-hidden h-2.5 mb-4 bg-gray-100">
-                                    {roleCounts.ADMIN > 0 && <div className="bg-purple-500 transition-all" style={{ width: `${(roleCounts.ADMIN / totalAll_dist) * 100}%` }} />}
-                                    {roleCounts.TEACHER > 0 && <div className="bg-indigo-500 transition-all" style={{ width: `${(roleCounts.TEACHER / totalAll_dist) * 100}%` }} />}
+                                    {roleCounts.ADMIN > 0 && <div className="bg-emerald-500 transition-all" style={{ width: `${(roleCounts.ADMIN / totalAll_dist) * 100}%` }} />}
+                                    {roleCounts.TEACHER > 0 && <div className="bg-blue-500 transition-all" style={{ width: `${(roleCounts.TEACHER / totalAll_dist) * 100}%` }} />}
                                     {roleCounts.STUDENT > 0 && <div className="bg-emerald-500 transition-all" style={{ width: `${(roleCounts.STUDENT / totalAll_dist) * 100}%` }} />}
                                 </div>
                                 <div className="space-y-2.5">
                                     {[
-                                        { label: 'Admin', count: roleCounts.ADMIN, color: 'bg-purple-500', pct: Math.round((roleCounts.ADMIN / totalAll_dist) * 100) },
-                                        { label: 'Müəllim', count: roleCounts.TEACHER, color: 'bg-indigo-500', pct: Math.round((roleCounts.TEACHER / totalAll_dist) * 100) },
+                                        { label: 'Admin', count: roleCounts.ADMIN, color: 'bg-emerald-500', pct: Math.round((roleCounts.ADMIN / totalAll_dist) * 100) },
+                                        { label: 'Müəllim', count: roleCounts.TEACHER, color: 'bg-blue-500', pct: Math.round((roleCounts.TEACHER / totalAll_dist) * 100) },
                                         { label: 'Tələbə', count: roleCounts.STUDENT, color: 'bg-emerald-500', pct: Math.round((roleCounts.STUDENT / totalAll_dist) * 100) },
                                     ].map(item => (
                                         <div key={item.label} className="flex items-center justify-between text-sm">
@@ -513,7 +514,7 @@ const AdminUsers = () => {
                                 </div>
                                 <div className="border-t border-gray-100 pt-3 flex items-center justify-between text-sm">
                                     <span className="text-gray-500">Aktiv planlı</span>
-                                    <span className="font-bold text-indigo-600">{pageWithPlan}</span>
+                                    <span className="font-bold text-blue-600">{pageWithPlan}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-gray-500">Plansız</span>
@@ -528,14 +529,14 @@ const AdminUsers = () => {
                         <h3 className="font-bold text-gray-800 text-sm mb-3">Sürətli Əməliyyatlar</h3>
                         <div className="space-y-1.5">
                             {[
-                                { to: '/admin/bildirişlər', label: 'Bildiriş göndər', icon: HiOutlineBell, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                                { to: '/admin/bildirişlər', label: 'Bildiriş göndər', icon: HiOutlineBell, color: 'text-blue-600', bg: 'bg-blue-50' },
                                 { to: '/admin/planlar', label: 'Planları idarə et', icon: HiOutlineCurrencyDollar, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                                 { to: '/admin/muellim-imtahanlar', label: 'İmtahanlara bax', icon: HiOutlineDocumentText, color: 'text-amber-600', bg: 'bg-amber-50' },
                             ].map(item => (
                                 <Link
                                     key={item.to}
                                     to={item.to}
-                                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group"
+                                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors group"
                                 >
                                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.bg}`}>
                                         <item.icon className={`w-3.5 h-3.5 ${item.color}`} />

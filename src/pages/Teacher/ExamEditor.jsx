@@ -8,6 +8,7 @@ import MathFormulaModal from '../../components/ui/MathFormulaModal';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { useSmartBack } from '../../hooks/useSmartBack';
 
 const TYPE_TO_FRONTEND = {
     MCQ: 'MULTIPLE_CHOICE', TRUE_FALSE: 'MULTIPLE_CHOICE',
@@ -175,6 +176,7 @@ const ExamEditor = () => {
     const { isAdmin, hasPermission, subscription } = useAuth();
     const isEditMode = !!id;
     const backPath = isAdmin ? '/admin/oz-imtahanlar' : '/imtahanlar';
+    const goBack = useSmartBack(backPath);
     const initialLocationState = location.state || { subject: 'Seçilməyib', type: 'free' };
 
     const [type, setType] = useState(initialLocationState.type);
@@ -602,6 +604,7 @@ const ExamEditor = () => {
                             questionCount: sec.questionCount,
                             formula: sec.formula,
                             typeCounts: sec.typeCounts || [],
+                            allowCustomPoints: sec.allowCustomPoints,
                         })));
                     }).catch(() => {});
             } else if (data.templateSectionId) {
@@ -625,6 +628,8 @@ const ExamEditor = () => {
                 text: q.content, points: q.points, attachedImage: q.attachedImage,
                 sampleAnswer: q.correctAnswer,
                 subjectGroup: q.subjectGroup || null,
+                reviewStatus: q.reviewStatus || null,
+                reviewComment: q.reviewComment || null,
                 options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
                 matchingPairs: toFrontendMatchingPairs(q.matchingPairs)
             }));
@@ -1113,8 +1118,8 @@ const ExamEditor = () => {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <div className="flex justify-center items-center min-h-screen" style={{ background: 'var(--paper-cream)' }}>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)]"></div>
             </div>
         );
     }
@@ -1124,15 +1129,38 @@ const ExamEditor = () => {
     const isMultiSectionTemplate = templateSections.length >= 2;
     const isQuestionCountLocked = (isTemplateMode || isOlimpiyadaMode) && (templateInfo !== null || isMultiSectionTemplate);
 
-    // Returns true if point input should be hidden for questions in the given subject section
-    const sectionHidesPoints = (subjectName) => {
-        if (isOlimpiyadaMode) return false; // olimpiyada uses pointsReadOnly instead
-        if (!isTemplateMode) return false;
+    // Per-section lock: a subject is template-bound (locked count, AI/Bazadan flow) when
+    // it matches one of the exam's template section references — regardless of the overall
+    // examType. This is what makes a hybrid collab parent (examType=FREE because mixed,
+    // but Azərbaycan-dili came from a template section) still lock Azərbaycan-dili while
+    // leaving truly free subjects unlocked. Free exams have no template refs at all →
+    // returns false → existing free behaviour preserved.
+    const isSectionLocked = (subjectName) => {
+        if (templateSections.some(s => s.subjectName === subjectName)) return true;
+        if (templateInfo && templateInfo.subjectName === subjectName) return true;
+        return false;
+    };
+
+    // Returns the template-section descriptor (id, subjectName, questionCount, formula,
+    // allowCustomPoints) for a given subject, or null when the subject is free-form. Lets
+    // the section header surface ŞABLON metadata (count cap, formula) inline.
+    const getTemplateSectionFor = (subjectName) => {
+        if (!isTemplateMode && !isOlimpiyadaMode) return null;
         if (isMultiSectionTemplate) {
-            const sec = templateSections.find(s => s.subjectName === subjectName);
-            return sec ? sec.allowCustomPoints === false : false;
+            return templateSections.find(s => s.subjectName === subjectName) || null;
         }
-        return templateInfo?.allowCustomPoints === false;
+        if (templateInfo && templateInfo.subjectName === subjectName) return templateInfo;
+        return null;
+    };
+
+    // Hide the points input for a subject when its template section explicitly disallows
+    // custom points. Mirrors isSectionLocked — driven by per-subject template refs, not by
+    // the exam's overall mode. Olimpiada flow keeps its own pointsReadOnly path.
+    const sectionHidesPoints = (subjectName) => {
+        if (isOlimpiyadaMode) return false;
+        const sec = templateSections.find(s => s.subjectName === subjectName)
+                  || (templateInfo && templateInfo.subjectName === subjectName ? templateInfo : null);
+        return sec ? sec.allowCustomPoints === false : false;
     };
 
     // Pre-compute global question offset for each section so numbering continues across sections
@@ -1151,38 +1179,38 @@ const ExamEditor = () => {
     });
 
     return (
-        <div className="bg-gray-50 min-h-screen pb-24">
+        <div className="min-h-screen pb-24" style={{ background: 'var(--paper-cream)' }}>
             {/* Top Toolbar */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-                <div className="container-main py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => navigate(backPath)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-                            <HiOutlineArrowLeft className="w-6 h-6" />
+            <div className="bg-white border-b border-[var(--ink-150)] sticky top-0 z-10 shadow-[var(--sh-sm)]">
+                <div className="container-main py-3.5 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button onClick={goBack} className="p-2 text-[var(--ink-500)] hover:text-[var(--ink-800)] hover:bg-[var(--ink-100)] rounded-xl transition-colors" title="Geri qayıt">
+                            <HiOutlineArrowLeft className="w-5 h-5" />
                         </button>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900 max-w-xl truncate">
+                        <div className="min-w-0">
+                            <h1 className="text-[17px] md:text-[19px] font-extrabold text-[var(--ink-900)] tracking-tight max-w-xl truncate">
                                 {examConfig.title || (isEditMode ? 'İmtahan Redaktə Edilir' : 'Yeni İmtahan Yaradılır')}
                             </h1>
-                            <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${isOlimpiyadaMode ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>{{ free: 'Sərbəst', template: 'Şablon', olimpiyada: 'Olimpiada' }[type] || type}</span>
-                                <span>•</span>
-                                <span>{examConfig.subject}</span>
-                                {examConfig.duration && <><span>•</span><span>{examConfig.duration} dəq</span></>}
+                            <div className="flex items-center gap-2 text-[12px] text-[var(--ink-500)] mt-0.5">
+                                <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider ${isOlimpiyadaMode ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-[var(--primary-soft)] text-[var(--primary-hover)] border border-[var(--brand-blue-100)]'}`}>{{ free: 'Sərbəst', template: 'Şablon', olimpiyada: 'Olimpiada' }[type] || type}</span>
+                                <span className="w-0.5 h-0.5 rounded-full bg-[var(--ink-300)]" />
+                                <span className="font-medium text-[var(--ink-600)]">{examConfig.subject}</span>
+                                {examConfig.duration && <><span className="w-0.5 h-0.5 rounded-full bg-[var(--ink-300)]" /><span>{examConfig.duration} dəq</span></>}
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 shrink-0">
                         <button
                             onClick={() => isCollaborativeMode ? null : setIsSettingsOpen(true)}
                             disabled={isCollaborativeMode}
                             title={isCollaborativeMode ? 'Parametrləri yalnız admin dəyişə bilər' : 'Parametrlər'}
-                            className={`flex items-center gap-2 px-4 py-2 font-semibold rounded-lg transition-colors ${
+                            className={`h-10 px-4 inline-flex items-center gap-2 font-semibold rounded-full text-[13px] transition-colors ${
                                 isCollaborativeMode
-                                    ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                    ? 'bg-[var(--ink-50)] text-[var(--ink-300)] cursor-not-allowed border border-[var(--ink-150)]'
+                                    : 'bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] text-[var(--ink-800)]'
                             }`}
                         >
-                            <HiOutlineCog className="w-5 h-5" />
+                            <HiOutlineCog className="w-4.5 h-4.5" />
                             <span className="hidden sm:inline">Parametrlər</span>
                         </button>
                     </div>
@@ -1193,11 +1221,13 @@ const ExamEditor = () => {
             <div className="container-main mt-8 max-w-4xl">
                 {/* Collaborative parent banner (admin editing the main exam) */}
                 {isCollaborativeParent && (
-                    <div className="mb-6 bg-violet-50 border border-violet-200 rounded-2xl px-6 py-4 flex items-start gap-3">
-                        <HiOutlineUserGroup className="w-5 h-5 text-violet-500 mt-0.5 shrink-0" />
+                    <div className="mb-6 bg-[var(--brand-green-50)] border border-[var(--brand-green-200)] rounded-3xl px-5 md:px-6 py-4 flex items-start gap-3">
+                        <span className="w-9 h-9 rounded-xl bg-white text-[var(--brand-green-600)] border border-[var(--brand-green-200)] flex items-center justify-center shrink-0">
+                            <HiOutlineUserGroup className="w-4.5 h-4.5" />
+                        </span>
                         <div>
-                            <p className="font-bold text-sm text-violet-800">Birgə İmtahan — Admin Redaktəsi</p>
-                            <p className="text-xs text-violet-600 mt-0.5">
+                            <p className="font-extrabold text-[14px] text-[var(--brand-green-700)] tracking-tight">Birgə İmtahan — Admin Redaktəsi</p>
+                            <p className="text-[12.5px] text-[var(--brand-green-700)]/80 mt-1 leading-relaxed">
                                 Bu imtahana müəllimlər də sual əlavə edir. Siz birbaşa sual, fənn və parametr əlavə edə bilərsiniz.
                                 Müəllimlərin göndərdiyi suallar admin panelindən təsdiq edildikdə avtomatik əlavə olunur.
                             </p>
@@ -1207,27 +1237,29 @@ const ExamEditor = () => {
 
                 {/* Collaborative mode banner */}
                 {isCollaborativeMode && (
-                    <div className={`mb-6 rounded-2xl px-6 py-4 border ${examStatus === 'SUBMITTED' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+                    <div className={`mb-6 rounded-3xl px-5 md:px-6 py-4 border ${examStatus === 'SUBMITTED' ? 'bg-amber-50 border-amber-200' : 'bg-[var(--primary-soft)] border-[var(--brand-blue-200)]'}`}>
                         <div className="flex items-start gap-3">
-                            <HiOutlineUserGroup className={`w-5 h-5 mt-0.5 shrink-0 ${examStatus === 'SUBMITTED' ? 'text-amber-500' : 'text-blue-500'}`} />
+                            <span className={`w-9 h-9 rounded-xl bg-white border flex items-center justify-center shrink-0 ${examStatus === 'SUBMITTED' ? 'text-amber-600 border-amber-200' : 'text-[var(--primary)] border-[var(--brand-blue-200)]'}`}>
+                                <HiOutlineUserGroup className="w-4.5 h-4.5" />
+                            </span>
                             <div className="flex-1 min-w-0">
-                                <p className={`font-bold text-sm ${examStatus === 'SUBMITTED' ? 'text-amber-800' : 'text-blue-800'}`}>
+                                <p className={`font-extrabold text-[14px] tracking-tight ${examStatus === 'SUBMITTED' ? 'text-amber-800' : 'text-[var(--primary-hover)]'}`}>
                                     {examStatus === 'SUBMITTED' ? 'Göndərildi — Admin yoxlayır' : 'Birgə İmtahan Workspace'}
                                 </p>
                                 {collaborativeTemplateSections.length > 0 ? (
-                                    <div className="mt-2 flex flex-col gap-1.5">
+                                    <div className="mt-2.5 flex flex-col gap-2">
                                         {collaborativeTemplateSections.map(sec => {
                                             const filled = questions.filter(q => q.subjectGroup === sec.subjectName && q.text?.trim()).length;
                                             const pct = sec.questionCount > 0 ? Math.round((filled / sec.questionCount) * 100) : 0;
                                             return (
                                                 <div key={sec.id}>
-                                                    <div className="flex items-center justify-between text-xs mb-0.5">
-                                                        <span className={`font-semibold ${examStatus === 'SUBMITTED' ? 'text-amber-700' : 'text-blue-700'}`}>{sec.subjectName}</span>
-                                                        <span className={`${examStatus === 'SUBMITTED' ? 'text-amber-600' : 'text-blue-600'}`}>{filled}/{sec.questionCount} sual</span>
+                                                    <div className="flex items-center justify-between text-[12px] mb-1">
+                                                        <span className={`font-bold ${examStatus === 'SUBMITTED' ? 'text-amber-700' : 'text-[var(--primary-hover)]'}`}>{sec.subjectName}</span>
+                                                        <span className={`${examStatus === 'SUBMITTED' ? 'text-amber-600' : 'text-[var(--primary)]'}`}>{filled}/{sec.questionCount} sual</span>
                                                     </div>
-                                                    <div className="h-1.5 rounded-full bg-white/60 overflow-hidden">
+                                                    <div className="h-1.5 rounded-full bg-white/70 overflow-hidden">
                                                         <div
-                                                            className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-green-500' : examStatus === 'SUBMITTED' ? 'bg-amber-400' : 'bg-blue-400'}`}
+                                                            className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-[var(--brand-green-600)]' : examStatus === 'SUBMITTED' ? 'bg-amber-400' : 'bg-[var(--primary)]'}`}
                                                             style={{ width: `${pct}%` }}
                                                         />
                                                     </div>
@@ -1236,12 +1268,12 @@ const ExamEditor = () => {
                                         })}
                                     </div>
                                 ) : collaborativeSubjects.length > 0 && (
-                                    <p className={`text-xs mt-1 ${examStatus === 'SUBMITTED' ? 'text-amber-600' : 'text-blue-600'}`}>
+                                    <p className={`text-[12px] mt-1 ${examStatus === 'SUBMITTED' ? 'text-amber-600' : 'text-[var(--primary)]'}`}>
                                         Sizin fənnlər: {collaborativeSubjects.join(', ')}
                                     </p>
                                 )}
                                 {examStatus === 'SUBMITTED' && (
-                                    <p className="text-xs text-amber-600 mt-1.5">Admin təsdiq etdikdən sonra suallar əsl imtahana əlavə ediləcək.</p>
+                                    <p className="text-[12px] text-amber-600 mt-1.5">Admin təsdiq etdikdən sonra suallar əsl imtahana əlavə ediləcək.</p>
                                 )}
                             </div>
                             {examStatus === 'SUBMITTED' && (
@@ -1253,19 +1285,19 @@ const ExamEditor = () => {
 
                 {/* Template info banner — multi-section */}
                 {isTemplateMode && isMultiSectionTemplate && (
-                    <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-2xl px-6 py-4">
-                        <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wide mb-3">
+                    <div className="mb-6 bg-[var(--primary-soft)] border border-[var(--brand-blue-200)] rounded-3xl px-5 md:px-6 py-4">
+                        <div className="text-[10.5px] font-bold text-[var(--primary)] uppercase tracking-[0.1em] mb-3">
                             {templateSections[0]?.templateTitle} · {templateSections[0]?.templateSubtitle} · Çox Fənli Şablon
                         </div>
                         <div className="flex flex-col gap-2">
                             {templateSections.map(sec => (
-                                <div key={sec.id} className="flex flex-wrap items-center justify-between gap-2 bg-white/60 rounded-xl px-3 py-2">
-                                    <span className="font-bold text-indigo-800 text-sm">{sec.subjectName}</span>
+                                <div key={sec.id} className="flex flex-wrap items-center justify-between gap-2 bg-white/70 border border-[var(--brand-blue-100)] rounded-2xl px-3 py-2">
+                                    <span className="font-bold text-[var(--primary-hover)] text-[13.5px]">{sec.subjectName}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">
+                                        <span className="text-[11.5px] font-bold text-[var(--primary-hover)] bg-[var(--primary-soft)] border border-[var(--brand-blue-100)] px-2.5 py-0.5 rounded-full">
                                             {sec.questionCount} sual (sabit)
                                         </span>
-                                        <code className="text-xs font-mono text-indigo-600 bg-white border border-indigo-200 px-2 py-0.5 rounded-lg">{sec.formula}</code>
+                                        <code className="text-[11px] font-mono text-[var(--primary)] bg-white border border-[var(--brand-blue-200)] px-2 py-0.5 rounded-lg">{sec.formula}</code>
                                     </div>
                                 </div>
                             ))}
@@ -1275,61 +1307,61 @@ const ExamEditor = () => {
 
                 {/* Template info banner — single section (read-only) */}
                 {isTemplateMode && templateInfo && !isMultiSectionTemplate && (
-                    <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="mb-6 bg-[var(--primary-soft)] border border-[var(--brand-blue-200)] rounded-3xl px-5 md:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wide">
+                            <div className="text-[10.5px] font-bold text-[var(--primary)] uppercase tracking-[0.1em]">
                                 {templateInfo.templateTitle} · {templateInfo.templateSubtitle}
                             </div>
-                            <div className="mt-0.5 font-bold text-indigo-800 text-base">{templateInfo.subjectName}</div>
+                            <div className="mt-0.5 font-extrabold text-[var(--primary-hover)] text-[15px] tracking-tight">{templateInfo.subjectName}</div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                            <span className="flex items-center gap-1 text-indigo-700 font-semibold bg-indigo-100 px-3 py-1 rounded-full">
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="flex items-center gap-1 text-[var(--primary-hover)] text-[12px] font-bold bg-white border border-[var(--brand-blue-200)] px-3 py-1 rounded-full">
                                 <HiOutlineInformationCircle className="w-4 h-4" />
                                 {templateInfo.questionCount} sual (sabit)
                             </span>
-                            <code className="text-xs font-mono text-indigo-600 bg-white border border-indigo-200 px-2.5 py-1 rounded-lg">{templateInfo.formula}</code>
+                            <code className="text-[11px] font-mono text-[var(--primary)] bg-white border border-[var(--brand-blue-200)] px-2.5 py-1 rounded-lg">{templateInfo.formula}</code>
                         </div>
                     </div>
                 )}
 
                 {/* Olimpiyada info banner — multi-section */}
                 {isOlimpiyadaMode && isMultiSectionTemplate && (
-                    <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4">
-                        <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide mb-3">
+                    <div className="mb-6 bg-amber-50 border border-amber-200 rounded-3xl px-5 md:px-6 py-4">
+                        <div className="text-[10.5px] font-bold text-amber-600 uppercase tracking-[0.1em] mb-3">
                             {templateSections[0]?.templateTitle} · {templateSections[0]?.templateSubtitle} · Olimpiada Şablonu
                         </div>
                         <div className="flex flex-col gap-2">
                             {templateSections.map(sec => (
-                                <div key={sec.id} className="flex flex-wrap items-center justify-between gap-2 bg-white/60 rounded-xl px-3 py-2">
-                                    <span className="font-bold text-amber-800 text-sm">{sec.subjectName}</span>
+                                <div key={sec.id} className="flex flex-wrap items-center justify-between gap-2 bg-white/70 border border-amber-100 rounded-2xl px-3 py-2">
+                                    <span className="font-bold text-amber-800 text-[13.5px]">{sec.subjectName}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                                        <span className="text-[11.5px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full">
                                             {sec.questionCount} sual (sabit)
                                         </span>
-                                        <code className="text-xs font-mono text-amber-600 bg-white border border-amber-200 px-2 py-0.5 rounded-lg">{sec.formula}</code>
+                                        <code className="text-[11px] font-mono text-amber-600 bg-white border border-amber-200 px-2 py-0.5 rounded-lg">{sec.formula}</code>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <p className="text-xs text-amber-600 mt-3">Hər sualın balı şablon tərəfindən avtomatik təyin edilib (dəyişdirilə bilməz)</p>
+                        <p className="text-[12px] text-amber-700 mt-3">Hər sualın balı şablon tərəfindən avtomatik təyin edilib (dəyişdirilə bilməz)</p>
                     </div>
                 )}
 
                 {/* Olimpiyada info banner — single section */}
                 {isOlimpiyadaMode && templateInfo && !isMultiSectionTemplate && (
-                    <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="mb-6 bg-amber-50 border border-amber-200 rounded-3xl px-5 md:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <div className="text-xs font-semibold text-amber-500 uppercase tracking-wide">
+                            <div className="text-[10.5px] font-bold text-amber-600 uppercase tracking-[0.1em]">
                                 {templateInfo.templateTitle} · {templateInfo.templateSubtitle} · Olimpiada
                             </div>
-                            <div className="mt-0.5 font-bold text-amber-800 text-base">{templateInfo.subjectName}</div>
+                            <div className="mt-0.5 font-extrabold text-amber-800 text-[15px] tracking-tight">{templateInfo.subjectName}</div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                            <span className="flex items-center gap-1 text-amber-700 font-semibold bg-amber-100 px-3 py-1 rounded-full">
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="flex items-center gap-1 text-amber-700 text-[12px] font-bold bg-white border border-amber-200 px-3 py-1 rounded-full">
                                 <HiOutlineInformationCircle className="w-4 h-4" />
                                 {templateInfo.questionCount} sual (sabit)
                             </span>
-                            <code className="text-xs font-mono text-amber-600 bg-white border border-amber-200 px-2.5 py-1 rounded-lg">{templateInfo.formula}</code>
+                            <code className="text-[11px] font-mono text-amber-600 bg-white border border-amber-200 px-2.5 py-1 rounded-lg">{templateInfo.formula}</code>
                         </div>
                     </div>
                 )}
@@ -1353,15 +1385,18 @@ const ExamEditor = () => {
                         <div key={sectionSubject} className="mb-10">
                             {/* Section header */}
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-sm">
+                                <div
+                                    className="inline-flex items-center gap-2 text-white px-4 py-2 rounded-full shadow-[var(--sh-sm)]"
+                                    style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%)' }}
+                                >
                                     <HiOutlineBookOpen className="w-4 h-4" />
-                                    <span className="font-bold text-sm">{sectionSubject}</span>
+                                    <span className="font-bold text-[13px] tracking-tight">{sectionSubject}</span>
                                 </div>
-                                <div className="flex-1 h-px bg-gray-200" />
+                                <div className="flex-1 h-px bg-[var(--ink-150)]" />
                                 {!isMain && !isCollaborativeMode && (
                                     <button
                                         onClick={() => handleRemoveSection(sectionSubject)}
-                                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                        className="p-1.5 text-[var(--ink-400)] hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                                         title="Bu bölməni sil"
                                     >
                                         <HiOutlineX className="w-4 h-4" />
@@ -1385,17 +1420,20 @@ const ExamEditor = () => {
                                                             onChange={handleUpdateQuestion}
                                                             onDelete={handleDeleteQuestion}
                                                             hidePoints={sectionHidesPoints(sectionSubject)}
-                                                            hideDelete={isQuestionCountLocked}
-                                                            pointsReadOnly={isOlimpiyadaMode}
+                                                            hideDelete={isSectionLocked(sectionSubject)}
+                                                            // Şablon-bağlı section: bal və sual tipi şablonla təyin olunur,
+                                                            // müəllim onları dəyişə bilməz — sadəcə oxuya bilər.
+                                                            pointsReadOnly={isOlimpiyadaMode || isSectionLocked(sectionSubject)}
+                                                            typeReadOnly={isSectionLocked(sectionSubject)}
                                                         />
-                                                        {isQuestionCountLocked && (
+                                                        {isSectionLocked(sectionSubject) && (
                                                             <div className="mt-2 flex justify-end gap-2">
                                                                 <button
                                                                     onClick={() => setBankPicker({ section: sectionSubject, replaceId: item.data.id, filterType: item.data.type })}
-                                                                    className={`flex items-center gap-1.5 px-3 py-1.5 bg-white font-semibold rounded-lg transition-colors text-xs ${
+                                                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 bg-white font-semibold rounded-full transition-colors text-[11.5px] ${
                                                                         isOlimpiyadaMode
-                                                                            ? 'border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-600'
-                                                                            : 'border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600'
+                                                                            ? 'border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-700'
+                                                                            : 'border border-[var(--brand-blue-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] text-[var(--primary-hover)]'
                                                                     }`}
                                                                 >
                                                                     <HiOutlineBookOpen className="w-3.5 h-3.5" />
@@ -1422,7 +1460,7 @@ const ExamEditor = () => {
                                                                                 setAiUsage(usageRes.data);
                                                                             } catch { setAiTopics([]); } finally { setAiTopicsLoading(false); }
                                                                         }}
-                                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-violet-200 hover:border-violet-400 hover:bg-violet-50 text-violet-600 font-semibold rounded-lg transition-colors text-xs"
+                                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[var(--brand-green-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)] text-[var(--brand-green-700)] font-semibold rounded-full transition-colors text-[11.5px]"
                                                                     >
                                                                         <HiOutlineSparkles className="w-3.5 h-3.5" />
                                                                         AI ilə doldur
@@ -1446,7 +1484,7 @@ const ExamEditor = () => {
                                                         onUpdateQuestion={handleUpdatePassageQuestion}
                                                         onDeleteQuestion={handleDeletePassageQuestion}
                                                         hasPermission={hasPermission}
-                                                        isQuestionCountLocked={isQuestionCountLocked}
+                                                        isQuestionCountLocked={isSectionLocked(sectionSubject)}
                                                         hidePoints={sectionHidesPoints(sectionSubject)}
                                                     />
                                                 );
@@ -1457,13 +1495,13 @@ const ExamEditor = () => {
                             )}
 
                             {/* Template mode: single PDF fill button at section bottom */}
-                            {isQuestionCountLocked && (
+                            {isSectionLocked(sectionSubject) && (
                                 <div className="mt-2 mb-2">
                                     <div className="relative inline-block">
                                         <input type="file" accept="application/pdf"
                                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                             onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfSection(sectionSubject); setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
-                                        <button className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50 text-gray-600 hover:text-indigo-700 font-semibold rounded-xl transition-colors text-sm">
+                                        <button className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-[var(--ink-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] text-[var(--ink-600)] hover:text-[var(--primary-hover)] font-semibold rounded-2xl transition-colors text-[13px]">
                                             <HiOutlineDocumentText className="w-4 h-4" />
                                             PDF-dən doldur
                                         </button>
@@ -1472,21 +1510,21 @@ const ExamEditor = () => {
                             )}
 
                             {/* Add question / PDF / passage buttons for this section */}
-                            {!isQuestionCountLocked && (
+                            {!isSectionLocked(sectionSubject) && (
                                 <div className="flex flex-wrap gap-3">
                                     <button
                                         onClick={() => handleAddQuestion(sectionSubject)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold rounded-xl transition-colors text-sm"
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-dashed border-[var(--brand-blue-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] text-[var(--primary-hover)] font-semibold rounded-2xl transition-colors text-[13px]"
                                     >
                                         <HiOutlinePlus className="w-4 h-4" />
                                         Sual əlavə et
                                     </button>
                                     <button
                                         onClick={() => hasPermission('addPassageQuestion') ? (setPassageSectionTarget(sectionSubject), setShowPassageTypeModal(true)) : null}
-                                        className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-xl transition-colors text-sm ${
+                                        className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-2xl transition-colors text-[13px] ${
                                             hasPermission('addPassageQuestion')
-                                                ? 'bg-white border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700'
-                                                : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                                ? 'bg-white border-[var(--brand-green-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)] text-[var(--brand-green-700)]'
+                                                : 'bg-[var(--ink-50)] border-[var(--ink-200)] text-[var(--ink-400)] cursor-not-allowed'
                                         }`}
                                     >
                                         {!hasPermission('addPassageQuestion') ? <HiLockClosed className="w-4 h-4"/> : <HiOutlinePlus className="w-4 h-4" />}
@@ -1495,10 +1533,10 @@ const ExamEditor = () => {
                                     <div className="relative">
                                         <input type="file" disabled={!hasPermission('importQuestionsFromPdf')} accept="application/pdf" className={`absolute inset-0 w-full h-full opacity-0 ${hasPermission('importQuestionsFromPdf') ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                                             onChange={(e) => { const file = e.target.files[0]; if (file) { setBatchPdfSection(sectionSubject); setBatchPdfFile(file); setIsBatchPdfOpen(true); } e.target.value = null; }} />
-                                        <button className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-xl transition-colors text-sm ${
+                                        <button className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-2xl transition-colors text-[13px] ${
                                             hasPermission('importQuestionsFromPdf')
-                                                ? 'bg-white border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700'
-                                                : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                                ? 'bg-white border-[var(--brand-blue-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] text-[var(--primary-hover)]'
+                                                : 'bg-[var(--ink-50)] border-[var(--ink-200)] text-[var(--ink-400)] cursor-not-allowed'
                                         }`}>
                                             {!hasPermission('importQuestionsFromPdf') ? <HiLockClosed className="w-4 h-4"/> : <HiOutlinePlus className="w-4 h-4" />}
                                             PDF-dən suallar əlavə et
@@ -1506,10 +1544,10 @@ const ExamEditor = () => {
                                     </div>
                                     <button
                                         onClick={() => hasPermission('useQuestionBank') ? setBankPicker({ section: sectionSubject, replaceId: null, filterType: null }) : null}
-                                        className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-xl transition-colors text-sm ${
+                                        className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-2xl transition-colors text-[13px] ${
                                             hasPermission('useQuestionBank')
                                                 ? 'bg-white border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-700'
-                                                : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                                : 'bg-[var(--ink-50)] border-[var(--ink-200)] text-[var(--ink-400)] cursor-not-allowed'
                                         }`}
                                     >
                                         {!hasPermission('useQuestionBank') ? <HiLockClosed className="w-4 h-4"/> : <HiOutlineBookOpen className="w-4 h-4" />}
@@ -1533,10 +1571,10 @@ const ExamEditor = () => {
                                                 setAiUsage(usageRes.data);
                                             } catch { setAiTopics([]); } finally { setAiTopicsLoading(false); }
                                         }}
-                                        className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-xl transition-colors text-sm ${
+                                        className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-2xl transition-colors text-[13px] ${
                                             (hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0) || isAdmin)
-                                                ? 'border-violet-200 hover:border-violet-400 hover:bg-violet-50 bg-white text-violet-700'
-                                                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                                ? 'border-[var(--brand-green-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)] bg-white text-[var(--brand-green-700)]'
+                                                : 'border-[var(--ink-200)] bg-[var(--ink-50)] text-[var(--ink-400)] cursor-not-allowed'
                                         }`}
                                     >
                                         {!(hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0) || isAdmin)
@@ -1555,8 +1593,8 @@ const ExamEditor = () => {
                 {!isCollaborativeMode && (
                     <div className="mt-4 mb-8">
                         {showSectionPicker ? (
-                            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-                                <p className="text-sm font-medium text-gray-700 mb-3">Yeni fənn seçin:</p>
+                            <div className="bg-white rounded-3xl border border-[var(--ink-200)] shadow-[var(--sh-sm)] p-5">
+                                <p className="text-[13px] font-bold text-[var(--ink-800)] mb-3 tracking-tight">Yeni fənn seçin:</p>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-3">
                                     {subjectsList
                                         .filter(s => s.name !== examConfig.subject && !(examConfig.extraSubjects || []).includes(s.name))
@@ -1564,27 +1602,27 @@ const ExamEditor = () => {
                                             <button
                                                 key={s.name}
                                                 onClick={() => handleAddSection(s.name)}
-                                                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                                                className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[var(--ink-200)] text-[12.5px] text-[var(--ink-800)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] transition-all"
                                             >
-                                                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.color || '#6366f1' }} />
+                                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color || 'var(--primary)' }} />
                                                 <span className="truncate">{s.name}</span>
                                             </button>
                                         ))}
                                 </div>
-                                <button onClick={() => setShowSectionPicker(false)} className="text-sm text-gray-400 hover:text-gray-600">Ləğv et</button>
+                                <button onClick={() => setShowSectionPicker(false)} className="text-[12.5px] text-[var(--ink-500)] hover:text-[var(--ink-800)] font-semibold">Ləğv et</button>
                             </div>
                         ) : (
                             <div className={`flex ${isQuestionCountLocked ? 'gap-3' : ''}`}>
                                 <button
                                     onClick={() => hasPermission('multipleSubjects') ? setShowSectionPicker(true) : null}
-                                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed font-semibold rounded-2xl transition-colors ${
+                                    className={`flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed font-semibold rounded-3xl transition-colors text-[14px] ${
                                         hasPermission('multipleSubjects')
-                                            ? 'bg-white border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 text-indigo-700'
-                                            : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                                            ? 'bg-white border-[var(--brand-blue-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] text-[var(--primary-hover)]'
+                                            : 'bg-[var(--ink-50)] border-[var(--ink-200)] text-[var(--ink-400)] cursor-not-allowed'
                                     }`}
                                 >
                                     {!hasPermission('multipleSubjects') ? <HiLockClosed className="w-5 h-5"/> : <HiOutlinePlus className="w-5 h-5" />}
-                                    Yeni fənn əlavə et {!hasPermission('multipleSubjects') && <span className="text-xs font-normal ml-2">(Pro plan tələb olunur)</span>}
+                                    Yeni fənn əlavə et {!hasPermission('multipleSubjects') && <span className="text-[11px] font-normal ml-2">(Pro plan tələb olunur)</span>}
                                 </button>
                                 {isQuestionCountLocked && (
                                     <button
@@ -1598,7 +1636,7 @@ const ExamEditor = () => {
                                                 setAddSectionModal(prev => ({ ...prev, loadingTemplates: false }));
                                             }
                                         }}
-                                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed font-semibold rounded-2xl transition-colors bg-white border-teal-300 hover:border-teal-500 hover:bg-teal-50 text-teal-700"
+                                        className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed font-semibold rounded-3xl transition-colors text-[14px] bg-white border-[var(--brand-green-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)] text-[var(--brand-green-700)]"
                                     >
                                         <HiOutlineBookOpen className="w-5 h-5" />
                                         Şablondan bölmə əlavə et
@@ -1612,25 +1650,25 @@ const ExamEditor = () => {
 
             {/* AI Question Generation Modal */}
             {aiModal && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full">
+                <div className="fixed inset-0 bg-[var(--ink-900)]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-[var(--sh-lg)] border border-[var(--ink-200)] p-7 max-w-sm w-full">
                         <div className="flex items-center gap-3 mb-5">
-                            <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
-                                <HiOutlineSparkles className="w-5 h-5 text-violet-600" />
+                            <div className="w-11 h-11 bg-[var(--brand-green-50)] rounded-2xl flex items-center justify-center shrink-0">
+                                <HiOutlineSparkles className="w-5 h-5 text-[var(--brand-green-700)]" />
                             </div>
-                            <div className="flex-1">
-                                <h3 className="text-lg font-bold text-gray-900 leading-tight">{aiModal.replaceId ? 'AI ilə doldur' : 'AI ilə sual yarat'}</h3>
-                                <p className="text-xs text-gray-400">Fənn: <span className="font-semibold text-gray-600">{aiModal.section}</span></p>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-[17px] font-extrabold text-[var(--ink-900)] leading-tight tracking-tight">{aiModal.replaceId ? 'AI ilə doldur' : 'AI ilə sual yarat'}</h3>
+                                <p className="text-[11.5px] text-[var(--ink-500)]">Fənn: <span className="font-bold text-[var(--ink-700)]">{aiModal.section}</span></p>
                             </div>
                             {aiUsage && (
-                                <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                <div className={`text-[10.5px] font-bold px-2.5 py-1 rounded-full ${
                                     aiUsage.remaining === -1
-                                        ? 'bg-green-100 text-green-700'
+                                        ? 'bg-[var(--brand-green-50)] text-[var(--brand-green-700)]'
                                         : aiUsage.remaining > 5
-                                            ? 'bg-violet-100 text-violet-700'
+                                            ? 'bg-[var(--brand-green-50)] text-[var(--brand-green-700)]'
                                             : aiUsage.remaining > 0
-                                                ? 'bg-amber-100 text-amber-700'
-                                                : 'bg-red-100 text-red-700'
+                                                ? 'bg-amber-50 text-amber-700'
+                                                : 'bg-red-50 text-red-700'
                                 }`}>
                                     {aiUsage.remaining === -1 ? '∞' : `${aiUsage.remaining} qaldı`}
                                 </div>
@@ -1638,17 +1676,17 @@ const ExamEditor = () => {
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Mövzu *</label>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">Mövzu *</label>
                                 {aiTopicsLoading ? (
-                                    <div className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-400 flex items-center gap-2">
-                                        <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-violet-500 rounded-full animate-spin" />
+                                    <div className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] text-[13px] text-[var(--ink-400)] flex items-center gap-2">
+                                        <div className="w-3.5 h-3.5 border-2 border-[var(--ink-200)] border-t-[var(--brand-green-600)] rounded-full animate-spin" />
                                         Mövzular yüklənir...
                                     </div>
                                 ) : aiTopics.length > 0 ? (
                                     <select
                                         value={aiForm.topic}
                                         onChange={e => setAiForm(f => ({ ...f, topic: e.target.value }))}
-                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none text-sm bg-white"
+                                        className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] focus:ring-2 focus:ring-[var(--brand-green-600)]/30 focus:border-[var(--brand-green-600)] outline-none text-[13px] bg-white"
                                         autoFocus
                                     >
                                         <option value="">Mövzu seçin...</option>
@@ -1662,39 +1700,39 @@ const ExamEditor = () => {
                                         value={aiForm.topic}
                                         onChange={e => setAiForm(f => ({ ...f, topic: e.target.value }))}
                                         placeholder="məs. Kvadrat tənliklər, Past Simple..."
-                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none text-sm"
+                                        className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] focus:ring-2 focus:ring-[var(--brand-green-600)]/30 focus:border-[var(--brand-green-600)] outline-none text-[13px]"
                                         autoFocus
                                     />
                                 )}
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Çətinlik</label>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">Çətinlik</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {[['EASY', 'Asan'], ['MEDIUM', 'Orta'], ['HARD', 'Çətin']].map(([val, label]) => (
                                         <button
                                             key={val}
                                             onClick={() => setAiForm(f => ({ ...f, difficulty: val }))}
-                                            className={`py-2 rounded-xl text-xs font-bold border-2 transition-colors ${
+                                            className={`py-2 rounded-full text-[12px] font-bold border-2 transition-colors ${
                                                 aiForm.difficulty === val
-                                                    ? 'border-violet-500 bg-violet-50 text-violet-700'
-                                                    : 'border-gray-200 text-gray-500 hover:border-violet-300'
+                                                    ? 'border-[var(--brand-green-600)] bg-[var(--brand-green-50)] text-[var(--brand-green-700)]'
+                                                    : 'border-[var(--ink-200)] text-[var(--ink-500)] hover:border-[var(--brand-green-200)]'
                                             }`}
                                         >{label}</button>
                                     ))}
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Sual tipi</label>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">Sual tipi</label>
                                 {aiModal.lockedQuestionType ? (
-                                    <div className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-600 font-medium">
+                                    <div className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] bg-[var(--ink-50)] text-[13px] text-[var(--ink-700)] font-semibold">
                                         {{ MCQ: 'Çoxvariantlı (tək cavab)', MULTI_SELECT: 'Çoxvariantlı (çox cavab)', OPEN_AUTO: 'Açıq sual (avtomatik yoxlama)', FILL_IN_THE_BLANK: 'Boşluq doldurma' }[aiModal.lockedQuestionType] || aiModal.lockedQuestionType}
-                                        <span className="ml-2 text-xs text-gray-400">(şablon tərəfindən müəyyən edilib)</span>
+                                        <span className="ml-2 text-[11px] text-[var(--ink-400)]">(şablon tərəfindən müəyyən edilib)</span>
                                     </div>
                                 ) : (
                                     <select
                                         value={aiForm.questionType}
                                         onChange={e => setAiForm(f => ({ ...f, questionType: e.target.value }))}
-                                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none text-sm bg-white"
+                                        className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] focus:ring-2 focus:ring-[var(--brand-green-600)]/30 focus:border-[var(--brand-green-600)] outline-none text-[13px] bg-white"
                                     >
                                         <option value="MCQ">Çoxvariantlı (tək cavab)</option>
                                         <option value="MULTI_SELECT">Çoxvariantlı (çox cavab)</option>
@@ -1707,12 +1745,12 @@ const ExamEditor = () => {
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => setAiModal(null)}
-                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors"
+                                className="flex-1 h-11 rounded-full border border-[var(--ink-200)] text-[var(--ink-700)] font-semibold text-[13px] hover:bg-[var(--ink-100)] transition-colors"
                             >Ləğv et</button>
                             <button
                                 onClick={handleAiGenerate}
                                 disabled={aiLoading || !aiForm.topic.trim() || (aiUsage && aiUsage.remaining === 0)}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition-colors disabled:opacity-60"
+                                className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-full bg-[var(--brand-green-600)] hover:bg-[var(--brand-green-700)] disabled:bg-[var(--brand-green-300)] disabled:hover:bg-[var(--brand-green-300)] disabled:cursor-not-allowed disabled:shadow-none text-white font-bold text-[13px] transition-colors shadow-[0_8px_24px_-10px_rgba(34,197,94,0.6)]"
                             >
                                 {aiUsage && aiUsage.remaining === 0 ? (
                                     <>Aylıq limit bitdi</>
@@ -1729,23 +1767,27 @@ const ExamEditor = () => {
 
             {/* Passage Type Selection Modal */}
             {showPassageTypeModal && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full">
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">Keçid tipini seçin</h3>
-                        <p className="text-sm text-gray-500 mb-6">Hansı tip keçid əlavə etmək istəyirsiniz?</p>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button onClick={() => handleAddPassage('TEXT')} className="flex flex-col items-center gap-3 p-6 border-2 border-teal-200 hover:border-teal-500 hover:bg-teal-50 rounded-xl transition-all">
-                                <HiOutlineDocumentText className="w-10 h-10 text-teal-600" />
-                                <span className="font-bold text-gray-800">Mətn</span>
-                                <span className="text-xs text-gray-500 text-center">Mətn parçası + suallar</span>
+                <div className="fixed inset-0 bg-[var(--ink-900)]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-[var(--sh-lg)] border border-[var(--ink-200)] p-7 max-w-sm w-full">
+                        <h3 className="text-[18px] font-extrabold text-[var(--ink-900)] mb-1 tracking-tight">Keçid tipini seçin</h3>
+                        <p className="text-[13px] text-[var(--ink-500)] mb-6">Hansı tip keçid əlavə etmək istəyirsiniz?</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => handleAddPassage('TEXT')} className="flex flex-col items-center gap-3 p-5 border-2 border-[var(--brand-blue-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] rounded-2xl transition-all">
+                                <span className="w-12 h-12 rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center">
+                                    <HiOutlineDocumentText className="w-6 h-6" />
+                                </span>
+                                <span className="font-extrabold text-[var(--ink-900)] text-[14px] tracking-tight">Mətn</span>
+                                <span className="text-[11.5px] text-[var(--ink-500)] text-center">Mətn parçası + suallar</span>
                             </button>
-                            <button onClick={() => handleAddPassage('LISTENING')} className="flex flex-col items-center gap-3 p-6 border-2 border-purple-200 hover:border-purple-500 hover:bg-purple-50 rounded-xl transition-all">
-                                <HiOutlineVolumeUp className="w-10 h-10 text-purple-600" />
-                                <span className="font-bold text-gray-800">Dinləmə</span>
-                                <span className="text-xs text-gray-500 text-center">Audio fayl + suallar</span>
+                            <button onClick={() => handleAddPassage('LISTENING')} className="flex flex-col items-center gap-3 p-5 border-2 border-[var(--brand-green-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)] rounded-2xl transition-all">
+                                <span className="w-12 h-12 rounded-2xl bg-[var(--brand-green-50)] text-[var(--brand-green-600)] flex items-center justify-center">
+                                    <HiOutlineVolumeUp className="w-6 h-6" />
+                                </span>
+                                <span className="font-extrabold text-[var(--ink-900)] text-[14px] tracking-tight">Dinləmə</span>
+                                <span className="text-[11.5px] text-[var(--ink-500)] text-center">Audio fayl + suallar</span>
                             </button>
                         </div>
-                        <button onClick={() => setShowPassageTypeModal(false)} className="mt-6 w-full py-2 text-gray-500 hover:text-gray-700 font-medium text-sm">Ləğv et</button>
+                        <button onClick={() => setShowPassageTypeModal(false)} className="mt-6 w-full h-10 rounded-full text-[var(--ink-500)] hover:text-[var(--ink-800)] hover:bg-[var(--ink-100)] font-semibold text-[13px] transition-colors">Ləğv et</button>
                     </div>
                 </div>
             )}
@@ -1786,13 +1828,13 @@ const ExamEditor = () => {
 
             {/* Add Template Section Modal */}
             {addSectionModal && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[80vh]">
-                        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
-                            <h3 className="text-base font-bold text-gray-900">
+                <div className="fixed inset-0 bg-[var(--ink-900)]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-[var(--sh-lg)] border border-[var(--ink-200)] w-full max-w-md flex flex-col max-h-[80vh]">
+                        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[var(--ink-150)]">
+                            <h3 className="text-[15.5px] font-extrabold text-[var(--ink-900)] tracking-tight">
                                 {addSectionModal.step === 1 ? 'Şablon seçin' : addSectionModal.step === 2 ? 'Alt başlıq seçin' : 'Bölmə seçin'}
                             </h3>
-                            <button onClick={() => setAddSectionModal(null)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                            <button onClick={() => setAddSectionModal(null)} className="p-1.5 text-[var(--ink-400)] hover:text-[var(--ink-700)] hover:bg-[var(--ink-100)] rounded-xl">
                                 <HiOutlineX className="w-5 h-5" />
                             </button>
                         </div>
@@ -1800,7 +1842,7 @@ const ExamEditor = () => {
                         <div className="overflow-y-auto flex-1 p-4">
                             {addSectionModal.step === 1 && (
                                 addSectionModal.loadingTemplates ? (
-                                    <div className="flex items-center justify-center py-10 text-gray-400 text-sm">Yüklənir...</div>
+                                    <div className="flex items-center justify-center py-10 text-[var(--ink-400)] text-[13px]">Yüklənir...</div>
                                 ) : (
                                     <div className="space-y-2">
                                         {addSectionModal.templates.map(t => (
@@ -1815,13 +1857,13 @@ const ExamEditor = () => {
                                                         setAddSectionModal(prev => ({ ...prev, loadingSubtitles: false }));
                                                     }
                                                 }}
-                                                className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                                                className="w-full text-left px-4 py-3 rounded-2xl border border-[var(--ink-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] transition-all"
                                             >
-                                                <p className="font-semibold text-gray-800 text-sm">{t.title}</p>
+                                                <p className="font-bold text-[var(--ink-800)] text-[13.5px]">{t.title}</p>
                                             </button>
                                         ))}
                                         {addSectionModal.templates.length === 0 && (
-                                            <p className="text-sm text-gray-400 text-center py-8">Şablon tapılmadı</p>
+                                            <p className="text-[13px] text-[var(--ink-400)] text-center py-8">Şablon tapılmadı</p>
                                         )}
                                     </div>
                                 )
@@ -1829,17 +1871,17 @@ const ExamEditor = () => {
 
                             {addSectionModal.step === 2 && (
                                 addSectionModal.loadingSubtitles ? (
-                                    <div className="flex items-center justify-center py-10 text-gray-400 text-sm">Yüklənir...</div>
+                                    <div className="flex items-center justify-center py-10 text-[var(--ink-400)] text-[13px]">Yüklənir...</div>
                                 ) : (
                                     <div className="space-y-2">
                                         {addSectionModal.subtitles.map(sub => (
                                             <button
                                                 key={sub.id}
                                                 onClick={() => setAddSectionModal(prev => ({ ...prev, selectedSubtitle: sub, step: 3 }))}
-                                                className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+                                                className="w-full text-left px-4 py-3 rounded-2xl border border-[var(--ink-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] transition-all"
                                             >
-                                                <p className="font-semibold text-gray-800 text-sm">{sub.subtitle}</p>
-                                                <p className="text-xs text-gray-400 mt-0.5">{sub.sections?.length || 0} bölmə</p>
+                                                <p className="font-bold text-[var(--ink-800)] text-[13.5px]">{sub.subtitle}</p>
+                                                <p className="text-[11.5px] text-[var(--ink-500)] mt-0.5">{sub.sections?.length || 0} bölmə</p>
                                             </button>
                                         ))}
                                     </div>
@@ -1855,18 +1897,18 @@ const ExamEditor = () => {
                                                 key={sec.id}
                                                 disabled={alreadyAdded}
                                                 onClick={() => handleAddTemplateSectionFromPicker(sec)}
-                                                className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                                                className={`w-full text-left px-4 py-3 rounded-2xl border transition-all ${
                                                     alreadyAdded
-                                                        ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
-                                                        : 'border-gray-200 hover:border-teal-400 hover:bg-teal-50'
+                                                        ? 'border-[var(--ink-100)] bg-[var(--ink-50)] cursor-not-allowed opacity-50'
+                                                        : 'border-[var(--ink-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)]'
                                                 }`}
                                             >
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="font-semibold text-gray-800 text-sm">{sec.subjectName}</p>
-                                                        <p className="text-xs text-gray-500 mt-0.5">{sec.questionCount} sual · <code className="font-mono">{sec.formula}</code></p>
+                                                        <p className="font-bold text-[var(--ink-800)] text-[13.5px]">{sec.subjectName}</p>
+                                                        <p className="text-[11.5px] text-[var(--ink-500)] mt-0.5">{sec.questionCount} sual · <code className="font-mono text-[var(--ink-700)]">{sec.formula}</code></p>
                                                     </div>
-                                                    {alreadyAdded && <span className="text-xs text-gray-400 shrink-0">Əlavədir</span>}
+                                                    {alreadyAdded && <span className="text-[11px] text-[var(--ink-400)] shrink-0">Əlavədir</span>}
                                                 </div>
                                             </button>
                                         );
@@ -1876,10 +1918,10 @@ const ExamEditor = () => {
                         </div>
 
                         {addSectionModal.step > 1 && (
-                            <div className="px-6 py-4 border-t border-gray-100">
+                            <div className="px-6 py-4 border-t border-[var(--ink-150)]">
                                 <button
                                     onClick={() => setAddSectionModal(prev => ({ ...prev, step: prev.step - 1 }))}
-                                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
+                                    className="inline-flex items-center gap-1.5 text-[13px] text-[var(--ink-500)] hover:text-[var(--ink-800)] font-semibold"
                                 >
                                     <HiOutlineArrowLeft className="w-4 h-4" /> Geri
                                 </button>
@@ -1892,13 +1934,13 @@ const ExamEditor = () => {
             {/* Floating Publish / Submit Button */}
             <div className="fixed bottom-6 right-6 z-20 flex flex-col items-end gap-2">
                 {autoSaveStatus === 'saving' && (
-                    <span className="flex items-center gap-1.5 text-xs text-white bg-amber-400 px-3 py-1.5 rounded-full shadow">
+                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-white bg-amber-400 px-3 py-1.5 rounded-full shadow-[var(--sh-sm)]">
                         <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                         Saxlanılır...
                     </span>
                 )}
                 {autoSaveStatus === 'saved' && (
-                    <span className="flex items-center gap-1.5 text-xs text-white bg-green-500 px-3 py-1.5 rounded-full shadow">
+                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-white bg-[var(--brand-green-600)] px-3 py-1.5 rounded-full shadow-[var(--sh-sm)]">
                         <div className="w-1.5 h-1.5 rounded-full bg-white" />
                         Yadda saxlanıldı
                     </span>
@@ -1907,10 +1949,10 @@ const ExamEditor = () => {
                     <button
                         onClick={examStatus === 'SUBMITTED' ? undefined : handleSubmitDraft}
                         disabled={examStatus === 'SUBMITTED'}
-                        className={`flex items-center gap-2 px-6 py-3.5 font-bold rounded-2xl shadow-xl transition-all ${
+                        className={`inline-flex items-center gap-2 h-12 px-6 font-bold rounded-full transition-all ${
                             examStatus === 'SUBMITTED'
-                                ? 'bg-amber-400 text-white cursor-not-allowed shadow-amber-200'
-                                : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-indigo-300'
+                                ? 'bg-amber-400 text-white cursor-not-allowed shadow-[0_10px_28px_-10px_rgba(251,191,36,0.55)]'
+                                : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:scale-95 text-white shadow-[0_12px_32px_-10px_rgba(37,99,235,0.65)]'
                         }`}
                     >
                         {examStatus === 'SUBMITTED'
@@ -1921,9 +1963,9 @@ const ExamEditor = () => {
                 ) : (
                     <button
                         onClick={handlePublish}
-                        className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-2xl shadow-xl shadow-indigo-300 transition-all"
+                        className="inline-flex items-center gap-2 h-12 px-6 bg-[var(--primary)] hover:bg-[var(--primary-hover)] active:scale-95 text-white font-bold rounded-full shadow-[0_12px_32px_-10px_rgba(37,99,235,0.65)] transition-all"
                     >
-                        <HiOutlineDocumentText className="w-5 h-5" />
+                        <HiOutlinePaperAirplane className="w-5 h-5" />
                         {examStatus === 'PUBLISHED' ? 'Yenilə' : 'Yayımla'}
                     </button>
                 )}
@@ -1960,32 +2002,34 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
     const isText = passage.passageType === 'TEXT';
 
     return (
-        <div className={`rounded-2xl border-2 overflow-hidden shadow-sm ${isText ? 'border-teal-200' : 'border-purple-200'}`}>
+        <div className={`rounded-3xl border-2 overflow-hidden shadow-[var(--sh-sm)] ${isText ? 'border-[var(--brand-blue-200)]' : 'border-[var(--brand-green-200)]'}`}>
             {/* Passage header */}
-            <div className={`px-6 py-4 flex items-center justify-between ${isText ? 'bg-teal-50' : 'bg-purple-50'}`}>
+            <div className={`px-5 md:px-6 py-3.5 flex items-center justify-between ${isText ? 'bg-[var(--primary-soft)]' : 'bg-[var(--brand-green-50)]'}`}>
                 <div className="flex items-center gap-3">
-                    {isText
-                        ? <HiOutlineDocumentText className="w-6 h-6 text-teal-600" />
-                        : <HiOutlineVolumeUp className="w-6 h-6 text-purple-600" />}
-                    <span className={`font-bold text-sm uppercase tracking-wide ${isText ? 'text-teal-700' : 'text-purple-700'}`}>
+                    <span className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isText ? 'bg-white text-[var(--primary)] border border-[var(--brand-blue-200)]' : 'bg-white text-[var(--brand-green-600)] border border-[var(--brand-green-200)]'}`}>
+                        {isText
+                            ? <HiOutlineDocumentText className="w-5 h-5" />
+                            : <HiOutlineVolumeUp className="w-5 h-5" />}
+                    </span>
+                    <span className={`font-extrabold text-[12px] uppercase tracking-[0.1em] ${isText ? 'text-[var(--primary-hover)]' : 'text-[var(--brand-green-700)]'}`}>
                         {isText ? 'Mətn Parçası' : 'Dinləmə'}
                     </span>
                 </div>
                 {!isQuestionCountLocked && (
-                    <button onClick={() => onDelete(passage.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onClick={() => onDelete(passage.id)} className="p-1.5 text-[var(--ink-400)] hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors">
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 )}
             </div>
 
-            <div className="bg-white p-6 space-y-4">
+            <div className="bg-white p-5 md:p-6 space-y-4">
                 {/* Title */}
                 <input
                     type="text"
                     value={passage.title}
                     onChange={(e) => onChange(passage.id, { ...passage, title: e.target.value })}
                     placeholder={isText ? 'Mətn başlığı (ixtiyari)' : 'Dinləmə başlığı (ixtiyari)'}
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    className="w-full border border-[var(--ink-200)] rounded-2xl px-4 py-2.5 text-[13.5px] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-colors"
                 />
 
                 {isText ? (
@@ -1993,12 +2037,12 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                         {/* Text content */}
                         <div>
                             <div className="flex items-center justify-between mb-1">
-                                <label className="text-xs font-medium text-gray-500">Mətn parçası</label>
+                                <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)]">Mətn parçası</label>
                                 <button
                                     type="button"
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => setMathModalOpen(true)}
-                                    className="text-xs font-bold px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                    className="text-[11.5px] font-bold px-2.5 py-1 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] hover:bg-[var(--brand-blue-100)] transition-colors"
                                 >
                                     fx Riyaziyyat
                                 </button>
@@ -2018,16 +2062,16 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                             onInsert={(latex) => { textEditorRef.current?.insertMath(latex); setMathModalOpen(false); }}
                         />
                         {/* Image for text passage */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                             <input ref={imageInputRef} type="file" accept="image/*" disabled={!hasPermission('addImage')} className="hidden" onChange={handleImageUpload} />
-                            <button onClick={() => hasPermission('addImage') ? imageInputRef.current.click() : null} className={`text-sm px-4 py-2 border rounded-lg transition-colors flex items-center gap-2 ${hasPermission('addImage') ? 'border-teal-300 text-teal-700 hover:bg-teal-50' : 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'}`}>
+                            <button onClick={() => hasPermission('addImage') ? imageInputRef.current.click() : null} className={`text-[13px] font-semibold px-4 py-2 border rounded-full transition-colors inline-flex items-center gap-2 ${hasPermission('addImage') ? 'border-[var(--brand-blue-200)] text-[var(--primary-hover)] hover:bg-[var(--primary-soft)]' : 'border-[var(--ink-200)] text-[var(--ink-400)] cursor-not-allowed bg-[var(--ink-50)]'}`}>
                                 {!hasPermission('addImage') ? <HiLockClosed className="w-4 h-4"/> : null}
                                 {passage.attachedImage ? 'Şəkli Dəyiş' : '+ Şəkil Əlavə Et'}
                             </button>
                             {passage.attachedImage && (
                                 <>
-                                    <img src={passage.attachedImage} alt="" className="h-16 rounded-lg border object-cover" />
-                                    <button onClick={() => onChange(passage.id, { ...passage, attachedImage: null })} className="text-red-400 hover:text-red-600 text-xs">Sil</button>
+                                    <img src={passage.attachedImage} alt="" className="h-16 rounded-2xl border border-[var(--ink-200)] object-cover" />
+                                    <button onClick={() => onChange(passage.id, { ...passage, attachedImage: null })} className="text-red-500 hover:text-red-700 text-[11.5px] font-semibold">Sil</button>
                                 </>
                             )}
                         </div>
@@ -2037,42 +2081,42 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                         {/* Audio upload */}
                         <input ref={audioInputRef} type="file" accept="audio/*" disabled={!hasPermission('addPassageQuestion')} className="hidden" onChange={handleAudioUpload} />
                         <div className="flex flex-col gap-3">
-                            <button onClick={() => hasPermission('addPassageQuestion') ? audioInputRef.current.click() : null} className={`flex items-center justify-center gap-2 w-full py-8 border-2 border-dashed rounded-xl transition-colors font-medium ${hasPermission('addPassageQuestion') ? 'border-purple-300 hover:bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'}`}>
+                            <button onClick={() => hasPermission('addPassageQuestion') ? audioInputRef.current.click() : null} className={`flex items-center justify-center gap-2 w-full py-8 border-2 border-dashed rounded-2xl transition-colors font-semibold text-[13.5px] ${hasPermission('addPassageQuestion') ? 'border-[var(--brand-green-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)] text-[var(--brand-green-700)]' : 'border-[var(--ink-200)] bg-[var(--ink-50)] text-[var(--ink-400)] cursor-not-allowed'}`}>
                                 {!hasPermission('addPassageQuestion') ? <HiLockClosed className="w-6 h-6"/> : <HiOutlineVolumeUp className="w-6 h-6" />}
                                 {passage.audioContent ? 'Audio Faylı Dəyiş' : 'Audio Fayl Yüklə (.mp3, .wav, .ogg)'}
                             </button>
                             {passage.audioContent && (
-                                <audio controls src={passage.audioContent} className="w-full rounded-lg" />
+                                <audio controls src={passage.audioContent} className="w-full rounded-2xl" />
                             )}
                         </div>
                         {/* Listen limit */}
-                        <div className="flex items-center gap-4">
-                            <label className="text-sm font-medium text-gray-700">Dinləmə limiti:</label>
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <label className="text-[13px] font-bold text-[var(--ink-800)]">Dinləmə limiti:</label>
                             <div className="flex items-center gap-3">
-                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                <label className="inline-flex items-center gap-1.5 cursor-pointer">
                                     <input
                                         type="radio"
                                         checked={passage.listenLimit === null}
                                         onChange={() => onChange(passage.id, { ...passage, listenLimit: null })}
-                                        className="accent-purple-600"
+                                        className="accent-[var(--brand-green-600)]"
                                     />
-                                    <span className="text-sm text-gray-700">Limitsiz</span>
+                                    <span className="text-[13px] text-[var(--ink-700)]">Limitsiz</span>
                                 </label>
-                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                <label className="inline-flex items-center gap-1.5 cursor-pointer">
                                     <input
                                         type="radio"
                                         checked={passage.listenLimit !== null}
                                         onChange={() => onChange(passage.id, { ...passage, listenLimit: passage.listenLimit ?? 2 })}
-                                        className="accent-purple-600"
+                                        className="accent-[var(--brand-green-600)]"
                                     />
-                                    <span className="text-sm text-gray-700">Məhdud:</span>
+                                    <span className="text-[13px] text-[var(--ink-700)]">Məhdud:</span>
                                 </label>
                                 {passage.listenLimit !== null && (
                                     <input
                                         type="number" min={1} max={10}
                                         value={passage.listenLimit ?? 2}
                                         onChange={(e) => onChange(passage.id, { ...passage, listenLimit: parseInt(e.target.value) || 1 })}
-                                        className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:border-purple-400"
+                                        className="w-16 border border-[var(--ink-200)] rounded-xl px-2 py-1 text-[13px] text-center focus:outline-none focus:border-[var(--brand-green-600)]"
                                     />
                                 )}
                             </div>
@@ -2083,9 +2127,9 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
 
             {/* Questions within this passage */}
             {passage.questions.length > 0 && (
-                <div className="bg-gray-50 p-4 space-y-4 border-t border-gray-100">
+                <div className="bg-[var(--ink-50)] p-4 space-y-4 border-t border-[var(--ink-150)]">
                     {passage.questions.map((q, idx) => (
-                        <div key={q.id} className="pl-4 border-l-4 border-indigo-200">
+                        <div key={q.id} className={`pl-4 border-l-4 ${isText ? 'border-[var(--brand-blue-200)]' : 'border-[var(--brand-green-200)]'}`}>
                             <QuestionEditor
                                 index={questionOffset + idx}
                                 question={q}
@@ -2101,10 +2145,10 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
 
             {/* Add question to this passage — hidden in template mode */}
             {!isQuestionCountLocked && (
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                <div className="bg-[var(--ink-50)] px-5 md:px-6 py-4 border-t border-[var(--ink-150)]">
                     <button
                         onClick={() => onAddQuestion(passage.id)}
-                        className={`flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-xl text-sm font-semibold transition-colors ${isText ? 'border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-700' : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50 text-purple-700'}`}
+                        className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed rounded-2xl text-[13px] font-semibold transition-colors ${isText ? 'border-[var(--brand-blue-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] text-[var(--primary-hover)]' : 'border-[var(--brand-green-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)] text-[var(--brand-green-700)]'}`}
                     >
                         <HiOutlinePlus className="w-4 h-4" />
                         Bu keçidə sual əlavə et

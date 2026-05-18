@@ -24,14 +24,15 @@ import Pagination from '../../components/admin/Pagination';
 import SectionForm from './templates/SectionForm';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../api/axios';
+import { fmtDate } from '../../utils/date';
 
 // ── Stat card ────────────────────────────────────────────────────────────────
-const StatCard = ({ icon: Icon, label, value, sub, color = 'indigo' }) => {
+const StatCard = ({ icon: Icon, label, value, sub, color = 'blue' }) => {
     const colors = {
-        indigo: 'bg-indigo-50 text-indigo-600',
+        blue: 'bg-blue-50 text-blue-600',
         emerald: 'bg-emerald-50 text-emerald-600',
         amber: 'bg-amber-50 text-amber-600',
-        violet: 'bg-violet-50 text-violet-600',
+        teal: 'bg-teal-50 text-teal-600',
     };
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -57,9 +58,9 @@ const TemplateForm = ({ initial, onSave, onCancel, saving }) => {
         onSave({ title: title.trim() });
     };
     return (
-        <div className="bg-white rounded-2xl border-2 border-indigo-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border-2 border-blue-200 shadow-sm overflow-hidden">
             <div className="px-4 pt-4 pb-3">
-                <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-2">
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">
                     {initial ? 'Redaktə' : 'Yeni şablon'}
                 </p>
                 <input
@@ -68,7 +69,7 @@ const TemplateForm = ({ initial, onSave, onCancel, saving }) => {
                     onChange={e => setTitle(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); if (e.key === 'Escape') onCancel(); }}
                     placeholder="Şablon adı"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
                 />
             </div>
             <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2">
@@ -76,7 +77,7 @@ const TemplateForm = ({ initial, onSave, onCancel, saving }) => {
                     Ləğv
                 </button>
                 <button onClick={handleSubmit} disabled={saving}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg disabled:opacity-60">
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg disabled:opacity-60">
                     {saving ? '...' : (initial ? 'Yenilə' : 'Yarat')}
                 </button>
             </div>
@@ -189,13 +190,13 @@ const SubtitleAccordion = ({ subtitle, templateId, navigate, onAddSection }) => 
                     ) : (
                         <div className="divide-y divide-gray-50">
                             {sections.map(sec => (
-                                <div key={sec.id} className="px-4 py-2.5 flex items-center justify-between hover:bg-gray-50/60 group">
+                                <div key={sec.id} className="px-4 py-2.5 flex items-center justify-between hover:bg-gray-100/60 group">
                                     <span className="text-sm text-gray-700">{sec.subjectName}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-semibold text-indigo-700">{sec.questionCount} sual</span>
+                                        <span className="text-xs font-semibold text-blue-700">{sec.questionCount} sual</span>
                                         <button
                                             onClick={() => navigate(`/admin/sablonlar/${templateId}/${subtitle.id}`)}
-                                            className="p-1 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="p-1 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                                             title="Redaktə"
                                         >
                                             <HiOutlinePencilAlt className="w-3.5 h-3.5" />
@@ -215,7 +216,7 @@ const SubtitleAccordion = ({ subtitle, templateId, navigate, onAddSection }) => 
 
                     <button
                         onClick={() => onAddSection(subtitle.id)}
-                        className="w-full px-4 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 border-t border-gray-100 flex items-center justify-center gap-1.5 transition-colors"
+                        className="w-full px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 border-t border-gray-100 flex items-center justify-center gap-1.5 transition-colors"
                     >
                         <HiOutlinePlus className="w-3.5 h-3.5" /> Fənn əlavə et
                     </button>
@@ -241,17 +242,17 @@ const SubtitleQuickAdd = ({ templateId, onDone }) => {
     };
 
     return (
-        <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-xl border-2 border-indigo-200">
+        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl border-2 border-blue-200">
             <input
                 autoFocus
                 value={name}
                 onChange={e => setName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onDone(); }}
                 placeholder="Altbaşlıq adı..."
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400 bg-white"
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-400 bg-white"
             />
             <button onClick={submit} disabled={createSubtitle.isPending}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg disabled:opacity-60">
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg disabled:opacity-60">
                 {createSubtitle.isPending ? '...' : 'Əlavə et'}
             </button>
             <button onClick={onDone} className="p-2 text-gray-400 hover:bg-white rounded-lg">
@@ -332,7 +333,7 @@ const TemplateDetailPanel = ({ template, navigate }) => {
                 </div>
                 <button
                     onClick={() => navigate(`/admin/sablonlar/${template.id}`)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
                 >
                     Tam redaktə <HiOutlineChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -344,7 +345,7 @@ const TemplateDetailPanel = ({ template, navigate }) => {
                 ) : (
                     <button
                         onClick={() => setAddingSubtitle(true)}
-                        className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 border-2 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/40 text-indigo-600 text-sm font-semibold rounded-xl transition-colors"
+                        className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50/40 text-blue-600 text-sm font-semibold rounded-xl transition-colors"
                     >
                         <HiOutlinePlus className="w-4 h-4" /> Yeni altbaşlıq əlavə et
                     </button>
@@ -467,7 +468,7 @@ const AdminTemplates = () => {
                 {!showCreateForm && (
                     <button
                         onClick={() => { setShowCreateForm(true); setEditingId(null); }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
                     >
                         <HiOutlinePlus className="w-4 h-4" /> Yeni Şablon
                     </button>
@@ -480,7 +481,7 @@ const AdminTemplates = () => {
                     icon={HiOutlineTemplate}
                     label="Cəmi şablonlar"
                     value={stats?.totalTemplates ?? '—'}
-                    color="indigo"
+                    color="blue"
                 />
                 <StatCard
                     icon={HiOutlineDocumentText}
@@ -501,9 +502,9 @@ const AdminTemplates = () => {
                     label="Ən yeni"
                     value={stats?.mostRecent?.title ?? '—'}
                     sub={stats?.mostRecent?.createdAt
-                        ? new Date(stats.mostRecent.createdAt).toLocaleDateString('az-AZ', { day: '2-digit', month: 'short', year: 'numeric' })
+                        ? fmtDate(stats.mostRecent.createdAt)
                         : null}
-                    color="violet"
+                    color="teal"
                 />
             </div>
 
@@ -518,7 +519,7 @@ const AdminTemplates = () => {
                             value={searchInput}
                             onChange={e => setSearchInput(e.target.value)}
                             placeholder="Şablon adı ilə axtar..."
-                            className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-white"
+                            className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 bg-white"
                         />
                         {searchInput && (
                             <button onClick={() => setSearchInput('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
@@ -538,7 +539,7 @@ const AdminTemplates = () => {
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[400px]">
                         {loading && templates.length === 0 ? (
                             <div className="flex justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                             </div>
                         ) : templates.length === 0 ? (
                             <div className="text-center py-12 text-gray-400 px-4">
@@ -563,10 +564,10 @@ const AdminTemplates = () => {
                                             ) : (
                                                 <div
                                                     onClick={() => setSelectedId(t.id)}
-                                                    className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50 border-l-4 border-indigo-500' : 'hover:bg-gray-50 border-l-4 border-transparent'}`}
+                                                    className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : 'hover:bg-gray-100 border-l-4 border-transparent'}`}
                                                 >
                                                     <div className="flex-1 min-w-0">
-                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-indigo-700' : 'text-gray-800'}`}>{t.title}</p>
+                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-blue-700' : 'text-gray-800'}`}>{t.title}</p>
                                                         <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
                                                             <span>{t.subtitleCount} altbaşlıq</span>
                                                             {t.examCount > 0 && (
@@ -580,14 +581,14 @@ const AdminTemplates = () => {
                                                         <button
                                                             onClick={e => { e.stopPropagation(); handleClone(t.id, t.title); }}
                                                             disabled={cloneTemplate.isPending}
-                                                            className="p-1 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded"
+                                                            className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"
                                                             title="Kopyala"
                                                         >
                                                             <HiOutlineDuplicate className="w-3.5 h-3.5" />
                                                         </button>
                                                         <button
                                                             onClick={e => { e.stopPropagation(); setEditingId(t.id); }}
-                                                            className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                                                            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
                                                             title="Redaktə"
                                                         >
                                                             <HiOutlinePencilAlt className="w-3.5 h-3.5" />

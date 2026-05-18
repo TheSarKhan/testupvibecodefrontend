@@ -33,7 +33,7 @@ const fmtDate = (iso) => {
     if (!iso) return '';
     const normalized = /[Zz]|[+-]\d{2}:\d{2}$/.test(iso) ? iso : iso + 'Z';
     return new Date(normalized).toLocaleString('az-AZ', {
-        day: '2-digit', month: 'short', year: 'numeric',
+        day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit',
     });
 };
@@ -123,7 +123,7 @@ const AdminContactMessages = () => {
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-2xl font-extrabold text-gray-900 flex items-center gap-2">
-                        <HiOutlineMail className="w-6 h-6 text-indigo-600" />
+                        <HiOutlineMail className="w-6 h-6 text-blue-600" />
                         Əlaqə Mesajları
                         {unreadCount > 0 && (
                             <span className="ml-1 h-6 min-w-[24px] px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
@@ -137,7 +137,7 @@ const AdminContactMessages = () => {
                 </div>
                 <button
                     onClick={() => { fetchMessages(); fetchUnread(); }}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                     <HiOutlineRefresh className="w-4 h-4" /> Yenilə
                 </button>
@@ -152,7 +152,7 @@ const AdminContactMessages = () => {
                         placeholder="Ad, e-poçt və ya mesaj..."
                         value={search}
                         onChange={e => { setSearch(e.target.value); setPage(0); }}
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     />
                 </div>
 
@@ -161,7 +161,7 @@ const AdminContactMessages = () => {
                     <select
                         value={subjectFilter}
                         onChange={e => { setSubjectFilter(e.target.value); setPage(0); }}
-                        className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white"
+                        className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
                     >
                         <option value="">Bütün mövzular</option>
                         <option value="texniki">Texniki problem</option>
@@ -173,7 +173,7 @@ const AdminContactMessages = () => {
                     <select
                         value={readFilter}
                         onChange={e => { setReadFilter(e.target.value); setPage(0); }}
-                        className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white"
+                        className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
                     >
                         <option value="">Hamısı</option>
                         <option value="false">Oxunmamış</option>
@@ -185,7 +185,7 @@ const AdminContactMessages = () => {
             {/* Messages list */}
             {loading ? (
                 <div className="flex justify-center py-20">
-                    <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                    <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
                 </div>
             ) : messages.length === 0 ? (
                 <div className="text-center py-20 text-gray-400">
@@ -199,12 +199,12 @@ const AdminContactMessages = () => {
                         return (
                             <div
                                 key={msg.id}
-                                className={`bg-white rounded-2xl border shadow-sm transition-all ${!msg.isRead ? 'border-indigo-200 shadow-indigo-50' : 'border-gray-100'}`}
+                                className={`bg-white rounded-2xl border shadow-sm transition-all ${!msg.isRead ? 'border-blue-200 shadow-blue-50' : 'border-gray-100'}`}
                             >
                                 {/* Row */}
                                 <div className="flex items-center gap-3 px-4 py-3">
                                     {/* Unread dot */}
-                                    <div className={`w-2 h-2 rounded-full shrink-0 ${!msg.isRead ? 'bg-indigo-500' : 'bg-transparent'}`} />
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${!msg.isRead ? 'bg-blue-500' : 'bg-transparent'}`} />
 
                                     {/* Info */}
                                     <button
@@ -234,7 +234,7 @@ const AdminContactMessages = () => {
                                             <button
                                                 onClick={() => handleMarkRead(msg.id)}
                                                 title="Oxundu işarələ"
-                                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                             >
                                                 <HiOutlineCheck className="w-4 h-4" />
                                             </button>
@@ -242,7 +242,7 @@ const AdminContactMessages = () => {
                                         <button
                                             onClick={() => handleExpand(msg)}
                                             title="Mesajı aç"
-                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                         >
                                             {isExpanded
                                                 ? <HiOutlineChevronUp className="w-4 h-4" />
@@ -274,7 +274,7 @@ const AdminContactMessages = () => {
                                         <div className="mt-3 flex gap-2">
                                             <button
                                                 onClick={() => openReplyModal(msg)}
-                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors"
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors"
                                             >
                                                 <HiOutlineReply className="w-3.5 h-3.5" />
                                                 Cavab ver
@@ -318,7 +318,7 @@ const AdminContactMessages = () => {
                         {/* Original message preview */}
                         <div className="px-6 pt-4">
                             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Orijinal mesaj</p>
-                            <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-500 leading-relaxed line-clamp-3 border-l-2 border-indigo-200">
+                            <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-500 leading-relaxed line-clamp-3 border-l-2 border-blue-200">
                                 {replyModal.msg.message}
                             </div>
                         </div>
@@ -332,7 +332,7 @@ const AdminContactMessages = () => {
                                     type="text"
                                     value={replySubject}
                                     onChange={e => setReplySubject(e.target.value)}
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                 />
                             </div>
 
@@ -344,7 +344,7 @@ const AdminContactMessages = () => {
                                     value={replyBody}
                                     onChange={e => setReplyBody(e.target.value)}
                                     placeholder="Cavabınızı yazın..."
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
+                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                                 />
                             </div>
 
@@ -358,8 +358,8 @@ const AdminContactMessages = () => {
                                             onClick={() => setReplyChannel(ch)}
                                             className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
                                                 replyChannel === ch
-                                                    ? 'bg-indigo-600 text-white border-indigo-600'
-                                                    : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
                                             }`}
                                         >
                                             {ch === 'GMAIL' ? 'Gmail' : 'SendPulse'}
@@ -373,14 +373,14 @@ const AdminContactMessages = () => {
                         <div className="px-6 pb-5 flex justify-end gap-2">
                             <button
                                 onClick={() => setReplyModal(null)}
-                                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                             >
                                 Ləğv et
                             </button>
                             <button
                                 onClick={sendReply}
                                 disabled={replySending || !replyBody.trim()}
-                                className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors disabled:opacity-50"
+                                className="flex items-center gap-2 px-5 py-2 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50"
                             >
                                 {replySending ? (
                                     <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Göndərilir...</>

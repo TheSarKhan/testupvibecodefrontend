@@ -137,7 +137,7 @@ const OngoingExamPopup = () => {
 
     return (
         <div className="fixed top-24 right-8 z-[100] animate-in fade-in slide-in-from-right-8 duration-500">
-            <div className="w-[320px] bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-[24px] p-6 shadow-2xl relative overflow-hidden border border-white/10 group">
+            <div className="w-[320px] bg-gradient-to-br from-blue-600 to-blue-700 rounded-[24px] p-6 shadow-2xl relative overflow-hidden border border-white/10 group">
                 <div className="flex items-center justify-between mb-8">
                     {/* Timer */}
                     <div className="text-white text-3xl font-bold font-mono">
@@ -175,7 +175,7 @@ const OngoingExamPopup = () => {
                 {/* Continue Button */}
                 <button
                     onClick={() => navigate(`/test/take/${exam.id}`)}
-                    className="w-full bg-white text-indigo-600 py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all active:scale-[0.98]"
+                    className="w-full bg-white text-blue-600 py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all active:scale-[0.98]"
                 >
                     İmtahana davam et
                 </button>

@@ -45,12 +45,23 @@ import AdminLogs from '../pages/Admin/AdminLogs';
 import AdminContactMessages from '../pages/Admin/AdminContactMessages';
 import AdminRevenue from '../pages/Admin/AdminRevenue';
 import CollaborativeAssignments from '../pages/Teacher/CollaborativeAssignments';
+import CollaborativeStats from '../pages/Teacher/CollaborativeStats';
 import PaymentSuccess from '../pages/Payment/PaymentSuccess';
 import PaymentDecline from '../pages/Payment/PaymentDecline';
 import StudentDashboard from '../pages/Student/StudentDashboard';
+import StudentExams from '../pages/Student/StudentExams';
+import MyExams from '../pages/Teacher/MyExams';
 
 // Protected
 import ProtectedRoute from './ProtectedRoute';
+import { useAuth } from '../context/AuthContext';
+
+// Route-level role switch for /imtahanlar. Keeps hook order stable across
+// login/logout transitions — teacher gets MyExams, everyone else gets ExamList.
+const ExamsRouteSwitch = () => {
+    const { isTeacher } = useAuth();
+    return isTeacher ? <MyExams /> : <ExamList />;
+};
 
 const router = createBrowserRouter([
     // ── Auth pages (no Navbar / Footer) ──
@@ -67,8 +78,9 @@ const router = createBrowserRouter([
             { path: 'elaqe', element: <Contact /> },
             { path: 'istifade-sertleri', element: <TermsOfService /> },
             { path: 'gizlilik-siyaseti', element: <PrivacyPolicy /> },
-            { path: 'imtahanlar', element: <ExamList /> },
+            { path: 'imtahanlar', element: <ExamsRouteSwitch /> },
             { path: 'birge-imtahanlari', element: <CollaborativeAssignments /> },
+            { path: 'birge-imtahanlari/:collaboratorId/statistika', element: <CollaborativeStats /> },
             { path: 'imtahanlar/melumat/:shareLink', element: <ExamDetail /> },
             { path: 'imtahanlar/:examId/neticeler', element: <ExamResults /> },
             { path: 'imtahanlar/:examId/statistika', element: <ExamResults /> },
@@ -85,6 +97,14 @@ const router = createBrowserRouter([
             { path: 'odenis/red', element: <PaymentDecline /> },
             {
                 path: 'imtahanlarim',
+                element: (
+                    <ProtectedRoute roles={['STUDENT']}>
+                        <StudentExams />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'panel',
                 element: (
                     <ProtectedRoute roles={['STUDENT']}>
                         <StudentDashboard />

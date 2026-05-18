@@ -6,7 +6,8 @@ import {
     HiOutlineX, HiOutlineCheckCircle, HiOutlineTag, HiOutlineDuplicate,
     HiOutlineDownload, HiOutlineSortDescending, HiOutlineChevronLeft,
     HiOutlineChevronRight, HiOutlineDocumentDuplicate, HiOutlineMenu,
-    HiOutlineExclamation
+    HiOutlineExclamation, HiOutlineSparkles, HiOutlineLibrary,
+    HiOutlineGlobe, HiOutlineCheck,
 } from 'react-icons/hi';
 import { QuestionEditor, LatexPreview, AiGenerateModal } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
@@ -31,8 +32,8 @@ const TYPE_LABELS = {
     FILL_IN_THE_BLANK: 'Boşluq', MATCHING: 'Uyğunlaşdırma',
 };
 const TYPE_COLORS = {
-    MULTIPLE_CHOICE: 'bg-indigo-50 text-indigo-700',
-    MULTI_SELECT: 'bg-violet-50 text-violet-700',
+    MULTIPLE_CHOICE: 'bg-blue-50 text-blue-700',
+    MULTI_SELECT: 'bg-emerald-50 text-emerald-700',
     OPEN_AUTO: 'bg-green-50 text-green-700',
     OPEN_MANUAL: 'bg-orange-50 text-orange-700',
     FILL_IN_THE_BLANK: 'bg-yellow-50 text-yellow-700',
@@ -197,7 +198,7 @@ const ViewModal = ({ question, onClose }) => {
                         <div className="space-y-2">
                             {question.matchingPairs.map((mp) => (
                                 <div key={mp.id} className="flex items-center gap-3 text-sm bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
-                                    <span className="font-medium text-indigo-700 min-w-0 flex-1"><LatexPreview content={mp.left} /></span>
+                                    <span className="font-medium text-blue-700 min-w-0 flex-1"><LatexPreview content={mp.left} /></span>
                                     <span className="text-gray-400">→</span>
                                     <span className="text-gray-700 min-w-0 flex-1 text-right"><LatexPreview content={mp.right} /></span>
                                 </div>
@@ -273,7 +274,7 @@ const TopicCombobox = ({ value, onChange, availableTopics }) => {
                     className={`flex-1 inline-flex items-center justify-between gap-2 px-3 py-2 border rounded-xl text-sm transition-colors ${
                         value
                             ? 'border-teal-300 bg-teal-50 text-teal-800'
-                            : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-300'
+                            : 'border-gray-200 bg-white text-gray-500 hover:border-blue-300'
                     }`}
                 >
                     <span className="inline-flex items-center gap-1.5 truncate">
@@ -310,7 +311,7 @@ const TopicCombobox = ({ value, onChange, availableTopics }) => {
                                 } else if (e.key === 'Escape') setOpen(false);
                             }}
                             placeholder="Mövzu axtar və ya yeni ad yaz..."
-                            className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400"
+                            className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
                         />
                     </div>
                     <div className="flex-1 overflow-y-auto py-1">
@@ -322,7 +323,7 @@ const TopicCombobox = ({ value, onChange, availableTopics }) => {
                                 key={name}
                                 type="button"
                                 onClick={() => commit(name)}
-                                className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-indigo-50 ${
+                                className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-blue-50 ${
                                     name === value ? 'bg-teal-50 text-teal-800 font-semibold' : 'text-gray-700'
                                 }`}
                             >
@@ -334,7 +335,7 @@ const TopicCombobox = ({ value, onChange, availableTopics }) => {
                             <button
                                 type="button"
                                 onClick={() => commit(q)}
-                                className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-indigo-50 border-t border-gray-100 text-indigo-700 font-semibold"
+                                className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-blue-50 border-t border-gray-100 text-blue-700 font-semibold"
                             >
                                 <HiOutlinePlus className="w-4 h-4" />
                                 "{q}" mövzusunu yarat
@@ -359,7 +360,7 @@ const TagInput = ({ value, onChange }) => {
         setText('');
     };
     return (
-        <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5 border border-gray-200 rounded-xl bg-white min-h-[44px] focus-within:border-indigo-400">
+        <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5 border border-gray-200 rounded-xl bg-white min-h-[44px] focus-within:border-blue-400">
             {tags.map(t => (
                 <span key={t} className="inline-flex items-center gap-1 bg-pink-50 text-pink-700 text-xs font-semibold px-2 py-0.5 rounded-full">
                     #{t}
@@ -407,12 +408,12 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
                 </div>
 
                 {/* ── Metadata card ───────────────────── */}
-                <div className="mx-5 mt-4 mb-2 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-4 space-y-4">
+                <div className="mx-5 mt-4 mb-2 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-white p-4 space-y-4">
                     {/* Difficulty + grade */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-                                <span className="inline-block w-1 h-3.5 bg-indigo-500 rounded-full" /> Çətinlik
+                                <span className="inline-block w-1 h-3.5 bg-blue-500 rounded-full" /> Çətinlik
                             </label>
                             <div className="flex items-center gap-2">
                                 <DifficultyPill level="EASY" active={local.difficulty === 'EASY'} onClick={() => setLocal(p => ({ ...p, difficulty: p.difficulty === 'EASY' ? null : 'EASY' }))} />
@@ -480,7 +481,7 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
                     hideDelete
                 />
                 <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100">
-                    <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 text-sm">Ləğv et</button>
+                    <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-100 text-sm">Ləğv et</button>
                     <button onClick={() => onSave(local)} disabled={saving}
                         className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl disabled:opacity-50">
                         <HiOutlineSave className="w-4 h-4" />
@@ -506,32 +507,33 @@ const StatsCard = ({ stats }) => {
     };
     const totalByType = Object.entries(stats.byType || {});
     return (
-        <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-4 text-white shadow-md flex flex-wrap items-center gap-x-6 gap-y-2">
-            <div>
-                <p className="text-2xl font-bold leading-none">{stats.total}</p>
-                <p className="text-[11px] uppercase tracking-wide opacity-80 mt-1">sual</p>
-            </div>
-            <div className="w-px h-10 bg-white/20 hidden md:block" />
-            <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
-                {totalByType.map(([type, count]) => (
-                    <span key={type} className="text-[11px] font-semibold bg-white/15 px-2 py-0.5 rounded-full">
-                        {count} {TYPE_LABELS[BACKEND_TO_FRONTEND[type]] || type}
-                    </span>
-                ))}
-                {stats.topics > 0 && (
-                    <span className="text-[11px] font-semibold bg-white/15 px-2 py-0.5 rounded-full">
-                        {stats.topics} mövzu
-                    </span>
-                )}
-                {stats.tagsCount > 0 && (
-                    <span className="text-[11px] font-semibold bg-white/15 px-2 py-0.5 rounded-full">
-                        {stats.tagsCount} etiket
-                    </span>
-                )}
-            </div>
-            <div className="text-right text-[11px] opacity-90 hidden sm:block">
-                Son əlavə: <b>{fmt(stats.lastAddedAt)}</b>
-            </div>
+        <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[12.5px] bg-[var(--paper-cream)] border border-[var(--ink-150)] rounded-full px-3 py-1.5 text-[var(--ink-700)]">
+                <HiOutlineLibrary className="w-3.5 h-3.5 text-[var(--primary)]" />
+                <strong className="text-[var(--ink-900)]">{stats.total.toLocaleString()}</strong> sual
+            </span>
+            {totalByType.map(([type, count]) => (
+                <span key={type} className="inline-flex items-center gap-1.5 text-[12.5px] bg-[var(--paper-cream)] border border-[var(--ink-150)] rounded-full px-3 py-1.5 text-[var(--ink-700)]">
+                    <strong className="text-[var(--ink-900)]">{count}</strong> {TYPE_LABELS[BACKEND_TO_FRONTEND[type]] || type}
+                </span>
+            ))}
+            {stats.topics > 0 && (
+                <span className="inline-flex items-center gap-1.5 text-[12.5px] bg-[var(--paper-cream)] border border-[var(--ink-150)] rounded-full px-3 py-1.5 text-[var(--ink-700)]">
+                    <HiOutlineTag className="w-3.5 h-3.5 text-amber-600" />
+                    <strong className="text-[var(--ink-900)]">{stats.topics}</strong> mövzu
+                </span>
+            )}
+            {stats.tagsCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 text-[12.5px] bg-[var(--paper-cream)] border border-[var(--ink-150)] rounded-full px-3 py-1.5 text-[var(--ink-700)]">
+                    <strong className="text-[var(--ink-900)]">{stats.tagsCount}</strong> etiket
+                </span>
+            )}
+            {stats.lastAddedAt && (
+                <span className="inline-flex items-center gap-1.5 text-[12.5px] bg-[var(--paper-cream)] border border-[var(--ink-150)] rounded-full px-3 py-1.5 text-[var(--ink-700)]">
+                    <HiOutlineSparkles className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    Son əlavə: <strong className="text-[var(--ink-900)]">{fmt(stats.lastAddedAt)}</strong>
+                </span>
+            )}
         </div>
     );
 };
@@ -800,95 +802,125 @@ const QuestionBankSubject = () => {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center min-h-screen">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+            <div className="flex justify-center items-center min-h-screen" style={{ background: 'var(--paper-cream)' }}>
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--primary)]" />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-                <div className="container-main py-4 flex items-center gap-4">
-                    <button onClick={() => navigate('/sual-bazasi')} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
-                        <HiOutlineArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <HiOutlineBookOpen className="w-5 h-5 text-indigo-600 shrink-0" />
-                        <h1 className="text-lg font-bold text-gray-900 truncate">{subject?.name}</h1>
-                        {subject?.isGlobal && (
-                            <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full shrink-0">Ümumi baza</span>
-                        )}
-                    </div>
-                    <div className="relative w-72">
-                        <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            ref={searchRef}
-                            type="text"
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="Sual, variant, cavab... ( / )"
-                            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400"
-                        />
-                    </div>
+        <div className="min-h-screen pb-20" style={{ background: 'var(--paper-cream)' }}>
+            {/* Hero — testup style */}
+            <section className="bg-white border-b border-[var(--ink-150)]">
+                <div className="container-main py-8 md:py-12">
+                    {/* Breadcrumb back */}
                     <button
-                        onClick={handleExportExcel}
-                        className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-semibold rounded-xl transition-colors"
-                        title="Excel olaraq ixrac et"
+                        onClick={() => navigate('/sual-bazasi')}
+                        className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--ink-500)] hover:text-[var(--primary)] mb-4 transition-colors"
                     >
-                        <HiOutlineDownload className="w-4 h-4" /> Excel
+                        <HiOutlineArrowLeft className="w-4 h-4" />
+                        Sual Bazası
                     </button>
-                    {canEdit && (
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setAiModalOpen(true)}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm"
-                            >
-                                <span className="text-base leading-none">✨</span> AI ilə yarat
-                            </button>
-                            <button
-                                onClick={handleAddQuestion}
-                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors"
-                                title="Yeni sual (N)"
-                            >
-                                <HiOutlinePlus className="w-4 h-4" /> Yeni sual
-                            </button>
+
+                    <div className="flex items-end justify-between flex-wrap gap-5">
+                        <div className="max-w-2xl">
+                            <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-[0.1em] px-3 py-1 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] border border-[var(--brand-blue-100)]">
+                                <HiOutlineBookOpen className="w-3.5 h-3.5" />
+                                Fənn
+                                {subject?.isGlobal && (
+                                    <>
+                                        <span className="w-1 h-1 rounded-full bg-[var(--primary)]/60 mx-0.5" />
+                                        <HiOutlineGlobe className="w-3.5 h-3.5" />
+                                        Ümumi baza
+                                    </>
+                                )}
+                            </span>
+                            <h1 className="mt-4 text-[34px] sm:text-[42px] md:text-[48px] font-extrabold text-[var(--ink-900)] tracking-tight leading-[1.05]">
+                                {subject?.name}
+                            </h1>
+                            <p className="mt-3 text-[15px] text-[var(--ink-500)] leading-relaxed max-w-xl">
+                                Bu fənn üzrə sualları idarə edin — yeni əlavə edin, AI ilə yaradın və ya Excel-dən idxal/ixrac edin.
+                            </p>
+
+                            {/* Stat chips */}
+                            <div className="mt-5">
+                                <StatsCard stats={stats} />
+                            </div>
                         </div>
-                    )}
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <button
+                                onClick={handleExportExcel}
+                                className="h-11 px-4 inline-flex items-center gap-1.5 bg-white border border-[var(--ink-200)] text-[var(--ink-700)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] text-[13.5px] font-semibold rounded-full transition-colors"
+                                title="Excel olaraq ixrac et"
+                            >
+                                <HiOutlineDownload className="w-4 h-4" /> Excel
+                            </button>
+                            {canEdit && (
+                                <>
+                                    <button
+                                        onClick={() => setAiModalOpen(true)}
+                                        className="h-11 px-5 inline-flex items-center gap-1.5 text-white text-[13.5px] font-bold rounded-full transition-all shadow-[0_8px_24px_-10px_rgba(34,197,94,0.55)]"
+                                        style={{ background: 'linear-gradient(135deg, var(--brand-green-600) 0%, var(--primary) 100%)' }}
+                                    >
+                                        <HiOutlineSparkles className="w-4 h-4" /> AI ilə sual yarat
+                                    </button>
+                                    <button
+                                        onClick={handleAddQuestion}
+                                        className="h-11 px-5 inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-[13.5px] font-bold rounded-full shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-colors"
+                                        title="Yeni sual (N)"
+                                    >
+                                        <HiOutlinePlus className="w-4 h-4" /> Yeni sual
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </section>
 
             <div className="container-main mt-6 space-y-4">
-                {/* Stats card */}
-                <StatsCard stats={stats} />
+                {/* Search box */}
+                <div className="relative max-w-md">
+                    <HiOutlineSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--ink-400)]" />
+                    <input
+                        ref={searchRef}
+                        type="text"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Sual mətnində, variantda axtar..."
+                        className="w-full h-10 pl-10 pr-12 text-[13px] bg-white border border-[var(--ink-200)] rounded-full focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-colors"
+                    />
+                    <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[var(--ink-400)] bg-[var(--ink-50)] border border-[var(--ink-150)] rounded-md px-1.5 py-0.5">/</kbd>
+                </div>
 
                 {/* Filter & sort row */}
                 <div className="flex flex-wrap items-center gap-2">
                     <select
                         value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-                        className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:border-indigo-400"
+                        className="text-[12px] font-bold px-3.5 py-2 border border-[var(--ink-200)] rounded-full bg-white focus:outline-none focus:border-[var(--primary)] text-[var(--ink-700)]"
                     >
                         <option value="ALL">Bütün tiplər</option>
                         {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                     </select>
                     <select
                         value={difficultyFilter} onChange={e => setDifficultyFilter(e.target.value)}
-                        className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:border-indigo-400"
+                        className="text-[12px] font-bold px-3.5 py-2 border border-[var(--ink-200)] rounded-full bg-white focus:outline-none focus:border-[var(--primary)] text-[var(--ink-700)]"
                     >
                         <option value="ALL">Bütün çətinliklər</option>
                         {Object.entries(DIFFICULTY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                     </select>
                     <select
                         value={gradeFilter} onChange={e => setGradeFilter(e.target.value)}
-                        className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:border-indigo-400"
+                        className="text-[12px] font-bold px-3.5 py-2 border border-[var(--ink-200)] rounded-full bg-white focus:outline-none focus:border-[var(--primary)] text-[var(--ink-700)]"
                     >
                         <option value="ALL">Bütün siniflər</option>
                         {GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                     <select
                         value={topicFilter} onChange={e => setTopicFilter(e.target.value)}
-                        className="text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-full bg-white focus:outline-none focus:border-indigo-400 max-w-[200px]"
+                        className="text-[12px] font-bold px-3.5 py-2 border border-[var(--ink-200)] rounded-full bg-white focus:outline-none focus:border-[var(--primary)] text-[var(--ink-700)] max-w-[200px]"
                     >
                         <option value="ALL">Bütün mövzular</option>
                         {availableTopics.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
@@ -896,11 +928,11 @@ const QuestionBankSubject = () => {
 
                     <div className="flex-1" />
 
-                    <div className="inline-flex items-center gap-1.5 px-2 py-1 border border-gray-200 rounded-full bg-white">
-                        <HiOutlineSortDescending className="w-3.5 h-3.5 text-gray-400" />
+                    <div className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1 border border-[var(--ink-200)] rounded-full bg-white">
+                        <HiOutlineSortDescending className="w-3.5 h-3.5 text-[var(--ink-400)]" />
                         <select
                             value={sort} onChange={e => setSort(e.target.value)}
-                            className="text-xs font-semibold bg-transparent focus:outline-none"
+                            className="text-[12px] font-bold bg-transparent focus:outline-none text-[var(--ink-700)] pr-2"
                         >
                             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                         </select>
@@ -909,20 +941,23 @@ const QuestionBankSubject = () => {
 
                 {/* Bulk action bar */}
                 {selectedIds.size > 0 && (
-                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
-                        <p className="text-sm font-semibold text-indigo-900">
-                            {selectedIds.size} sual seçildi
+                    <div className="bg-[var(--primary-soft)] border border-[var(--brand-blue-200)] rounded-2xl px-4 py-2.5 flex items-center gap-3 shadow-[var(--sh-sm)]">
+                        <span className="w-7 h-7 rounded-xl bg-white text-[var(--primary)] border border-[var(--brand-blue-200)] inline-flex items-center justify-center shrink-0">
+                            <HiOutlineCheck className="w-4 h-4" />
+                        </span>
+                        <p className="text-[13px] font-bold text-[var(--primary-hover)] tracking-tight">
+                            <span className="font-extrabold">{selectedIds.size}</span> sual seçildi
                         </p>
                         <div className="flex-1" />
                         <button
                             onClick={() => setSelectedIds(new Set())}
-                            className="text-xs font-semibold text-gray-600 hover:bg-white px-3 py-1.5 rounded-lg"
+                            className="text-[12px] font-semibold text-[var(--ink-700)] hover:bg-white px-3 py-1.5 rounded-full transition-colors"
                         >Seçimi təmizlə</button>
                         {canEdit && (
                             <button
                                 onClick={handleBulkDelete}
                                 disabled={bulkDeleting}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 text-[12px] font-bold text-white bg-red-500 hover:bg-red-600 px-3.5 py-1.5 rounded-full disabled:opacity-50 transition-colors"
                             >
                                 <HiOutlineTrash className="w-3.5 h-3.5" />
                                 {bulkDeleting ? 'Silinir...' : 'Sil'}
@@ -933,20 +968,23 @@ const QuestionBankSubject = () => {
 
                 {/* Table */}
                 {totalElements === 0 && questions.length === 0 ? (
-                    <div className="text-center py-20">
-                        <HiOutlineBookOpen className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                        <p className="text-gray-500 font-medium">Filtrlərə uyğun sual tapılmadı</p>
+                    <div className="bg-white rounded-3xl border border-[var(--ink-200)] shadow-[var(--sh-sm)] py-16 px-8 text-center">
+                        <span className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--ink-50)] inline-flex items-center justify-center">
+                            <HiOutlineBookOpen className="w-8 h-8 text-[var(--ink-300)]" />
+                        </span>
+                        <p className="text-[15px] font-bold text-[var(--ink-800)] tracking-tight">Filtrlərə uyğun sual tapılmadı</p>
+                        <p className="text-[12.5px] text-[var(--ink-500)] mt-1">Yeni sual əlavə edin və ya filtri sıfırlayın</p>
                         {canEdit && (
-                            <button onClick={handleAddQuestion} className="mt-4 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm">
-                                İlk sualı əlavə et
+                            <button onClick={handleAddQuestion} className="mt-5 inline-flex items-center gap-2 h-11 px-5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-full font-bold text-[13px] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-colors">
+                                <HiOutlinePlus className="w-4 h-4" /> İlk sualı əlavə et
                             </button>
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                        <table className="w-full text-sm">
+                    <div className="bg-white rounded-3xl border border-[var(--ink-200)] shadow-[var(--sh-sm)] overflow-hidden">
+                        <table className="w-full text-[13px]">
                             <thead>
-                                <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                <tr className="bg-[var(--paper-cream)]/60 border-b border-[var(--ink-150)] text-[10.5px] font-bold text-[var(--ink-500)] uppercase tracking-[0.08em]">
                                     <th className="px-3 py-3 text-left w-8">
                                         {canEdit && (
                                             <input
@@ -956,7 +994,7 @@ const QuestionBankSubject = () => {
                                                     if (allFilteredSelected) setSelectedIds(new Set());
                                                     else setSelectedIds(new Set(questions.map(q => q.id)));
                                                 }}
-                                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-400"
+                                                className="w-4 h-4 rounded accent-[var(--primary)] focus:ring-[var(--primary)]"
                                             />
                                         )}
                                     </th>
@@ -990,7 +1028,7 @@ const QuestionBankSubject = () => {
                                         onDragLeave={() => setHoverId(null)}
                                         onDrop={() => onDrop(q.id)}
                                         onDragEnd={onDragEnd}
-                                        className={`transition-colors ${checked ? 'bg-indigo-50/60' : 'hover:bg-gray-50'} ${isDragTarget ? 'outline outline-2 outline-indigo-400' : ''}`}
+                                        className={`transition-colors ${checked ? 'bg-blue-50/60' : 'hover:bg-gray-100'} ${isDragTarget ? 'outline outline-2 outline-blue-400' : ''}`}
                                     >
                                         <td className="px-3 py-3 align-top">
                                             <div className="flex items-center gap-1.5">
@@ -1010,7 +1048,7 @@ const QuestionBankSubject = () => {
                                                                 return next;
                                                             });
                                                         }}
-                                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-400"
+                                                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-400"
                                                     />
                                                 )}
                                             </div>
@@ -1063,7 +1101,7 @@ const QuestionBankSubject = () => {
                                         <td className="px-4 py-3 text-center font-semibold text-gray-700 align-top">{q.points}</td>
                                         <td className="px-4 py-3 align-top">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button onClick={() => setViewQuestion(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50" title="Bax">
+                                                <button onClick={() => setViewQuestion(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Bax">
                                                     <HiOutlineEye className="w-4 h-4" />
                                                 </button>
                                                 {canEdit && (
@@ -1071,7 +1109,7 @@ const QuestionBankSubject = () => {
                                                         <button onClick={() => setEditQuestion(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Redaktə">
                                                             <HiOutlinePencil className="w-4 h-4" />
                                                         </button>
-                                                        <button onClick={() => handleClone(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50" title="Klonla">
+                                                        <button onClick={() => handleClone(q)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50" title="Klonla">
                                                             <HiOutlineDocumentDuplicate className="w-4 h-4" />
                                                         </button>
                                                         <button onClick={() => handleDelete(q.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50" title="Sil">

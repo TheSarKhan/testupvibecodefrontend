@@ -187,7 +187,7 @@ const ImageAnnotatorModal = ({ src, onConfirm, onClose }) => {
                                 title={t.label}
                                 className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
                                     tool === t.id
-                                        ? 'bg-indigo-600 text-white shadow-sm'
+                                        ? 'bg-blue-600 text-white shadow-sm'
                                         : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                             >
@@ -205,7 +205,7 @@ const ImageAnnotatorModal = ({ src, onConfirm, onClose }) => {
                                     key={c}
                                     onClick={() => setColor(c)}
                                     className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                                        color === c ? 'border-indigo-600 scale-125' : 'border-gray-300 hover:scale-110'
+                                        color === c ? 'border-blue-600 scale-125' : 'border-gray-300 hover:scale-110'
                                     }`}
                                     style={{ backgroundColor: c }}
                                 />
@@ -223,7 +223,7 @@ const ImageAnnotatorModal = ({ src, onConfirm, onClose }) => {
                                     key={s.id}
                                     onClick={() => setSizeId(s.id)}
                                     className={`flex items-center justify-center w-8 h-8 rounded-lg border-2 transition-colors ${
-                                        sizeId === s.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-400'
+                                        sizeId === s.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-400'
                                     }`}
                                 >
                                     <span
@@ -240,7 +240,7 @@ const ImageAnnotatorModal = ({ src, onConfirm, onClose }) => {
                         <button
                             onClick={handleUndo}
                             disabled={!canUndo}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-40 transition-colors"
                         >
                             <HiOutlineArrowLeft className="w-3.5 h-3.5" /> Geri al
                         </button>
@@ -280,13 +280,13 @@ const ImageAnnotatorModal = ({ src, onConfirm, onClose }) => {
                 <div className="flex gap-3 px-5 py-4 border-t border-gray-100 shrink-0">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-50 transition-colors"
+                        className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:bg-gray-100 transition-colors"
                     >
                         Ləğv et
                     </button>
                     <button
                         onClick={handleConfirm}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-colors"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-colors"
                     >
                         <HiOutlineCheck className="w-4 h-4" />
                         Tətbiq et

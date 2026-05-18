@@ -129,7 +129,7 @@ const MatchingReview = ({ q }) => {
                             : 'border-red-400 bg-red-50 text-red-900';
                         return (
                             <div key={pair.id} data-left-id={pair.id} className={`p-4 rounded-2xl border-2 text-sm font-medium min-h-[52px] flex flex-col justify-center ${cls}`}>
-                                <LatexPreview content={pair.leftItem} />
+                                <LatexPreview content={pair.leftItem} placeholder={null} />
                                 {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
                                 {missed && <p className="text-[10px] font-bold text-orange-500 mt-1">Birləşdirilməyib</p>}
                             </div>
@@ -156,7 +156,7 @@ const MatchingReview = ({ q }) => {
                             : 'border-red-400 bg-red-50 text-red-900';
                         return (
                             <div key={pair.id} data-right-id={pair.id} className={`p-4 rounded-2xl border-2 text-sm font-medium min-h-[52px] flex flex-col justify-center ${cls}`}>
-                                <LatexPreview content={pair.rightItem} />
+                                <LatexPreview content={pair.rightItem} placeholder={null} />
                                 {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
                                 {missed && <p className="text-[10px] font-bold text-orange-500 mt-1">Birləşdirilməyib</p>}
                             </div>
@@ -710,7 +710,7 @@ const ExamReview = () => {
                                         </div>
 
                                         <div className="text-[17px] text-[var(--ink-900)] font-semibold mb-5 leading-[1.55]">
-                                            <LatexPreview content={q.content} />
+                                            <LatexPreview content={q.content} placeholder={null} />
                                         </div>
 
                                         {q.attachedImage && (
@@ -771,7 +771,7 @@ const ExamReview = () => {
                                                                 {String.fromCharCode(65 + opt.orderIndex)}
                                                             </span>
                                                             <div className={`flex-1 font-medium ${textClass}`}>
-                                                                <LatexPreview content={opt.content} />
+                                                                <LatexPreview content={opt.content} placeholder={null} />
                                                             </div>
                                                             {badge}
                                                         </div>
@@ -787,7 +787,7 @@ const ExamReview = () => {
                                                     <p className="text-[11px] font-bold text-[var(--primary)] uppercase tracking-[0.1em] mb-2">Şagirdin cavabı</p>
                                                     {q.studentAnswerText ? (
                                                         <div className="text-[var(--ink-900)] font-medium leading-relaxed">
-                                                            <LatexPreview content={q.studentAnswerText} />
+                                                            <LatexPreview content={q.studentAnswerText} placeholder={null} />
                                                         </div>
                                                     ) : (
                                                         <p className="text-[var(--ink-400)] italic">[Mətn cavabı yoxdur]</p>
@@ -813,7 +813,7 @@ const ExamReview = () => {
                                                             {q.questionType === 'OPEN_AUTO' ? 'Düzgün cavab' : 'İstinad cavab (müəllim)'}
                                                         </p>
                                                         <div className="text-[var(--ink-900)] font-medium leading-relaxed">
-                                                            <LatexPreview content={q.correctAnswer} />
+                                                            <LatexPreview content={q.correctAnswer} placeholder={null} />
                                                         </div>
                                                     </div>
                                                 )}

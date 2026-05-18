@@ -136,7 +136,7 @@ const RegisterBrand = ({ role }) => {
 // Field input (reusable)
 // ───────────────────────────────────────────────────────────────────────────
 
-const Field = ({ label, Icon, type = 'text', value, onChange, placeholder, required, autoComplete, trailing }) => (
+const Field = ({ label, Icon, type = 'text', value, onChange, placeholder, required, autoComplete, trailing, maxLength }) => (
     <div className="mt-4">
         <label className="block text-[12.5px] font-bold uppercase tracking-[0.08em] text-[var(--ink-600)] mb-1.5">{label}</label>
         <div className="relative">
@@ -148,6 +148,7 @@ const Field = ({ label, Icon, type = 'text', value, onChange, placeholder, requi
                 required={required}
                 autoComplete={autoComplete}
                 placeholder={placeholder}
+                maxLength={maxLength}
                 className={`w-full h-12 ${Icon ? 'pl-11' : 'pl-4'} ${trailing ? 'pr-11' : 'pr-4'} rounded-xl bg-[var(--ink-50)] border border-[var(--ink-200)] text-[14px] text-[var(--ink-900)] placeholder-[var(--ink-400)] outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)] transition-colors`}
             />
             {trailing}
@@ -289,8 +290,9 @@ const StepDetails = ({ role, formData, set, onBack, onNext }) => {
                 Icon={HiOutlinePhone}
                 type="tel"
                 value={formData.phoneNumber}
-                onChange={e => set('phoneNumber', e.target.value)}
+                onChange={e => set('phoneNumber', e.target.value.slice(0, 20))}
                 placeholder="+994 50 000 00 00"
+                maxLength={20}
             />
 
             <button

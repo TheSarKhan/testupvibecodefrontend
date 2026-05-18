@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    HiOutlinePlus, HiOutlineSearch, HiOutlineSparkles, HiOutlineDownload,
+    HiOutlinePlus, HiOutlineSearch,
     HiOutlineCheck, HiOutlineEye, HiOutlineStar, HiStar,
     HiOutlineChevronDown, HiOutlineChevronRight, HiOutlineLibrary,
     HiOutlineSortDescending, HiOutlineX, HiOutlineBookOpen,
@@ -41,23 +41,29 @@ const SORT_OPTIONS = [
 ];
 
 // Deterministic subject color from name hash — consistent across page loads.
+// Foreground colors are darkened to the *-800 / *-900 Tailwind range so the
+// label text is unambiguously readable on the light pill background. The
+// previous *-600 values washed out on the very-light backgrounds and looked
+// like greyed-out placeholders against the page.
 const SUBJECT_COLORS = [
-    { bg: '#EFF4FF', fg: '#2563EB' },
-    { bg: '#F3EEFE', fg: '#7C3AED' },
-    { bg: '#ECFDF5', fg: '#059669' },
-    { bg: '#FFF7ED', fg: '#C2410C' },
-    { bg: '#FDF2F8', fg: '#DB2777' },
-    { bg: '#ECFEFF', fg: '#0891B2' },
-    { bg: '#FEF2F2', fg: '#DC2626' },
-    { bg: '#F0FDFA', fg: '#0D9488' },
-    { bg: '#F1F5F9', fg: '#475569' },
+    { bg: '#DBE7FF', fg: '#1E3A8A' }, // blue
+    { bg: '#EADDFD', fg: '#5B21B6' }, // violet
+    { bg: '#D1FAE5', fg: '#065F46' }, // green
+    { bg: '#FFE7CC', fg: '#9A3412' }, // orange
+    { bg: '#FBDDEC', fg: '#9D174D' }, // pink
+    { bg: '#D6F3F8', fg: '#155E75' }, // cyan
+    { bg: '#FDDADA', fg: '#991B1B' }, // red
+    { bg: '#CFF3EC', fg: '#115E59' }, // teal
+    { bg: '#E2E8F0', fg: '#1F2937' }, // slate
 ];
 
 const colorForSubject = (s) => {
     if (s.color) {
-        // Backend-provided color overrides
+        // Backend-provided color overrides — pair the hex with a soft tint
+        // and a darker text override so it remains readable. (Hex + "33"
+        // ≈ 20% opacity background; foreground stays the saturated colour.)
         const hex = s.color.startsWith('#') ? s.color : '#2563EB';
-        return { bg: hex + '14', fg: hex };
+        return { bg: hex + '33', fg: hex };
     }
     const hash = [...(s.name || '')].reduce((a, c) => a + c.charCodeAt(0), 0);
     return SUBJECT_COLORS[hash % SUBJECT_COLORS.length];
@@ -404,7 +410,7 @@ const QuestionRow = ({ q, subject, selected, onToggleSelect, expanded, onToggleE
 
                     {/* Text — LaTeX-aware, clamped to 2 lines */}
                     <div className="text-[14px] text-[var(--ink-800)] line-clamp-2 leading-snug">
-                        <LatexPreview content={q.content || '—'} />
+                        <LatexPreview content={q.content || '—'} placeholder={null} />
                     </div>
 
                     {/* Image thumbnail — collapsed view (small preview) */}
@@ -455,7 +461,7 @@ const QuestionRow = ({ q, subject, selected, onToggleSelect, expanded, onToggleE
             {expanded && (
                 <div className="px-4 pb-4 pt-1 border-t border-[var(--ink-150)]">
                     <div className="text-[14px] text-[var(--ink-900)] mt-3 mb-3 leading-relaxed">
-                        <LatexPreview content={q.content || ''} />
+                        <LatexPreview content={q.content || ''} placeholder={null} />
                     </div>
                     {q.attachedImage && (
                         <div className="mb-3">
@@ -489,7 +495,7 @@ const QuestionRow = ({ q, subject, selected, onToggleSelect, expanded, onToggleE
                                             {String.fromCharCode(65 + i)}
                                         </span>
                                         <span className={`flex-1 ${isCorrect ? 'text-[var(--ink-900)] font-semibold' : 'text-[var(--ink-700)]'}`}>
-                                            <LatexPreview content={opt.content || opt.text || '—'} />
+                                            <LatexPreview content={opt.content || opt.text || '—'} placeholder={null} />
                                         </span>
                                         {isCorrect && (
                                             <span className="text-[11px] font-bold text-[var(--brand-green-700)] inline-flex items-center gap-1">
@@ -505,7 +511,7 @@ const QuestionRow = ({ q, subject, selected, onToggleSelect, expanded, onToggleE
                     {q.correctAnswer && options.length === 0 && (
                         <div className="bg-[var(--brand-green-50)] border border-[var(--brand-green-200)] rounded-xl px-3 py-2.5 text-[13.5px] text-[var(--ink-800)] mb-3">
                             <span className="font-bold text-[var(--brand-green-700)]">Düz cavab:</span>{' '}
-                            <LatexPreview content={q.correctAnswer} />
+                            <LatexPreview content={q.correctAnswer} placeholder={null} />
                         </div>
                     )}
                 </div>
@@ -650,6 +656,13 @@ const QuestionBank = () => {
     }, []);
 
     // ── Question fetch ─────────────────────────────────────────────────────
+    // Two-pronged search:
+    //   1) The backend `search` param matches against question content/topic.
+    //   2) If the search query also matches a subject name, we additionally
+    //      fetch ALL questions in that subject (no text filter), so typing
+    //      "Riyaziyyat" lists everything in that subject even if no question
+    //      contains the word in its text. This is what users expect when the
+    //      sidebar offers subjects as a navigation axis.
     useEffect(() => {
         if (loadingSubjects) return;
         if (subjects.length === 0) { setQuestions([]); return; }
@@ -657,10 +670,10 @@ const QuestionBank = () => {
         let cancelled = false;
         setLoadingQuestions(true);
 
-        const loadOne = (subjectId) =>
+        const loadOne = (subjectId, search) =>
             api.get(`/bank/subjects/${subjectId}/questions/paged`, {
                 params: {
-                    search: searchDebounced || undefined,
+                    search: search || undefined,
                     sort,
                     page: 0,
                     size: 50,
@@ -671,10 +684,26 @@ const QuestionBank = () => {
             ? [activeSubjectId]
             : subjects.map(s => s.id);
 
-        Promise.all(targets.map(loadOne))
+        // Identify subjects whose names match the search query. When the
+        // user has already drilled into a single subject (activeSubjectId),
+        // we keep the conventional text search there.
+        const q = searchDebounced.trim().toLowerCase();
+        const matchedBySubjectName = (!activeSubjectId && q)
+            ? subjects.filter(s => (s.name || '').toLowerCase().includes(q)).map(s => s.id)
+            : [];
+
+        const baseFetches = targets.map(id => loadOne(id, searchDebounced));
+        const subjectNameFetches = matchedBySubjectName.map(id => loadOne(id, ''));
+
+        Promise.all([...baseFetches, ...subjectNameFetches])
             .then(results => {
                 if (cancelled) return;
-                let merged = results.flat();
+                // Dedupe by question id (a question can appear from both prongs).
+                const seen = new Set();
+                let merged = [];
+                for (const q of results.flat()) {
+                    if (!seen.has(q.id)) { seen.add(q.id); merged.push(q); }
+                }
                 // Client-side type + difficulty filters (sidebar checkboxes are inclusive OR)
                 if (typeFilter.length > 0) {
                     merged = merged.filter(q => typeFilter.includes(q.questionType));
@@ -782,27 +811,6 @@ const QuestionBank = () => {
                             )}
                         </div>
 
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                            <button
-                                onClick={() => toast('Yaxında — Excel idxalı', { icon: '⚙️' })}
-                                className="h-11 px-4 inline-flex items-center gap-1.5 bg-white border border-[var(--ink-200)] text-[var(--ink-700)] hover:bg-[var(--ink-50)] hover:border-[var(--ink-300)] text-[13.5px] font-semibold rounded-full transition-colors"
-                            >
-                                <HiOutlineDownload className="w-4 h-4" /> İdxal et
-                            </button>
-                            <button
-                                onClick={() => navigate(activeSubjectId ? `/sual-bazasi/${activeSubjectId}?ai=1` : '/sual-bazasi')}
-                                className="h-11 px-5 inline-flex items-center gap-1.5 text-white text-[13.5px] font-bold rounded-full transition-all shadow-[0_8px_24px_-10px_rgba(34,197,94,0.55)]"
-                                style={{ background: 'linear-gradient(135deg, var(--brand-green-600) 0%, var(--primary) 100%)' }}
-                            >
-                                <HiOutlineSparkles className="w-4 h-4" /> AI ilə sual yarat
-                            </button>
-                            <button
-                                onClick={() => navigate(newQuestionHref)}
-                                className="h-11 px-5 inline-flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-[13.5px] font-bold rounded-full shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-colors"
-                            >
-                                <HiOutlinePlus className="w-4 h-4" /> Yeni sual
-                            </button>
-                        </div>
                     </div>
                 </div>
             </section>
@@ -812,7 +820,14 @@ const QuestionBank = () => {
                 <Sidebar
                     subjects={subjects}
                     activeSubjectId={activeSubjectId}
-                    onSelectSubject={setActiveSubjectId}
+                    onSelectSubject={(id) => {
+                        // null means "Bütün fənnlərim" — just resets the filter
+                        // so the right pane shows every question. Picking a
+                        // specific subject opens its dedicated page where
+                        // creation actions (Yeni sual / AI / İdxal) live.
+                        if (id == null) setActiveSubjectId(null);
+                        else navigate(`/sual-bazasi/${id}`);
+                    }}
                     typeFilter={typeFilter}
                     onToggleType={toggleType}
                     difficultyFilter={difficultyFilter}
@@ -836,7 +851,7 @@ const QuestionBank = () => {
                                 type="text"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                placeholder="Sual mətnində, mövzuda axtar..."
+                                placeholder="Sual, mövzu və ya fənn adında axtar..."
                                 className="w-full h-10 pl-10 pr-14 text-[13px] bg-white border border-[var(--ink-200)] rounded-full focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-colors"
                             />
                             <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[var(--ink-400)] bg-[var(--ink-50)] border border-[var(--ink-150)] rounded-md px-1.5 py-0.5">⌘ K</kbd>

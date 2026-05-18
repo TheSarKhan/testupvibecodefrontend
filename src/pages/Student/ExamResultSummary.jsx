@@ -313,7 +313,7 @@ const ReviewItem = ({ q, index }) => {
                 </span>
             </div>
             <div className="text-[15px] font-semibold text-[var(--ink-900)] leading-relaxed mb-3">
-                <LatexPreview content={q.content} />
+                <LatexPreview content={q.content} placeholder={null} />
             </div>
 
             {isChoice && q.options && (
@@ -334,7 +334,7 @@ const ReviewItem = ({ q, index }) => {
                                     {String.fromCharCode(65 + (opt.orderIndex ?? 0))}
                                 </span>
                                 <div className="flex-1 text-[13.5px] font-medium">
-                                    <LatexPreview content={opt.content} />
+                                    <LatexPreview content={opt.content} placeholder={null} />
                                 </div>
                                 {isCorrect && (
                                     <span className="text-[11px] font-bold text-[var(--brand-green-600)] shrink-0">✓ Düzgün</span>
@@ -358,7 +358,7 @@ const ReviewItem = ({ q, index }) => {
                             <p className="text-[11px] font-bold text-[var(--ink-500)] uppercase tracking-[0.1em] mb-1.5">Sizin cavab</p>
                             {q.studentAnswerText?.trim() && (
                                 <div className="text-[14px] font-medium text-[var(--ink-900)] whitespace-pre-wrap">
-                                    <LatexPreview content={q.studentAnswerText} />
+                                    <LatexPreview content={q.studentAnswerText} placeholder={null} />
                                 </div>
                             )}
                             {q.studentAnswerImage && (
@@ -377,7 +377,7 @@ const ReviewItem = ({ q, index }) => {
                                 {q.questionType === 'OPEN_MANUAL' ? 'İstinad cavab' : 'Düzgün cavab'}
                             </p>
                             <div className="text-[14px] font-medium text-[var(--ink-900)]">
-                                <LatexPreview content={q.correctAnswer} />
+                                <LatexPreview content={q.correctAnswer} placeholder={null} />
                             </div>
                         </div>
                     )}
@@ -504,9 +504,24 @@ const ExamResultSummary = () => {
         );
     }
 
-    const scorePercent = displaySubmission?.maxScore > 0
+    // Template exams use a formula score (e.g. DİM-style: correct - wrong/3
+    // mapped through section weights). For those, prefer the formula result.
+    // Free exams: fall back to the points-based ratio (totalScore / maxScore)
+    // where each question contributes its own point value.
+    const isTemplateExam = displaySubmission?.examType === 'TEMPLATE'
+        || displaySubmission?.templateScorePercent != null
+        || displaySubmission?.templateTotalMaxScore != null;
+    const pointsPercent = displaySubmission?.maxScore > 0
         ? Math.round((displaySubmission.totalScore / displaySubmission.maxScore) * 100)
         : null;
+    const formulaPercent = displaySubmission?.templateTotalMaxScore > 0
+        ? Math.round((displaySubmission.templateTotalScore / displaySubmission.templateTotalMaxScore) * 100)
+        : (displaySubmission?.templateScorePercent != null
+            ? Math.round(displaySubmission.templateScorePercent)
+            : null);
+    const scorePercent = isTemplateExam && formulaPercent != null
+        ? formulaPercent
+        : pointsPercent;
 
     const timeTaken = (() => {
         if (!displaySubmission?.startedAt || !displaySubmission?.submittedAt) return null;
@@ -617,19 +632,26 @@ const ExamResultSummary = () => {
                     </div>
                 </section>
 
-                {/* ── 4-Stat strip ── */}
-                {scorePercent != null && (
+                {/* ── 4-Stat strip ──
+                   Leftmost: count of questions the student actually answered
+                   (correct + wrong + still-being-graded). Skipped questions are
+                   excluded — they're already in their own banner below. The
+                   detailed bal calculation is in the hero ring + Düzgün/Səhv
+                   cards. */}
+                {scorePercent != null && (() => {
+                    const answered = correct + wrong + pending;
+                    return (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <StatCard
                             Icon={HiOutlineAcademicCap}
-                            label="Toplanan bal"
+                            label="Cavablanan sual"
                             value={
                                 <>
-                                    {(displaySubmission.totalScore ?? 0).toFixed(1)}
-                                    <span className="text-[14px] text-[var(--ink-400)] font-bold ml-1">/ {displaySubmission.maxScore}</span>
+                                    {answered}
+                                    <span className="text-[14px] text-[var(--ink-400)] font-bold ml-1">/ {totalQuestions}</span>
                                 </>
                             }
-                            sub={`${scorePercent}%`}
+                            sub={pending > 0 ? `${pending} yoxlanılır` : null}
                             tone="blue"
                         />
                         <StatCard
@@ -654,7 +676,8 @@ const ExamResultSummary = () => {
                             tone="amber"
                         />
                     </div>
-                )}
+                    );
+                })()}
 
                 {/* ── Skipped / Pending banner ── */}
                 {(skipped > 0 || pending > 0) && (
@@ -666,7 +689,11 @@ const ExamResultSummary = () => {
                                 </div>
                                 <div>
                                     <p className="font-bold text-amber-800 text-[14px]">{pending} sual yoxlanılır</p>
-                                    <p className="text-[12.5px] text-amber-700">Müəllim yoxladıqdan sonra balınız yenilənəcək</p>
+                                    <p className="text-[12.5px] text-amber-700">
+                                        {isOwner
+                                            ? 'Müəllim yoxladıqdan sonra balınız yenilənəcək'
+                                            : 'Müəllim yoxladıqdan sonra bal yenilənəcək'}
+                                    </p>
                                 </div>
                             </div>
                         )}
@@ -677,7 +704,9 @@ const ExamResultSummary = () => {
                                 </div>
                                 <div>
                                     <p className="font-bold text-[var(--ink-800)] text-[14px]">{skipped} sual boş buraxılıb</p>
-                                    <p className="text-[12.5px] text-[var(--ink-500)]">Cavablar bölməsində bu sualları görə bilərsiniz</p>
+                                    {isOwner && (
+                                        <p className="text-[12.5px] text-[var(--ink-500)]">Cavablar bölməsində bu sualları görə bilərsiniz</p>
+                                    )}
                                 </div>
                             </div>
                         )}

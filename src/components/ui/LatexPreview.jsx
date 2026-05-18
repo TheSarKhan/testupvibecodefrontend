@@ -111,10 +111,18 @@ const renderLatex = (text) => {
     return parts.join('');
 };
 
+// `placeholder` controls how empty content is rendered:
+//   - default string: shows the dashed-border editor preview placeholder. Use
+//     this in editor / authoring contexts where the empty state is meaningful.
+//   - null / empty string: renders nothing. Use this in display contexts
+//     (result summary, review, bank rows) where an empty question or option
+//     should just collapse to blank space, not show "Önbaxış burada
+//     görünəcək…" repeated under every line.
 const LatexPreview = ({ content, placeholder = 'Önbaxış burada görünəcək...', className = '' }) => {
     const html = useMemo(() => renderLatex(content), [content]);
 
     if (!content || content.trim() === '') {
+        if (placeholder == null || placeholder === '') return null;
         return (
             <div className={`w-full ${className}`}>
                 <div className="p-3 bg-gray-50 border border-gray-100 border-dashed rounded-lg flex items-center min-h-[40px]">

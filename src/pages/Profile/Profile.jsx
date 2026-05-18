@@ -263,12 +263,102 @@ const ChangePasswordModal = ({ onClose }) => {
 };
 
 // ───────────────────────────────────────────────────────────────────────────
+// Edit-profile modal — lets the user update their display name.
+// Email is intentionally read-only here (changing it is an auth flow).
+// ───────────────────────────────────────────────────────────────────────────
+
+const EditProfileModal = ({ initial, onClose }) => {
+    const { user } = useAuth();
+    const [fullName, setFullName] = useState(initial?.fullName || '');
+    const [saving, setSaving] = useState(false);
+
+    const save = async (e) => {
+        e?.preventDefault?.();
+        const trimmed = fullName.trim();
+        if (!trimmed) { toast.error('Ad boş ola bilməz'); return; }
+        if (trimmed === initial?.fullName) { onClose(); return; }
+        setSaving(true);
+        try {
+            await api.put('/users/me', { fullName: trimmed });
+            toast.success('Profil yeniləndi');
+            // Reload to refresh AuthContext with the new name everywhere.
+            window.location.reload();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Profil yenilənmədi');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 bg-[var(--ink-900)]/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <form onSubmit={save} className="bg-white rounded-3xl shadow-[var(--sh-lg)] border border-[var(--ink-200)] w-full max-w-sm overflow-hidden">
+                <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[var(--ink-150)]">
+                    <div className="flex items-center gap-2.5">
+                        <span className="w-9 h-9 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] inline-flex items-center justify-center">
+                            <HiOutlinePencilAlt className="w-4.5 h-4.5" />
+                        </span>
+                        <h3 className="text-[16px] font-extrabold text-[var(--ink-900)] tracking-tight">Profili düzəlt</h3>
+                    </div>
+                    <button type="button" onClick={onClose} className="p-1.5 rounded-xl text-[var(--ink-400)] hover:text-[var(--ink-700)] hover:bg-[var(--ink-50)]">
+                        <HiOutlineX className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">Ad Soyad</label>
+                        <input
+                            type="text"
+                            value={fullName}
+                            onChange={e => setFullName(e.target.value)}
+                            autoFocus
+                            disabled={saving}
+                            className="w-full h-11 px-3.5 rounded-2xl border border-[var(--ink-200)] text-[14px] text-[var(--ink-900)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-colors"
+                            placeholder="Ad Soyad"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">E-poçt</label>
+                        <input
+                            type="text"
+                            value={user?.email || ''}
+                            disabled
+                            className="w-full h-11 px-3.5 rounded-2xl border border-[var(--ink-150)] bg-[var(--ink-50)] text-[14px] text-[var(--ink-500)] outline-none cursor-not-allowed"
+                        />
+                        <p className="mt-1 text-[11px] text-[var(--ink-400)]">E-poçtu dəyişmək üçün dəstəklə əlaqə saxlayın.</p>
+                    </div>
+                </div>
+
+                <div className="flex gap-2.5 px-6 pb-6 pt-1">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={saving}
+                        className="flex-1 h-11 rounded-full border border-[var(--ink-200)] text-[var(--ink-700)] font-semibold text-[13px] hover:bg-[var(--ink-100)] transition-colors"
+                    >
+                        Ləğv et
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={saving || !fullName.trim()}
+                        className="flex-1 h-11 inline-flex items-center justify-center gap-2 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:bg-[var(--brand-blue-300)] disabled:cursor-not-allowed text-white font-bold text-[13px] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-colors"
+                    >
+                        {saving ? <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Saxlanır...</> : 'Yadda saxla'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
 // Building blocks
 // ───────────────────────────────────────────────────────────────────────────
 
 const HeroGradient = () => (
     <div
-        className="relative h-32 md:h-40 overflow-hidden"
+        className="relative h-28 md:h-32 overflow-hidden"
         style={{ background: 'linear-gradient(135deg, var(--brand-blue-700) 0%, var(--primary) 60%, var(--brand-green-600) 130%)' }}
     >
         <div className="absolute -top-16 -right-16 w-72 h-72 bg-white/10 rounded-full" />
@@ -284,7 +374,8 @@ const HeroGradient = () => (
 );
 
 const StatCard = ({ Icon, label, value, color, soft }) => (
-    <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-5 flex items-center gap-4">
+    <div className="relative bg-white border border-[var(--ink-200)] rounded-2xl p-5 flex items-center gap-4 overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-1" style={{ background: color }} />
         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: soft, color }}>
             <Icon className="w-5 h-5" />
         </div>
@@ -310,6 +401,7 @@ const StudentProfile = ({ user }) => {
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState(location.state?.tab || 'results');
     const [showPwModal, setShowPwModal] = useState(false);
+    const [showEditProfile, setShowEditProfile] = useState(false);
     const [profilePicture, setProfilePicture] = useState('');
     const [removingDepot, setRemovingDepot] = useState(null);
 
@@ -368,13 +460,20 @@ const StudentProfile = ({ user }) => {
         .sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt))
         .slice(-7);
 
+    // 4 achievements — matches the testup student-dashboard design.
+    // "Cəld həll" is wired to a fast-solver signal derived from submission timing
+    // (when a teacher exposes durationMinutes & startedAt/submittedAt the helper
+    // returns true if the student used < 50% of the allotted time).
+    const fastSolver = completed.some(r => {
+        if (!r.startedAt || !r.submittedAt || !r.durationMinutes) return false;
+        const usedSec = (new Date(r.submittedAt) - new Date(r.startedAt)) / 1000;
+        return usedSec > 0 && usedSec < (r.durationMinutes * 60) * 0.5;
+    });
     const achievements = [
-        { Icon: HiOutlineFlag,            label: 'İlk imtahan', desc: 'İlk imtahanı tamamladı',  got: totalExams >= 1,  color: '#2563EB' },
-        { Icon: HiOutlineBookOpen,        label: 'Dəyişməz',    desc: '5 imtahan tamamladı',     got: totalExams >= 5,  color: '#0891B2' },
-        { Icon: HiOutlineSparkles,        label: 'Çempion',     desc: '10 imtahan tamamladı',    got: totalExams >= 10, color: '#F59E0B' },
-        { Icon: HiOutlineStar,            label: 'Əla nəticə',  desc: '90%+ bal qazandı',        got: bestPct >= 90,    color: '#F59E0B' },
-        { Icon: HiOutlineCheckCircle,     label: 'Mükəmməl',    desc: '100% bal qazandı',        got: bestPct === 100,  color: '#16A34A' },
-        { Icon: HiOutlineFire,            label: 'Yüksək orta', desc: 'Orta balı 75%+',          got: avgPct >= 75,     color: '#EF4444' },
+        { Icon: HiOutlineFlag,        label: 'İlk imtahan', desc: 'İlk imtahanı tamamladı', got: totalExams >= 1, color: '#2563EB' },
+        { Icon: HiOutlineStar,        label: 'Əla nəticə',  desc: '90%+ bal qazandı',       got: bestPct >= 90,   color: '#F59E0B' },
+        { Icon: HiOutlineCheckCircle, label: 'Mükəmməl',    desc: '100% bal qazandı',       got: bestPct === 100, color: '#16A34A' },
+        { Icon: HiOutlineLightningBolt, label: 'Cəld həll', desc: 'Vaxtın 50%-ini istifadə etdi', got: fastSolver, color: '#7C3AED' },
     ];
     const gotCount = achievements.filter(a => a.got).length;
 
@@ -382,12 +481,20 @@ const StudentProfile = ({ user }) => {
         <div className="min-h-screen pb-16" style={{ background: 'var(--paper-cream)' }}>
             <Helmet><title>Profilim — testup.az</title></Helmet>
             {showPwModal && <ChangePasswordModal onClose={() => setShowPwModal(false)} />}
+            {showEditProfile && (
+                <EditProfileModal
+                    initial={{ fullName: user?.fullName || '' }}
+                    onClose={() => setShowEditProfile(false)}
+                />
+            )}
 
             <HeroGradient />
 
-            <div className="container-main max-w-5xl">
-                {/* Profile card */}
-                <div className="bg-white border border-[var(--ink-200)] rounded-3xl p-6 md:p-7 -mt-16 mb-6 shadow-[var(--sh-md)]">
+            <div className="container-main max-w-5xl relative">
+                {/* Profile card — explicit z-10 keeps it above the hero gradient even
+                    when the avatar overflows upward. -mt-12 gives a smaller overlap
+                    that pairs with the trimmed hero height (h-28/h-32). */}
+                <div className="relative z-10 bg-white border border-[var(--ink-200)] rounded-3xl p-6 md:p-7 -mt-12 mb-6 shadow-[var(--sh-md)]">
                     <div className="flex flex-col md:flex-row md:items-center gap-5">
                         <Avatar
                             name={user?.fullName}
@@ -398,7 +505,7 @@ const StudentProfile = ({ user }) => {
                         />
                         <div className="flex-1 min-w-0">
                             <h1 className="text-[22px] md:text-[26px] font-extrabold text-[var(--ink-900)] tracking-tight truncate">
-                                {user?.fullName}
+                                {user?.fullName || 'İstifadəçi'}
                             </h1>
                             <p className="text-[13.5px] text-[var(--ink-500)] mt-0.5 truncate">{user?.email}</p>
                             <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -417,12 +524,20 @@ const StudentProfile = ({ user }) => {
                                 )}
                             </div>
                         </div>
-                        <button
-                            onClick={() => setShowPwModal(true)}
-                            className="shrink-0 inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[12.5px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
-                        >
-                            <HiOutlineKey className="w-3.5 h-3.5" /> Şifrəni dəyiş
-                        </button>
+                        <div className="flex flex-col sm:flex-row md:flex-col lg:flex-row gap-2 shrink-0">
+                            <button
+                                onClick={() => setShowPwModal(true)}
+                                className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-full text-[12.5px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                            >
+                                <HiOutlineKey className="w-3.5 h-3.5" /> Şifrəni dəyiş
+                            </button>
+                            <button
+                                onClick={() => setShowEditProfile(true)}
+                                className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-full text-[12.5px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_6px_18px_-8px_rgba(37,99,235,0.55)] transition-all"
+                            >
+                                <HiOutlinePencilAlt className="w-3.5 h-3.5" /> Profili düzəlt
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -747,9 +862,9 @@ const TeacherProfile = ({ user }) => {
 
             <HeroGradient />
 
-            <div className="container-main max-w-5xl">
+            <div className="container-main max-w-5xl relative">
                 {/* Profile card */}
-                <div className="bg-white border border-[var(--ink-200)] rounded-3xl p-6 md:p-7 -mt-16 mb-6 shadow-[var(--sh-md)]">
+                <div className="relative z-10 bg-white border border-[var(--ink-200)] rounded-3xl p-6 md:p-7 -mt-12 mb-6 shadow-[var(--sh-md)]">
                     <div className="flex flex-col md:flex-row md:items-center gap-5">
                         <Avatar
                             name={user?.fullName}

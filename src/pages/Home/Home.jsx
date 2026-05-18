@@ -6,6 +6,8 @@ import {
     HiOutlinePencilAlt, HiOutlineChartBar, HiOutlineLibrary,
     HiOutlineShieldCheck, HiOutlineAcademicCap, HiOutlineLightningBolt,
     HiOutlineLightBulb, HiOutlineDeviceMobile, HiOutlineBell, HiOutlineSparkles,
+    HiOutlineClipboardList, HiOutlineBookmark, HiOutlineCollection, HiOutlineFlag,
+    HiOutlineDocumentText, HiOutlineUserGroup,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import heroIllustration from '../../assets/hero-illustration.png';
@@ -47,10 +49,9 @@ const Eyebrow = ({ children }) => (
     <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">{children}</span>
 );
 
-const SectionHead = ({ eyebrow, title, sub }) => (
+const SectionHead = ({ title, sub }) => (
     <div className="text-center max-w-[720px] mx-auto mb-14">
-        <Eyebrow>{eyebrow}</Eyebrow>
-        <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)] text-balance">{title}</h2>
+        <h2 className="text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)] text-balance">{title}</h2>
         {sub && <p className="mt-4 text-[17px] md:text-lg text-[var(--ink-500)] leading-relaxed">{sub}</p>}
     </div>
 );
@@ -89,12 +90,7 @@ const Hero = ({ isAuthenticated, isTeacher }) => (
             <div className="grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-14 items-center">
                 {/* Left */}
                 <div>
-                    <span className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] text-[13px] font-semibold border border-blue-100">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
-                        Azərbaycanın #1 onlayn imtahan platforması
-                    </span>
-
-                    <h1 className="mt-6 text-[44px] sm:text-[52px] md:text-[60px] lg:text-[64px] font-bold leading-[1.05] tracking-[-0.035em] text-[var(--ink-900)] text-balance">
+                    <h1 className="text-[44px] sm:text-[52px] md:text-[60px] lg:text-[64px] font-bold leading-[1.05] tracking-[-0.035em] text-[var(--ink-900)] text-balance">
                         Onlayn imtahanları{' '}
                         <span className="relative whitespace-nowrap text-[var(--primary)]">
                             dəqiqələr
@@ -144,7 +140,7 @@ const Hero = ({ isAuthenticated, isTeacher }) => (
                         </div>
                         <div className="text-[13.5px] text-[var(--ink-500)] leading-snug">
                             <div className="text-amber-500 tracking-widest text-sm">★★★★★ <strong className="text-[var(--ink-800)]">4.9</strong></div>
-                            <div><strong className="text-[var(--ink-800)] font-semibold">12 000+</strong> müəllim platformamızdan istifadə edir</div>
+                            <div>Azərbaycanlı müəllimlərin platforması</div>
                         </div>
                     </div>
                 </div>
@@ -164,16 +160,15 @@ const Hero = ({ isAuthenticated, isTeacher }) => (
 
 const Stats = () => {
     const stats = [
-        { num: '12K',  plus: true,  label: 'Aktiv müəllim' },
-        { num: '340K', plus: true,  label: 'Şagird qeydiyyatı' },
-        { num: '1.2M', plus: true,  label: 'Tamamlanmış imtahan' },
-        { num: '99.9', suffix: '%', label: 'Saytın işləmə vaxtı' },
+        { num: '50',   plus: true, label: 'Aktiv müəllim' },
+        { num: '800',  plus: true, label: 'Şagird qeydiyyatı' },
+        { num: '2000', plus: true, label: 'Tamamlanmış imtahan' },
     ];
     return (
         <section className="py-10 md:py-14">
             <div className="container-main">
                 <div
-                    className="relative overflow-hidden rounded-3xl text-white px-6 py-10 md:px-8 md:py-12 grid grid-cols-2 md:grid-cols-4"
+                    className="relative overflow-hidden rounded-3xl text-white px-6 py-10 md:px-8 md:py-12 grid grid-cols-1 md:grid-cols-3"
                     style={{ background: 'var(--ink-900)' }}
                 >
                     <div className="absolute inset-0 pointer-events-none" style={{
@@ -267,9 +262,9 @@ const FeaturesTeacher = () => (
                     </div>
                 </div>
 
-                <FeatureCard Icon={HiOutlineLibrary}     title="Sual bankı"           desc="40 000+ hazır sual: SİSC, MİQ, buraxılış, blok imtahanları. Filtrlə, seç, istifadə et." />
-                <FeatureCard Icon={HiOutlineShieldCheck} title="Anti-köçürmə"         desc="Səhifədən çıxış izi, sual qarışdırılması, vaxt limiti və IP məhdudlaşdırması." />
-                <FeatureCard Icon={HiOutlineAcademicCap} title="Avtomatik sertifikat" desc="Müvəffəq olanlara PDF sertifikat. Loqo, imza və QR doğrulama ilə." />
+                <FeatureCard Icon={HiOutlineLibrary}      title="Sual bankı"           desc="Şəxsi və ümumi sual bazalarınız. Fənn, mövzu və çətinlik üzrə filtrlə, bir kliklə imtahana əlavə et." />
+                <FeatureCard Icon={HiOutlineSparkles}     title="AI ilə sual yaratma"  desc="Mövzu, çətinlik və sual tipini seçin — AI dərhal sual, variantlar və düz cavabı hazırlayır." />
+                <FeatureCard Icon={HiOutlineDocumentText} title="PDF-dən sual idxalı"  desc="Köhnə imtahan vərəqələrinizi PDF olaraq yükləyin — mətn və şəkillər sual kartlarına çevrilir." />
             </div>
         </div>
     </section>
@@ -280,7 +275,7 @@ const FeaturesStudent = () => (
         <div className="container-main">
             <SectionHead
                 eyebrow="Şagirdlər üçün"
-                title="Hazırlıqdan nəticəyə — rahat və motivasiyaedici"
+                title="İmtahanlara hazırlaşın, biliyinizi yoxlayın"
                 sub="Telefondan, planşetdən və ya kompüterdən — istənilən vaxt, istənilən yerdə."
             />
             <div className="grid md:grid-cols-3 gap-5">
@@ -318,43 +313,53 @@ const FeaturesStudent = () => (
                     </div>
                 </div>
 
-                <FeatureCard Icon={HiOutlineLightBulb}    title="Şəxsi tövsiyələr"   desc="Sistem zəif mövzularınızı təyin edir və hansı mövzunu təkrar etməli olduğunuzu deyir." iconClass="bg-[var(--accent-soft)] text-[var(--brand-green-600)]" />
-                <FeatureCard Icon={HiOutlineDeviceMobile} title="Bütün cihazlarda"   desc="iOS, Android və veb. Tətbiqi yükləmədən brauzerdən rahatlıqla istifadə edin." />
-                <FeatureCard Icon={HiOutlineBell}         title="Xatırlatmalar"      desc="Yeni imtahanlar, nəticələr və hədəflər haqqında bildirişlər." />
-                <FeatureCard Icon={HiOutlineSparkles}     title="AI tövsiyələri"     desc="Sual bankından sizə ən uyğun mövzuları AI seçir və hazırlıq planı qurur." iconClass="bg-[var(--accent-soft)] text-[var(--brand-green-600)]" />
+                <FeatureCard Icon={HiOutlineClipboardList} title="Ətraflı nəticə təhlili" desc="Hər imtahandan sonra fənn üzrə nəticə, doğru-səhv cavablar və müəllim izahatları ilə tam baxış." iconClass="bg-[var(--accent-soft)] text-[var(--brand-green-600)]" />
+                <FeatureCard Icon={HiOutlineDeviceMobile}  title="Hər cihazda hazır"     desc="Telefon, planşet və ya kompüter — brauzerdə bütün funksiyalar. Heç bir quraşdırma tələb olunmur." />
+                <FeatureCard Icon={HiOutlineCollection}    title="Müxtəlif sual formatları" desc="Test, çoxlu cavab, açıq sual, boşluq doldurma, uyğunluq, dinləmə və mətn parçası — hamısı bir yerdə." />
+                <FeatureCard Icon={HiOutlineFlag}          title="Real imtahan formatı"     desc="DİM, MİQ və buraxılış imtahanları şablonu ilə dəqiq sual sayı, vaxt limiti və bal hesablanması." iconClass="bg-[var(--accent-soft)] text-[var(--brand-green-600)]" />
             </div>
         </div>
     </section>
 );
 
+// Derive a short feature bullet list from a backend SubscriptionPlanResponse.
+// Picks the most user-meaningful flags + limits. Order matters — first 5 show.
+const featuresFromPlan = (plan) => {
+    const limitStr = (n, suffix) => (n == null || n < 0 ? `Limitsiz ${suffix}` : `${n} ${suffix}`);
+    const bullets = [];
+    if (plan.monthlyExamLimit != null) bullets.push(limitStr(plan.monthlyExamLimit, 'aylıq imtahan'));
+    if (plan.maxParticipantsPerExam != null) bullets.push(limitStr(plan.maxParticipantsPerExam, 'şagirdə qədər'));
+    if (plan.maxQuestionsPerExam != null) bullets.push(`İmtahanda ${plan.maxQuestionsPerExam < 0 ? 'limitsiz' : plan.maxQuestionsPerExam} sual`);
+    if (plan.useAiExamGeneration) bullets.push(plan.monthlyAiQuestionLimit > 0 ? `AI ilə ${plan.monthlyAiQuestionLimit} sual / ay` : 'AI ilə sual yaratma');
+    if (plan.useQuestionBank) bullets.push('Sual bankından istifadə');
+    if (plan.createQuestionBank) bullets.push('Şəxsi sual bazası');
+    if (plan.importQuestionsFromPdf) bullets.push('PDF-dən sual idxalı');
+    if (plan.multipleSubjects) bullets.push('Çox fənli imtahanlar');
+    if (plan.useTemplateExams) bullets.push('Hazır şablon imtahanlar');
+    if (plan.addPassageQuestion) bullets.push('Mətn və dinləmə suallari');
+    if (plan.addImage) bullets.push('Şəkil və formula dəstəyi');
+    if (plan.manualChecking) bullets.push('Manual qiymətləndirmə');
+    if (plan.downloadAsPdf) bullets.push('Nəticələri PDF olaraq yüklə');
+    if (plan.studentResultAnalysis) bullets.push('Şagird üzrə analitika');
+    return bullets.slice(0, 6);
+};
+
 const PricingPreview = () => {
-    const plans = [
-        {
-            name: 'Başlanğıc',
-            desc: 'Tək müəllimlər və kiçik qruplar üçün.',
-            price: '0',
-            period: 'ömürlük pulsuz',
-            features: ['3 aktiv imtahan', '50 şagirdə qədər', 'Əsas analitika', 'Email dəstək'],
-            cta: 'Pulsuz başla', ctaTo: '/register', variant: 'secondary',
-        },
-        {
-            name: 'Peşəkar',
-            featured: true, tag: 'Ən populyar',
-            desc: 'Aktiv müəllimlər və hazırlıq mərkəzləri üçün.',
-            price: '19',
-            period: 'aylıq, AZN',
-            features: ['Limitsiz imtahan', '1000 şagirdə qədər', 'Tam analitika və hesabatlar', 'Anti-köçürmə alətləri', 'Branding və sertifikat', 'Prioritet dəstək'],
-            cta: '14 gün pulsuz sına', ctaTo: '/planlar', variant: 'primary',
-        },
-        {
-            name: 'Mərkəz',
-            desc: 'Məktəblər və böyük təlim mərkəzləri üçün.',
-            price: '49',
-            period: 'aylıq, AZN',
-            features: ['Hər şey + komanda hesabları', '10 000 şagirdə qədər', 'API və inteqrasiyalar', 'Şəxsi domen', 'Şəxsi menecer'],
-            cta: 'Bizimlə əlaqə', ctaTo: '/elaqe', variant: 'secondary',
-        },
-    ];
+    const [plans, setPlans] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.get('/subscription-plans')
+            .then(r => {
+                const sorted = [...(r.data || [])].sort((a, b) => (a.level ?? a.price) - (b.level ?? b.price));
+                setPlans(sorted.slice(0, 3));
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, []);
+
+    // The middle plan is featured by convention
+    const featuredIdx = plans.length >= 3 ? 1 : 0;
     return (
         <section className="py-20 md:py-24" id="pricing">
             <div className="container-main">
@@ -363,60 +368,94 @@ const PricingPreview = () => {
                     title="Şəffaf qiymət, gizli ödənişsiz"
                     sub="Pulsuz başlayın və ehtiyacınız böyüdükcə miqyaslandırın. İstənilən vaxt ləğv edə bilərsiniz."
                 />
-                <div className="grid md:grid-cols-3 gap-5 max-w-[1100px] mx-auto">
-                    {plans.map((p, i) => {
-                        const featured = p.featured;
-                        return (
-                            <div
-                                key={i}
-                                className={`relative rounded-3xl p-7 transition-all ${
-                                    featured
-                                        ? 'bg-[var(--ink-900)] text-white border border-[var(--ink-900)] shadow-2xl md:scale-105'
-                                        : 'bg-white text-[var(--ink-800)] border border-[var(--ink-200)] hover:-translate-y-1 hover:shadow-[var(--sh-md)]'
-                                }`}
-                            >
-                                {p.tag && (
-                                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[var(--accent)] text-[#06351A] text-[11px] font-bold tracking-wider uppercase">
-                                        {p.tag}
-                                    </span>
-                                )}
-                                <div className={`text-[13px] font-bold uppercase tracking-[0.12em] ${featured ? 'text-[var(--accent)]' : 'text-[var(--primary)]'}`}>
-                                    {p.name}
+                {loading ? (
+                    <div className="grid md:grid-cols-3 gap-5 max-w-[1100px] mx-auto">
+                        {[0, 1, 2].map(i => (
+                            <div key={i} className="rounded-3xl p-7 bg-white border border-[var(--ink-200)] animate-pulse">
+                                <div className="h-4 w-1/3 bg-[var(--ink-100)] rounded" />
+                                <div className="h-3 w-3/4 bg-[var(--ink-100)] rounded mt-3" />
+                                <div className="h-12 w-1/2 bg-[var(--ink-100)] rounded mt-6" />
+                                <div className="space-y-2 mt-6">
+                                    <div className="h-3 bg-[var(--ink-100)] rounded" />
+                                    <div className="h-3 bg-[var(--ink-100)] rounded" />
+                                    <div className="h-3 bg-[var(--ink-100)] rounded" />
                                 </div>
-                                <p className={`mt-2 text-[14px] ${featured ? 'text-white/70' : 'text-[var(--ink-500)]'}`}>{p.desc}</p>
-                                <div className="mt-6 flex items-baseline gap-1.5">
-                                    <span className={`text-[52px] font-bold leading-none tracking-tight ${featured ? 'text-white' : 'text-[var(--ink-900)]'}`}>{p.price}</span>
-                                    {p.price !== '0' && (
-                                        <span className={`text-[14px] font-semibold ${featured ? 'text-white/70' : 'text-[var(--ink-500)]'}`}>AZN</span>
-                                    )}
-                                </div>
-                                <div className={`text-[13px] mt-1 ${featured ? 'text-white/60' : 'text-[var(--ink-500)]'}`}>{p.period}</div>
-
-                                <ul className={`mt-6 space-y-3 pt-6 border-t ${featured ? 'border-white/15' : 'border-[var(--ink-150)]'}`}>
-                                    {p.features.map((f, j) => (
-                                        <li key={j} className={`flex items-start gap-2.5 text-[14px] ${featured ? 'text-white/90' : 'text-[var(--ink-700)]'}`}>
-                                            <HiOutlineCheck className={`w-4 h-4 mt-0.5 shrink-0 ${featured ? 'text-[var(--accent)]' : 'text-[var(--primary)]'}`} />
-                                            {f}
-                                        </li>
-                                    ))}
-                                </ul>
-
-                                <Link
-                                    to={p.ctaTo}
-                                    className={`mt-7 w-full inline-flex items-center justify-center h-12 rounded-full font-semibold text-[14.5px] transition-all ${
+                                <div className="h-11 bg-[var(--ink-100)] rounded-full mt-7" />
+                            </div>
+                        ))}
+                    </div>
+                ) : plans.length === 0 ? (
+                    <div className="text-center py-12 text-[var(--ink-500)] text-[14px]">
+                        Planlar hazırlanır — qısa zamanda <Link to="/planlar" className="text-[var(--primary)] hover:underline font-semibold">qiymət səhifəsinə</Link> baxa bilərsiniz.
+                    </div>
+                ) : (
+                    <div className="grid md:grid-cols-3 gap-5 max-w-[1100px] mx-auto">
+                        {plans.map((p, i) => {
+                            const featured = i === featuredIdx && plans.length >= 2;
+                            const isFree = !p.price || Number(p.price) === 0;
+                            const features = featuresFromPlan(p);
+                            const ctaLabel = isFree ? 'Pulsuz başla' : 'Planı seç';
+                            const ctaTo = isFree ? '/register' : '/planlar';
+                            return (
+                                <div
+                                    key={p.id}
+                                    className={`relative rounded-3xl p-7 transition-all ${
                                         featured
-                                            ? 'bg-white text-[var(--ink-900)] hover:bg-white/95'
-                                            : p.variant === 'primary'
-                                                ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]'
-                                                : 'bg-[var(--ink-100)] text-[var(--ink-800)] hover:bg-[var(--ink-200)]'
+                                            ? 'bg-[var(--ink-900)] text-white border border-[var(--ink-900)] shadow-2xl md:scale-105'
+                                            : 'bg-white text-[var(--ink-800)] border border-[var(--ink-200)] hover:-translate-y-1 hover:shadow-[var(--sh-md)]'
                                     }`}
                                 >
-                                    {p.cta}
-                                </Link>
-                            </div>
-                        );
-                    })}
-                </div>
+                                    {featured && (
+                                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[var(--accent)] text-[#06351A] text-[11px] font-bold tracking-wider uppercase">
+                                            Ən populyar
+                                        </span>
+                                    )}
+                                    <div className={`text-[13px] font-bold uppercase tracking-[0.12em] ${featured ? 'text-[var(--accent)]' : 'text-[var(--primary)]'}`}>
+                                        {p.name}
+                                    </div>
+                                    <p className={`mt-2 text-[14px] ${featured ? 'text-white/70' : 'text-[var(--ink-500)]'}`}>
+                                        {p.description || 'Müəllimlər və təlim mərkəzləri üçün hazırlanmış plan.'}
+                                    </p>
+                                    <div className="mt-6 flex items-baseline gap-1.5">
+                                        <span className={`text-[52px] font-bold leading-none tracking-tight ${featured ? 'text-white' : 'text-[var(--ink-900)]'}`}>
+                                            {isFree ? '0' : Number(p.price).toLocaleString('az-AZ', { maximumFractionDigits: 0 })}
+                                        </span>
+                                        {!isFree && (
+                                            <span className={`text-[14px] font-semibold ${featured ? 'text-white/70' : 'text-[var(--ink-500)]'}`}>AZN</span>
+                                        )}
+                                    </div>
+                                    <div className={`text-[13px] mt-1 ${featured ? 'text-white/60' : 'text-[var(--ink-500)]'}`}>
+                                        {isFree ? 'ömürlük pulsuz' : 'aylıq'}
+                                    </div>
+
+                                    {features.length > 0 && (
+                                        <ul className={`mt-6 space-y-3 pt-6 border-t ${featured ? 'border-white/15' : 'border-[var(--ink-150)]'}`}>
+                                            {features.map((f, j) => (
+                                                <li key={j} className={`flex items-start gap-2.5 text-[14px] ${featured ? 'text-white/90' : 'text-[var(--ink-700)]'}`}>
+                                                    <HiOutlineCheck className={`w-4 h-4 mt-0.5 shrink-0 ${featured ? 'text-[var(--accent)]' : 'text-[var(--primary)]'}`} />
+                                                    {f}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+
+                                    <Link
+                                        to={ctaTo}
+                                        className={`mt-7 w-full inline-flex items-center justify-center h-12 rounded-full font-semibold text-[14.5px] transition-all ${
+                                            featured
+                                                ? 'bg-white text-[var(--ink-900)] hover:bg-white/95'
+                                                : isFree
+                                                    ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]'
+                                                    : 'bg-[var(--ink-100)] text-[var(--ink-800)] hover:bg-[var(--ink-200)]'
+                                        }`}
+                                    >
+                                        {ctaLabel}
+                                    </Link>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
                 <div className="text-center mt-9">
                     <Link to="/planlar" className="inline-flex items-center gap-1.5 text-[var(--primary)] font-semibold text-[14px] hover:gap-2 transition-all">
                         Bütün planları və müqayisəni gör <HiOutlineArrowRight className="w-3.5 h-3.5" />

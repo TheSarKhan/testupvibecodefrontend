@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import Logo from '../ui/Logo';
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -9,10 +10,10 @@ const Footer = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* Brand */}
                     <div>
-                        <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-                            testup.az
-                        </span>
-                        <p className="mt-3 text-sm">
+                        <Link to="/" onClick={scrollTop} aria-label="testup.az ana səhifə" className="inline-block">
+                            <Logo size={36} dark />
+                        </Link>
+                        <p className="mt-4 text-sm">
                             Müəllimlər üçün onlayn imtahan yaratma və idarəetmə platforması.
                         </p>
                     </div>

@@ -3,6 +3,7 @@ import {
     HiOutlineXCircle, HiOutlineArrowLeft, HiOutlineShieldCheck,
     HiOutlineRefresh, HiOutlineSupport,
 } from 'react-icons/hi';
+import Logo from '../../components/ui/Logo';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Shell (mirrors PaymentSuccess)
@@ -12,15 +13,8 @@ const PaymentShell = ({ children }) => (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--paper-cream)' }}>
         <div className="border-b border-[var(--ink-150)] bg-white">
             <div className="container-main py-3.5 flex items-center justify-between">
-                <Link to="/" className="inline-flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="4 12 10 18 20 6" />
-                        </svg>
-                    </span>
-                    <span className="font-extrabold text-[18px] tracking-tight text-[var(--ink-900)]">
-                        testup<span className="text-[var(--brand-green-600)]">.az</span>
-                    </span>
+                <Link to="/" aria-label="testup.az ana səhifə">
+                    <Logo size={32} />
                 </Link>
                 <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--ink-500)]">
                     <HiOutlineShieldCheck className="w-3.5 h-3.5 text-[var(--brand-green-600)]" />

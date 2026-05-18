@@ -196,6 +196,37 @@ const ExamEditor = () => {
         if (isEditMode) return [];
         const state = location.state || {};
         if (state.type === 'template' || state.type === 'olimpiyada') return []; // pre-populated via useEffect
+        // Prefilled from the Question Bank's bulk "İmtahan yarat" action —
+        // each item is a BankQuestionResponse coming through router state.
+        // We map them through the same conversion used by handleBankSelectMany,
+        // but inline because the helper closes over `nextOrderIndex()`.
+        if (Array.isArray(state.bankQuestions) && state.bankQuestions.length > 0) {
+            return state.bankQuestions.map((bq, i) => {
+                const ts = Date.now() + i;
+                const frontendType = TYPE_TO_FRONTEND[bq.questionType] || 'MULTIPLE_CHOICE';
+                return {
+                    id: `bank-${ts}-${bq.id}`,
+                    type: frontendType,
+                    text: bq.content || '',
+                    attachedImage: bq.attachedImage || null,
+                    points: bq.points ?? 1,
+                    orderIndex: i,
+                    subjectGroup: null,
+                    options: (bq.options || [])
+                        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+                        .map(o => ({
+                            id: String(o.id || ts + Math.random()),
+                            text: o.content || '',
+                            isCorrect: !!o.isCorrect,
+                            attachedImage: o.attachedImage || null,
+                        })),
+                    matchingPairs: toFrontendMatchingPairs(
+                        (bq.matchingPairs || []).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+                    ).map(p => ({ ...p, id: String(p.id || ts + Math.random()) })),
+                    sampleAnswer: bq.correctAnswer || '',
+                };
+            });
+        }
         return [{
             id: Date.now().toString(), type: 'MULTIPLE_CHOICE', text: '', points: 1,
             orderIndex: 0, subjectGroup: null,

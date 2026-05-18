@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import {
     HiOutlineArrowRight, HiOutlineUsers, HiOutlineGlobe,
     HiOutlineAcademicCap, HiOutlineHeart, HiOutlineShieldCheck,
-    HiOutlineLightBulb,
+    HiOutlineLightBulb, HiOutlineSparkles,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import aboutImage from '../../assets/about.png';
@@ -16,10 +16,9 @@ const Eyebrow = ({ children }) => (
     <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">{children}</span>
 );
 
-const SectionHead = ({ eyebrow, title, sub }) => (
+const SectionHead = ({ title, sub }) => (
     <div className="text-center max-w-[720px] mx-auto mb-14">
-        <Eyebrow>{eyebrow}</Eyebrow>
-        <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)] text-balance">{title}</h2>
+        <h2 className="text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)] text-balance">{title}</h2>
         {sub && <p className="mt-4 text-[17px] md:text-lg text-[var(--ink-500)] leading-relaxed">{sub}</p>}
     </div>
 );
@@ -55,12 +54,7 @@ const AboutHero = ({ isAuthenticated }) => (
             <div className="grid lg:grid-cols-[1.2fr_1fr] gap-10 lg:gap-14 items-center">
                 {/* Left */}
                 <div>
-                    <span className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] text-[13px] font-semibold border border-blue-100">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
-                        Bakı, Azərbaycan · 2023-dən bəri
-                    </span>
-
-                    <h1 className="mt-6 text-[36px] sm:text-[44px] md:text-[56px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
+                    <h1 className="text-[36px] sm:text-[44px] md:text-[56px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
                         Azərbaycanın hər müəlliminə peşəkar imtahan alətləri
                     </h1>
 
@@ -110,7 +104,7 @@ const AboutHero = ({ isAuthenticated }) => (
                             <HiOutlineUsers className="w-5 h-5" />
                         </div>
                         <div>
-                            <div className="text-[15px] font-bold text-[var(--ink-900)]">12 000+ müəllim</div>
+                            <div className="text-[15px] font-bold text-[var(--ink-900)]">50+ müəllim</div>
                             <div className="text-[12.5px] text-[var(--ink-500)]">Aktiv istifadəçi</div>
                         </div>
                     </div>
@@ -120,8 +114,8 @@ const AboutHero = ({ isAuthenticated }) => (
                             <HiOutlineAcademicCap className="w-5 h-5" />
                         </div>
                         <div>
-                            <div className="text-[15px] font-bold text-[var(--ink-900)]">340 000 imtahan</div>
-                            <div className="text-[12.5px] text-[var(--ink-500)]">Bu il keçirilib</div>
+                            <div className="text-[15px] font-bold text-[var(--ink-900)]">2000+ imtahan</div>
+                            <div className="text-[12.5px] text-[var(--ink-500)]">Tamamlanıb</div>
                         </div>
                     </div>
 
@@ -130,8 +124,8 @@ const AboutHero = ({ isAuthenticated }) => (
                             <HiOutlineGlobe className="w-5 h-5" />
                         </div>
                         <div>
-                            <div className="text-[15px] font-bold text-[var(--ink-900)]">63 şəhər</div>
-                            <div className="text-[12.5px] text-[var(--ink-500)]">Azərbaycan boyu</div>
+                            <div className="text-[15px] font-bold text-[var(--ink-900)]">800+ şagird</div>
+                            <div className="text-[12.5px] text-[var(--ink-500)]">Qeydiyyatdan keçib</div>
                         </div>
                     </div>
                 </div>
@@ -149,9 +143,9 @@ const Mission = () => {
             tone: 'bg-[var(--primary-soft)] text-[var(--primary)]',
         },
         {
-            Icon: HiOutlineShieldCheck,
-            title: 'Ədalət',
-            desc: 'Hər şagirdin bərabər şərtlərdə qiymətləndirilməsi üçün anti-köçürmə, vaxt nəzarəti və qarışdırma alətləri quruluşumuza yerləşdirilib.',
+            Icon: HiOutlineSparkles,
+            title: 'AI ilə dəstək',
+            desc: 'Mövzu və çətinlik yazın — AI dərhal sual, variantlar və düz cavabı hazırlayır. PDF-dən köhnə imtahanlarınızı yükləyib bir kliklə sual kartına çevirin.',
             tone: 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]',
         },
         {
@@ -190,19 +184,17 @@ const Mission = () => {
 
 const Story = () => {
     const items = [
-        { year: '2023 — Yaz',    title: 'İdeyanın doğulması',         desc: 'Bakıda riyaziyyat müəllimi olan həmtəsisçimiz hər həftə əl ilə test yoxlamağın saatlarını sayır. İlk MVP iki nəfərlə hazırlanır.' },
-        { year: '2024 — Yanvar', title: 'İlk 1 000 müəllim',           desc: 'Beta variant Azərbaycan müəllimləri arasında pulsuz buraxılır. İlk 6 ayda 1 000 fəal müəllim qeydiyyatdan keçir.' },
-        { year: '2025 — İyun',   title: 'Sual bankı və sertifikat',     desc: '40 000+ sualı olan sual bankı və QR-doğrulamalı sertifikat sistemi əlavə edilir. Komanda 14 nəfərə çatır.' },
-        { year: '2026 — İndi',   title: 'v3.0 və regional genişlənmə',  desc: 'Tam yenidən qurulmuş analitika, müştəri panelləri və Türkiyə bazarına ilk addımlar.' },
-        { year: '2027 — Yol',    title: 'AI köməkçi və oflayn rejim',   desc: 'Sual yaradan AI köməkçi və zəif internetlə işləyən oflayn imtahan rejimi planlaşdırılır.' },
+        { year: '2025 — Avqust',  title: 'Layihəyə başlanılıb',           desc: 'testup.az komandası layihəni rəsmi olaraq başladır və ilkin texniki memarlıq, dizayn istiqamətləri müəyyənləşdirilir.' },
+        { year: '2025 — Dekabr',  title: 'İlk imtahanlar keçirilib',       desc: 'Beta variantda ilk imtahanlar real müəllimlər və şagirdlərlə keçirilir, sistemdən gerçək vaxt rejimində geri bildirimlər toplanır.' },
+        { year: '2026 — Fevral',  title: 'Yeni versiyaya keçid',           desc: 'Sual bankı, AI ilə sual yaratma və PDF idxalı kimi əsas funksiyalar tamamlanır. Yeni versiya istifadəyə verilir.' },
+        { year: '2026 — May',     title: 'Platforma yekunlaşır',            desc: 'Tam yenilənmiş dizayn, ödəniş sistemi və admin paneli ilə platforma rəsmi olaraq təqdim edilir.' },
     ];
     return (
         <section className="py-20 md:py-24 bg-[var(--ink-50)]">
             <div className="container-main">
                 <SectionHead
-                    eyebrow="Hekayəmiz"
-                    title="Bir müəllimin probleminin həllindən başlayıb"
-                    sub="Əhəmiyyətli mərhələlərimiz və qarşıdan gələn planlarımız."
+                    title="İdeyadan platformaya qədər"
+                    sub="testup.az-ın inkişaf mərhələləri."
                 />
                 <div className="relative max-w-[760px] mx-auto pl-8">
                     {/* Vertical gradient line */}
@@ -238,16 +230,15 @@ const Story = () => {
 
 const ByNumbers = () => {
     const stats = [
-        { num: '12K',  plus: true,  label: 'Aktiv müəllim' },
-        { num: '340K', plus: true,  label: 'Şagird qeydiyyatı' },
-        { num: '1.2M', plus: true,  label: 'Tamamlanmış imtahan' },
-        { num: '63',                  label: 'Azərbaycan şəhəri' },
+        { num: '50',  plus: true, label: 'Aktiv müəllim' },
+        { num: '800', plus: true, label: 'Şagird qeydiyyatı' },
+        { num: '2000', plus: true, label: 'Tamamlanmış imtahan' },
     ];
     return (
         <section className="py-12 md:py-16">
             <div className="container-main">
                 <div
-                    className="relative overflow-hidden rounded-3xl text-white px-6 py-10 md:px-8 md:py-12 grid grid-cols-2 md:grid-cols-4"
+                    className="relative overflow-hidden rounded-3xl text-white px-6 py-10 md:px-8 md:py-12 grid grid-cols-1 md:grid-cols-3"
                     style={{ background: 'var(--ink-900)' }}
                 >
                     <div className="absolute inset-0 pointer-events-none" style={{
@@ -269,14 +260,14 @@ const ByNumbers = () => {
 
 const Team = () => {
     const team = [
-        { i: 'EQ', n: 'Elvin Qədirov',     r: 'Həmtəsisçi, CEO' },
-        { i: 'NM', n: 'Nərmin Məmmədova',  r: 'Həmtəsisçi, CPO' },
-        { i: 'TƏ', n: 'Tural Əliyev',      r: 'Mühəndis komandasının rəhbəri' },
-        { i: 'SR', n: 'Səbinə Rüstəmova',  r: 'Təhsil məhsul üzrə menecer' },
-        { i: 'RH', n: 'Rauf Həsənli',      r: 'Dizayn rəhbəri' },
-        { i: 'AC', n: 'Aysu Cəfərova',     r: 'Müştəri uğuru' },
-        { i: 'KM', n: 'Kamran Məhərrəmov', r: 'Sual bankı redaktoru' },
-        { i: 'LƏ', n: 'Leyla Əhmədova',    r: 'Marketinq' },
+        { i: 'SR', n: 'Səbuhi Ramazanov', r: 'Təsisçi · Riyaziyyat müəllimi' },
+        { i: 'SB', n: 'Sərxan Babayev',   r: 'Product Owner' },
+        { i: 'NM', n: 'Nicat Mazanlı',    r: 'Cyber Security' },
+        { i: 'ÜƏ', n: 'Ülkər Əliyeva',    r: 'QA Tester' },
+        { i: 'NƏ', n: 'Nigar Əliyeva',    r: 'Frontend Developer' },
+        { i: 'TN', n: 'Teyran Nağıyeva',  r: 'Dizayner' },
+        { i: 'EA', n: 'Eltun Aslanov',    r: 'Backend Developer' },
+        { i: 'NM', n: 'Nərmin Məmmədli',  r: 'QA Tester' },
     ];
     return (
         <section className="py-20 md:py-24 bg-[var(--ink-50)]">
@@ -313,9 +304,6 @@ const PressMentions = () => {
     return (
         <section className="py-12 md:py-16">
             <div className="container-main">
-                <div className="text-center mb-6">
-                    <Eyebrow>Mətbuatda</Eyebrow>
-                </div>
                 <div className="flex flex-wrap justify-around items-center gap-7 opacity-70">
                     {mentions.map((m, i) => (
                         <div
@@ -395,7 +383,8 @@ const About = () => {
             <Story />
             <ByNumbers />
             <Team />
-            <PressMentions />
+            {/* Mətbuat bölməsi gələcəkdə real partnerlərlə bərpa ediləcək */}
+            {/* <PressMentions /> */}
             <CTABanner isAuthenticated={isAuthenticated} />
         </div>
     );

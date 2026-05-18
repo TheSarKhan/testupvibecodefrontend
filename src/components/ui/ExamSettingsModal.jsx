@@ -14,9 +14,23 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
     const tagInputRef = useRef(null);
     const suggestionsRef = useRef(null);
 
-    // Fetch subjects and tags once on mount
+    // Fetch subjects and tags once on mount.
+    // Subjects come from TWO sources:
+    //   1) /subjects        — admin-seeded system subjects (Riyaziyyat, Fizika, …)
+    //   2) /bank/subjects   — the teacher's own question-bank subjects (e.g. "Alman dili"
+    //                          if they created it themselves and it's not in the system list)
+    // We merge + dedupe so any subject the user has access to is selectable, regardless
+    // of whether it originated as a system seed or as a personal bank subject.
     useEffect(() => {
-        api.get('/subjects').then(res => setSubjects(res.data)).catch(() => {});
+        Promise.all([
+            api.get('/subjects').then(r => r.data || []).catch(() => []),
+            api.get('/bank/subjects').then(r => (r.data || []).map(s => s.name)).catch(() => []),
+        ]).then(([systemNames, bankNames]) => {
+            const merged = Array.from(new Set([...systemNames, ...bankNames]))
+                .filter(Boolean)
+                .sort((a, b) => a.localeCompare(b, 'az'));
+            setSubjects(merged);
+        });
         api.get('/tags').then(res => setAllTags(res.data)).catch(() => {});
     }, []);
 
@@ -177,13 +191,21 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                                 onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value, subjects: [e.target.value] }))}
                                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none bg-white"
                             >
-                                {subjects.length === 0 ? (
-                                    <option value={formData.subject || formData.subjects?.[0]}>{formData.subject || formData.subjects?.[0]}</option>
-                                ) : (
-                                    subjects.map(name => (
+                                {(() => {
+                                    const current = formData.subject || formData.subjects?.[0] || '';
+                                    // Guarantee the current value is selectable even if the
+                                    // /subjects + /bank/subjects merge doesn't include it
+                                    // (e.g. legacy exams or freshly-created bank subject).
+                                    const list = current && !subjects.includes(current)
+                                        ? [current, ...subjects]
+                                        : subjects;
+                                    if (list.length === 0) {
+                                        return <option value={current}>{current || '—'}</option>;
+                                    }
+                                    return list.map(name => (
                                         <option key={name} value={name}>{name}</option>
-                                    ))
-                                )}
+                                    ));
+                                })()}
                             </select>
                         </div>
                     </div>
@@ -272,10 +294,22 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
                                 onChange={e => { setTagInput(e.target.value); setShowSuggestions(true); }}
                                 onFocus={() => setShowSuggestions(true)}
                                 onKeyDown={e => {
-                                    if (e.key === 'Escape') { setShowSuggestions(false); }
+                                    if (e.key === 'Enter' || e.key === ',') {
+                                        // Prevent the surrounding <form>'s onSubmit (which
+                                        // would publish the exam) and instead commit the
+                                        // currently-typed text as a new tag.
+                                        e.preventDefault();
+                                        if (tagInput.trim()) addTag(tagInput);
+                                    } else if (e.key === 'Backspace' && !tagInput && formData.tags.length > 0) {
+                                        // Quick-remove the last tag when the input is empty.
+                                        e.preventDefault();
+                                        setFormData(prev => ({ ...prev, tags: prev.tags.slice(0, -1) }));
+                                    } else if (e.key === 'Escape') {
+                                        setShowSuggestions(false);
+                                    }
                                 }}
                                 className="block w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 sm:text-sm outline-none"
-                                placeholder="Teq axtar və seç..."
+                                placeholder="Yeni teq yaz və ya siyahıdan seç (Enter ilə əlavə et)"
                                 autoComplete="off"
                             />
 

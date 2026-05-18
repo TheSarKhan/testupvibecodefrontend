@@ -10,6 +10,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 import { fmtDate } from '../../utils/date';
+import Logo from '../../components/ui/Logo';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -483,13 +484,8 @@ const ExamResultSummary = () => {
             {/* ── Header ── */}
             <header className="border-b border-[var(--ink-150)] bg-[color-mix(in_srgb,var(--paper-cream),white_30%)]/90 backdrop-blur sticky top-0 z-20">
                 <div className="container-main py-4 flex items-center justify-between gap-3 flex-wrap">
-                    <Link to="/" className="inline-flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-[var(--primary)] text-white flex items-center justify-center">
-                            <HiOutlineCheckCircle className="w-5 h-5" />
-                        </div>
-                        <span className="font-extrabold text-[18px] tracking-tight text-[var(--ink-900)]">
-                            testup<span className="text-[var(--brand-green-600)]">.az</span>
-                        </span>
+                    <Link to="/" aria-label="testup.az ana səhifə">
+                        <Logo size={36} />
                     </Link>
                     <div className="flex items-center gap-2">
                         <button

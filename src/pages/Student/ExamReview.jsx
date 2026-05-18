@@ -432,7 +432,10 @@ const ExamReview = () => {
     const ringColor = ringPct >= 80 ? 'var(--brand-green-600)' : ringPct >= 50 ? '#F59E0B' : '#EF4444';
     const submittedDate = review.submittedAt ? new Date(review.submittedAt) : null;
     const studentName = review.studentName || review.studentFullName || review.studentEmail || '—';
-    const studentInit = studentName.trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase();
+    const studentInit = studentName && studentName !== '—'
+        ? studentName.trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase()
+        : '?';
+    const studentRole = review.isGuest ? 'Qonaq' : 'Şagird';
     const duration = (() => {
         if (!review.startedAt || !review.submittedAt) return null;
         const diffSec = Math.abs(new Date(review.submittedAt) - new Date(review.startedAt)) / 1000;
@@ -491,7 +494,7 @@ const ExamReview = () => {
                         </span>
                         <div className="leading-tight">
                             <div className="text-[13px] font-bold text-[var(--ink-900)] truncate max-w-[150px]">{studentName}</div>
-                            <div className="text-[11px] text-[var(--ink-500)]">Şagird</div>
+                            <div className="text-[11px] text-[var(--ink-500)]">{studentRole}</div>
                         </div>
                     </div>
                 </div>

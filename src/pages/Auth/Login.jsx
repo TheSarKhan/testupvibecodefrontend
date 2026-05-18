@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import GoogleRoleModal from '../../components/ui/GoogleRoleModal';
 import ForgotPasswordModal from '../../components/ui/ForgotPasswordModal';
+import Logo, { LogoMark } from '../../components/ui/Logo';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Google brand icon
@@ -40,15 +41,8 @@ const AuthBrand = () => (
         <div className="absolute top-1/2 right-12 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2" />
 
         {/* Logo */}
-        <Link to="/" className="relative z-10 inline-flex items-center gap-2 w-fit">
-            <span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="4 12 10 18 20 6" />
-                </svg>
-            </span>
-            <span className="font-extrabold text-[20px] tracking-tight">
-                testup<span className="text-[var(--brand-green-100)]">.az</span>
-            </span>
+        <Link to="/" className="relative z-10 w-fit" aria-label="testup.az ana səhifə">
+            <Logo size={36} dark />
         </Link>
 
         {/* Body */}
@@ -167,15 +161,8 @@ const Login = () => {
                     </div>
 
                     {/* Mobile logo */}
-                    <Link to="/" className="lg:hidden inline-flex items-center gap-2 mb-6">
-                        <span className="w-9 h-9 rounded-xl bg-[var(--primary)] flex items-center justify-center">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="4 12 10 18 20 6" />
-                            </svg>
-                        </span>
-                        <span className="font-extrabold text-[20px] tracking-tight text-[var(--ink-900)]">
-                            testup<span className="text-[var(--brand-green-600)]">.az</span>
-                        </span>
+                    <Link to="/" className="lg:hidden mb-6" aria-label="testup.az ana səhifə">
+                        <Logo size={36} />
                     </Link>
 
                     {/* Form card */}

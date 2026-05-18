@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
     HiOutlineCheck, HiOutlinePlus, HiOutlineCreditCard, HiOutlineX,
-    HiOutlineArrowRight,
+    HiOutlineArrowRight, HiOutlineShieldCheck,
 } from 'react-icons/hi';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -65,11 +65,7 @@ const PlansHero = () => (
                 <span className="text-[var(--ink-800)] font-semibold">Planlar</span>
             </div>
             <div className="text-center max-w-[720px] mx-auto">
-                <span className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] text-[13px] font-semibold border border-blue-100">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
-                    14 gün pulsuz sınaq · Kredit kartı tələb olunmur
-                </span>
-                <h1 className="mt-5 text-[36px] md:text-[52px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
+                <h1 className="text-[36px] md:text-[52px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
                     Hər müəllim və mərkəz üçün uyğun plan
                 </h1>
                 <p className="mt-4 text-[18px] text-[var(--ink-500)] max-w-[580px] mx-auto leading-relaxed">
@@ -276,8 +272,7 @@ const CompareTable = ({ plans }) => {
         <section className="py-20 md:py-24">
             <div className="container-main">
                 <div className="text-center max-w-[720px] mx-auto mb-12">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">Müqayisə</span>
-                    <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)]">
+                    <h2 className="text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)]">
                         Bütün xüsusiyyətlər yan-yana
                     </h2>
                     <p className="mt-4 text-[17px] text-[var(--ink-500)] leading-relaxed">
@@ -405,8 +400,7 @@ const PlansFAQ = () => {
         <section className="py-20 md:py-24 bg-[var(--ink-50)]">
             <div className="container-main max-w-3xl">
                 <div className="text-center max-w-[720px] mx-auto mb-12">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">FAQ</span>
-                    <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)]">
+                    <h2 className="text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)]">
                         Plan və ödənişlərlə bağlı suallar
                     </h2>
                 </div>
@@ -664,6 +658,10 @@ const Pricing = ({ isEmbedded = false }) => {
                         );
                     })}
                 </div>
+                <p className="mt-8 text-center text-[13px] text-[var(--ink-500)] inline-flex items-center justify-center gap-2 w-full">
+                    <HiOutlineShieldCheck className="w-4 h-4 text-[var(--brand-green-600)]" />
+                    Pulsuz planda kart məlumatı tələb olunmur · İstədiyiniz vaxt ləğv edə bilərsiniz
+                </p>
             </div>
             <CompareTable plans={plans} />
             <ExtraCTA />

@@ -7,7 +7,7 @@ import {
     HiOutlineAcademicCap, HiOutlinePencilAlt,
     HiOutlineBell, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineSpeakerphone, HiOutlineCreditCard,
 } from 'react-icons/hi';
-import logo from '../../assets/logo.png';
+import Logo from '../ui/Logo';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import SockJS from 'sockjs-client';
@@ -255,12 +255,10 @@ const Navbar = () => {
                 <div className="flex justify-between items-center h-[78px]">
 
                     {/* Logo */}
-                    <Link to="/" className="flex items-center shrink-0 group">
-                        <img
-                            src={logo}
-                            alt="testup.az"
-                            className="h-[60px] w-auto transition-transform duration-200 group-hover:scale-[1.03]"
-                        />
+                    <Link to="/" className="flex items-center shrink-0 group" aria-label="testup.az ana səhifə">
+                        <span className="inline-block transition-transform duration-200 group-hover:scale-[1.03]">
+                            <Logo size={36} />
+                        </span>
                     </Link>
 
                     {/* Desktop nav links with sliding indicator */}

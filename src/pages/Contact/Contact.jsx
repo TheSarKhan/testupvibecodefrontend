@@ -13,10 +13,9 @@ import api from '../../api/axios';
 // Shared
 // ───────────────────────────────────────────────────────────────────────────
 
-const SectionHead = ({ eyebrow, title, sub }) => (
+const SectionHead = ({ title, sub }) => (
     <div className="text-center max-w-[720px] mx-auto mb-12">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">{eyebrow}</span>
-        <h2 className="mt-3 text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)] text-balance">{title}</h2>
+        <h2 className="text-[30px] md:text-[44px] font-bold leading-[1.1] tracking-[-0.03em] text-[var(--ink-900)] text-balance">{title}</h2>
         {sub && <p className="mt-4 text-[17px] text-[var(--ink-500)] leading-relaxed">{sub}</p>}
     </div>
 );
@@ -46,11 +45,7 @@ const ContactHero = () => (
                 <span className="text-[var(--ink-800)] font-semibold">Əlaqə</span>
             </div>
             <div className="text-center max-w-[720px] mx-auto">
-                <span className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] text-[13px] font-semibold border border-blue-100">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
-                    Adətən 2 saat ərzində cavab veririk
-                </span>
-                <h1 className="mt-5 text-[36px] md:text-[52px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
+                <h1 className="text-[36px] md:text-[52px] lg:text-[60px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
                     Bizimlə əlaqə saxlayın
                 </h1>
                 <p className="mt-4 text-[18px] text-[var(--ink-500)] max-w-[580px] mx-auto leading-relaxed">
@@ -139,40 +134,40 @@ const ContactBody = () => {
 
                         <div className="flex flex-col gap-3">
                             <InfoCard
-                                href="mailto:salam@testup.az"
+                                href="mailto:hello@testup.az"
                                 Icon={HiOutlineMail}
                                 label="Email"
-                                value="salam@testup.az"
+                                value="hello@testup.az"
                                 sub="Ümumi məlumatlar və satış üçün"
                             />
                             <InfoCard
-                                href="mailto:destek@testup.az"
+                                href="mailto:support@testup.az"
                                 Icon={HiOutlineShieldCheck}
                                 green
                                 label="Texniki dəstək"
-                                value="destek@testup.az"
-                                sub="Pulsuz plan üçün 24 saat içində cavab"
+                                value="support@testup.az"
+                                sub="İş günlərində 24 saat içində cavab"
                             />
                             <InfoCard
-                                href="tel:+994123456789"
+                                href="tel:+994555723023"
                                 Icon={HiOutlinePhone}
                                 label="Telefon"
-                                value="+994 12 345 67 89"
+                                value="+994 55 572 30 23"
                                 sub="B.e — Cümə · 09:00 – 18:00"
                             />
                             <InfoCard
-                                href="https://wa.me/994504000000"
+                                href="https://wa.me/994555723023"
                                 Icon={WhatsAppIcon}
                                 green
                                 label="WhatsApp"
-                                value="+994 50 400 00 00"
-                                sub="Peşəkar plan istifadəçiləri üçün"
+                                value="+994 55 572 30 23"
+                                sub="Tez cavab üçün"
                             />
                             <InfoCard
                                 Icon={HiOutlineLocationMarker}
                                 label="Ofis"
                                 value="Bakı, Azərbaycan"
-                                sub="Nizami küç. 203, 4-cü mərtəbə · AZ1010"
+                                sub="Nərimanov m/s çıxışı"
                             />
                         </div>
 
@@ -308,6 +303,9 @@ const ContactBody = () => {
                                 >
                                     {sending ? 'Göndərilir...' : <>Mesajı göndər <HiOutlineArrowRight className="w-4 h-4" /></>}
                                 </button>
+                                <p className="mt-3 text-center text-[12px] text-[var(--ink-500)]">
+                                    Adətən 2 saat ərzində cavab veririk · İş saatları 9:00–18:00
+                                </p>
                             </form>
                         ) : (
                             <div className="text-center py-10">

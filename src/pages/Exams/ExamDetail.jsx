@@ -71,7 +71,7 @@ const SUBJECT_COLORS = [
 const ExamDetail = () => {
     const { shareLink } = useParams();
     const navigate = useNavigate();
-    const { isAuthenticated, isStudent } = useAuth();
+    const { isAuthenticated, isStudent, user, isAdmin } = useAuth();
 
     const [exam, setExam] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -144,9 +144,22 @@ const ExamDetail = () => {
     const isPaid = exam?.price != null && Number(exam.price) > 0;
     const isPrivate = exam?.visibility === 'PRIVATE';
     const isInactive = exam?.status === 'DRAFT' || exam?.status === 'CANCELLED';
+    // The exam's author (or any admin) opens the internal preview page
+    // (ExamView) instead of going through the student-side ExamEntry flow.
+    // user.id comes from the JWT `sub` claim (string), exam.teacherId is a
+    // Long serialized as a number — coerce both sides before comparing or
+    // the check silently fails and we ship the wrong CTA.
+    const isOwner = !!exam && !!user && (
+        Number(exam.teacherId) === Number(user.id) ||
+        isAdmin
+    );
 
     // ── Handlers ────────────────────────────────────────────────────────────
     const handleStart = () => {
+        if (isOwner && exam?.id) {
+            navigate(`/imtahanlar/${exam.id}`);
+            return;
+        }
         navigate(`/imtahan/${shareLink}`);
     };
 
@@ -205,11 +218,13 @@ const ExamDetail = () => {
     const ratingCount = exam.ratingCount || 0;
 
     const canStart = !isPaid || hasPurchased;
-    const ctaLabel = isInactive
-        ? 'İmtahan bağlıdır'
-        : isPaid && !hasPurchased
-            ? `Satın al · ${Number(exam.price).toFixed(2)} ₼`
-            : 'İmtahana başla';
+    const ctaLabel = isOwner
+        ? 'İmtahana bax'
+        : isInactive
+            ? 'İmtahan bağlıdır'
+            : isPaid && !hasPurchased
+                ? `Satın al · ${Number(exam.price).toFixed(2)} ₼`
+                : 'İmtahana başla';
 
     return (
         <div className="min-h-screen pb-16" style={{ background: 'var(--paper-cream)' }}>
@@ -348,17 +363,19 @@ const ExamDetail = () => {
                             <div className="flex flex-col gap-2 md:items-end shrink-0">
                                 <button
                                     onClick={handleStart}
-                                    disabled={isInactive}
+                                    disabled={isInactive && !isOwner}
                                     className={`inline-flex items-center justify-center gap-2 h-14 px-7 rounded-full font-bold text-[14.5px] transition-all whitespace-nowrap ${
-                                        isInactive
+                                        (isInactive && !isOwner)
                                             ? 'bg-[var(--ink-200)] text-[var(--ink-400)] cursor-not-allowed'
-                                            : isPaid && !hasPurchased
-                                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-[0_8px_24px_-10px_rgba(245,158,11,0.6)] hover:-translate-y-0.5'
-                                                : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] hover:-translate-y-0.5'
+                                            : isOwner
+                                                ? 'bg-[var(--ink-900)] hover:bg-[var(--ink-800)] text-white shadow-[0_8px_24px_-10px_rgba(0,0,0,0.35)] hover:-translate-y-0.5'
+                                                : isPaid && !hasPurchased
+                                                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-[0_8px_24px_-10px_rgba(245,158,11,0.6)] hover:-translate-y-0.5'
+                                                    : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] hover:-translate-y-0.5'
                                     }`}
                                 >
                                     {ctaLabel}
-                                    {!isInactive && <HiOutlineArrowRight className="w-4 h-4" />}
+                                    {(!isInactive || isOwner) && <HiOutlineArrowRight className="w-4 h-4" />}
                                 </button>
                                 {hasPurchased && isPaid && (
                                     <span className="text-xs font-bold text-green-700 text-center md:text-right">
@@ -536,17 +553,19 @@ const ExamDetail = () => {
                         {/* Mobile-friendly bottom CTA */}
                         <button
                             onClick={handleStart}
-                            disabled={isInactive}
+                            disabled={isInactive && !isOwner}
                             className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-sm shadow-md transition-all ${
-                                isInactive
+                                (isInactive && !isOwner)
                                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : isPaid && !hasPurchased
-                                        ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    : isOwner
+                                        ? 'bg-gray-900 hover:bg-black text-white'
+                                        : isPaid && !hasPurchased
+                                            ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
                             }`}
                         >
                             {ctaLabel}
-                            {!isInactive && <HiOutlineArrowRight className="w-4 h-4" />}
+                            {(!isInactive || isOwner) && <HiOutlineArrowRight className="w-4 h-4" />}
                         </button>
                     </aside>
                 </div>

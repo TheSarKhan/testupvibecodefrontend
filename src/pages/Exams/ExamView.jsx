@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HiOutlineArrowLeft, HiOutlinePencilAlt, HiOutlineClock, HiOutlineDocumentText, HiOutlineCheckCircle } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlinePencilAlt, HiOutlineClock, HiOutlineDocumentText, HiOutlineCheckCircle, HiOutlineKey } from 'react-icons/hi';
 import { useState } from 'react';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
+import AccessCodeModal from '../../components/ui/AccessCodeModal';
 
 const STATUS_LABELS = {
     PUBLISHED: 'Aktiv',
@@ -17,6 +18,21 @@ const ExamView = () => {
     const navigate = useNavigate();
     const [exam, setExam] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [generatingCode, setGeneratingCode] = useState(false);
+    const [accessCode, setAccessCode] = useState(null);
+
+    const generateAccessCode = async () => {
+        if (!id || generatingCode) return;
+        setGeneratingCode(true);
+        try {
+            const { data } = await api.post(`/exams/${id}/generate-code`);
+            if (data?.accessCode) setAccessCode(data.accessCode);
+        } catch {
+            toast.error('Kod yaradılmadı');
+        } finally {
+            setGeneratingCode(false);
+        }
+    };
 
     useEffect(() => {
         fetchExamDetails();
@@ -65,6 +81,16 @@ const ExamView = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
+                        {exam.visibility === 'PRIVATE' && exam.status === 'PUBLISHED' && (
+                            <button
+                                onClick={generateAccessCode}
+                                disabled={generatingCode}
+                                className="flex items-center gap-2 bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm disabled:opacity-60"
+                            >
+                                <HiOutlineKey className={`w-5 h-5 ${generatingCode ? 'animate-pulse' : ''}`} />
+                                {generatingCode ? 'Yaradılır...' : 'Tələbə kodu yarat'}
+                            </button>
+                        )}
                         <button
                             onClick={() => navigate(`/imtahanlar/${exam.id}/statistika`)}
                             className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm"
@@ -330,6 +356,10 @@ const ExamView = () => {
                     })()}
                 </div>
             </div>
+
+            {accessCode && (
+                <AccessCodeModal code={accessCode} onClose={() => setAccessCode(null)} />
+            )}
         </div>
     );
 };

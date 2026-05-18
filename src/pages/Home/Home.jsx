@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import heroIllustration from '../../assets/hero-illustration.png';
 import api from '../../api/axios';
+import CreateExamModal from '../../components/ui/CreateExamModal';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Building blocks
@@ -70,7 +71,7 @@ const FeatureCard = ({ Icon, title, desc, iconClass = 'bg-[var(--primary-soft)] 
 // Sections
 // ───────────────────────────────────────────────────────────────────────────
 
-const Hero = ({ isAuthenticated, isTeacher }) => (
+const Hero = ({ isAuthenticated, isTeacher, onCreateExam }) => (
     <section className="relative pt-16 md:pt-20 pb-16 md:pb-24 overflow-hidden">
         {/* Grid background */}
         <div
@@ -108,9 +109,15 @@ const Hero = ({ isAuthenticated, isTeacher }) => (
                     <div className="mt-9 flex flex-wrap items-center gap-3">
                         {isAuthenticated ? (
                             <>
-                                <BtnPrimary to={isTeacher ? '/imtahanlar/yarat' : '/imtahanlar'} size="lg">
-                                    {isTeacher ? 'Yeni imtahan yarat' : 'İmtahanlara bax'} <HiOutlineArrowRight className="w-4 h-4" />
-                                </BtnPrimary>
+                                {isTeacher ? (
+                                    <BtnPrimary onClick={onCreateExam} size="lg">
+                                        Yeni imtahan yarat <HiOutlineArrowRight className="w-4 h-4" />
+                                    </BtnPrimary>
+                                ) : (
+                                    <BtnPrimary to="/imtahanlar" size="lg">
+                                        İmtahanlara bax <HiOutlineArrowRight className="w-4 h-4" />
+                                    </BtnPrimary>
+                                )}
                                 <BtnSecondary to="/profil" size="lg">Profilə keç</BtnSecondary>
                             </>
                         ) : (
@@ -505,7 +512,7 @@ const FAQ = () => {
         { q: 'Nəticələri Excel və ya PDF formatında ixrac edə bilərəmmi?', a: 'Bəli. Hər imtahanın nəticələrini Excel, CSV və PDF kimi yükləyə bilərsiniz. Sertifikatlar avtomatik PDF formatında hazırlanır.' },
         { q: 'Texniki dəstək necədir?', a: 'Pulsuz plan üçün email, Peşəkar üçün prioritet email + WhatsApp, Mərkəz planı üçün isə şəxsi menecer ayrılır.' },
     ];
-    const [open, setOpen] = useState(0);
+    const [open, setOpen] = useState(-1);
     return (
         <section className="py-20 md:py-24" id="faq">
             <div className="container-main max-w-3xl">
@@ -533,7 +540,7 @@ const FAQ = () => {
     );
 };
 
-const CTABanner = ({ isAuthenticated, isTeacher }) => (
+const CTABanner = ({ isAuthenticated, isTeacher, onCreateExam }) => (
     <section className="py-16 md:py-20">
         <div className="container-main">
             <div className="relative overflow-hidden rounded-3xl px-6 py-14 md:px-12 md:py-16 text-center text-white" style={{ background: 'linear-gradient(135deg, var(--brand-blue-700) 0%, var(--primary) 60%, var(--brand-green-600) 130%)' }}>
@@ -548,12 +555,22 @@ const CTABanner = ({ isAuthenticated, isTeacher }) => (
                 </p>
                 <div className="relative mt-8 flex flex-wrap justify-center gap-3">
                     {isAuthenticated ? (
-                        <Link
-                            to={isTeacher ? '/imtahanlar/yarat' : '/imtahanlar'}
-                            className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--primary)] bg-white hover:bg-white/95 transition-all shadow-xl"
-                        >
-                            {isTeacher ? 'Yeni imtahan yarat' : 'İmtahanlara bax'} <HiOutlineArrowRight className="w-4 h-4" />
-                        </Link>
+                        isTeacher ? (
+                            <button
+                                type="button"
+                                onClick={onCreateExam}
+                                className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--primary)] bg-white hover:bg-white/95 transition-all shadow-xl"
+                            >
+                                Yeni imtahan yarat <HiOutlineArrowRight className="w-4 h-4" />
+                            </button>
+                        ) : (
+                            <Link
+                                to="/imtahanlar"
+                                className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--primary)] bg-white hover:bg-white/95 transition-all shadow-xl"
+                            >
+                                İmtahanlara bax <HiOutlineArrowRight className="w-4 h-4" />
+                            </Link>
+                        )
                     ) : (
                         <>
                             <Link
@@ -635,10 +652,13 @@ const Banners = ({ banners, isAuthenticated }) => {
 const Home = () => {
     const { isAuthenticated, isTeacher } = useAuth();
     const [banners, setBanners] = useState([]);
+    const [createOpen, setCreateOpen] = useState(false);
 
     useEffect(() => {
         api.get('/content/banners').then(r => setBanners(r.data)).catch(() => {});
     }, []);
+
+    const openCreate = () => setCreateOpen(true);
 
     return (
         <div style={{ background: 'var(--paper-cream)' }}>
@@ -648,7 +668,7 @@ const Home = () => {
                 <link rel="canonical" href="https://testup.az/" />
             </Helmet>
 
-            <Hero isAuthenticated={isAuthenticated} isTeacher={isTeacher} />
+            <Hero isAuthenticated={isAuthenticated} isTeacher={isTeacher} onCreateExam={openCreate} />
             <Banners banners={banners} isAuthenticated={isAuthenticated} />
             <Stats />
             <HowItWorks />
@@ -657,7 +677,9 @@ const Home = () => {
             <PricingPreview />
             <Testimonials />
             <FAQ />
-            <CTABanner isAuthenticated={isAuthenticated} isTeacher={isTeacher} />
+            <CTABanner isAuthenticated={isAuthenticated} isTeacher={isTeacher} onCreateExam={openCreate} />
+
+            <CreateExamModal isOpen={createOpen} onClose={() => setCreateOpen(false)} />
         </div>
     );
 };

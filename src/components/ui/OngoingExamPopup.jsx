@@ -78,6 +78,16 @@ const OngoingExamPopup = () => {
             return;
         }
 
+        // If the route just changed to the result page, the user has just
+        // finalized the exam. ExamSession already clears localStorage on its
+        // way out; we additionally clear the in-memory state so the popup
+        // disappears immediately, without waiting for the next poll tick.
+        if (location.pathname.startsWith('/test/result/')) {
+            if (!user) localStorage.removeItem(GUEST_KEY);
+            setOngoingExams([]);
+            return;
+        }
+
         if (user) {
             fetchOngoing();
             const interval = setInterval(fetchOngoing, 30000);
@@ -87,7 +97,21 @@ const OngoingExamPopup = () => {
             const interval = setInterval(fetchGuestOngoing, 30000);
             return () => clearInterval(interval);
         }
-    }, [user, isExamSession]);
+    }, [user, isExamSession, location.pathname]);
+
+    // Cross-window/tab safety: react instantly when localStorage's
+    // guestOngoingExam key is removed (e.g. ExamSession finalized in another
+    // tab, or this same tab while popup state hadn't refreshed yet).
+    useEffect(() => {
+        if (user) return;
+        const onStorage = (e) => {
+            if (e.key === GUEST_KEY && e.newValue === null) {
+                setOngoingExams([]);
+            }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, [user]);
 
     useEffect(() => {
         if (ongoingExams.length > 0 && ongoingExams[0].startedAt && ongoingExams[0].durationMinutes) {

@@ -395,7 +395,7 @@ const PlansFAQ = () => {
         { q: 'Endirim kuponları və promo kodlar varmı?', a: 'Müəllim təsdiqi ilə 50%, illik ödənişlə 20% endirim mümkündür. Ayrıca yaz/payız tədris ilinin başlanğıcında xüsusi kampaniyalar elan olunur.' },
         { q: 'Pul qaytarma siyasətiniz necədir?', a: 'İlk 30 gün ərzində soruşmadan tam pul qaytarması. Daha sonra istifadə olunmamış müddət üçün proporsional qaytarma.' },
     ];
-    const [open, setOpen] = useState(0);
+    const [open, setOpen] = useState(-1);
     return (
         <section className="py-20 md:py-24 bg-[var(--ink-50)]">
             <div className="container-main max-w-3xl">

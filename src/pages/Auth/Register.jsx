@@ -405,9 +405,9 @@ const StepPassword = ({ formData, set, onBack, onSubmit, loading }) => {
                     className="w-4 h-4 rounded accent-[var(--primary)] mt-0.5 shrink-0"
                 />
                 <span className="text-[13px] text-[var(--ink-700)] leading-snug">
-                    <Link to="/legal/sertler" className="text-[var(--primary)] font-semibold hover:underline">İstifadə şərtləri</Link>
+                    <Link to="/istifade-sertleri" target="_blank" className="text-[var(--primary)] font-semibold hover:underline">İstifadə şərtləri</Link>
                     {' '}və{' '}
-                    <Link to="/legal/mexfilik" className="text-[var(--primary)] font-semibold hover:underline">Gizlilik Siyasətini</Link>
+                    <Link to="/gizlilik-siyaseti" target="_blank" className="text-[var(--primary)] font-semibold hover:underline">Gizlilik Siyasətini</Link>
                     {' '}oxuyub qəbul edirəm
                 </span>
             </label>

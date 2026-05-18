@@ -359,10 +359,10 @@ const WhatsAppIcon = ({ className = 'w-5 h-5' }) => (
 // ───────────────────────────────────────────────────────────────────────────
 
 const SupportChannels = () => {
+    // Knowledge base + community group cards are temporarily hidden — they don't
+    // exist yet. Only the YouTube tutorials card stays, linking to the channel.
     const cards = [
-        { Icon: HiOutlineLibrary, title: 'Bilik Bazası',     desc: '200+ məqalə, addım-addım təlimatlar və video təlimlər. İstifadəyə başlamağın ən sürətli yolu.', cta: 'Bilik bazasına keç' },
-        { Icon: HiOutlinePlay,    title: 'Video təlimlər',    desc: 'İlk imtahanı yaratmaqdan sertifikat şablonuna qədər — 5-10 dəqiqəlik video təlimlər.',           cta: 'YouTube kanalına keç', green: true },
-        { Icon: HiOutlineUsers,   title: 'Müəllim icması',    desc: '2 400+ müəllimin olduğu Telegram qrupu. Suallarınıza tez-tez digər müəllimlər cavab verir.',     cta: 'İcmaya qoşul' },
+        { Icon: HiOutlinePlay, title: 'Video təlimlər', desc: 'İlk imtahanı yaratmaqdan sertifikat şablonuna qədər — 5-10 dəqiqəlik video təlimlər.', cta: 'YouTube kanalına keç', href: 'https://www.youtube.com/@testupaz', green: true },
     ];
     return (
         <section className="py-20 md:py-24 bg-[var(--ink-50)]">
@@ -372,7 +372,7 @@ const SupportChannels = () => {
                     title="Sual göndərməyə ehtiyac olmaya bilər"
                     sub="Çox vaxt cavab artıq aşağıdakı resurslardan birindədir."
                 />
-                <div className="grid md:grid-cols-3 gap-5">
+                <div className="grid md:grid-cols-1 gap-5 max-w-md mx-auto">
                     {cards.map((c, i) => (
                         <div
                             key={i}
@@ -385,7 +385,12 @@ const SupportChannels = () => {
                             </div>
                             <h4 className="text-[17px] font-bold text-[var(--ink-900)] mb-2">{c.title}</h4>
                             <p className="text-[14px] text-[var(--ink-500)] leading-relaxed mb-4">{c.desc}</p>
-                            <a href="#" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[var(--primary)] hover:gap-2 transition-all">
+                            <a
+                                href={c.href || '#'}
+                                target={c.href ? '_blank' : undefined}
+                                rel={c.href ? 'noopener noreferrer' : undefined}
+                                className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[var(--primary)] hover:gap-2 transition-all"
+                            >
                                 {c.cta} <HiOutlineArrowRight className="w-3.5 h-3.5" />
                             </a>
                         </div>
@@ -407,7 +412,7 @@ const ContactFAQ = () => {
         { q: 'Texniki problem ilə üzləşmişəm — nə etməliyəm?',    a: 'destek@testup.az ünvanına yazın və ya istifadəçi panelinizdən "Dəstək" düyməsini sıxın. Mümkünsə ekran şəkili əlavə edin — bu prosesi xeyli sürətləndirir.' },
         { q: 'Mətbuatla əlaqə saxlamaq istəyirəm.',                a: 'Mətbuat materialları və müsahibə müraciətləri üçün press@testup.az ünvanına yazın. Loqo və əsas məlumat paketini istənildikdə göndəririk.' },
     ];
-    const [open, setOpen] = useState(0);
+    const [open, setOpen] = useState(-1);
     return (
         <section className="py-20 md:py-24">
             <div className="container-main max-w-3xl">

@@ -95,13 +95,15 @@ const LegalShell = ({ kind, breadcrumb, title, subtitle, meta, toc, activeId, se
                         <span className="text-[12px] font-bold text-[var(--ink-800)]">Azərbaycan</span>
                         <span className="text-[10.5px] text-[var(--ink-400)] font-mono">(AZ)</span>
                     </span>
-                    <a
-                        href={meta.pdfHref || '#'}
+                    <button
+                        type="button"
+                        onClick={() => window.print()}
                         className="inline-flex items-center gap-1.5 bg-white border border-[var(--brand-blue-200)] hover:border-[var(--primary)] hover:bg-[var(--primary-soft)] text-[var(--primary-hover)] rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-colors"
+                        title="Bu səhifəni PDF kimi yadda saxlamaq üçün çap dialoqunda 'PDF olaraq saxla' seçin"
                     >
                         <HiOutlineDownload className="w-3.5 h-3.5" />
                         PDF yüklə
-                    </a>
+                    </button>
                 </div>
             </div>
         </header>

@@ -657,7 +657,16 @@ const QuestionBankSubject = () => {
 
     // ── Save (with duplicate detection) ──────────────────────────────────────
     const handleSave = async (localQuestion) => {
-        if (!localQuestion.text.trim()) { toast.error('Sualın mətni boş ola bilməz'); return; }
+        // The exam editor lets teachers create image-only questions (e.g. a
+        // scanned task cropped from a PDF) with no typed text. In the question
+        // bank we now allow the same: if there's an attached image, the text
+        // can be empty. Without both, the question is empty and we still block.
+        const hasText = !!localQuestion.text?.trim();
+        const hasImage = !!localQuestion.attachedImage;
+        if (!hasText && !hasImage) {
+            toast.error('Sual mətni və ya şəkli əlavə edin');
+            return;
+        }
 
         const contentValidation = validateLatexSyntax(localQuestion.text);
         if (!contentValidation.valid) {

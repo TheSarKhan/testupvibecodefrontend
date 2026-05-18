@@ -5,6 +5,7 @@ import {
     HiOutlineCheck, HiOutlineEye, HiOutlineStar, HiStar,
     HiOutlineChevronDown, HiOutlineChevronRight, HiOutlineLibrary,
     HiOutlineSortDescending, HiOutlineX, HiOutlineBookOpen,
+    HiOutlinePencil, HiOutlineTrash,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
@@ -77,14 +78,18 @@ const Sidebar = ({
     subjects, activeSubjectId, onSelectSubject,
     typeFilter, onToggleType, difficultyFilter, onToggleDifficulty,
     typeCounts, difficultyCounts, totalCount,
-    onAddSubject, suggestions,
+    onAddSubject, onRenameSubject, onDeleteSubject, suggestions,
 }) => {
     const [adding, setAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [renamingId, setRenamingId] = useState(null);
+    const [renameValue, setRenameValue] = useState('');
     const inputRef = useRef(null);
+    const renameRef = useRef(null);
 
     useEffect(() => { if (adding) inputRef.current?.focus(); }, [adding]);
+    useEffect(() => { if (renamingId) renameRef.current?.focus(); }, [renamingId]);
 
     const submit = async () => {
         const name = newName.trim();
@@ -100,6 +105,21 @@ const Sidebar = ({
     };
 
     const cancel = () => { setNewName(''); setAdding(false); };
+
+    const startRename = (s) => {
+        setRenamingId(s.id);
+        setRenameValue(s.name);
+    };
+    const submitRename = async (s) => {
+        const next = renameValue.trim();
+        if (!next || next === s.name) { setRenamingId(null); return; }
+        try {
+            await onRenameSubject(s.id, next);
+        } finally {
+            setRenamingId(null);
+        }
+    };
+    const cancelRename = () => { setRenamingId(null); setRenameValue(''); };
 
     return (
         <aside className="lg:sticky lg:top-6 self-start space-y-7">
@@ -138,15 +158,37 @@ const Sidebar = ({
                     {subjects.map(s => {
                         const c = colorForSubject(s);
                         const active = activeSubjectId === s.id;
+                        const isRenaming = renamingId === s.id;
+                        const canEdit = !s.isGlobal;
+
+                        if (isRenaming) {
+                            return (
+                                <div key={s.id} className="px-3 py-1.5 rounded-xl bg-white border border-[var(--brand-blue-200)]">
+                                    <input
+                                        ref={renameRef}
+                                        type="text"
+                                        value={renameValue}
+                                        onChange={e => setRenameValue(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') { e.preventDefault(); submitRename(s); }
+                                            else if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
+                                        }}
+                                        onBlur={() => submitRename(s)}
+                                        className="w-full px-2 py-1 text-[13px] border border-[var(--ink-200)] rounded-md outline-none focus:border-[var(--primary)]"
+                                    />
+                                </div>
+                            );
+                        }
+
                         return (
-                            <button
+                            <div
                                 key={s.id}
-                                onClick={() => onSelectSubject(s.id)}
-                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] transition-colors ${
+                                className={`group/sub w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] transition-colors cursor-pointer ${
                                     active
                                         ? 'bg-[var(--primary-soft)] text-[var(--primary-hover)] font-bold'
                                         : 'text-[var(--ink-700)] hover:bg-white'
                                 }`}
+                                onClick={() => onSelectSubject(s.id)}
                             >
                                 <HiOutlineChevronRight className="w-3 h-3 text-[var(--ink-300)] shrink-0" />
                                 <span
@@ -156,10 +198,32 @@ const Sidebar = ({
                                     {shortFor(s.name)}
                                 </span>
                                 <span className="flex-1 text-left truncate">{s.name}</span>
-                                <span className={`text-[11px] font-mono ${active ? 'text-[var(--primary)]/70' : 'text-[var(--ink-400)]'}`}>
+
+                                {canEdit && (
+                                    <span className="opacity-0 group-hover/sub:opacity-100 flex items-center gap-0.5 transition-opacity">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); startRename(s); }}
+                                            title="Adını dəyiş"
+                                            className="w-5 h-5 inline-flex items-center justify-center rounded text-[var(--ink-400)] hover:text-[var(--primary)] hover:bg-[var(--primary-soft)]"
+                                        >
+                                            <HiOutlinePencil className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); onDeleteSubject(s); }}
+                                            title="Sil"
+                                            className="w-5 h-5 inline-flex items-center justify-center rounded text-[var(--ink-400)] hover:text-red-600 hover:bg-red-50"
+                                        >
+                                            <HiOutlineTrash className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                )}
+
+                                <span className={`text-[11px] font-mono group-hover/sub:hidden ${active ? 'text-[var(--primary)]/70' : 'text-[var(--ink-400)]'}`}>
                                     {s.questionCount ?? 0}
                                 </span>
-                            </button>
+                            </div>
                         );
                     })}
 
@@ -343,6 +407,18 @@ const QuestionRow = ({ q, subject, selected, onToggleSelect, expanded, onToggleE
                         <LatexPreview content={q.content || '—'} />
                     </div>
 
+                    {/* Image thumbnail — collapsed view (small preview) */}
+                    {q.attachedImage && (
+                        <div className="mt-2">
+                            <img
+                                src={q.attachedImage}
+                                alt="Sual şəkli"
+                                className="max-h-20 rounded-lg border border-[var(--ink-200)] object-contain bg-white"
+                                loading="lazy"
+                            />
+                        </div>
+                    )}
+
                     {/* Foot */}
                     <div className="mt-2 flex items-center gap-2 text-[11.5px] text-[var(--ink-500)]">
                         <span>{typeLabel}</span>
@@ -381,6 +457,15 @@ const QuestionRow = ({ q, subject, selected, onToggleSelect, expanded, onToggleE
                     <div className="text-[14px] text-[var(--ink-900)] mt-3 mb-3 leading-relaxed">
                         <LatexPreview content={q.content || ''} />
                     </div>
+                    {q.attachedImage && (
+                        <div className="mb-3">
+                            <img
+                                src={q.attachedImage}
+                                alt="Sual şəkli"
+                                className="max-h-72 rounded-xl border border-[var(--ink-200)] object-contain bg-white"
+                            />
+                        </div>
+                    )}
                     {options.length > 0 && (
                         <div className="space-y-2 mb-3">
                             {options.map((opt, i) => {
@@ -519,6 +604,31 @@ const QuestionBank = () => {
             const msg = err.response?.data?.message || 'Fənn əlavə edilmədi';
             toast.error(msg);
             throw err;
+        }
+    };
+
+    const handleRenameSubject = async (id, name) => {
+        try {
+            const { data } = await api.put(`/bank/subjects/${id}`, { name });
+            setSubjects(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+            toast.success('Fənn adı dəyişdirildi');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Fənn adı dəyişdirilmədi');
+        }
+    };
+
+    const handleDeleteSubject = async (subject) => {
+        const msg = subject.questionCount > 0
+            ? `"${subject.name}" fənni və içindəki ${subject.questionCount} sual tamamilə silinəcək. Davam edilsin?`
+            : `"${subject.name}" fənni silinəcək. Davam edilsin?`;
+        if (!window.confirm(msg)) return;
+        try {
+            await api.delete(`/bank/subjects/${subject.id}`);
+            setSubjects(prev => prev.filter(s => s.id !== subject.id));
+            if (activeSubjectId === subject.id) setActiveSubjectId(null);
+            toast.success('Fənn silindi');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Fənn silinmədi');
         }
     };
 
@@ -711,6 +821,8 @@ const QuestionBank = () => {
                     difficultyCounts={difficultyCounts}
                     totalCount={totalCount}
                     onAddSubject={handleAddSubject}
+                    onRenameSubject={handleRenameSubject}
+                    onDeleteSubject={handleDeleteSubject}
                     suggestions={systemSubjects.filter(n => !subjects.some(s => s.name === n))}
                 />
 

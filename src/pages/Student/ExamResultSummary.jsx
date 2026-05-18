@@ -10,7 +10,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 import { fmtDate } from '../../utils/date';
-import Logo from '../../components/ui/Logo';
+import { useAuth } from '../../context/AuthContext';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -225,11 +225,13 @@ const QuestionReview = ({ questions, sessionId, navigate }) => {
 
     if (!items.length) return null;
 
+    const pendingCount = items.filter(q => q._status === 'pending').length;
     const tabs = [
-        { k: 'all',     label: 'Hamısı',  count: counts.all },
-        { k: 'correct', label: 'Düz',     count: counts.correct },
-        { k: 'wrong',   label: 'Səhv',    count: counts.wrong + counts.partial },
-        { k: 'skipped', label: 'Boş',     count: counts.skipped },
+        { k: 'all',     label: 'Hamısı',     count: counts.all },
+        { k: 'correct', label: 'Düz',        count: counts.correct },
+        { k: 'wrong',   label: 'Səhv',       count: counts.wrong + counts.partial },
+        { k: 'skipped', label: 'Boş',        count: counts.skipped },
+        ...(pendingCount > 0 ? [{ k: 'pending', label: 'Yoxlanılır', count: pendingCount }] : []),
     ];
 
     return (
@@ -346,12 +348,48 @@ const ReviewItem = ({ q, index }) => {
                 </div>
             )}
 
-            {!isChoice && q.correctAnswer && (
-                <div className="bg-[var(--accent-soft)] border border-[var(--brand-green-100)] rounded-xl p-3.5 mt-1">
-                    <p className="text-[11px] font-bold text-[var(--brand-green-600)] uppercase tracking-[0.1em] mb-1.5">Düzgün cavab</p>
-                    <div className="text-[14px] font-medium text-[var(--ink-900)]">
-                        <LatexPreview content={q.correctAnswer} />
-                    </div>
+            {!isChoice && (
+                <div className="flex flex-col gap-2.5 mt-1">
+                    {/* Student's typed answer (if any). For OPEN_MANUAL / OPEN_AUTO
+                        this is what they actually wrote — needs to be visible
+                        on the result page, not just the correct answer. */}
+                    {(q.studentAnswerText?.trim() || q.studentAnswerImage) && (
+                        <div className="bg-white border border-[var(--ink-200)] rounded-xl p-3.5">
+                            <p className="text-[11px] font-bold text-[var(--ink-500)] uppercase tracking-[0.1em] mb-1.5">Sizin cavab</p>
+                            {q.studentAnswerText?.trim() && (
+                                <div className="text-[14px] font-medium text-[var(--ink-900)] whitespace-pre-wrap">
+                                    <LatexPreview content={q.studentAnswerText} />
+                                </div>
+                            )}
+                            {q.studentAnswerImage && (
+                                <img
+                                    src={q.studentAnswerImage}
+                                    alt="Cavab şəkli"
+                                    className="mt-2 max-h-60 rounded-lg border border-[var(--ink-200)] object-contain bg-white"
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {q.correctAnswer && (
+                        <div className="bg-[var(--accent-soft)] border border-[var(--brand-green-100)] rounded-xl p-3.5">
+                            <p className="text-[11px] font-bold text-[var(--brand-green-600)] uppercase tracking-[0.1em] mb-1.5">
+                                {q.questionType === 'OPEN_MANUAL' ? 'İstinad cavab' : 'Düzgün cavab'}
+                            </p>
+                            <div className="text-[14px] font-medium text-[var(--ink-900)]">
+                                <LatexPreview content={q.correctAnswer} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* OPEN_MANUAL feedback shown to the student once a teacher
+                        scored / commented on it. */}
+                    {q.questionType === 'OPEN_MANUAL' && q.isGraded && q.feedback?.trim() && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-[0.1em] mb-1.5">Müəllim qeydi</p>
+                            <p className="text-[13.5px] text-[var(--ink-800)] whitespace-pre-wrap">{q.feedback}</p>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -366,6 +404,7 @@ const ExamResultSummary = () => {
     const { sessionId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { user, isAuthenticated } = useAuth();
 
     const submission = location.state?.submission || null;
 
@@ -440,15 +479,21 @@ const ExamResultSummary = () => {
     };
 
     const handleShare = () => {
-        if (navigator.share) {
-            navigator.share({
-                title: displaySubmission?.examTitle || 'İmtahan nəticəsi',
-                url: window.location.href,
-            }).catch(() => {});
-        } else if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(window.location.href);
-            toast.success('Link kopyalandı');
+        const url = window.location.href;
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(url)
+                .then(() => toast.success('Nəticə linki kopyalandı'))
+                .catch(() => toast.error('Link kopyalanmadı'));
+            return;
         }
+        // Fallback for very old browsers without async clipboard API.
+        const el = document.createElement('textarea');
+        el.value = url;
+        document.body.appendChild(el);
+        el.select();
+        try { document.execCommand('copy'); toast.success('Nəticə linki kopyalandı'); }
+        catch { toast.error('Link kopyalanmadı'); }
+        document.body.removeChild(el);
     };
 
     if (loading) {
@@ -479,32 +524,21 @@ const ExamResultSummary = () => {
     const pending = displaySubmission?.pendingManualCount || 0;
     const totalQuestions = correct + wrong + skipped + pending;
 
+    // "Owner" — the student who actually took this exam. Used to gate
+    // personal actions (review my answers, profile shortcuts, rate). Guest
+    // submissions have no studentId; the local justSubmitted-via-state hint
+    // covers the case where the just-finished guest opens this page directly.
+    // NOTE: user.id is a JWT-string, displaySubmission.studentId is a number,
+    // so always compare via Number() coercion.
+    const justSubmittedLocally = !!submission;
+    const isOwner = justSubmittedLocally || (
+        isAuthenticated && user?.id != null &&
+        displaySubmission?.studentId != null &&
+        Number(user.id) === Number(displaySubmission.studentId)
+    );
+
     return (
         <div className="min-h-screen pb-16" style={{ background: 'var(--paper-cream)' }}>
-            {/* ── Header ── */}
-            <header className="border-b border-[var(--ink-150)] bg-[color-mix(in_srgb,var(--paper-cream),white_30%)]/90 backdrop-blur sticky top-0 z-20">
-                <div className="container-main py-4 flex items-center justify-between gap-3 flex-wrap">
-                    <Link to="/" aria-label="testup.az ana səhifə">
-                        <Logo size={36} />
-                    </Link>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleShare}
-                            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[13px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
-                            title="Paylaş"
-                        >
-                            <HiOutlineShare className="w-4 h-4" /> Paylaş
-                        </button>
-                        <Link
-                            to="/imtahanlar"
-                            className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[13px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
-                        >
-                            İmtahanlara qayıt
-                        </Link>
-                    </div>
-                </div>
-            </header>
-
             <div className="container-main max-w-6xl py-8 md:py-10 space-y-6">
                 {/* ── Hero ── */}
                 <section
@@ -551,18 +585,23 @@ const ExamResultSummary = () => {
                             </p>
 
                             <div className="mt-6 flex flex-wrap gap-2.5 justify-center lg:justify-start">
-                                <button
-                                    onClick={() => navigate(`/test/review/${sessionId}`, { state: { fromResult: true } })}
-                                    className="h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
-                                >
-                                    <HiOutlineEye className="w-4 h-4" /> Cavablarıma bax
-                                </button>
-                                <Link
-                                    to="/imtahanlar"
-                                    className="h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--ink-800)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
-                                >
-                                    Digər imtahanlar
-                                </Link>
+                                {isOwner && (
+                                    <button
+                                        onClick={() => navigate(`/test/review/${sessionId}`, { state: { fromResult: true } })}
+                                        className="h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                                    >
+                                        <HiOutlineEye className="w-4 h-4" /> Cavablarıma bax
+                                    </button>
+                                )}
+                                {isOwner && (
+                                    <button
+                                        onClick={handleShare}
+                                        className="h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--ink-800)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                                        title="Nəticənin linkini kopyala"
+                                    >
+                                        <HiOutlineShare className="w-4 h-4" /> Nəticəmi paylaş
+                                    </button>
+                                )}
                                 {displaySubmission?.explanationVideoUrl && (
                                     <a
                                         href={displaySubmission.explanationVideoUrl}
@@ -651,9 +690,10 @@ const ExamResultSummary = () => {
                 )}
 
                 {/* ── Rating + Question Review side-by-side on large ── */}
-                <div className="grid lg:grid-cols-[1fr_320px] gap-5">
+                <div className={`grid gap-5 ${isOwner ? 'lg:grid-cols-[1fr_320px]' : ''}`}>
                     <QuestionReview questions={reviewQuestions} sessionId={sessionId} navigate={navigate} />
 
+                    {isOwner && (
                     <aside className="flex flex-col gap-5">
                         {/* Rating card */}
                         <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6">
@@ -707,6 +747,7 @@ const ExamResultSummary = () => {
                             </Link>
                         </div>
                     </aside>
+                    )}
                 </div>
             </div>
         </div>

@@ -7,11 +7,12 @@ import {
     HiOutlineCheckCircle, HiOutlineClock, HiOutlineLibrary,
     HiOutlineEye, HiOutlineChartBar, HiOutlinePencilAlt, HiOutlineDuplicate,
     HiOutlineTrash, HiOutlineShare, HiOutlineDownload, HiOutlineLockClosed,
-    HiOutlineFilter, HiOutlineChevronDown,
+    HiOutlineFilter, HiOutlineChevronDown, HiOutlineKey,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import { CreateExamModal } from '../../components/ui';
 import AiExamModal from '../../components/ui/AiExamModal';
+import AccessCodeModal from '../../components/ui/AccessCodeModal';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 
@@ -81,10 +82,26 @@ const ExamMgmtCard = ({
     const isPublished = exam.status === 'PUBLISHED';
     const isCancelled = exam.status === 'CANCELLED';
     const isFreeFormat = exam.examType === 'FREE';
+    const isPrivate = exam.visibility === 'PRIVATE';
     const subjects = exam.subjects?.length ? exam.subjects : (exam.subject ? [exam.subject] : []);
     const primarySubject = subjects[0] || 'İmtahan';
     const palette = paletteFor(primarySubject);
     const qCount = (exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0);
+
+    const [genCode, setGenCode] = useState(null);
+    const [genLoading, setGenLoading] = useState(false);
+    const generateCode = async () => {
+        if (genLoading) return;
+        setGenLoading(true);
+        try {
+            const { data } = await api.post(`/exams/${exam.id}/generate-code`);
+            if (data?.accessCode) setGenCode(data.accessCode);
+        } catch {
+            toast.error('Kod yaradılmadı');
+        } finally {
+            setGenLoading(false);
+        }
+    };
 
     return (
         <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-5 flex flex-col gap-3 hover:border-[var(--primary)] hover:shadow-[var(--sh-md)] transition-all">
@@ -208,6 +225,19 @@ const ExamMgmtCard = ({
                     </>
                 )}
             </div>
+
+            {isPrivate && !isDraft && (
+                <button
+                    onClick={generateCode}
+                    disabled={genLoading}
+                    className="h-9 inline-flex items-center justify-center gap-1.5 rounded-xl text-[12.5px] font-bold bg-[var(--primary-soft)] text-[var(--primary-hover)] hover:bg-[var(--brand-blue-100)] border border-[var(--brand-blue-200)] transition-colors disabled:opacity-60"
+                >
+                    <HiOutlineKey className={`w-3.5 h-3.5 ${genLoading ? 'animate-pulse' : ''}`} />
+                    {genLoading ? 'Yaradılır...' : 'Tələbə kodu yarat'}
+                </button>
+            )}
+
+            {genCode && <AccessCodeModal code={genCode} onClose={() => setGenCode(null)} />}
         </div>
     );
 };

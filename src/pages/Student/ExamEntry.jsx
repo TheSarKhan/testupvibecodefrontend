@@ -137,16 +137,23 @@ const JoinForm = ({
     isPaid, hasPurchased, isPurchasing, onPurchase,
     onLogout,
 }) => {
-    const titleByCtx = {
-        login: 'Başlamağa hazırsınız',
-        guest: 'İmtahana qoşul',
-        code:  'İmtahan kodunu daxil edin',
-    };
-    const subByCtx = {
-        login: 'Hesabınıza daxil olmusunuz. Aşağıdakı düyməyə basaraq dərhal başlaya bilərsiniz.',
-        guest: 'Adınızı daxil edin və imtahana başlayın.',
-        code:  'Müəllimdən aldığınız 6 rəqəmli kodu yazın.',
-    };
+    const title = ctx === 'login'
+        ? 'Başlamağa hazırsınız'
+        : ctx === 'code'
+            ? 'İmtahan kodunu daxil edin'
+            : 'İmtahana qoşul';
+    const subtitle = ctx === 'login'
+        ? 'Hesabınıza daxil olmusunuz. Aşağıdakı düyməyə basaraq dərhal başlaya bilərsiniz.'
+        : ctx === 'code'
+            ? (isAuthenticated
+                ? 'Müəllimdən aldığınız 6 rəqəmli kodu daxil edin.'
+                : 'Adınızı və müəllimdən aldığınız 6 rəqəmli kodu daxil edin.')
+            : 'Adınızı daxil edin və imtahana başlayın.';
+    // The name input is only needed for unauthenticated users — logged-in
+    // students already have a name on file, even if the exam is PRIVATE.
+    const needsGuestName = !isAuthenticated && (ctx === 'guest' || ctx === 'code');
+    // The user chip appears whenever we're logged in (login OR code context).
+    const showUserChip = isAuthenticated && user;
 
     return (
         <div className="bg-white p-7 md:p-9 lg:p-10 flex flex-col">
@@ -155,16 +162,16 @@ const JoinForm = ({
                 <HiOutlineLibrary className="w-6 h-6" />
             </div>
             <h2 className="text-[22px] md:text-[24px] font-extrabold text-[var(--ink-900)] tracking-tight">
-                {titleByCtx[ctx]}
+                {title}
             </h2>
             <p className="mt-2 text-[14px] text-[var(--ink-500)] leading-relaxed">
-                {subByCtx[ctx]}
+                {subtitle}
             </p>
 
             {/* ── Context-aware content ── */}
 
-            {/* Guest: warning */}
-            {ctx === 'guest' && (
+            {/* Guest / code: warning */}
+            {needsGuestName && (
                 <div className="mt-5 flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
                     <span className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
                         <HiOutlineExclamation className="w-4 h-4" />
@@ -176,8 +183,8 @@ const JoinForm = ({
                 </div>
             )}
 
-            {/* Login: user chip */}
-            {ctx === 'login' && user && (
+            {/* Login (or PRIVATE-with-login): user chip */}
+            {showUserChip && (
                 <div className="mt-5 flex items-center gap-3 p-4 bg-[var(--accent-soft)] border border-[var(--brand-green-100)] rounded-2xl">
                     <span className="w-10 h-10 rounded-full bg-[var(--brand-green-600)] text-white inline-flex items-center justify-center font-bold text-[13px] shrink-0">
                         {initialsOf(user.fullName || user.email)}
@@ -192,8 +199,8 @@ const JoinForm = ({
                 </div>
             )}
 
-            {/* Guest: name input */}
-            {ctx === 'guest' && (
+            {/* Guest / code: name input */}
+            {needsGuestName && (
                 <div className="mt-5">
                     <label className="block text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--ink-600)] mb-1.5">
                         Ad və Soyad
@@ -280,6 +287,14 @@ const JoinForm = ({
                     <>
                         Kod yoxdur?{' '}
                         <span className="text-[var(--ink-700)]">Müəllimdən soruşun</span>
+                        {isAuthenticated && (
+                            <>
+                                {' '}·{' '}
+                                <button onClick={onLogout} className="text-[var(--primary)] font-semibold hover:underline">
+                                    Çıxış et
+                                </button>
+                            </>
+                        )}
                     </>
                 )}
             </div>
@@ -431,7 +446,7 @@ const ExamEntry = () => {
     const { shareLink } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, isAuthenticated, logout } = useAuth();
+    const { user, isAuthenticated, logout, loading: authLoading } = useAuth();
 
     const [exam, setExam] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -444,7 +459,12 @@ const ExamEntry = () => {
     const [isFinishingOngoing, setIsFinishingOngoing] = useState(false);
 
     // ── Load exam ────────────────────────────────────────────────────────────
+    // Wait for AuthContext to finish bootstrapping before fetching. Otherwise
+    // we may evaluate `isAuthenticated` while it's still false-by-default and
+    // miss the `my-status` call (or render the form in guest mode for a logged-
+    // in student until the next refresh). authLoading is the gate.
     useEffect(() => {
+        if (authLoading) return;
         let cancelled = false;
         (async () => {
             try {
@@ -467,7 +487,7 @@ const ExamEntry = () => {
             }
         })();
         return () => { cancelled = true; };
-    }, [shareLink, isAuthenticated]);
+    }, [shareLink, isAuthenticated, authLoading]);
 
     // ── Detect guest ongoing ─────────────────────────────────────────────────
     useEffect(() => {
@@ -580,7 +600,9 @@ const ExamEntry = () => {
     };
 
     // ── Loading ──────────────────────────────────────────────────────────────
-    if (loading) {
+    // Wait for BOTH the auth bootstrap and the exam fetch — otherwise the
+    // student-logged-in path renders briefly as a guest before we know.
+    if (loading || authLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--paper-cream)' }}>
                 <div className="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
@@ -592,7 +614,13 @@ const ExamEntry = () => {
 
     const isClosed = exam.status === 'CANCELLED' || exam.status === 'DRAFT';
     const isPaid = exam.price != null && Number(exam.price) > 0;
-    const ctx = isAuthenticated ? 'login' : (exam.visibility === 'PRIVATE' ? 'code' : 'guest');
+    const isPrivate = exam.visibility === 'PRIVATE';
+    // Context picks the headline / subtitle. A PRIVATE exam always shows the
+    // code input regardless of auth state — controlled by `isPrivate` inside
+    // JoinForm, not by ctx.
+    const ctx = isAuthenticated
+        ? (isPrivate ? 'code' : 'login')
+        : (isPrivate ? 'code' : 'guest');
 
     return (
         <div className="min-h-screen flex flex-col" style={{ background: 'var(--paper-cream)' }}>

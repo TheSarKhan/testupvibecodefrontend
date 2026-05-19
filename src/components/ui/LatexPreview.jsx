@@ -156,7 +156,21 @@ const renderLatex = (text) => {
         }
 
         const isDisplay = match[1] !== undefined;
-        const math = isDisplay ? match[1] : match[2];
+        const rawMath = isDisplay ? match[1] : match[2];
+        // Translate MathLive-flavoured LaTeX macros (`\exponentialE`,
+        // `\differentialD`, `\placeholder{}`, etc.) into the KaTeX dialect.
+        // The math input ships these natively but KaTeX silently fails to
+        // render them, so the student answer ends up showing raw backslash
+        // commands on the review page if we don't normalise here too.
+        const math = rawMath
+            .replace(/\\exponentialE/g, 'e')
+            .replace(/\\imaginaryI/g, 'i')
+            .replace(/\\imaginaryJ/g, 'j')
+            .replace(/\\differentialD/g, '\\mathrm{d}')
+            .replace(/\\differentialX/g, '\\mathrm{d}x')
+            .replace(/\\differentialY/g, '\\mathrm{d}y')
+            .replace(/\\differentialT/g, '\\mathrm{d}t')
+            .replace(/\\placeholder\{[^{}]*\}/g, '');
         try {
             parts.push(katex.renderToString(math, {
                 displayMode: isDisplay,

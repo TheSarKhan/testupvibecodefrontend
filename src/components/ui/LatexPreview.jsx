@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import katex from 'katex';
+import { normalizeLatex } from '../../utils/latexNormalize';
 
 // One-pass HTML entity decoder. The exam editor serializes through
 // `clone.innerHTML`, which means typed `>` ends up stored as the literal
@@ -157,28 +158,7 @@ const renderLatex = (text) => {
 
         const isDisplay = match[1] !== undefined;
         const rawMath = isDisplay ? match[1] : match[2];
-        // Translate MathLive-flavoured LaTeX macros and strip patterns that
-        // crash KaTeX even with `throwOnError: false`. Empty superscripts /
-        // subscripts (`^{}`, `_{}`), un-anchored sup/sub before a base
-        // (e.g. `\times^{}` — the `^` has no preceding token to attach to)
-        // are the most common student-keyboard mishaps; we strip them so
-        // the rest of the expression still renders.
-        let math = rawMath
-            .replace(/\\exponentialE/g, 'e')
-            .replace(/\\imaginaryI/g, 'i')
-            .replace(/\\imaginaryJ/g, 'j')
-            .replace(/\\differentialD/g, '\\mathrm{d}')
-            .replace(/\\differentialX/g, '\\mathrm{d}x')
-            .replace(/\\differentialY/g, '\\mathrm{d}y')
-            .replace(/\\differentialT/g, '\\mathrm{d}t')
-            .replace(/\\placeholder\{[^{}]*\}/g, '')
-            // Drop empty `^{}` and `_{}` (MathLive emits these when the
-            // student opens a sup/sub slot then closes it without filling).
-            .replace(/\^\{\s*\}/g, '')
-            .replace(/_\{\s*\}/g, '');
-        // Strip any remaining lone trailing `^` or `_` (no group after it)
-        // that KaTeX would treat as a parse error.
-        math = math.replace(/[\^_](?!\w|\{)/g, '');
+        const math = normalizeLatex(rawMath);
 
         try {
             parts.push(katex.renderToString(math, {

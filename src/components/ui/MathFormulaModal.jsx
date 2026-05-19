@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Modal from './Modal';
 import 'mathlive';
+import { normalizeLatex } from '../../utils/latexNormalize';
 
 const MathFormulaModal = ({ isOpen, onClose, onInsert }) => {
     const mathFieldRef = useRef(null);
@@ -19,42 +20,14 @@ const MathFormulaModal = ({ isOpen, onClose, onInsert }) => {
         }
     }, [isOpen]);
 
-    // MathLive emits its own dialect of LaTeX with macros like
-    // `\exponentialE`, `\imaginaryI`, `\differentialD`, `\placeholder{}` that
-    // KaTeX doesn't recognise — so when the rendered answer is displayed
-    // back to the student / teacher KaTeX bails out and shows the raw
-    // backslash commands. Resolve to standard LaTeX before persisting:
-    //   1. Prefer mathfield.getValue('latex-expanded') which expands MathLive
-    //      macros to KaTeX-compatible commands.
-    //   2. Fall back to a small textual replace table for environments where
-    //      latex-expanded isn't supported.
-    const normalizeLatex = (raw) => {
-        if (!raw) return '';
-        let out = raw;
-        const map = {
-            '\\exponentialE': 'e',
-            '\\imaginaryI': 'i',
-            '\\imaginaryJ': 'j',
-            '\\differentialD': '\\mathrm{d}',
-            '\\differentialX': '\\mathrm{d}x',
-            '\\differentialY': '\\mathrm{d}y',
-            '\\differentialT': '\\mathrm{d}t',
-            '\\placeholder{}': '',
-        };
-        Object.entries(map).forEach(([from, to]) => {
-            out = out.split(from).join(to);
-        });
-        // Drop any remaining \placeholder{…} macros — they're MathLive's
-        // "blank slot" markers and have no KaTeX equivalent.
-        out = out.replace(/\\placeholder\{[^{}]*\}/g, '');
-        return out.trim();
-    };
-
     const handleInsert = () => {
         const mf = mathFieldRef.current;
         let expanded = '';
         try {
             if (mf && typeof mf.getValue === 'function') {
+                // Prefer MathLive's expanded form (which rewrites its own
+                // macros internally) and then normaliseLatex on top to catch
+                // anything MathLive still leaves behind.
                 expanded = mf.getValue('latex-expanded') || mf.getValue('latex') || mf.value || '';
             } else {
                 expanded = mf?.value || formula;
@@ -62,7 +35,7 @@ const MathFormulaModal = ({ isOpen, onClose, onInsert }) => {
         } catch {
             expanded = formula;
         }
-        const cleaned = normalizeLatex(expanded);
+        const cleaned = normalizeLatex(expanded).trim();
         if (cleaned) {
             onInsert(cleaned);
         }

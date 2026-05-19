@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { normalizeLatex } from '../../utils/latexNormalize';
 
 const FONT_SIZES = [
     { label: 'Kiçik', value: '2' },
@@ -58,10 +59,11 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         if (hasHtmlTags(text)) {
             // New HTML format: just replace $$math$$ markers
             return text.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => {
+                const clean = normalizeLatex(latex.trim());
                 try {
-                    const mathHtml = katex.renderToString(latex.trim(), { throwOnError: false, displayMode: false });
-                    return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${latex.trim()}">${mathHtml}</span>`;
-                } catch { return `$$${latex}$$`; }
+                    const mathHtml = katex.renderToString(clean, { throwOnError: false, displayMode: false, strict: 'ignore' });
+                    return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${clean}">${mathHtml}</span>`;
+                } catch { return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-amber-50 px-1 rounded text-[12px] font-mono text-amber-700" contenteditable="false" data-latex="${clean}">[math]</span>`; }
             });
         }
 
@@ -76,10 +78,13 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 math = part.slice(1, -1).trim();
             }
             if (math !== null) {
+                const clean = normalizeLatex(math);
                 try {
-                    const mathHtml = katex.renderToString(math, { throwOnError: false, displayMode: false });
-                    html += `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${math}">${mathHtml}</span>`;
-                } catch { html += part; }
+                    const mathHtml = katex.renderToString(clean, { throwOnError: false, displayMode: false, strict: 'ignore' });
+                    html += `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${clean}">${mathHtml}</span>`;
+                } catch {
+                    html += `<span class="math-node mx-1 inline-block align-middle cursor-default bg-amber-50 px-1 rounded text-[12px] font-mono text-amber-700" contenteditable="false" data-latex="${clean}">[math]</span>`;
+                }
             } else {
                 html += part
                     .replace(/&nbsp;/g, ' ')
@@ -198,12 +203,16 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 targetRange.selectNodeContents(editorRef.current);
                 targetRange.collapse(false);
             }
+            // Always normalise before handing to KaTeX \u2014 MathLive macros
+            // and empty sup/sub slots otherwise crash the renderer and we
+            // fall back to raw red text in the editor.
+            const cleanLatex = normalizeLatex(latexString);
             try {
-                const mathHtml = katex.renderToString(latexString, { throwOnError: false, displayMode: false });
+                const mathHtml = katex.renderToString(cleanLatex, { throwOnError: false, displayMode: false, strict: 'ignore' });
                 const span = document.createElement('span');
                 span.className = "math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded";
                 span.contentEditable = "false";
-                span.setAttribute('data-latex', latexString);
+                span.setAttribute('data-latex', cleanLatex);
                 span.innerHTML = mathHtml;
                 const space = document.createTextNode('\u00A0');
                 targetRange.deleteContents();
@@ -215,10 +224,21 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 sel.addRange(targetRange);
                 savedSelection.current = targetRange.cloneRange();
             } catch {
-                const textNode = document.createTextNode(` $$ ${latexString} $$ `);
+                // KaTeX still bailed even after normalisation \u2014 embed an
+                // [math] placeholder so the student sees something was
+                // inserted, rather than a wall of raw red backslash codes.
+                // The data-latex attribute keeps the raw LaTeX so the
+                // teacher can still see it on the review page.
+                const placeholder = document.createElement('span');
+                placeholder.className = "math-node mx-1 inline-block align-middle cursor-default bg-amber-50 text-amber-700 text-[12px] font-mono px-1 rounded";
+                placeholder.contentEditable = "false";
+                placeholder.setAttribute('data-latex', cleanLatex);
+                placeholder.textContent = '[math]';
+                const space2 = document.createTextNode('\u00A0');
                 targetRange.deleteContents();
-                targetRange.insertNode(textNode);
-                targetRange.setStartAfter(textNode);
+                targetRange.insertNode(space2);
+                targetRange.insertNode(placeholder);
+                targetRange.setStartAfter(space2);
                 targetRange.collapse(true);
                 sel.removeAllRanges();
                 sel.addRange(targetRange);

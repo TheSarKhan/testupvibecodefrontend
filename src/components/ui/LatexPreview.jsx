@@ -45,24 +45,91 @@ const LATEX_CMD_PATTERN = 'frac|sqrt|int|sum|prod|lim|binom|mathrm|mathbf|mathit
     '|infty|partial|nabla|cdot|times|div|pm|mp|leq|geq|neq|approx|equiv|cong|propto|le|ge' +
     '|cup|cap|in|notin|subset|supset|emptyset|forall|exists|to|rightarrow|leftarrow|Rightarrow|Leftarrow|mapsto';
 
-// Catches a "messy math" run: a contiguous whitespace-free chunk that
-// contains at least one known LaTeX command. This handles the case where
-// a single mathematical expression got split into many tiny $..$ math nodes
-// in the editor and concatenated against raw `\int_0^{...}` prose — e.g.
-// `\int_0^{$\infty$}\!x\,$\mathrm{d}$x$\sqrt${x^{dw}}`. We collapse the whole
-// run into one math segment, stripping the stray `$` markers, so KaTeX can
-// render it as a single coherent formula.
-const MESSY_MATH_RE = new RegExp(`\\S*\\\\(?:${LATEX_CMD_PATTERN})\\b\\S*`, 'g');
+// Locates the position of the next \command from `start`. Returns null if
+// none. Names must end on a word boundary so `\infty.something` works but
+// random `\foo` (not in our vocabulary) is ignored.
+const CMD_LOCATOR_RE = new RegExp(`\\\\(?:${LATEX_CMD_PATTERN})\\b`, 'g');
 
+// Walk through `segment` and locate runs that look like LaTeX math, then
+// wrap each one with `$...$`. Two failure modes we have to handle:
+//
+//   1) Adjacent text glued to the math, e.g.
+//      `60\text{ km/s}süratlə` — the AI question generator emits this with
+//      no spaces, and the `{ km/s}` brace contains a space, so a simple
+//      `\S+` regex breaks. We track brace depth so `\text{ km/s}` stays in
+//      one piece.
+//
+//   2) Mid-expression `$` markers from the rich-text editor's per-node
+//      math wrappers, e.g. `\int_0^{$\infty$}\!x\,$\mathrm{d}$x`. We
+//      collapse the whole run into one math segment and strip the strays.
 const autoWrapBareLatex = (segment) => {
     if (!segment.includes('\\')) return segment;
-    return segment.replace(MESSY_MATH_RE, (match) => {
-        // Strip ALL stray `$` characters from the inside; KaTeX would otherwise
-        // see them as broken delimiters and bail out. Then wrap the cleaned
-        // run in a single inline-math pair.
-        const cleaned = match.replace(/\$/g, '');
-        return `$${cleaned}$`;
-    });
+
+    const out = [];
+    let cursor = 0;
+    CMD_LOCATOR_RE.lastIndex = 0;
+    let m;
+
+    while ((m = CMD_LOCATOR_RE.exec(segment)) !== null) {
+        const cmdAt = m.index;
+        if (cmdAt < cursor) continue; // overlap from previous expansion
+
+        // Skip commands that already live inside an existing $...$ pair.
+        // Without this we'd produce `$$\frac{...}$ ... $` and break the
+        // outer block — the author already delimited the math, our job is
+        // only to wrap the cases where they didn't.
+        let dollarCount = 0;
+        for (let i = 0; i < cmdAt; i++) {
+            if (segment[i] === '$' && segment[i - 1] !== '\\') dollarCount++;
+        }
+        if (dollarCount % 2 === 1) continue;
+
+        // Walk LEFT through any non-whitespace, non-`$`, ASCII characters to
+        // absorb a numeric/variable prefix like `60` in `60\text{km}`.
+        // Non-ASCII characters mark a prose boundary we shouldn't cross.
+        // `<` / `>` are HTML tag boundaries — if we walk past them we drag
+        // a `<p>` or `</span>` into the math run, which KaTeX then renders
+        // as a red error message.
+        let start = cmdAt;
+        while (start > cursor) {
+            const ch = segment[start - 1];
+            if (/\s/.test(ch) || ch === '$' || ch === '<' || ch === '>' || ch.charCodeAt(0) > 127) break;
+            start--;
+        }
+
+        // Walk RIGHT past the command name, then continue while we're inside
+        // a `{...}` (allowing spaces, balanced) or seeing non-space tokens
+        // typical of math: digits, letters, `^_+-*/=<>(),`, `\command` etc.
+        let end = cmdAt + m[0].length;
+        let depth = 0;
+        while (end < segment.length) {
+            const ch = segment[end];
+            if (ch === '{') { depth++; end++; continue; }
+            if (ch === '}') { if (depth === 0) break; depth--; end++; continue; }
+            if (depth > 0) { end++; continue; }
+            // Outside braces: stop on whitespace, stray `$`, a non-ASCII
+            // letter, or `<` / `>`. AI-generated content sometimes glues
+            // Azerbaijani prose straight onto math (`\text{km}süratlə`),
+            // and HTML-wrapped content surrounds the math with tags like
+            // `</span>` — neither should be absorbed into the math run
+            // (KaTeX would error red on the resulting expression).
+            if (/\s/.test(ch) || ch === '$' || ch === '<' || ch === '>' || ch.charCodeAt(0) > 127) break;
+            end++;
+        }
+
+        // Emit pre-run text untouched.
+        if (start > cursor) out.push(segment.slice(cursor, start));
+        // Strip any stray `$` inside the run, then wrap once.
+        const inner = segment.slice(start, end).replace(/\$/g, '');
+        out.push(`$${inner}$`);
+        cursor = end;
+
+        // Resume the search from the cursor to avoid re-matching the same run.
+        CMD_LOCATOR_RE.lastIndex = cursor;
+    }
+
+    if (cursor < segment.length) out.push(segment.slice(cursor));
+    return out.join('');
 };
 
 const renderLatex = (text) => {

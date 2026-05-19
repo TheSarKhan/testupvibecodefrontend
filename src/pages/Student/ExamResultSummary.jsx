@@ -316,6 +316,16 @@ const ReviewItem = ({ q, index }) => {
                 <LatexPreview content={q.content} placeholder={null} />
             </div>
 
+            {q.attachedImage && (
+                <div className="mb-3">
+                    <img
+                        src={q.attachedImage}
+                        alt="Sual şəkli"
+                        className="max-h-72 rounded-xl border border-[var(--ink-200)] object-contain bg-white"
+                    />
+                </div>
+            )}
+
             {isChoice && q.options && (
                 <div className="flex flex-col gap-2">
                     {q.options.map((opt) => {
@@ -329,18 +339,25 @@ const ReviewItem = ({ q, index }) => {
                         else if (isUserSel && !isCorrect) cls = 'border-red-400 bg-red-50 text-[var(--ink-900)]';
 
                         return (
-                            <div key={opt.id} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border ${cls}`}>
-                                <span className="w-6 h-6 inline-flex items-center justify-center rounded-md text-[11.5px] font-bold bg-white border border-[var(--ink-200)] text-[var(--ink-600)] shrink-0">
+                            <div key={opt.id} className={`flex items-start gap-3 px-3.5 py-2.5 rounded-xl border ${cls}`}>
+                                <span className="w-6 h-6 inline-flex items-center justify-center rounded-md text-[11.5px] font-bold bg-white border border-[var(--ink-200)] text-[var(--ink-600)] shrink-0 mt-0.5">
                                     {String.fromCharCode(65 + (opt.orderIndex ?? 0))}
                                 </span>
-                                <div className="flex-1 text-[13.5px] font-medium">
-                                    <LatexPreview content={opt.content} placeholder={null} />
+                                <div className="flex-1 min-w-0 text-[13.5px] font-medium">
+                                    {opt.content?.trim() && <LatexPreview content={opt.content} placeholder={null} />}
+                                    {opt.attachedImage && (
+                                        <img
+                                            src={opt.attachedImage}
+                                            alt="Variant şəkli"
+                                            className="mt-1.5 max-h-40 rounded-lg border border-[var(--ink-200)] object-contain bg-white"
+                                        />
+                                    )}
                                 </div>
                                 {isCorrect && (
-                                    <span className="text-[11px] font-bold text-[var(--brand-green-600)] shrink-0">✓ Düzgün</span>
+                                    <span className="text-[11px] font-bold text-[var(--brand-green-600)] shrink-0 mt-1">✓ Düzgün</span>
                                 )}
                                 {isUserSel && !isCorrect && (
-                                    <span className="text-[11px] font-bold text-red-600 shrink-0">Sizin cavabınız</span>
+                                    <span className="text-[11px] font-bold text-red-600 shrink-0 mt-1">Sizin cavabınız</span>
                                 )}
                             </div>
                         );

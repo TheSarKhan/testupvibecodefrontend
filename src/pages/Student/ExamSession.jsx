@@ -18,7 +18,23 @@ const ExamSession = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeLeftId, setActiveLeftId] = useState(null);
     // listenCounts: { [passageId]: number }
-    const [listenCounts, setListenCounts] = useState({});
+    // Persisted to localStorage under `examListenCounts:<sessionId>` so a
+    // page refresh can't reset the counter and let the student start over.
+    // The state is hydrated lazily from storage and mirrored back on every
+    // update.
+    const listenCountsStorageKey = sessionId ? `examListenCounts:${sessionId}` : null;
+    const [listenCounts, setListenCounts] = useState(() => {
+        if (!listenCountsStorageKey) return {};
+        try {
+            const raw = localStorage.getItem(listenCountsStorageKey);
+            return raw ? JSON.parse(raw) : {};
+        } catch { return {}; }
+    });
+    useEffect(() => {
+        if (!listenCountsStorageKey) return;
+        try { localStorage.setItem(listenCountsStorageKey, JSON.stringify(listenCounts)); }
+        catch { /* localStorage full / disabled — best-effort */ }
+    }, [listenCounts, listenCountsStorageKey]);
     const [zoomImage, setZoomImage] = useState(null);
     const autoSubmitRef = useRef(false);
     const navScrollRef = useRef(null);
@@ -500,23 +516,150 @@ const ExamSession = () => {
     );
 };
 
+// Minimal, locked-down audio player used inside the exam. The native
+// `<audio controls>` element exposes a seek bar, a speed-rate menu, and (on
+// Chromium) a download button — all of which let a student rewind, slow
+// the speaker down, or save the file. For a fair listening exam we ship a
+// custom UI: only Play/Pause, the elapsed time, and the listen count.
+// Seeking is also blocked at the media-element level (any `seeking` event
+// snaps `currentTime` back to the last allowed position) so even keyboard
+// shortcuts can't bypass the UI.
+const SecureAudioPlayer = ({ src, disabled, onStart }) => {
+    const audioRef = useRef(null);
+    const [playing, setPlaying] = useState(false);
+    // Once a play session has started this stays true until the audio
+    // reaches its natural end. We use it to (a) auto-resume on any pause
+    // attempt and (b) disable the Play button so the student can't stop
+    // mid-track. Combined with the seek block and rate lock, the listening
+    // exam is effectively one-shot: hit play, listen straight through.
+    const [hasStarted, setHasStarted] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const lastAllowedTimeRef = useRef(0);
+    const hasStartedRef = useRef(false);
+
+    const fmt = (s) => {
+        if (!Number.isFinite(s)) return '0:00';
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${m}:${sec.toString().padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
+        const el = audioRef.current;
+        if (!el) return;
+        el.playbackRate = 1.0;
+        const lockRate = () => { el.playbackRate = 1.0; };
+        el.addEventListener('ratechange', lockRate);
+        return () => el.removeEventListener('ratechange', lockRate);
+    }, []);
+
+    const onTimeUpdate = (e) => {
+        const t = e.currentTarget.currentTime;
+        setCurrentTime(t);
+        if (t + 0.5 < lastAllowedTimeRef.current) {
+            e.currentTarget.currentTime = lastAllowedTimeRef.current;
+            return;
+        }
+        lastAllowedTimeRef.current = t;
+    };
+
+    const onSeeking = (e) => {
+        if (e.currentTarget.currentTime + 0.5 < lastAllowedTimeRef.current) {
+            e.currentTarget.currentTime = lastAllowedTimeRef.current;
+        }
+    };
+
+    const startPlayback = () => {
+        const el = audioRef.current;
+        if (!el || disabled || hasStartedRef.current) return;
+        // Fire onStart BEFORE play() resolves — that increments the listen
+        // count in the parent, which immediately persists to localStorage.
+        // Even if the page reloads a second later, the play has been
+        // counted.
+        onStart?.();
+        el.play().then(() => {
+            hasStartedRef.current = true;
+            setHasStarted(true);
+            setPlaying(true);
+        }).catch(() => {});
+    };
+
+    return (
+        <div className={`flex items-center gap-4 px-4 py-3 rounded-xl border bg-emerald-50 border-emerald-200 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <button
+                type="button"
+                onClick={startPlayback}
+                disabled={disabled || hasStarted}
+                className="w-11 h-11 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center transition-colors shadow disabled:cursor-not-allowed disabled:bg-emerald-500"
+                aria-label="Oynat"
+                title={hasStarted ? 'Dinləmə başlayıb — dayandırıla bilməz' : 'Oynat'}
+            >
+                {hasStarted ? (
+                    // Animated "playing" indicator (3 vertical bars). Tells
+                    // the student playback is locked in.
+                    <svg viewBox="0 0 24 24" className="w-5 h-5">
+                        <rect x="5"  y="6" width="3" height="12" rx="1" fill="currentColor"><animate attributeName="height" values="12;4;12" dur="0.9s" repeatCount="indefinite" /><animate attributeName="y" values="6;10;6" dur="0.9s" repeatCount="indefinite" /></rect>
+                        <rect x="10.5" y="4" width="3" height="16" rx="1" fill="currentColor"><animate attributeName="height" values="16;6;16" dur="0.9s" begin="0.15s" repeatCount="indefinite" /><animate attributeName="y" values="4;9;4" dur="0.9s" begin="0.15s" repeatCount="indefinite" /></rect>
+                        <rect x="16" y="6" width="3" height="12" rx="1" fill="currentColor"><animate attributeName="height" values="12;4;12" dur="0.9s" begin="0.3s" repeatCount="indefinite" /><animate attributeName="y" values="6;10;6" dur="0.9s" begin="0.3s" repeatCount="indefinite" /></rect>
+                    </svg>
+                ) : (
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M8 5v14l11-7z" /></svg>
+                )}
+            </button>
+            <div className="flex-1 font-mono text-sm text-emerald-800 tabular-nums">
+                {fmt(currentTime)} <span className="text-emerald-400">/</span> {fmt(duration)}
+            </div>
+            <audio
+                ref={audioRef}
+                src={src}
+                preload="metadata"
+                className="hidden"
+                controlsList="nodownload noplaybackrate noremoteplayback"
+                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+                onTimeUpdate={onTimeUpdate}
+                onSeeking={onSeeking}
+                onEnded={() => {
+                    // Reset UI so the button can re-arm if the listen limit
+                    // hasn't been reached yet. We deliberately don't fire
+                    // onStart again here — the count was already incremented
+                    // at play time.
+                    setPlaying(false);
+                    setHasStarted(false);
+                    hasStartedRef.current = false;
+                    lastAllowedTimeRef.current = 0;
+                }}
+                onPause={(e) => {
+                    // The student (or an OS-level media key) tried to pause
+                    // a playback in progress. Force-resume — listening is
+                    // strictly one-shot until the track ends naturally.
+                    if (hasStartedRef.current && !e.currentTarget.ended) {
+                        e.currentTarget.play().catch(() => {});
+                    } else {
+                        setPlaying(false);
+                    }
+                }}
+                onPlay={() => setPlaying(true)}
+                onContextMenu={(e) => e.preventDefault()}
+            />
+        </div>
+    );
+};
+
 // ---- PassageContentCard — shown above each passage question ----
 const PassageContentCard = ({ passage, listenCounts, setListenCounts, onZoomImage }) => {
-    const audioRef = useRef(null);
     const isText = passage.passageType === 'TEXT';
     const listenCount = listenCounts[passage.id] || 0;
     const isLimited = passage.listenLimit !== null && passage.listenLimit !== undefined;
     const limitReached = isLimited && listenCount >= passage.listenLimit;
 
-    const handleAudioEnded = () => {
+    // Count a listen the moment the student clicks Play — not when the
+    // audio reaches its end. Otherwise refreshing mid-track or simply
+    // navigating away wipes the in-progress play and the limit is never
+    // hit. Together with the localStorage persistence of `listenCounts`
+    // this makes the cap actually enforceable.
+    const handleAudioStarted = () => {
         if (isLimited) setListenCounts(prev => ({ ...prev, [passage.id]: (prev[passage.id] || 0) + 1 }));
-    };
-    const handleAudioPlay = () => {
-        if (limitReached && audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            toast.error(`Dinləmə limiti dolub (${passage.listenLimit} dəfə)`);
-        }
     };
 
     return (
@@ -550,9 +693,11 @@ const PassageContentCard = ({ passage, listenCounts, setListenCounts, onZoomImag
                 ) : (
                     <>
                         {passage.audioContent ? (
-                            <audio ref={audioRef} controls={!limitReached} src={passage.audioContent}
-                                className={`w-full rounded-lg ${limitReached ? 'opacity-50 pointer-events-none' : ''}`}
-                                onEnded={handleAudioEnded} onPlay={handleAudioPlay} />
+                            <SecureAudioPlayer
+                                src={passage.audioContent}
+                                disabled={limitReached}
+                                onStart={handleAudioStarted}
+                            />
                         ) : (
                             <div className="p-8 text-center text-gray-400 border-2 border-dashed rounded-xl">Audio fayl mövcud deyil</div>
                         )}
@@ -586,7 +731,6 @@ const QuestionCard = ({ question, questionNumber, answer, onAnswerChange, active
                             {question.points} Bal
                         </span>
                     </div>
-                    <span className="text-sm text-gray-400 font-mono">{question.questionType}</span>
                 </div>
 
                 {question.questionType !== 'FILL_IN_THE_BLANK' && (

@@ -41,29 +41,31 @@ const SORT_OPTIONS = [
 ];
 
 // Deterministic subject color from name hash — consistent across page loads.
-// Foreground colors are darkened to the *-800 / *-900 Tailwind range so the
-// label text is unambiguously readable on the light pill background. The
-// previous *-600 values washed out on the very-light backgrounds and looked
-// like greyed-out placeholders against the page.
+// Foreground colors are pushed into the *-900 / *-950 range and backgrounds
+// kept light-but-present so the pill text reads as strong, near-black ink
+// rather than the washed-out tint the earlier *-600/-700 values produced.
 const SUBJECT_COLORS = [
-    { bg: '#DBE7FF', fg: '#1E3A8A' }, // blue
-    { bg: '#EADDFD', fg: '#5B21B6' }, // violet
-    { bg: '#D1FAE5', fg: '#065F46' }, // green
-    { bg: '#FFE7CC', fg: '#9A3412' }, // orange
-    { bg: '#FBDDEC', fg: '#9D174D' }, // pink
-    { bg: '#D6F3F8', fg: '#155E75' }, // cyan
-    { bg: '#FDDADA', fg: '#991B1B' }, // red
-    { bg: '#CFF3EC', fg: '#115E59' }, // teal
-    { bg: '#E2E8F0', fg: '#1F2937' }, // slate
+    { bg: '#CFE0FF', fg: '#172554' }, // blue
+    { bg: '#E0CFFB', fg: '#3B0764' }, // violet
+    { bg: '#BBF1D6', fg: '#022C22' }, // green
+    { bg: '#FFDCB8', fg: '#431407' }, // orange
+    { bg: '#FBCFE1', fg: '#500724' }, // pink
+    { bg: '#BFE9F3', fg: '#083344' }, // cyan
+    { bg: '#FDC9C9', fg: '#450A0A' }, // red
+    { bg: '#B6EBE0', fg: '#042F2E' }, // teal
+    { bg: '#D6DEE7', fg: '#020617' }, // slate
 ];
+
+// A fixed near-black ink — used as the text colour when the subject ships its
+// own colour from the backend. Using the backend hex directly as foreground
+// often renders washed-out (it's tuned for a vibrant accent, not body text);
+// we always pair the tinted background with this dark ink for legibility.
+const SUBJECT_INK = '#0F172A'; // slate-900
 
 const colorForSubject = (s) => {
     if (s.color) {
-        // Backend-provided color overrides — pair the hex with a soft tint
-        // and a darker text override so it remains readable. (Hex + "33"
-        // ≈ 20% opacity background; foreground stays the saturated colour.)
         const hex = s.color.startsWith('#') ? s.color : '#2563EB';
-        return { bg: hex + '33', fg: hex };
+        return { bg: hex + '33', fg: SUBJECT_INK };
     }
     const hash = [...(s.name || '')].reduce((a, c) => a + c.charCodeAt(0), 0);
     return SUBJECT_COLORS[hash % SUBJECT_COLORS.length];
@@ -85,6 +87,7 @@ const Sidebar = ({
     typeFilter, onToggleType, difficultyFilter, onToggleDifficulty,
     typeCounts, difficultyCounts, totalCount,
     onAddSubject, onRenameSubject, onDeleteSubject, suggestions,
+    addingExternalKey,
 }) => {
     const [adding, setAdding] = useState(false);
     const [newName, setNewName] = useState('');
@@ -96,6 +99,17 @@ const Sidebar = ({
 
     useEffect(() => { if (adding) inputRef.current?.focus(); }, [adding]);
     useEffect(() => { if (renamingId) renameRef.current?.focus(); }, [renamingId]);
+
+    // Parent can request the add-subject form to open by incrementing
+    // `addingExternalKey` (e.g. from the empty-state CTA when there are no
+    // subjects yet so the regular "Yeni sual" navigation is meaningless).
+    useEffect(() => {
+        if (addingExternalKey) {
+            setAdding(true);
+            // Scroll the sidebar into view so the focused input is visible.
+            setTimeout(() => inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
+        }
+    }, [addingExternalKey]);
 
     const submit = async () => {
         const name = newName.trim();
@@ -408,10 +422,15 @@ const QuestionRow = ({ q, subject, selected, onToggleSelect, expanded, onToggleE
                         ))}
                     </div>
 
-                    {/* Text — LaTeX-aware, clamped to 2 lines */}
-                    <div className="text-[14px] text-[var(--ink-800)] line-clamp-2 leading-snug">
-                        <LatexPreview content={q.content || '—'} placeholder={null} />
-                    </div>
+                    {/* Text — LaTeX-aware, clamped to 2 lines. Only render
+                        the container when there's actual content; otherwise
+                        the empty `leading-snug` div leaves a visible gap
+                        above the image for image-only questions. */}
+                    {q.content?.trim() && (
+                        <div className="text-[14px] text-[var(--ink-800)] line-clamp-2 leading-snug">
+                            <LatexPreview content={q.content} placeholder={null} />
+                        </div>
+                    )}
 
                     {/* Image thumbnail — collapsed view (small preview) */}
                     {q.attachedImage && (
@@ -576,6 +595,8 @@ const QuestionBank = () => {
 
     // System-wide subject names (for new-subject autocomplete suggestions)
     const [systemSubjects, setSystemSubjects] = useState([]);
+    // Bumped to ask the sidebar to open its add-subject form (no-subjects flow).
+    const [addingTrigger, setAddingTrigger] = useState(0);
 
     const searchRef = useRef(null);
 
@@ -839,6 +860,7 @@ const QuestionBank = () => {
                     onRenameSubject={handleRenameSubject}
                     onDeleteSubject={handleDeleteSubject}
                     suggestions={systemSubjects.filter(n => !subjects.some(s => s.name === n))}
+                    addingExternalKey={addingTrigger}
                 />
 
                 <main>
@@ -927,7 +949,22 @@ const QuestionBank = () => {
                         <EmptyState
                             isAdmin={isAdmin}
                             hasFilters={Boolean(activeSubjectId || typeFilter.length || difficultyFilter.length || searchDebounced)}
-                            onCreate={() => navigate(newQuestionHref)}
+                            hasSubjects={subjects.length > 0}
+                            onCreate={() => {
+                                if (subjects.length === 0) {
+                                    // No subjects yet — opening the editor would
+                                    // land on a page with no fənn to attach
+                                    // the question to. Trigger the sidebar's
+                                    // "add subject" inline form instead.
+                                    setAddingTrigger(t => t + 1);
+                                    return;
+                                }
+                                // With subjects present, push the user into
+                                // the first subject's dedicated page where
+                                // all the creation actions live.
+                                const targetId = activeSubjectId || subjects[0].id;
+                                navigate(`/sual-bazasi/${targetId}`);
+                            }}
                         />
                     ) : (
                         <div className="space-y-3">

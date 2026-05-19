@@ -815,7 +815,11 @@ const ExamEditor = () => {
         const crops = isNewFormat ? payload.crops : (Array.isArray(payload) ? payload.map(img => ({ questionImage: img, options: [] })) : []);
         const optionCount = isNewFormat ? (payload.optionCount || 5) : 5;
         const cropMode = isNewFormat ? (payload.cropMode || 'simple') : 'simple';
-        const optionTextMode = isNewFormat ? (payload.optionTextMode || 'label') : 'label';
+        // Default to 'empty' so PDF-imported questions don't pre-fill each
+        // option with "A variantı / B variantı". The letter pill rendered by
+        // the option UI already makes the variant identity clear; the extra
+        // placeholder text was visual noise.
+        const optionTextMode = isNewFormat ? (payload.optionTextMode || 'empty') : 'empty';
 
         const ALL_OPT = ['A', 'B', 'C', 'D', 'E'];
         const activeLabels = ALL_OPT.slice(0, optionCount);

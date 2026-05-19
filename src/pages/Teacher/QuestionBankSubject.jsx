@@ -178,18 +178,36 @@ const ViewModal = ({ question, onClose }) => {
                     </button>
                 </div>
                 <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-                    <div className="text-sm font-medium text-gray-900">
-                        <LatexPreview content={question.text || '—'} />
-                    </div>
+                    {question.text?.trim() && (
+                        <div className="text-sm font-medium text-gray-900">
+                            <LatexPreview content={question.text} placeholder={null} />
+                        </div>
+                    )}
+                    {question.attachedImage && (
+                        <img
+                            src={question.attachedImage}
+                            alt="Sual şəkli"
+                            className="max-h-80 rounded-xl border border-gray-200 object-contain bg-white mx-auto"
+                        />
+                    )}
                     {isChoice && question.options?.length > 0 && (
                         <div className="space-y-2">
                             {question.options.map((o, i) => (
-                                <div key={o.id} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm ${o.isCorrect ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-100'}`}>
+                                <div key={o.id} className={`flex items-start gap-2.5 px-3 py-2 rounded-xl text-sm ${o.isCorrect ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-100'}`}>
                                     {o.isCorrect
-                                        ? <HiOutlineCheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                                        : <span className="w-4 h-4 rounded-full border border-gray-300 shrink-0 flex items-center justify-center text-[10px] text-gray-400 font-bold">{String.fromCharCode(65 + i)}</span>
+                                        ? <HiOutlineCheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                                        : <span className="w-4 h-4 rounded-full border border-gray-300 shrink-0 flex items-center justify-center text-[10px] text-gray-400 font-bold mt-0.5">{String.fromCharCode(65 + i)}</span>
                                     }
-                                    <LatexPreview content={o.text} />
+                                    <div className="flex-1 min-w-0">
+                                        {o.text?.trim() && <LatexPreview content={o.text} placeholder={null} />}
+                                        {o.attachedImage && (
+                                            <img
+                                                src={o.attachedImage}
+                                                alt={`Variant ${String.fromCharCode(65 + i)} şəkli`}
+                                                className="mt-1.5 max-h-32 rounded-lg border border-gray-200 object-contain bg-white"
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -398,14 +416,18 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-4">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
                     <h2 className="text-base font-bold text-gray-900">Sualı redaktə et</h2>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 </div>
+
+                {/* Scrollable body — caps the modal at 90vh and lets the
+                   inner sections scroll while the header + footer stay put. */}
+                <div className="flex-1 overflow-y-auto">
 
                 {/* ── Metadata card ───────────────────── */}
                 <div className="mx-5 mt-4 mb-2 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-white p-4 space-y-4">
@@ -480,7 +502,8 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
                     hidePoints={false}
                     hideDelete
                 />
-                <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100">
+                </div>
+                <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100 shrink-0 bg-white rounded-b-2xl">
                     <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-100 text-sm">Ləğv et</button>
                     <button onClick={() => onSave(local)} disabled={saving}
                         className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl disabled:opacity-50">
@@ -1066,22 +1089,38 @@ const QuestionBankSubject = () => {
                                             {page * PAGE_SIZE + idx + 1}
                                         </td>
                                         <td className="px-4 py-3 align-top">
-                                            <div className="line-clamp-2 text-gray-800">
-                                                <LatexPreview content={q.text || '—'} />
-                                            </div>
-                                            {(q.tags || []).length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                    {q.tags.slice(0, 4).map(t => (
-                                                        <span key={t} className="text-[10px] font-semibold bg-pink-50 text-pink-700 px-1.5 py-0.5 rounded-full">#{t}</span>
-                                                    ))}
-                                                    {q.tags.length > 4 && (
-                                                        <span className="text-[10px] text-gray-400">+{q.tags.length - 4}</span>
+                                            <div className="flex items-start gap-3">
+                                                {q.attachedImage && (
+                                                    <img
+                                                        src={q.attachedImage}
+                                                        alt="Sual şəkli"
+                                                        className="w-14 h-14 rounded-lg object-cover border border-gray-200 bg-white shrink-0"
+                                                        loading="lazy"
+                                                    />
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    {q.text?.trim() ? (
+                                                        <div className="line-clamp-2 text-gray-800">
+                                                            <LatexPreview content={q.text} placeholder={null} />
+                                                        </div>
+                                                    ) : (
+                                                        !q.attachedImage && <span className="text-gray-300">—</span>
+                                                    )}
+                                                    {(q.tags || []).length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {q.tags.slice(0, 4).map(t => (
+                                                                <span key={t} className="text-[10px] font-semibold bg-pink-50 text-pink-700 px-1.5 py-0.5 rounded-full">#{t}</span>
+                                                            ))}
+                                                            {q.tags.length > 4 && (
+                                                                <span className="text-[10px] text-gray-400">+{q.tags.length - 4}</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {!q._bankId && (
+                                                        <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full mt-1 inline-block">Yadda saxlanılmayıb</span>
                                                     )}
                                                 </div>
-                                            )}
-                                            {!q._bankId && (
-                                                <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full mt-1 inline-block">Yadda saxlanılmayıb</span>
-                                            )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3 align-top">
                                             {q.topic ? (

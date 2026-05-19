@@ -29,7 +29,10 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
     // Batch settings
     const [cropMode, setCropMode] = useState('simple');      // 'simple' | 'advanced'
     const [optionCount, setOptionCount] = useState(5);       // 3, 4 or 5
-    const [optionTextMode, setOptionTextMode] = useState('label'); // 'label' | 'empty'
+    // Default to 'empty' — the letter pill in the option row already labels
+    // each variant; adding "A variantı" text is just visual noise that the
+    // teacher then has to delete before saving.
+    const [optionTextMode, setOptionTextMode] = useState('empty'); // 'label' | 'empty'
 
     // Which slot the next "Kəs" goes into: 'question' | 'A'...'E'
     const [cropTarget, setCropTarget] = useState('question');

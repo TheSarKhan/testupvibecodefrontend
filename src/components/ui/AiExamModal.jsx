@@ -160,7 +160,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                                Mövzu <span className="text-gray-300 font-normal">(isteğe bağlı)</span>
+                                Mövzu <span className="text-gray-300 font-normal">(istəyə bağlı)</span>
                             </label>
                             <select
                                 value={selectedTopic}

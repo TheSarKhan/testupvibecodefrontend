@@ -2,6 +2,19 @@ import React, { useMemo } from 'react';
 import katex from 'katex';
 import { normalizeLatex } from '../../utils/latexNormalize';
 
+// Restore C-escape glyphs that have collapsed into real control characters
+// somewhere in the pipeline. The classic case is `\frac` getting JSON-parsed
+// with a single backslash — `\f` becomes U+000C (form feed) and on the page
+// renders as an up-arrow glyph in most fonts, breaking the LaTeX command.
+// Convert these back to their two-character "\X" form so KaTeX sees the
+// real command name.
+const restoreEscapedGlyphs = (str) =>
+    str
+        .replace(/\f/g, '\\f')      // form feed → \f
+        .replace(/\v/g, '\\v')      // vertical tab → \v
+        .replace(/[\b]/g, '\\b')    // backspace → \b (character class — bare \b in regex is a word boundary)
+        .replace(/\0/g, '\\0');     // null → \0
+
 // One-pass HTML entity decoder. The exam editor serializes through
 // `clone.innerHTML`, which means typed `>` ends up stored as the literal
 // string `&gt;`. The rich-text editor's own roundtrip can also double-encode
@@ -136,10 +149,15 @@ const autoWrapBareLatex = (segment) => {
 const renderLatex = (text) => {
     if (!text) return '';
 
-    // 1) Decode entities first so `&gt;` / `&amp;gt;` collapse to `>`
-    //    before we search for `$` delimiters.
-    const decoded = decodeEntities(text);
-    // 2) Auto-add `$...$` around bare LaTeX commands so authors who skipped
+    // 1) Restore C-escape glyphs (form feed → `\f`, vertical tab → `\v`, …).
+    //    If a `\frac` somewhere along the pipeline got JSON-parsed with a
+    //    single backslash, `\f` collapses into U+000C and the command is
+    //    rendered as an up-arrow + "rac{a}{b}" by KaTeX.
+    const escapedRestored = restoreEscapedGlyphs(text);
+    // 2) Decode HTML entities so `&gt;` / `&amp;gt;` collapse to `>` before
+    //    we search for `$` delimiters.
+    const decoded = decodeEntities(escapedRestored);
+    // 3) Auto-add `$...$` around bare LaTeX commands so authors who skipped
     //    the math editor (or pasted raw markup) still get rendering.
     const normalized = autoWrapBareLatex(decoded);
 
@@ -150,9 +168,16 @@ const renderLatex = (text) => {
     let last = 0;
     let match;
 
+    // Plain-text segments between math blocks sometimes still contain stray
+    // `$` characters left over from unbalanced wrappers ($$$ at the end of
+    // a malformed student answer, for example). They're never meaningful
+    // outside a `$...$` pair, so strip them here — otherwise the result
+    // page shows ugly `$$$` debris next to rendered math.
+    const cleanTextSegment = (s) => s.replace(/\$+/g, '');
+
     while ((match = regex.exec(normalized)) !== null) {
         if (match.index > last) {
-            const segment = normalized.slice(last, match.index);
+            const segment = cleanTextSegment(normalized.slice(last, match.index));
             parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(segment).replace(/\n/g, '<br>'));
         }
 
@@ -160,26 +185,37 @@ const renderLatex = (text) => {
         const rawMath = isDisplay ? match[1] : match[2];
         const math = normalizeLatex(rawMath);
 
+        const renderFallback = () => {
+            // Subdued gray block — far easier on the eye than KaTeX's red
+            // error styling for an expression riddled with unknown commands.
+            const safe = escapeHtml(rawMath);
+            return `<code class="text-[12.5px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">${safe}</code>`;
+        };
+
         try {
-            parts.push(katex.renderToString(math, {
+            const out = katex.renderToString(math, {
                 displayMode: isDisplay,
                 throwOnError: false,
                 output: 'html',
                 strict: 'ignore',
-            }));
+            });
+            // KaTeX with `throwOnError: false` swallows errors and emits red
+            // `katex-error` spans for unknown commands. If the result is
+            // dominated by errors (or KaTeX produced no real math content),
+            // drop the noisy red render in favour of the calm gray fallback
+            // — the page should never look like a raw LaTeX dump even when
+            // the student typed gibberish.
+            const looksBroken = /katex-error/.test(out) || !/class="katex/.test(out);
+            parts.push(looksBroken ? renderFallback() : out);
         } catch {
-            // Last-resort fallback: show the raw expression as plain text
-            // in a subdued tone so the reviewer at least sees what the
-            // student tried to type, rather than a red dollar-sign jungle.
-            const safe = escapeHtml(rawMath);
-            parts.push(`<code class="text-[12.5px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">${safe}</code>`);
+            parts.push(renderFallback());
         }
 
         last = match.index + match[0].length;
     }
 
     if (last < normalized.length) {
-        const segment = normalized.slice(last);
+        const segment = cleanTextSegment(normalized.slice(last));
         parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(segment).replace(/\n/g, '<br>'));
     }
 

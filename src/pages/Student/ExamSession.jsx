@@ -733,9 +733,15 @@ const QuestionCard = ({ question, questionNumber, answer, onAnswerChange, active
                     </div>
                 </div>
 
-                {question.questionType !== 'FILL_IN_THE_BLANK' && (
+                {/* Only render the question content block when there's
+                    actual text. Image-only questions used to show the editor
+                    placeholder ("Önbaxış burada görünəcək…") here because
+                    LatexPreview's default placeholder fires on empty content;
+                    we now gate the whole div on real content + pass
+                    placeholder={null} as a belt-and-braces guard. */}
+                {question.questionType !== 'FILL_IN_THE_BLANK' && question.content?.trim() && (
                     <div className="prose max-w-none text-xl text-gray-800 mb-8">
-                        <LatexPreview content={question.content} />
+                        <LatexPreview content={question.content} placeholder={null} />
                     </div>
                 )}
 
@@ -875,7 +881,13 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
             <div className="text-xl text-gray-800 leading-[3.5rem]">
                 {parts.map((part, i) => (
                     <span key={i}>
-                        {part && <LatexPreview content={part} />}
+                        {/* Render the surrounding text ONLY when it has
+                            non-whitespace content. A bare space (e.g. the
+                            empty span before a leading `___`) used to slip
+                            past the `&&` guard and triggered LatexPreview's
+                            editor placeholder ("Önbaxış burada görünəcək…"),
+                            which leaked into the live exam UI. */}
+                        {part && part.trim() && <LatexPreview content={part} placeholder={null} />}
                         {i < blankCount && (
                             <span
                                 onDragOver={e => { e.preventDefault(); setDragOver(i); }}

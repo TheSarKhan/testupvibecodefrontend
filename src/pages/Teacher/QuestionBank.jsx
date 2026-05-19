@@ -597,6 +597,12 @@ const QuestionBank = () => {
     const [systemSubjects, setSystemSubjects] = useState([]);
     // Bumped to ask the sidebar to open its add-subject form (no-subjects flow).
     const [addingTrigger, setAddingTrigger] = useState(0);
+    // "Yeni sual" was previously jumping straight to the first subject in
+    // the list when the user was in the "Bütün fənnlər" view — confusing
+    // because the destination subject was arbitrary. Show this picker
+    // modal instead so the teacher explicitly chooses where the new
+    // question belongs.
+    const [subjectPickerOpen, setSubjectPickerOpen] = useState(false);
 
     const searchRef = useRef(null);
 
@@ -952,18 +958,22 @@ const QuestionBank = () => {
                             hasSubjects={subjects.length > 0}
                             onCreate={() => {
                                 if (subjects.length === 0) {
-                                    // No subjects yet — opening the editor would
-                                    // land on a page with no fənn to attach
-                                    // the question to. Trigger the sidebar's
-                                    // "add subject" inline form instead.
+                                    // No subjects yet — trigger the sidebar's
+                                    // "add subject" inline form.
                                     setAddingTrigger(t => t + 1);
                                     return;
                                 }
-                                // With subjects present, push the user into
-                                // the first subject's dedicated page where
-                                // all the creation actions live.
-                                const targetId = activeSubjectId || subjects[0].id;
-                                navigate(`/sual-bazasi/${targetId}`);
+                                if (activeSubjectId) {
+                                    // A specific subject is already active —
+                                    // go straight to its page.
+                                    navigate(`/sual-bazasi/${activeSubjectId}`);
+                                    return;
+                                }
+                                // "Bütün fənnlər" view: ask the teacher
+                                // which subject the new question belongs
+                                // to instead of dumping them onto an
+                                // arbitrary (last-created) subject page.
+                                setSubjectPickerOpen(true);
                             }}
                         />
                     ) : (
@@ -1007,9 +1017,66 @@ const QuestionBank = () => {
                     });
                 }}
             />
+
+            {subjectPickerOpen && (
+                <SubjectPickerModal
+                    subjects={subjects}
+                    onCancel={() => setSubjectPickerOpen(false)}
+                    onPick={(id) => {
+                        setSubjectPickerOpen(false);
+                        navigate(`/sual-bazasi/${id}`);
+                    }}
+                />
+            )}
         </div>
     );
 };
+
+const SubjectPickerModal = ({ subjects, onCancel, onPick }) => (
+    <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        onClick={onCancel}
+    >
+        <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+        >
+            <div className="px-5 py-4 border-b border-[var(--ink-150)]">
+                <h3 className="text-[16px] font-bold text-[var(--ink-900)]">Hansı fənnə əlavə olunsun?</h3>
+                <p className="text-[12.5px] text-[var(--ink-500)] mt-1">Sual yaratdığınız fənni seçin.</p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+                {subjects.map(s => {
+                    const c = colorForSubject(s);
+                    return (
+                        <button
+                            key={s.id}
+                            onClick={() => onPick(s.id)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--ink-50)] transition-colors text-left"
+                        >
+                            <span
+                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[11px] font-bold shrink-0"
+                                style={{ background: c.bg, color: c.fg }}
+                            >
+                                {shortFor(s.name)}
+                            </span>
+                            <span className="flex-1 text-[14px] font-semibold text-[var(--ink-800)] truncate">{s.name}</span>
+                            <span className="text-[11.5px] text-[var(--ink-400)] font-mono shrink-0">{s.questionCount ?? 0}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            <div className="px-4 py-3 border-t border-[var(--ink-150)] flex justify-end">
+                <button
+                    onClick={onCancel}
+                    className="h-9 px-4 rounded-full text-[13px] font-semibold text-[var(--ink-600)] hover:bg-[var(--ink-100)] transition-colors"
+                >
+                    Ləğv et
+                </button>
+            </div>
+        </div>
+    </div>
+);
 
 // ───────────────────────────────────────────────────────────────────────────
 // Auxiliary

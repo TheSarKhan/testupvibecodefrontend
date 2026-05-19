@@ -199,14 +199,17 @@ const renderLatex = (text) => {
                 output: 'html',
                 strict: 'ignore',
             });
-            // KaTeX with `throwOnError: false` swallows errors and emits red
-            // `katex-error` spans for unknown commands. If the result is
-            // dominated by errors (or KaTeX produced no real math content),
-            // drop the noisy red render in favour of the calm gray fallback
-            // — the page should never look like a raw LaTeX dump even when
-            // the student typed gibberish.
-            const looksBroken = /katex-error/.test(out) || !/class="katex/.test(out);
-            parts.push(looksBroken ? renderFallback() : out);
+            // Only treat the render as broken if KaTeX returned literally
+            // nothing renderable (no `<span class="katex"` wrapper). The
+            // earlier `katex-error` heuristic was over-eager — KaTeX can
+            // surface a single non-critical warning span while still
+            // rendering valid math like `\frac{1}{x}`, and dropping the
+            // whole expression into the gray fallback hid perfectly good
+            // formulas. KaTeX's inline error spans (red text on undefined
+            // commands) are acceptable; we only intervene when nothing was
+            // produced at all.
+            const looksEmpty = !out || !/class="katex/.test(out);
+            parts.push(looksEmpty ? renderFallback() : out);
         } catch {
             parts.push(renderFallback());
         }

@@ -207,28 +207,41 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
             // and empty sup/sub slots otherwise crash the renderer and we
             // fall back to raw red text in the editor.
             const cleanLatex = normalizeLatex(latexString);
+            let renderedOk = false;
             try {
                 const mathHtml = katex.renderToString(cleanLatex, { throwOnError: false, displayMode: false, strict: 'ignore' });
-                const span = document.createElement('span');
-                span.className = "math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded";
-                span.contentEditable = "false";
-                span.setAttribute('data-latex', cleanLatex);
-                span.innerHTML = mathHtml;
-                const space = document.createTextNode('\u00A0');
-                targetRange.deleteContents();
-                targetRange.insertNode(space);
-                targetRange.insertNode(span);
-                targetRange.setStartAfter(space);
-                targetRange.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(targetRange);
-                savedSelection.current = targetRange.cloneRange();
+                // `throwOnError: false` makes KaTeX swallow undefined-command
+                // errors and embed red `katex-error` spans. The student then
+                // sees what looks like raw red LaTeX inside the editor \u2014 same
+                // as a render failure. Treat that as a fail so we fall back
+                // to the [math] placeholder rather than dumping red text.
+                const isBroken = /katex-error/.test(mathHtml) || !/class="katex/.test(mathHtml);
+                if (!isBroken) {
+                    const span = document.createElement('span');
+                    span.className = "math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded";
+                    span.contentEditable = "false";
+                    span.setAttribute('data-latex', cleanLatex);
+                    span.innerHTML = mathHtml;
+                    const space = document.createTextNode('\u00A0');
+                    targetRange.deleteContents();
+                    targetRange.insertNode(space);
+                    targetRange.insertNode(span);
+                    targetRange.setStartAfter(space);
+                    targetRange.collapse(true);
+                    sel.removeAllRanges();
+                    sel.addRange(targetRange);
+                    savedSelection.current = targetRange.cloneRange();
+                    renderedOk = true;
+                }
             } catch {
-                // KaTeX still bailed even after normalisation \u2014 embed an
-                // [math] placeholder so the student sees something was
-                // inserted, rather than a wall of raw red backslash codes.
-                // The data-latex attribute keeps the raw LaTeX so the
-                // teacher can still see it on the review page.
+                renderedOk = false;
+            }
+            if (!renderedOk) {
+                // KaTeX bailed (or rendered errors) \u2014 embed a compact [math]
+                // placeholder so the editor doesn't fill with red raw LaTeX.
+                // data-latex still stores the original so the math survives
+                // the round-trip and the teacher can see the source on
+                // review.
                 const placeholder = document.createElement('span');
                 placeholder.className = "math-node mx-1 inline-block align-middle cursor-default bg-amber-50 text-amber-700 text-[12px] font-mono px-1 rounded";
                 placeholder.contentEditable = "false";

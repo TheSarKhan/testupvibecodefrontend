@@ -43,7 +43,11 @@ const AiExamModal = ({ onClose, onGenerate }) => {
         ]).then(([subjectsRes, usageRes]) => {
             const names = subjectsRes.data || [];
             setSubjects(names);
-            if (names.length > 0) setSelectedSubject(names[0]);
+            // Leave selectedSubject empty so the dropdown shows the
+            // "Fənn seç" placeholder by default. Auto-selecting the first
+            // subject (e.g. "Alman dili") surprised teachers — they
+            // would hit Yarat without changing it and end up with a
+            // German exam they didn't intend.
             setAiUsage(usageRes.data);
         }).catch(() => toast.error('Fənlər yüklənərkən xəta baş verdi'))
           .finally(() => setLoadingSubjects(false));
@@ -152,10 +156,14 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                                 disabled={loading || loadingSubjects}
                                 className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors"
                             >
-                                {loadingSubjects
-                                    ? <option>Yüklənir...</option>
-                                    : subjects.map(s => <option key={s} value={s}>{s}</option>)
-                                }
+                                {loadingSubjects ? (
+                                    <option>Yüklənir...</option>
+                                ) : (
+                                    <>
+                                        <option value="" disabled>Fənn seç</option>
+                                        {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </>
+                                )}
                             </select>
                         </div>
                         <div>

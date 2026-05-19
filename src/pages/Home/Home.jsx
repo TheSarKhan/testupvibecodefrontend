@@ -425,7 +425,13 @@ const PricingPreview = () => {
                                     </p>
                                     <div className="mt-6 flex items-baseline gap-1.5">
                                         <span className={`text-[52px] font-bold leading-none tracking-tight ${featured ? 'text-white' : 'text-[var(--ink-900)]'}`}>
-                                            {isFree ? '0' : Number(p.price).toLocaleString('az-AZ', { maximumFractionDigits: 0 })}
+                                            {isFree
+                                                ? '0'
+                                                /* Match the Pricing page formatting exactly so the user
+                                                   doesn't see 29.9 AZN here and 30 AZN on the home preview.
+                                                   `maximumFractionDigits: 0` was previously rounding the
+                                                   one-decimal prices (29.9, 59.9) up to integers. */
+                                                : Number(p.price).toLocaleString('az-AZ', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
                                         </span>
                                         {!isFree && (
                                             <span className={`text-[14px] font-semibold ${featured ? 'text-white/70' : 'text-[var(--ink-500)]'}`}>AZN</span>

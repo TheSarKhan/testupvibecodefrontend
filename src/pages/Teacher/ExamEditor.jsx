@@ -37,7 +37,7 @@ const toFrontendMatchingPairs = (pairs) => {
     }));
 };
 
-const makeQuestion = (questionType, orderIdx, subjectGroup, points = 0) => {
+const makeQuestion = (questionType, orderIdx, subjectGroup, points = 1) => {
     const frontendType = TYPE_TO_FRONTEND[questionType] || 'MULTIPLE_CHOICE';
     const isChoice = frontendType === 'MULTIPLE_CHOICE' || frontendType === 'MULTI_SELECT';
     const ts = Date.now() + Math.random();
@@ -62,7 +62,7 @@ const makePassageQuestion = (questionType, idx) => {
     const ts = Date.now() + Math.random();
     return {
         id: `new-pq-${ts}-${idx}`,
-        type: frontendType, text: '', points: 0,
+        type: frontendType, text: '', points: 1,
         options: isChoice ? [
             { id: `o1-${ts}`, text: '', isCorrect: false },
             { id: `o2-${ts}`, text: '', isCorrect: false },
@@ -108,7 +108,7 @@ const buildQuestionsFromTypeCounts = (typeCounts) => {
             questions.push({
                 id: `new-${ts}-${orderIdx}`,
                 type: frontendType,
-                text: '', points: 0,
+                text: '', points: 1,
                 orderIndex: orderIdx++,
                 subjectGroup: null,
                 options: isChoice ? [

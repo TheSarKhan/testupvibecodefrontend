@@ -30,9 +30,9 @@ const AccessCodeButton = ({ examId }) => {
             <button
                 onClick={generate}
                 disabled={generating}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 text-blue-700 text-xs font-bold rounded-xl border border-blue-100 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 text-blue-700 text-sm font-bold rounded-xl border border-blue-100 transition-colors"
             >
-                <HiOutlineKey className={`w-3.5 h-3.5 ${generating ? 'animate-pulse' : ''}`} />
+                <HiOutlineKey className={`w-4 h-4 ${generating ? 'animate-pulse' : ''}`} />
                 {generating ? 'Yaradılır...' : 'Tələbə Kodu Yarat'}
             </button>
             {modalCode && <AccessCodeModal code={modalCode} onClose={() => setModalCode(null)} />}
@@ -51,18 +51,18 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
         <div className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full ${isDraft ? 'border-dashed border-gray-300' : 'border-gray-100'}`}>
 
             {/* Body */}
-            <div className="p-5 flex-1 flex flex-col">
+            <div className="p-7 flex-1 flex flex-col">
 
                 {/* Top row: type + status + actions */}
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1.5">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
                         {typeLabel && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[11px] font-bold uppercase tracking-wide">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wide">
                                 {typeLabel}
                             </span>
                         )}
                         {isDraft ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[11px] font-bold">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-50 text-amber-600 text-xs font-bold">
                                 Qaralama
                             </span>
                         ) : (
@@ -70,14 +70,14 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                                 <button
                                     onClick={() => onToggleStatus(exam.id)}
                                     title={isPublished ? 'Bağlamaq üçün klikləyin' : 'Açmaq üçün klikləyin'}
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold transition-opacity hover:opacity-75 ${isPublished ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-opacity hover:opacity-75 ${isPublished ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}
                                 >
-                                    {isPublished ? <HiOutlineEye className="w-3 h-3" /> : <HiOutlineEyeOff className="w-3 h-3" />}
+                                    {isPublished ? <HiOutlineEye className="w-3.5 h-3.5" /> : <HiOutlineEyeOff className="w-3.5 h-3.5" />}
                                     {isPublished ? 'Açıq' : 'Bağlı'}
                                 </button>
                             ) : (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${isPublished ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
-                                    {isPublished ? <HiOutlineEye className="w-3 h-3" /> : <HiOutlineEyeOff className="w-3 h-3" />}
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold ${isPublished ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                                    {isPublished ? <HiOutlineEye className="w-3.5 h-3.5" /> : <HiOutlineEyeOff className="w-3.5 h-3.5" />}
                                     {isPublished ? 'Açıq' : 'Bağlı'}
                                 </span>
                             )
@@ -87,76 +87,76 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                     {/* Action icons */}
                     <div className="flex items-center gap-0.5 -mr-1">
                         {!isDraft && onShare && (
-                            <button onClick={() => onShare(exam.id)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Paylaş">
-                                <HiOutlineShare className="w-4 h-4" />
+                            <button onClick={() => onShare(exam.id)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Paylaş">
+                                <HiOutlineShare className="w-5 h-5" />
                             </button>
                         )}
                         {!isDraft && onDownloadPdf && (
                             canDownloadPdf ? (
-                                <button onClick={() => onDownloadPdf(exam.id)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="PDF Yüklə">
-                                    <HiOutlineDownload className="w-4 h-4" />
+                                <button onClick={() => onDownloadPdf(exam.id)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="PDF Yüklə">
+                                    <HiOutlineDownload className="w-5 h-5" />
                                 </button>
                             ) : (
-                                <span className="p-1.5 text-gray-300 cursor-not-allowed rounded-lg" title="PDF yükləmə cari planınızda mövcud deyil">
-                                    <HiLockClosed className="w-4 h-4" />
+                                <span className="p-2 text-gray-300 cursor-not-allowed rounded-lg" title="PDF yükləmə cari planınızda mövcud deyil">
+                                    <HiLockClosed className="w-5 h-5" />
                                 </span>
                             )
                         )}
                         {canEdit ? (
-                            <Link to={`/imtahanlar/duzenle/${exam.id}`} className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Düzəliş et">
-                                <HiOutlinePencilAlt className="w-4 h-4" />
+                            <Link to={`/imtahanlar/duzenle/${exam.id}`} className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors" title="Düzəliş et">
+                                <HiOutlinePencilAlt className="w-5 h-5" />
                             </Link>
                         ) : (
-                            <span className="p-1.5 text-gray-300 cursor-not-allowed rounded-lg" title="İmtahan redaktəsi cari planınızda mövcud deyil">
-                                <HiLockClosed className="w-4 h-4" />
+                            <span className="p-2 text-gray-300 cursor-not-allowed rounded-lg" title="İmtahan redaktəsi cari planınızda mövcud deyil">
+                                <HiLockClosed className="w-5 h-5" />
                             </span>
                         )}
                         {onClone && (
-                            <button onClick={() => onClone(exam.id)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Kopyala">
-                                <HiOutlineDuplicate className="w-4 h-4" />
+                            <button onClick={() => onClone(exam.id)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Kopyala">
+                                <HiOutlineDuplicate className="w-5 h-5" />
                             </button>
                         )}
-                        <button onClick={() => onDelete(exam.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Testi sil">
-                            <HiOutlineTrash className="w-4 h-4" />
+                        <button onClick={() => onDelete(exam.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Testi sil">
+                            <HiOutlineTrash className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
 
                 {/* Pending manual grading banner */}
                 {exam.pendingManualCount > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-50 border border-orange-100 mb-3">
-                        <HiOutlineClipboardCheck className="w-4 h-4 text-orange-500 shrink-0" />
-                        <span className="text-xs font-semibold text-orange-700">{exam.pendingManualCount} yoxlanılmağı gözləyir</span>
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-orange-50 border border-orange-100 mb-4">
+                        <HiOutlineClipboardCheck className="w-5 h-5 text-orange-500 shrink-0" />
+                        <span className="text-sm font-semibold text-orange-700">{exam.pendingManualCount} yoxlanılmağı gözləyir</span>
                     </div>
                 )}
 
                 {/* Access code widget for PRIVATE non-draft exams */}
                 {exam.visibility === 'PRIVATE' && !isDraft && (
-                    <div className="mb-3">
+                    <div className="mb-4">
                         <AccessCodeButton examId={exam.id} />
                     </div>
                 )}
 
                 {/* Title */}
-                <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-2 leading-snug">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2 line-clamp-2 leading-snug">
                     {exam.title}
                 </h3>
 
                 {/* Tags */}
                 {(exam.tags || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
+                    <div className="flex flex-wrap gap-1.5 mb-4">
                         {(exam.tags || []).map((tag, index) => (
                             onTagClick ? (
                                 <button
                                     key={index}
                                     onClick={() => onTagClick(tag)}
-                                    className="px-2 py-0.5 bg-gray-100 hover:bg-blue-100 hover:text-blue-700 text-gray-500 text-[11px] rounded-full font-medium transition-colors"
+                                    className="px-2.5 py-1 bg-gray-100 hover:bg-blue-100 hover:text-blue-700 text-gray-500 text-xs rounded-full font-medium transition-colors"
                                     title={`"${tag}" teqinə görə filtrele`}
                                 >
                                     #{tag}
                                 </button>
                             ) : (
-                                <span key={index} className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[11px] rounded-full font-medium">
+                                <span key={index} className="px-2.5 py-1 bg-gray-100 text-gray-500 text-xs rounded-full font-medium">
                                     #{tag}
                                 </span>
                             )
@@ -165,19 +165,19 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
                 )}
 
                 {/* Meta info */}
-                <div className="mt-auto flex items-center gap-4 text-xs text-gray-500 pt-3 border-t border-gray-100">
+                <div className="mt-auto flex items-center gap-5 text-sm text-gray-500 pt-4 border-t border-gray-100">
                     {subjects.length > 0 && (
                         <span className="flex items-center gap-1.5" title="Fənnlər">
-                            <HiOutlineAcademicCap className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium text-gray-700 truncate max-w-[120px]">{subjects.join(', ')}</span>
+                            <HiOutlineAcademicCap className="w-[18px] h-[18px] text-gray-400" />
+                            <span className="font-medium text-gray-700 truncate max-w-[160px]">{subjects.join(', ')}</span>
                         </span>
                     )}
                     <span className="flex items-center gap-1.5" title="Müddət">
-                        <HiOutlineClock className="w-4 h-4 text-gray-400" />
+                        <HiOutlineClock className="w-[18px] h-[18px] text-gray-400" />
                         <span className="font-medium text-gray-700">{exam.duration ? `${exam.duration} dəq` : 'Sərbəst'}</span>
                     </span>
                     <span className="flex items-center gap-1.5" title="Sual sayı">
-                        <HiOutlineDocumentText className="w-4 h-4 text-gray-400" />
+                        <HiOutlineDocumentText className="w-[18px] h-[18px] text-gray-400" />
                         <span className="font-medium text-gray-700">{exam.questionCount} sual</span>
                     </span>
                 </div>
@@ -185,36 +185,36 @@ const ExamCard = ({ exam, onDelete, onShare, onToggleStatus, onDownloadPdf, onCl
 
             {/* Footer: Primary Actions */}
             {isDraft ? (
-                <div className="px-5 pb-5">
+                <div className="px-7 pb-7">
                     {canEdit ? (
                         <Link
                             to={`/imtahanlar/duzenle/${exam.id}`}
-                            className="flex justify-center items-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors w-full"
+                            className="flex justify-center items-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold rounded-xl transition-colors w-full"
                         >
-                            <HiOutlinePencilAlt className="w-4 h-4" />
+                            <HiOutlinePencilAlt className="w-5 h-5" />
                             Davam Et
                         </Link>
                     ) : (
-                        <div className="flex justify-center items-center gap-2 py-2.5 bg-gray-200 text-gray-400 text-sm font-semibold rounded-xl w-full cursor-not-allowed">
-                            <HiLockClosed className="w-4 h-4" />
+                        <div className="flex justify-center items-center gap-2 py-3 bg-gray-200 text-gray-400 text-base font-semibold rounded-xl w-full cursor-not-allowed">
+                            <HiLockClosed className="w-5 h-5" />
                             Redaktə Bağlı
                         </div>
                     )}
                 </div>
             ) : (
-                <div className="px-5 pb-5 grid grid-cols-2 gap-2">
+                <div className="px-7 pb-7 grid grid-cols-2 gap-2.5">
                     <Link
                         to={`/imtahanlar/${exam.id}`}
-                        className="flex justify-center items-center gap-1.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+                        className="flex justify-center items-center gap-1.5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-base font-semibold rounded-xl transition-colors"
                     >
-                        <HiOutlineEye className="w-4 h-4" />
+                        <HiOutlineEye className="w-5 h-5" />
                         İmtahana bax
                     </Link>
                     <Link
                         to={`/imtahanlar/${exam.id}/statistika`}
-                        className="flex justify-center items-center gap-1.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                        className="flex justify-center items-center gap-1.5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold rounded-xl transition-colors"
                     >
-                        <HiOutlineChartBar className="w-4 h-4" />
+                        <HiOutlineChartBar className="w-5 h-5" />
                         Statistika
                     </Link>
                 </div>

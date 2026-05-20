@@ -155,6 +155,26 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
         if (!allRows.length || allRows.some(r => parseInt(r.count) < 1)) {
             toast.error('Hər sual tipinin sayı ən azı 1 olmalıdır'); return;
         }
+        // Validate point groups: must fully cover positions 1..total without gaps/overlaps
+        if (pgEnabled) {
+            const sorted = [...pgList].sort((a, b) => (a.from || 0) - (b.from || 0));
+            for (const pg of sorted) {
+                if (!pg.from || !pg.to || pg.from > pg.to) {
+                    toast.error('Bal qruplarında başlanğıc/son düzgün deyil'); return;
+                }
+            }
+            if (sorted[0].from !== 1) {
+                toast.error(`Bal qrupları 1-dən başlamalıdır (indi ${sorted[0].from}-dən başlayır)`); return;
+            }
+            for (let i = 1; i < sorted.length; i++) {
+                if (sorted[i].from !== sorted[i - 1].to + 1) {
+                    toast.error(`Bal qruplarında boşluq/üst-üstə düşmə: ${sorted[i-1].to} → ${sorted[i].from}`); return;
+                }
+            }
+            if (sorted[sorted.length - 1].to !== total) {
+                toast.error(`Bal qrupları bütün ${total} sualı əhatə etməlidir (sonuncu: ${sorted[sorted.length - 1].to})`); return;
+            }
+        }
         onSave({
             subjectName: subjectName.trim(),
             formula: formula.trim(),

@@ -132,11 +132,15 @@ const newEditorQuestion = (orderIndex) => ({
     sampleAnswer: '',
 });
 
-// Simple text-based duplicate hash: lowercase + strip whitespace + sort options
+// Simple text-based duplicate hash: lowercase + strip whitespace + sort options.
+// Returns null for image-only questions (no text + no option text) so duplicate
+// detection skips them — image content can't be compared as text.
 const dedupeHash = (q) => {
     const norm = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
-    const opts = (q.options || []).map(o => norm(o.text)).sort().join('|');
-    return norm(q.text) + '@@' + opts;
+    const text = norm(q.text);
+    const opts = (q.options || []).map(o => norm(o.text)).filter(Boolean).sort().join('|');
+    if (!text && !opts) return null;
+    return text + '@@' + opts;
 };
 
 // ── View Modal ───────────────────────────────────────────────────────────────
@@ -712,10 +716,14 @@ const QuestionBankSubject = () => {
         if (needsCorrect && !localQuestion.options?.some(o => o.isCorrect)) { toast.error('Ən azı bir düzgün variant seçilməlidir'); return; }
         if (needsAnswer && !localQuestion.sampleAnswer?.trim()) { toast.error('Düzgün cavab daxil edilməlidir'); return; }
 
-        // Duplicate detection (against currently-loaded page; not perfect but cheap)
+        // Duplicate detection (against currently-loaded page; not perfect but cheap).
+        // Skip when hash is null — that means the question has no text content to
+        // compare (e.g. image-only sual); two such questions aren't "duplicates".
         const hash = dedupeHash(localQuestion);
-        const dup = questions.find(q => q.id !== localQuestion.id && dedupeHash(q) === hash);
-        if (dup && !window.confirm('Eyni mətnli sual artıq mövcuddur. Yenə də yadda saxlayım?')) return;
+        if (hash) {
+            const dup = questions.find(q => q.id !== localQuestion.id && dedupeHash(q) === hash);
+            if (dup && !window.confirm('Eyni mətnli sual artıq mövcuddur. Yenə də yadda saxlayım?')) return;
+        }
 
         setSaving(true);
         try {

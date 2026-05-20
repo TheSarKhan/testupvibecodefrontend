@@ -6,7 +6,7 @@ import {
     HiOutlineUserGroup, HiOutlinePaperAirplane, HiOutlineDocumentText,
     HiOutlineCheckCircle, HiOutlineClock, HiOutlineLibrary,
     HiOutlineEye, HiOutlineChartBar, HiOutlinePencilAlt, HiOutlineDuplicate,
-    HiOutlineTrash, HiOutlineShare, HiOutlineDownload, HiOutlineLockClosed,
+    HiOutlineTrash, HiOutlineShare, HiOutlineDownload, HiOutlineLockClosed, HiOutlineLockOpen,
     HiOutlineFilter, HiOutlineChevronDown, HiOutlineKey,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
@@ -151,7 +151,9 @@ const ExamMgmtCard = ({
                     )}
                     {!isDraft && onToggleStatus && (
                         <IconBtn title={isPublished ? 'Bağla' : 'Aç'} onClick={() => onToggleStatus(exam.id)}>
-                            <HiOutlineLockClosed className="w-3.5 h-3.5" />
+                            {isPublished
+                                ? <HiOutlineLockClosed className="w-3.5 h-3.5" />
+                                : <HiOutlineLockOpen className="w-3.5 h-3.5" />}
                         </IconBtn>
                     )}
                     {onDelete && (
@@ -702,8 +704,15 @@ const MyExams = () => {
                                             onStats={handleStats}
                                             onEdit={handleEdit}
                                             onClone={handleClone}
+                                            onShare={handleShare}
+                                            onDownloadPdf={handleDownloadPdf}
+                                            /* `onToggleStatus` was missing here — that's why CANCELLED
+                                               (Bağlı) exams couldn't be reopened. The card hides the
+                                               lock button when the callback isn't passed. */
+                                            onToggleStatus={handleToggleStatus}
                                             onDelete={handleDelete}
                                             canEdit={canEdit}
+                                            canDownloadPdf={canDownloadPdf}
                                         />
                                     ))}
                                 </div>

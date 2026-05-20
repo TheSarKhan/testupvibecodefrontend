@@ -781,7 +781,7 @@ const QuestionCard = ({ question, questionNumber, answer, onAnswerChange, active
                                             )}
                                         </div>
                                         <div className="flex-1 text-lg">
-                                            <LatexPreview content={opt.content} placeholder={`${String.fromCharCode(65 + optIdx)} variantı`} />
+                                            <LatexPreview content={opt.content} placeholder="Variant boşdur" />
                                             {opt.attachedImage && <img src={opt.attachedImage} className="mt-2 max-h-32 rounded border cursor-zoom-in" alt="Varyant" onClick={e => { e.stopPropagation(); onZoomImage?.(opt.attachedImage); }} />}
                                         </div>
                                     </div>

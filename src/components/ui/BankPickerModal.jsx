@@ -365,8 +365,19 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                                 )}
                                             </div>
                                             <div className="text-sm text-gray-800 line-clamp-3">
-                                                <LatexPreview content={q.content} />
+                                                {/* placeholder={null} stops LatexPreview from rendering its
+                                                    dashed "Önbaxış burada görünəcək..." block when the question
+                                                    is image-only (empty content). Without this, image-only rows
+                                                    show the placeholder text instead of the actual image. */}
+                                                <LatexPreview content={q.content} placeholder={null} />
                                             </div>
+                                            {q.attachedImage && (
+                                                <img
+                                                    src={q.attachedImage}
+                                                    alt="Sual şəkli"
+                                                    className="mt-1 max-h-24 max-w-full rounded border border-gray-200 object-contain"
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                     );

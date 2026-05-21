@@ -52,12 +52,21 @@ const headlineFor = (pct) => {
 // Score ring with grade badge
 // ───────────────────────────────────────────────────────────────────────────
 
-const ScoreRing = ({ pct, passed }) => {
+// Compact bal formatter — drop trailing .0 so "12 bal" beats "12.0 bal", but
+// keep one decimal when partial credit produced a fractional total.
+const fmtBal = (n) => {
+    if (n == null || isNaN(n)) return '—';
+    const rounded = Math.round(n * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+};
+
+const ScoreRing = ({ pct, passed, score, maxScore }) => {
     const r = 96;
     const c = 2 * Math.PI * r;
     const offset = c - (pct / 100) * c;
     const color = ringColorFor(pct);
     const grade = getGrade(pct);
+    const hasPoints = score != null && maxScore != null && maxScore > 0;
     return (
         <div className="relative w-[220px] h-[220px] shrink-0">
             <svg width="220" height="220" viewBox="0 0 220 220" style={{ transform: 'rotate(-90deg)' }}>
@@ -74,8 +83,20 @@ const ScoreRing = ({ pct, passed }) => {
                 />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className="text-[44px] font-extrabold leading-none" style={{ color }}>{pct.toFixed(0)}%</div>
-                <div className="text-[11px] text-[var(--ink-500)] mt-1.5 font-bold uppercase tracking-[0.12em]">Ümumi nəticə</div>
+                {hasPoints ? (
+                    <>
+                        <div className="flex items-baseline gap-1" style={{ color }}>
+                            <span className="text-[44px] font-extrabold leading-none">{fmtBal(score)}</span>
+                            <span className="text-[18px] font-bold opacity-70">/ {fmtBal(maxScore)}</span>
+                        </div>
+                        <div className="text-[11px] text-[var(--ink-500)] mt-1.5 font-bold uppercase tracking-[0.12em]">Topladığınız bal</div>
+                    </>
+                ) : (
+                    <>
+                        <div className="text-[44px] font-extrabold leading-none" style={{ color }}>{pct.toFixed(0)}%</div>
+                        <div className="text-[11px] text-[var(--ink-500)] mt-1.5 font-bold uppercase tracking-[0.12em]">Ümumi nəticə</div>
+                    </>
+                )}
             </div>
             <div
                 className="absolute -bottom-1 -right-1 w-12 h-12 rounded-2xl bg-white border-2 flex items-center justify-center text-[22px] font-extrabold shadow-[var(--sh-md)]"
@@ -144,7 +165,8 @@ const SectionBreakdown = ({ subjectStats }) => {
                                 <div className="text-[14px] font-semibold text-[var(--ink-800)]">{s.subjectName || 'Digər'}</div>
                                 <div className="text-[12.5px] text-[var(--ink-500)]">
                                     <strong className="text-[var(--ink-900)]">{s.correctCount ?? 0}</strong> / {s.questionCount ?? 0} sual ·{' '}
-                                    <strong className="text-[var(--ink-900)]">{pct}%</strong>
+                                    <strong className="text-[var(--ink-900)]">{fmtBal(s.totalScore ?? 0)}</strong>
+                                    {s.maxScore > 0 && <> / {fmtBal(s.maxScore)} bal</>}
                                 </div>
                             </div>
                             <div className="h-2 w-full bg-[var(--ink-150)] rounded-full overflow-hidden">
@@ -582,9 +604,33 @@ const ExamResultSummary = () => {
                     }}
                 >
                     <div className="flex flex-col lg:flex-row items-center gap-8">
-                        {scorePercent != null ? (
-                            <ScoreRing pct={scorePercent} passed={passed} />
-                        ) : (
+                        {scorePercent != null ? (() => {
+                            // For multi-section template/olimpiyada exams the backend's
+                            // templateTotalScore / templateTotalMaxScore only reflects the
+                            // FIRST section's DİM-style normalized score — not the sum.
+                            // Sum subjectStats when there are >1 sections so the hero ring
+                            // shows the total balance across every subject the student took.
+                            const stats = displaySubmission?.subjectStats;
+                            const multiSection = Array.isArray(stats) && stats.length > 1;
+                            const ringScore = multiSection
+                                ? stats.reduce((s, x) => s + (x.totalScore || 0), 0)
+                                : (isTemplateExam && displaySubmission?.templateTotalMaxScore > 0
+                                    ? displaySubmission.templateTotalScore
+                                    : displaySubmission?.totalScore);
+                            const ringMaxScore = multiSection
+                                ? stats.reduce((s, x) => s + (x.maxScore || 0), 0)
+                                : (isTemplateExam && displaySubmission?.templateTotalMaxScore > 0
+                                    ? displaySubmission.templateTotalMaxScore
+                                    : displaySubmission?.maxScore);
+                            return (
+                                <ScoreRing
+                                    pct={scorePercent}
+                                    passed={passed}
+                                    score={ringScore}
+                                    maxScore={ringMaxScore}
+                                />
+                            );
+                        })() : (
                             <div className="w-[220px] h-[220px] rounded-full bg-[var(--ink-50)] border-4 border-[var(--ink-150)] flex items-center justify-center shrink-0">
                                 <HiOutlineClock className="w-14 h-14 text-[var(--ink-400)]" />
                             </div>

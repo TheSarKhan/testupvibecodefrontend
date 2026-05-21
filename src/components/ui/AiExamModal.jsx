@@ -170,15 +170,23 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                                 Mövzu <span className="text-gray-300 font-normal">(istəyə bağlı)</span>
                             </label>
-                            <select
+                            {/* Combobox: free text input + datalist of presets so every
+                                subject — even those without a preset topic list — lets
+                                the teacher type their own. */}
+                            <input
+                                type="text"
+                                list="ai-exam-topic-suggestions"
                                 value={selectedTopic}
                                 onChange={e => setSelectedTopic(e.target.value)}
-                                disabled={loading || topics.length === 0}
+                                disabled={loading}
+                                placeholder={topics.length > 0 ? 'Siyahıdan seç və ya öz mövzunu yaz' : 'Mövzu adı'}
                                 className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors"
-                            >
-                                <option value="">Ümumi</option>
-                                {topics.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
-                            </select>
+                            />
+                            {topics.length > 0 && (
+                                <datalist id="ai-exam-topic-suggestions">
+                                    {topics.map(t => <option key={t.id} value={t.name} />)}
+                                </datalist>
+                            )}
                         </div>
                     </div>
 

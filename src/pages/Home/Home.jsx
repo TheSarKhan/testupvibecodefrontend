@@ -103,7 +103,7 @@ const Hero = ({ isAuthenticated, isTeacher, onCreateExam }) => (
                     </h1>
 
                     <p className="mt-7 text-[18px] md:text-[19px] leading-[1.55] text-[var(--ink-500)] max-w-[540px]">
-                        Müəllimlər və təlim mərkəzləri üçün hazırlanmış müasir platforma. Test bankı, avtomatik qiymətləndirmə, ətraflı analitika və sertifikat — hamısı bir yerdə.
+                        Müəllimlər və təlim mərkəzləri üçün hazırlanmış müasir platforma. Test bankı, avtomatik qiymətləndirmə və ətraflı analitika — hamısı bir yerdə.
                     </p>
 
                     <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -199,7 +199,7 @@ const HowItWorks = () => {
     const steps = [
         { n: 1, t: 'Sualları daxil edin',    d: 'Hazır şablonlar, sual bankı və ya öz suallarınızla 5 dəqiqəyə imtahan yaradın. Şəkil, formula və video dəstəyi.' },
         { n: 2, t: 'Şagirdlərə paylaşın',     d: 'Bir linklə imtahanı sinifə göndərin. Şagirdlər istənilən cihazdan iştirak edə bilərlər — qeydiyyatla və ya qeydiyyatsız.' },
-        { n: 3, t: 'Nəticələri analiz edin',  d: 'Avtomatik qiymətləndirmə, ətraflı statistika və hər şagird üçün fərdi hesabat. Sertifikatlar tək kliklə.' },
+        { n: 3, t: 'Nəticələri analiz edin',  d: 'Avtomatik qiymətləndirmə, ətraflı statistika və hər şagird üçün fərdi hesabat.' },
     ];
     return (
         <section className="py-20 md:py-24" id="how">
@@ -482,7 +482,7 @@ const PricingPreview = () => {
 const Testimonials = () => {
     const items = [
         { q: 'Bir semestrdə 14 imtahan yaratdım. Əvvəllər kağızda yoxlamağa bir həftə gedirdi — indi 30 dəqiqəyə bütün analizi alıram.', n: 'Aysel Səfərova', r: 'Riyaziyyat müəllimi, 23 №-li məktəb', i: 'AS' },
-        { q: 'Sual bankı və avtomatik sertifikat funksiyası kursumuzun keyfiyyətini çox artırdı. Şagirdlər nəticələrini həm görür, həm də motivasiya alır.', n: 'Rəşad Məmmədov', r: 'Hazırlıq mərkəzinin direktoru', i: 'RM' },
+        { q: 'Sual bankı və ətraflı analitika kursumuzun keyfiyyətini çox artırdı. Şagirdlər nəticələrini həm görür, həm də motivasiya alır.', n: 'Rəşad Məmmədov', r: 'Hazırlıq mərkəzinin direktoru', i: 'RM' },
         { q: 'Anti-köçürmə alətləri sayəsində qiymətləndirmənin ədalətli olduğuna əminəm. Üstəlik telefonumdan da hər şeyi idarə edə bilirəm.', n: 'Nigar Quliyeva', r: 'Fizika müəllimi, özəl lisey', i: 'NQ' },
     ];
     return (
@@ -515,7 +515,7 @@ const FAQ = () => {
         { q: 'Şagirdlərin qeydiyyatdan keçməsi vacibdirmi?', a: 'Xeyr. İmtahanı tək link vasitəsilə qeydiyyatsız da paylaşa bilərsiniz. Lakin uzunmüddətli izləmə üçün qeydiyyat tövsiyə olunur.' },
         { q: 'Hansı sual növlərini dəstəkləyirsiniz?', a: 'Çoxseçimli, çoxlu doğru cavab, doğru/yalan, açıq cavab, uyğunluq, ardıcıllıq və ədəd cavablı suallar. Şəkil, LaTeX formula və video də əlavə oluna bilər.' },
         { q: 'Köçürmənin qarşısını necə alırsınız?', a: 'Səhifədən çıxış izləməsi, sual və cavabların qarışdırılması, vaxt limiti, tək giriş icazəsi və IP məhdudlaşdırma — hamısı bir yerdə.' },
-        { q: 'Nəticələri Excel və ya PDF formatında ixrac edə bilərəmmi?', a: 'Bəli. Hər imtahanın nəticələrini Excel, CSV və PDF kimi yükləyə bilərsiniz. Sertifikatlar avtomatik PDF formatında hazırlanır.' },
+        { q: 'Nəticələri Excel və ya PDF formatında ixrac edə bilərəmmi?', a: 'Bəli. Hər imtahanın nəticələrini Excel, CSV və PDF kimi yükləyə bilərsiniz.' },
         { q: 'Texniki dəstək necədir?', a: 'Pulsuz plan üçün email, Peşəkar üçün prioritet email + WhatsApp, Mərkəz planı üçün isə şəxsi menecer ayrılır.' },
     ];
     const [open, setOpen] = useState(-1);
@@ -657,12 +657,7 @@ const Banners = ({ banners, isAuthenticated }) => {
 
 const Home = () => {
     const { isAuthenticated, isTeacher } = useAuth();
-    const [banners, setBanners] = useState([]);
     const [createOpen, setCreateOpen] = useState(false);
-
-    useEffect(() => {
-        api.get('/content/banners').then(r => setBanners(r.data)).catch(() => {});
-    }, []);
 
     const openCreate = () => setCreateOpen(true);
 
@@ -670,12 +665,11 @@ const Home = () => {
         <div style={{ background: 'var(--paper-cream)' }}>
             <Helmet>
                 <title>testup.az — Onlayn İmtahan Platforması</title>
-                <meta name="description" content="Müəllimlər və təlim mərkəzləri üçün hazırlanmış müasir onlayn imtahan platforması. Test bankı, avtomatik qiymətləndirmə, ətraflı analitika və sertifikat — hamısı bir yerdə." />
+                <meta name="description" content="Müəllimlər və təlim mərkəzləri üçün hazırlanmış müasir onlayn imtahan platforması. Test bankı, avtomatik qiymətləndirmə və ətraflı analitika — hamısı bir yerdə." />
                 <link rel="canonical" href="https://testup.az/" />
             </Helmet>
 
             <Hero isAuthenticated={isAuthenticated} isTeacher={isTeacher} onCreateExam={openCreate} />
-            <Banners banners={banners} isAuthenticated={isAuthenticated} />
             <Stats />
             <HowItWorks />
             <FeaturesTeacher />

@@ -261,34 +261,34 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
 
             {/* Config row */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-                {/* Topic */}
+                {/* Topic — combobox: pick from preset list OR type your own.
+                    `<datalist>` keeps it native: clicking the chevron shows
+                    suggestions, but the input also accepts free text so subjects
+                    like music/PE/art (which have no fixed curriculum topics) and
+                    every other subject behave the same way. */}
                 <div>
                     <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Mövzu</label>
-                    {topics.length > 0 ? (
-                        <div className="relative">
-                            <select
-                                value={topicName}
-                                onChange={e => setTopicName(e.target.value)}
-                                className="w-full appearance-none border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 pr-8"
-                            >
-                                <option value="">Bütün mövzular</option>
-                                {topics.map(t => (
-                                    <option key={typeof t === 'object' ? t.id : t} value={typeof t === 'object' ? t.name : t}>
-                                        {typeof t === 'object' ? t.name : t}
-                                    </option>
-                                ))}
-                            </select>
-                            <HiOutlineChevronDown className="absolute right-2.5 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-                        </div>
-                    ) : (
+                    <div className="relative">
                         <input
                             type="text"
-                            placeholder="Mövzu adı (istəyə bağlı)"
+                            list="ai-topic-suggestions"
+                            placeholder={topics.length > 0 ? 'Siyahıdan seç və ya öz mövzunu yaz' : 'Mövzu adı (istəyə bağlı)'}
                             value={topicName}
                             onChange={e => setTopicName(e.target.value)}
-                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 pr-8"
                         />
-                    )}
+                        {topics.length > 0 && (
+                            <>
+                                <datalist id="ai-topic-suggestions">
+                                    {topics.map(t => {
+                                        const value = typeof t === 'object' ? t.name : t;
+                                        return <option key={typeof t === 'object' ? t.id : t} value={value} />;
+                                    })}
+                                </datalist>
+                                <HiOutlineChevronDown className="absolute right-2.5 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 {/* Question type */}

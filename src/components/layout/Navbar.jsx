@@ -213,6 +213,7 @@ const Navbar = () => {
         logout();
         setDropdownOpen(false);
         setMobileOpen(false);
+        navigate('/');
     };
 
     const fmtTime = (iso) => {

@@ -159,7 +159,23 @@ const renderLatex = (text) => {
     const decoded = decodeEntities(escapedRestored);
     // 3) Auto-add `$...$` around bare LaTeX commands so authors who skipped
     //    the math editor (or pasted raw markup) still get rendering.
-    const normalized = autoWrapBareLatex(decoded);
+    let normalized = autoWrapBareLatex(decoded);
+
+    // 4) Repair unbalanced `$` markers. The rich-text editor sometimes emits
+    //    `coğrafi$x\int_0^{\infty}\!xdsa\,\mathrm{d}x` (open `$`, no close)
+    //    when the user types/pastes around a math chunk. Without a closing
+    //    `$` the inline-math regex doesn't match and the LaTeX renders as
+    //    raw text. If the dollar count is odd, append a trailing `$` so the
+    //    last math run can be picked up by the regex below. We avoid the
+    //    `(?<!\\)` lookbehind form because older Safari trips on it.
+    let unescapedDollars = 0;
+    for (let i = 0; i < normalized.length; i++) {
+        if (normalized[i] !== '$') continue;
+        let backslashes = 0;
+        for (let j = i - 1; j >= 0 && normalized[j] === '\\'; j--) backslashes++;
+        if (backslashes % 2 === 0) unescapedDollars++;
+    }
+    if (unescapedDollars % 2 === 1) normalized = normalized + '$';
 
     const isHtml = hasHtmlTags(normalized);
     const parts = [];

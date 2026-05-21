@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 import QuestionNav from '../../components/ui/QuestionNav';
 import { fmtDate } from '../../utils/date';
+import ChipContent from '../../utils/chipContent';
 
 const fmtScore = (v) => {
     if (v === null || v === undefined) return '0';
@@ -41,21 +42,24 @@ const MatchingReview = ({ q }) => {
         return correctConnectionSet.has((lp.leftItem || '') + '|||' + (rp.rightItem || ''));
     };
 
-    // Content-deduped left groups: leftItem text → { pair (representative), allIds }
+    // Content-deduped left groups, keyed by text + image so image-only
+    // pairs aren't dropped (they used to disappear from the review view).
     const leftGroupMap = {};
     q.matchingPairs.forEach(p => {
-        if (!p.leftItem) return;
-        if (!leftGroupMap[p.leftItem]) leftGroupMap[p.leftItem] = { pair: p, allIds: [] };
-        if (!leftGroupMap[p.leftItem].allIds.includes(p.id)) leftGroupMap[p.leftItem].allIds.push(p.id);
+        const k = `${p.leftItem || ''}|${p.attachedImageLeft || ''}`;
+        if (k === '|') return;
+        if (!leftGroupMap[k]) leftGroupMap[k] = { pair: p, allIds: [] };
+        if (!leftGroupMap[k].allIds.includes(p.id)) leftGroupMap[k].allIds.push(p.id);
     });
     const leftNodes = Object.values(leftGroupMap);
 
     // Content-deduped right groups, sorted alphabetically
     const rightGroupMap = {};
     q.matchingPairs.forEach(p => {
-        if (!p.rightItem) return;
-        if (!rightGroupMap[p.rightItem]) rightGroupMap[p.rightItem] = { pair: p, allIds: [] };
-        if (!rightGroupMap[p.rightItem].allIds.includes(p.id)) rightGroupMap[p.rightItem].allIds.push(p.id);
+        const k = `${p.rightItem || ''}|${p.attachedImageRight || ''}`;
+        if (k === '|') return;
+        if (!rightGroupMap[k]) rightGroupMap[k] = { pair: p, allIds: [] };
+        if (!rightGroupMap[k].allIds.includes(p.id)) rightGroupMap[k].allIds.push(p.id);
     });
     const rightNodes = Object.values(rightGroupMap).sort((a, b) => (a.pair.rightItem || '').localeCompare(b.pair.rightItem || ''));
 
@@ -129,7 +133,7 @@ const MatchingReview = ({ q }) => {
                             : 'border-red-400 bg-red-50 text-red-900';
                         return (
                             <div key={pair.id} data-left-id={pair.id} className={`p-4 rounded-2xl border-2 text-sm font-medium min-h-[52px] flex flex-col justify-center ${cls}`}>
-                                <LatexPreview content={pair.leftItem} placeholder={null} />
+                                {pair.leftItem && <div className="break-words"><ChipContent text={pair.leftItem} /></div>}
                                 {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
                                 {missed && <p className="text-[10px] font-bold text-orange-500 mt-1">Birləşdirilməyib</p>}
                             </div>
@@ -156,7 +160,7 @@ const MatchingReview = ({ q }) => {
                             : 'border-red-400 bg-red-50 text-red-900';
                         return (
                             <div key={pair.id} data-right-id={pair.id} className={`p-4 rounded-2xl border-2 text-sm font-medium min-h-[52px] flex flex-col justify-center ${cls}`}>
-                                <LatexPreview content={pair.rightItem} placeholder={null} />
+                                {pair.rightItem && <div className="break-words"><ChipContent text={pair.rightItem} /></div>}
                                 {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto" /></div>}
                                 {missed && <p className="text-[10px] font-bold text-orange-500 mt-1">Birləşdirilməyib</p>}
                             </div>
@@ -885,16 +889,16 @@ const ExamReview = () => {
                                                                 }`}
                                                             >
                                                                 <span className="text-[12px] font-bold text-[var(--ink-500)] w-20 shrink-0 uppercase tracking-wider">Boşluq {i + 1}</span>
-                                                                <div className="flex-1 grid grid-cols-2 gap-3">
-                                                                    <div>
+                                                                <div className="flex-1 grid grid-cols-2 gap-3 min-w-0">
+                                                                    <div className="min-w-0 break-words">
                                                                         <p className="text-[10.5px] text-[var(--ink-400)] mb-1 font-bold uppercase tracking-wider">Şagird</p>
-                                                                        <p className={`font-semibold ${student ? 'text-[var(--ink-900)]' : 'text-[var(--ink-400)] italic'}`}>
-                                                                            {student || '[boş]'}
-                                                                        </p>
+                                                                        <div className={`font-semibold ${student ? 'text-[var(--ink-900)]' : 'text-[var(--ink-400)] italic'}`}>
+                                                                            {student ? <ChipContent text={student} /> : '[boş]'}
+                                                                        </div>
                                                                     </div>
-                                                                    <div>
+                                                                    <div className="min-w-0 break-words">
                                                                         <p className="text-[10.5px] text-[var(--ink-400)] mb-1 font-bold uppercase tracking-wider">Düzgün</p>
-                                                                        <p className="font-semibold text-[var(--brand-green-600)]">{correct}</p>
+                                                                        <div className="font-semibold text-[var(--brand-green-600)]"><ChipContent text={correct} /></div>
                                                                     </div>
                                                                 </div>
                                                                 {isCorrect ? (

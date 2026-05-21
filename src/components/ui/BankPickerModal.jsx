@@ -364,9 +364,30 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-sm text-gray-800 line-clamp-3">
-                                                <LatexPreview content={q.content} />
-                                            </div>
+                                            {(() => {
+                                                const stripped = (q.content || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+                                                const hasText = stripped.length > 0;
+                                                const hasImage = !!q.attachedImage;
+                                                if (hasText) {
+                                                    return (
+                                                        <div className="text-sm text-gray-800 line-clamp-3">
+                                                            <LatexPreview content={q.content} />
+                                                        </div>
+                                                    );
+                                                }
+                                                if (hasImage) {
+                                                    return (
+                                                        <img
+                                                            src={q.attachedImage}
+                                                            alt=""
+                                                            className="max-h-32 max-w-full rounded-md border border-gray-100 object-contain"
+                                                        />
+                                                    );
+                                                }
+                                                return (
+                                                    <div className="text-sm text-gray-400 italic">Sualın şərti yoxdur</div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                     );

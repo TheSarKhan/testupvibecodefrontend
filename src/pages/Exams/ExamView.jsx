@@ -6,6 +6,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 import AccessCodeModal from '../../components/ui/AccessCodeModal';
+import ChipContent from '../../utils/chipContent';
 
 const STATUS_LABELS = {
     PUBLISHED: 'Aktiv',
@@ -225,7 +226,7 @@ const ExamView = () => {
                                                             {part && <LatexPreview content={part} />}
                                                             {i < parts.length - 1 && (
                                                                 <span className="inline-flex items-center justify-center mx-2 min-w-[100px] h-8 px-3 rounded-lg border-2 border-solid border-green-400 bg-green-50 text-green-700 text-sm font-semibold">
-                                                                    {correctAnswers[i] || '___'}
+                                                                    {correctAnswers[i] ? <ChipContent text={correctAnswers[i]} /> : '___'}
                                                                 </span>
                                                             )}
                                                         </span>
@@ -237,11 +238,11 @@ const ExamView = () => {
                                                         <p className="text-sm text-green-700 font-semibold mb-3">✓ Düzgün Cavablar:</p>
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                             {correctAnswers.map((answer, idx) => (
-                                                                <div key={idx} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-green-200">
-                                                                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-500 text-white text-xs font-bold">
+                                                                <div key={idx} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-green-200 min-w-0">
+                                                                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-500 text-white text-xs font-bold shrink-0">
                                                                         {idx + 1}
                                                                     </span>
-                                                                    <span className="font-semibold text-gray-800">{answer}</span>
+                                                                    <span className="font-semibold text-gray-800 min-w-0 break-words"><ChipContent text={answer} /></span>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -253,8 +254,8 @@ const ExamView = () => {
                                                         <p className="text-sm text-blue-700 font-semibold mb-3">Seçimlər:</p>
                                                         <div className="flex flex-wrap gap-2">
                                                             {q.options.map(opt => (
-                                                                <span key={opt.id} className="px-3 py-1.5 bg-white border border-blue-200 rounded-lg text-sm font-medium text-blue-700">
-                                                                    {opt.content}
+                                                                <span key={opt.id} className="max-w-full px-3 py-1.5 bg-white border border-blue-200 rounded-lg text-sm font-medium text-blue-700 overflow-hidden">
+                                                                    <ChipContent text={opt.content} />
                                                                 </span>
                                                             ))}
                                                         </div>
@@ -286,7 +287,7 @@ const ExamView = () => {
                                                                 key={`left-${idx}`}
                                                                 className="p-4 bg-white rounded-lg border-2 border-emerald-200 text-gray-800 font-medium text-center"
                                                             >
-                                                                <LatexPreview content={item} />
+                                                                {item ? <ChipContent text={item} /> : ''}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -299,7 +300,7 @@ const ExamView = () => {
                                                                 key={`right-${idx}`}
                                                                 className="p-4 bg-white rounded-lg border-2 border-emerald-200 text-gray-800 font-medium text-center"
                                                             >
-                                                                <LatexPreview content={item} />
+                                                                {item ? <ChipContent text={item} /> : ''}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -315,11 +316,11 @@ const ExamView = () => {
                                                                 className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200"
                                                             >
                                                                 <span className="font-medium text-gray-800">
-                                                                    <LatexPreview content={left} />
+                                                                    <ChipContent text={left} />
                                                                 </span>
                                                                 <span className="text-green-600 font-bold">↔</span>
                                                                 <span className="font-medium text-green-700">
-                                                                    <LatexPreview content={rights[0]} />
+                                                                    <ChipContent text={rights[0]} />
                                                                 </span>
                                                             </div>
                                                         ))}

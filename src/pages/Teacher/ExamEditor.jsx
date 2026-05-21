@@ -366,6 +366,32 @@ const ExamEditor = () => {
                 q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
                 q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'MULTIPLE_CHOICE';
 
+            // FILL_IN_THE_BLANK: editor expects sampleAnswer as JSON array
+            // and the correct answers mirrored into options with isCorrect=true
+            // (otherwise the answer chips and grading both break).
+            let aiSampleAnswer = q.correctAnswer || '';
+            let aiOptions = (q.options || []).map((o, oi) => ({
+                id: Date.now() + oi + 1,
+                text: o.content || '',
+                isCorrect: !!o.isCorrect,
+            }));
+            if (frontendType === 'FILL_IN_THE_BLANK' && q.correctAnswer) {
+                let answers;
+                try {
+                    const parsed = JSON.parse(q.correctAnswer);
+                    answers = Array.isArray(parsed) ? parsed : [q.correctAnswer];
+                } catch {
+                    answers = [q.correctAnswer];
+                }
+                aiSampleAnswer = JSON.stringify(answers);
+                const correctOpts = answers.map((a, ai) => ({
+                    id: Date.now() + 900 + ai,
+                    text: a,
+                    isCorrect: true,
+                }));
+                aiOptions = [...correctOpts, ...aiOptions];
+            }
+
             if (aiModal.replaceId) {
                 // Template mode: fill into existing question slot, keep id/orderIndex/subjectGroup/points
                 setQuestions(prev => prev.map(existing => {
@@ -374,12 +400,8 @@ const ExamEditor = () => {
                     return {
                         ...existing,
                         text: q.content || '',
-                        sampleAnswer: q.correctAnswer || '',
-                        options: sameType ? (q.options || []).map((o, oi) => ({
-                            id: Date.now() + oi + 1,
-                            text: o.content || '',
-                            isCorrect: !!o.isCorrect,
-                        })) : existing.options,
+                        sampleAnswer: aiSampleAnswer,
+                        options: sameType ? aiOptions : existing.options,
                     };
                 }));
                 toast.success('Sual AI ilə dolduruldu');
@@ -393,13 +415,9 @@ const ExamEditor = () => {
                     points: q.points ?? 1,
                     orderIndex: nextOrderIndex(),
                     subjectGroup: isMain ? null : aiModal.section,
-                    options: (q.options || []).map((o, oi) => ({
-                        id: Date.now() + oi + 1,
-                        text: o.content || '',
-                        isCorrect: !!o.isCorrect,
-                    })),
+                    options: aiOptions,
                     matchingPairs: [],
-                    sampleAnswer: q.correctAnswer || '',
+                    sampleAnswer: aiSampleAnswer,
                 };
                 setQuestions(prev => [...prev, newQ]);
                 toast.success('AI sual əlavə edildi');
@@ -545,25 +563,52 @@ const ExamEditor = () => {
     // On new exam with AI-generated questions
     useEffect(() => {
         if (!isEditMode && initialLocationState.aiQuestions?.length > 0) {
-            const mapped = initialLocationState.aiQuestions.map((q, idx) => ({
-                id: (Date.now() + idx).toString(),
-                orderIndex: idx,
-                type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
+            const mapped = initialLocationState.aiQuestions.map((q, idx) => {
+                const type = q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
                       q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
                       q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
                       q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' :
-                      q.questionType === 'OPEN_MANUAL' ? 'OPEN_MANUAL' : 'MULTIPLE_CHOICE',
-                text: q.content || '',
-                points: q.points ?? 1,
-                subjectGroup: null,
-                options: (q.options || []).map((o, oi) => ({
+                      q.questionType === 'OPEN_MANUAL' ? 'OPEN_MANUAL' : 'MULTIPLE_CHOICE';
+
+                // FILL_IN_THE_BLANK editor expects sampleAnswer as a
+                // JSON-stringified array (one entry per blank) and the
+                // correct answers mirrored into the options list with
+                // isCorrect=true so they appear in the chip pool.
+                let sampleAnswer = q.correctAnswer || '';
+                let baseOptions = (q.options || []).map((o, oi) => ({
                     id: Date.now() + idx * 100 + oi,
                     text: o.content || '',
                     isCorrect: !!o.isCorrect
-                })),
-                matchingPairs: [],
-                sampleAnswer: q.correctAnswer || ''
-            }));
+                }));
+                if (type === 'FILL_IN_THE_BLANK' && q.correctAnswer) {
+                    let answers;
+                    try {
+                        const parsed = JSON.parse(q.correctAnswer);
+                        answers = Array.isArray(parsed) ? parsed : [q.correctAnswer];
+                    } catch {
+                        answers = [q.correctAnswer];
+                    }
+                    sampleAnswer = JSON.stringify(answers);
+                    const correctOpts = answers.map((a, ai) => ({
+                        id: Date.now() + idx * 100 + 900 + ai,
+                        text: a,
+                        isCorrect: true,
+                    }));
+                    baseOptions = [...correctOpts, ...baseOptions];
+                }
+
+                return {
+                    id: (Date.now() + idx).toString(),
+                    orderIndex: idx,
+                    type,
+                    text: q.content || '',
+                    points: q.points ?? 1,
+                    subjectGroup: null,
+                    options: baseOptions,
+                    matchingPairs: [],
+                    sampleAnswer
+                };
+            });
             setQuestions(mapped);
             // Auto-set title so auto-save can proceed
             const subj = initialLocationState.subject || 'AI';

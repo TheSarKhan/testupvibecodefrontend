@@ -6,6 +6,7 @@ import {
     HiOutlineX, HiOutlineCheckCircle, HiOutlineTag, HiOutlineLightningBolt,
 } from 'react-icons/hi';
 import { QuestionEditor, LatexPreview, Combobox } from '../../components/ui';
+import ChipContent from '../../utils/chipContent';
 import toast from 'react-hot-toast';
 import {
     useBankSubjects,
@@ -153,9 +154,9 @@ const ViewModal = ({ question, onClose }) => {
                         <div className="space-y-2">
                             {question.matchingPairs.map((mp) => (
                                 <div key={mp.id} className="flex items-center gap-3 text-sm bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
-                                    <span className="font-medium text-blue-700 min-w-0 flex-1"><LatexPreview content={mp.left} /></span>
+                                    <span className="font-medium text-blue-700 min-w-0 flex-1 break-words"><ChipContent text={mp.left} /></span>
                                     <span className="text-gray-400">→</span>
-                                    <span className="text-gray-700 min-w-0 flex-1 text-right"><LatexPreview content={mp.right} /></span>
+                                    <span className="text-gray-700 min-w-0 flex-1 text-right break-words"><ChipContent text={mp.right} /></span>
                                 </div>
                             ))}
                         </div>
@@ -163,7 +164,23 @@ const ViewModal = ({ question, onClose }) => {
                     {(question.type === 'OPEN_AUTO' || question.type === 'OPEN_MANUAL' || question.type === 'FILL_IN_THE_BLANK') && question.sampleAnswer && (
                         <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
                             <p className="text-xs font-semibold text-green-700 mb-1">Düzgün cavab</p>
-                            <p className="text-sm text-green-800"><LatexPreview content={question.sampleAnswer} /></p>
+                            {question.type === 'FILL_IN_THE_BLANK' ? (() => {
+                                let answers = [];
+                                try { answers = JSON.parse(question.sampleAnswer); } catch {}
+                                if (!Array.isArray(answers)) answers = [question.sampleAnswer];
+                                return (
+                                    <div className="flex flex-wrap gap-1.5 text-sm text-green-800">
+                                        {answers.map((a, i) => (
+                                            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-green-200 rounded-md">
+                                                <span className="text-[10px] font-bold text-green-600">{i + 1}.</span>
+                                                <ChipContent text={a} />
+                                            </span>
+                                        ))}
+                                    </div>
+                                );
+                            })() : (
+                                <p className="text-sm text-green-800"><LatexPreview content={question.sampleAnswer} /></p>
+                            )}
                         </div>
                     )}
                 </div>

@@ -10,6 +10,7 @@ import {
     HiOutlineGlobe, HiOutlineCheck,
 } from 'react-icons/hi';
 import { QuestionEditor, LatexPreview, AiGenerateModal } from '../../components/ui';
+import ChipContent from '../../utils/chipContent';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -132,11 +133,23 @@ const newEditorQuestion = (orderIndex) => ({
     sampleAnswer: '',
 });
 
-// Simple text-based duplicate hash: lowercase + strip whitespace + sort options
+// Duplicate hash: normalised question text + sorted option texts + a short
+// fingerprint of the attached image. Without the image fingerprint, two
+// image-only questions (empty text, empty options, different pictures) used
+// to collide on the same hash and the editor kept asking "Eyni mətnli sual
+// artıq mövcuddur".
+const stripHtml = (s) => (s || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&[a-z]+;/g, ' ');
 const dedupeHash = (q) => {
-    const norm = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const norm = (s) => stripHtml(s).replace(/\s+/g, ' ').trim().toLowerCase();
     const opts = (q.options || []).map(o => norm(o.text)).sort().join('|');
-    return norm(q.text) + '@@' + opts;
+    // Use a stable substring of the data-URL / URL so the hash isn't huge.
+    const imgFp = q.attachedImage
+        ? '#img:' + q.attachedImage.slice(0, 80) + ':' + q.attachedImage.length
+        : '';
+    return norm(q.text) + '@@' + opts + imgFp;
 };
 
 // ── View Modal ───────────────────────────────────────────────────────────────
@@ -216,9 +229,9 @@ const ViewModal = ({ question, onClose }) => {
                         <div className="space-y-2">
                             {question.matchingPairs.map((mp) => (
                                 <div key={mp.id} className="flex items-center gap-3 text-sm bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
-                                    <span className="font-medium text-blue-700 min-w-0 flex-1"><LatexPreview content={mp.left} /></span>
+                                    <span className="font-medium text-blue-700 min-w-0 flex-1 break-words"><ChipContent text={mp.left} /></span>
                                     <span className="text-gray-400">→</span>
-                                    <span className="text-gray-700 min-w-0 flex-1 text-right"><LatexPreview content={mp.right} /></span>
+                                    <span className="text-gray-700 min-w-0 flex-1 text-right break-words"><ChipContent text={mp.right} /></span>
                                 </div>
                             ))}
                         </div>
@@ -226,7 +239,23 @@ const ViewModal = ({ question, onClose }) => {
                     {(question.type === 'OPEN_AUTO' || question.type === 'OPEN_MANUAL' || question.type === 'FILL_IN_THE_BLANK') && question.sampleAnswer && (
                         <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
                             <p className="text-xs font-semibold text-green-700 mb-1">Düzgün cavab</p>
-                            <p className="text-sm text-green-800"><LatexPreview content={question.sampleAnswer} /></p>
+                            {question.type === 'FILL_IN_THE_BLANK' ? (() => {
+                                let answers = [];
+                                try { answers = JSON.parse(question.sampleAnswer); } catch {}
+                                if (!Array.isArray(answers)) answers = [question.sampleAnswer];
+                                return (
+                                    <div className="flex flex-wrap gap-1.5 text-sm text-green-800">
+                                        {answers.map((a, i) => (
+                                            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-green-200 rounded-md">
+                                                <span className="text-[10px] font-bold text-green-600">{i + 1}.</span>
+                                                <ChipContent text={a} />
+                                            </span>
+                                        ))}
+                                    </div>
+                                );
+                            })() : (
+                                <p className="text-sm text-green-800"><LatexPreview content={question.sampleAnswer} /></p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -712,10 +741,24 @@ const QuestionBankSubject = () => {
         if (needsCorrect && !localQuestion.options?.some(o => o.isCorrect)) { toast.error('Ən azı bir düzgün variant seçilməlidir'); return; }
         if (needsAnswer && !localQuestion.sampleAnswer?.trim()) { toast.error('Düzgün cavab daxil edilməlidir'); return; }
 
-        // Duplicate detection (against currently-loaded page; not perfect but cheap)
-        const hash = dedupeHash(localQuestion);
-        const dup = questions.find(q => q.id !== localQuestion.id && dedupeHash(q) === hash);
-        if (dup && !window.confirm('Eyni mətnli sual artıq mövcuddur. Yenə də yadda saxlayım?')) return;
+        // Duplicate detection — but ONLY for questions that have meaningful,
+        // non-empty text. Image-only / blank questions can't realistically
+        // be duplicates (the image is the content) and every previous
+        // attempt to compare them just produced false positives. Skip the
+        // check unless we have at least 10 characters of plain (non-HTML)
+        // text — that filters out empty placeholders, single letters,
+        // dashes, etc.
+        const plainText = (localQuestion.text || '')
+            .replace(/<[^>]*>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&[a-z]+;/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (plainText.length >= 10) {
+            const hash = dedupeHash(localQuestion);
+            const dup = questions.find(q => q.id !== localQuestion.id && dedupeHash(q) === hash);
+            if (dup && !window.confirm('Eyni mətnli sual artıq mövcuddur. Yenə də yadda saxlayım?')) return;
+        }
 
         setSaving(true);
         try {

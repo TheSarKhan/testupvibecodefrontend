@@ -56,15 +56,23 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
     const parseToHtml = (text) => {
         if (!text) return '';
 
+        const renderMathChunk = (clean) => {
+            try {
+                const mathHtml = katex.renderToString(clean, { throwOnError: false, displayMode: false, strict: 'ignore' });
+                // Only treat as broken when KaTeX produced no `.katex` wrapper
+                // at all. A partial katex-error span is still readable and
+                // strictly better than `[math]`.
+                const isBroken = !/class="katex/.test(mathHtml);
+                if (!isBroken) {
+                    return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${clean}">${mathHtml}</span>`;
+                }
+            } catch { /* fall through */ }
+            return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-amber-50 px-1 rounded text-[12px] font-mono text-amber-700" contenteditable="false" data-latex="${clean}">[math]</span>`;
+        };
+
         if (hasHtmlTags(text)) {
             // New HTML format: just replace $$math$$ markers
-            return text.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => {
-                const clean = normalizeLatex(latex.trim());
-                try {
-                    const mathHtml = katex.renderToString(clean, { throwOnError: false, displayMode: false, strict: 'ignore' });
-                    return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${clean}">${mathHtml}</span>`;
-                } catch { return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-amber-50 px-1 rounded text-[12px] font-mono text-amber-700" contenteditable="false" data-latex="${clean}">[math]</span>`; }
-            });
+            return text.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => renderMathChunk(normalizeLatex(latex.trim())));
         }
 
         // Legacy plain text format: split on math markers + escape HTML + convert newlines
@@ -78,13 +86,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 math = part.slice(1, -1).trim();
             }
             if (math !== null) {
-                const clean = normalizeLatex(math);
-                try {
-                    const mathHtml = katex.renderToString(clean, { throwOnError: false, displayMode: false, strict: 'ignore' });
-                    html += `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${clean}">${mathHtml}</span>`;
-                } catch {
-                    html += `<span class="math-node mx-1 inline-block align-middle cursor-default bg-amber-50 px-1 rounded text-[12px] font-mono text-amber-700" contenteditable="false" data-latex="${clean}">[math]</span>`;
-                }
+                html += renderMathChunk(normalizeLatex(math));
             } else {
                 html += part
                     .replace(/&nbsp;/g, ' ')
@@ -210,12 +212,12 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
             let renderedOk = false;
             try {
                 const mathHtml = katex.renderToString(cleanLatex, { throwOnError: false, displayMode: false, strict: 'ignore' });
-                // `throwOnError: false` makes KaTeX swallow undefined-command
-                // errors and embed red `katex-error` spans. The student then
-                // sees what looks like raw red LaTeX inside the editor \u2014 same
-                // as a render failure. Treat that as a fail so we fall back
-                // to the [math] placeholder rather than dumping red text.
-                const isBroken = /katex-error/.test(mathHtml) || !/class="katex/.test(mathHtml);
+                // Only treat as broken when KaTeX produced absolutely nothing
+                // recognisable. A long expression that contains a single
+                // unsupported token still renders the rest \u2014 falling back to
+                // `[math]` in that case would hide a perfectly readable
+                // formula, which is exactly the bug the student reported.
+                const isBroken = !/class="katex/.test(mathHtml);
                 if (!isBroken) {
                     const span = document.createElement('span');
                     span.className = "math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded";

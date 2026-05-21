@@ -292,7 +292,7 @@ const ContactBody = () => {
 
                                 <p className="text-[12.5px] text-[var(--ink-500)] mb-5">
                                     Forma göndərməklə{' '}
-                                    <a href="#" className="text-[var(--primary)] font-semibold">məxfilik siyasətini</a>{' '}
+                                    <Link to="/gizlilik-siyaseti" className="text-[var(--primary)] font-semibold">məxfilik siyasətini</Link>{' '}
                                     qəbul etmiş olursunuz.
                                 </p>
 
@@ -314,7 +314,7 @@ const ContactBody = () => {
                                 </div>
                                 <h3 className="text-[20px] font-bold text-[var(--ink-900)] mb-2">Mesajınız göndərildi!</h3>
                                 <p className="text-[var(--ink-500)] text-[15px] mb-7">
-                                    <span className="text-[var(--ink-800)] font-semibold">{form.email || 'Sizin email'}</span>-ə qəbz göndərdik. Komandamız 2 saat ərzində sizinlə əlaqə saxlayacaq.
+                                    Komandamız ən yaxın müddət ərzində sizinlə geri dönüş edəcək.
                                 </p>
                                 <button
                                     onClick={() => {

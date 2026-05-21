@@ -3,7 +3,9 @@ import { HiOutlineTrash, HiOutlinePlus, HiOutlineX, HiLockClosed } from 'react-i
 import PdfCropperModal from './PdfCropperModal';
 import MathFormulaModal from './MathFormulaModal';
 import MathTextEditor from './MathTextEditor';
+import LatexPreview from './LatexPreview';
 import { useAuth } from '../../context/AuthContext';
+import ChipContent from '../../utils/chipContent';
 
 // Supported Question Types
 const QUESTION_TYPES = {
@@ -39,6 +41,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
         let refKey = '';
         if (mathModalField.type === 'main') refKey = 'main';
         else if (mathModalField.type === 'sampleAnswer') refKey = 'sampleAnswer';
+        else if (mathModalField.type === 'fillAnswer') refKey = `fillAnswer-${mathModalField.id}`;
         else refKey = `${mathModalField.type}-${mathModalField.id}`;
 
         const editor = editorsRefs.current[refKey];
@@ -293,10 +296,35 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
             rebuildAndSave(answers, distractors.filter(d => d.id !== id));
         };
 
+        // The rich-text editor (MathTextEditor) stores values as a mix of
+        // raw text, `$$latex$$` markers from math-node insertions, and any
+        // HTML wrappers contentEditable adds while the user types. Chips
+        // need a clean string that LatexPreview can render reliably — strip
+        // tags, collapse whitespace, then normalise math markers so each
+        // formula is wrapped in exactly one `$..$` pair. Without this the
+        // chip preview shows half-rendered junk like `x² $\int_0^{\infty}…`.
+        const sanitizeChipText = (raw) => {
+            if (!raw) return '';
+            // 1) Drop HTML tags but keep the inner text/markers.
+            let s = String(raw).replace(/<[^>]+>/g, ' ');
+            // 2) Decode common HTML entities so `&amp;` etc. round-trip.
+            s = s.replace(/&nbsp;/g, ' ')
+                 .replace(/&amp;/g, '&')
+                 .replace(/&lt;/g, '<')
+                 .replace(/&gt;/g, '>')
+                 .replace(/&#39;/g, "'")
+                 .replace(/&quot;/g, '"');
+            // 3) Collapse `$$X$$` → `$X$` so we only deal with one math
+            //    delimiter style downstream.
+            s = s.replace(/\$\$([\s\S]+?)\$\$/g, '$$$1$$').replace(/\$\$/g, '$');
+            // 4) Trim outer whitespace and collapse repeats.
+            return s.replace(/\s+/g, ' ').trim();
+        };
+
         // Preview chip pool (what student will see)
         const allChips = [
-            ...answers.filter(a => a.trim()).map((a, i) => ({ key: `c-${i}`, text: a, correct: true })),
-            ...distractors.filter(d => d.text.trim()).map(d => ({ key: `d-${d.id}`, text: d.text, correct: false }))
+            ...answers.filter(a => sanitizeChipText(a)).map((a, i) => ({ key: `c-${i}`, text: sanitizeChipText(a), correct: true })),
+            ...distractors.filter(d => sanitizeChipText(d.text)).map(d => ({ key: `d-${d.id}`, text: sanitizeChipText(d.text), correct: false }))
         ];
 
         return (
@@ -320,13 +348,24 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     ) : answers.map((val, i) => (
                         <div key={i} className="flex items-center gap-3">
                             <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold text-xs shrink-0">{i + 1}</span>
-                            <input
-                                type="text"
-                                value={val}
-                                onChange={e => updateAnswer(i, e.target.value)}
-                                placeholder={`Boşluq ${i + 1} üçün düzgün cavab`}
-                                className="flex-1 px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            />
+                            <div className="flex-1 min-w-0 flex bg-white border border-blue-200 rounded-lg focus-within:ring-2 focus-within:ring-blue-400 overflow-hidden">
+                                <MathTextEditor
+                                    ref={setEditorRef(`fillAnswer-${i}`)}
+                                    value={val}
+                                    onChange={(v) => updateAnswer(i, v)}
+                                    placeholder={`Boşluq ${i + 1} üçün düzgün cavab`}
+                                    className="flex-1 min-w-0 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[40px] max-h-[200px] overflow-y-auto bg-transparent break-words"
+                                />
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => setMathModalField({ type: 'fillAnswer', id: i })}
+                                    className="px-3 border-l border-blue-200 text-blue-600 font-bold hover:bg-blue-50 flex items-center justify-center transition-colors shrink-0"
+                                    title="Riyaziyyat formulu əlavə et"
+                                >
+                                    fx
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -339,13 +378,24 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     </p>
                     {distractors.map((d, i) => (
                         <div key={d.id} className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={d.text}
-                                onChange={e => updateDistractor(d.id, e.target.value)}
-                                placeholder={`Yanlış seçim ${i + 1}`}
-                                className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-                            />
+                            <div className="flex-1 min-w-0 flex bg-white border border-gray-200 rounded-lg focus-within:ring-2 focus-within:ring-gray-300 overflow-hidden">
+                                <MathTextEditor
+                                    ref={setEditorRef(`option-${d.id}`)}
+                                    value={d.text}
+                                    onChange={(v) => updateDistractor(d.id, v)}
+                                    placeholder={`Yanlış seçim ${i + 1}`}
+                                    className="flex-1 min-w-0 px-3 py-2 border-none focus:ring-0 sm:text-sm min-h-[40px] max-h-[200px] overflow-y-auto bg-transparent break-words"
+                                />
+                                <button
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => setMathModalField({ type: 'option', id: d.id })}
+                                    className="px-3 border-l border-gray-200 text-blue-600 font-bold hover:bg-blue-50 flex items-center justify-center transition-colors shrink-0"
+                                    title="Riyaziyyat formulu əlavə et"
+                                >
+                                    fx
+                                </button>
+                            </div>
                             <button type="button" onClick={() => removeDistractor(d.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
                                 <HiOutlineTrash className="w-4 h-4" />
                             </button>
@@ -366,9 +416,9 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                         <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Şagid Görəcəyi Çiplər (qarışıq):</p>
                         <div className="flex flex-wrap gap-2">
                             {allChips.map(chip => (
-                                <span key={chip.key} className={`px-3 py-1.5 rounded-xl border-2 text-sm font-medium ${chip.correct ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>
-                                    {chip.text}
-                                </span>
+                                <div key={chip.key} className={`max-w-full px-3 py-1.5 rounded-xl border-2 text-sm font-medium overflow-hidden ${chip.correct ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-100 border-gray-200 text-gray-600'}`}>
+                                    <ChipContent text={chip.text} />
+                                </div>
                             ))}
                         </div>
                     </div>

@@ -90,11 +90,16 @@ const PreviewQuestion = ({ q, index, onRemove }) => {
             </ul>
         )}
 
-        {/* Open / Fill-in-blank answer */}
-        {q.correctAnswer && !q.options?.length && (
-            <p className="mt-2.5 text-xs px-2.5 py-1.5 bg-green-50 text-green-800 rounded-lg font-medium">
-                ✓ {q.correctAnswer}
-            </p>
+        {/* Open / Fill-in-blank answer. The AI emits `$5$` / `$\frac{1}{2}$`
+            etc., so we have to render through LatexPreview rather than
+            printing the raw string (which leaves the literal dollar
+            markers showing in the preview card). For fill-in-blank we
+            also show the correct answer above the distractor options. */}
+        {q.correctAnswer && (!q.options?.length || !q.options.some(o => o.isCorrect)) && (
+            <div className="mt-2.5 text-xs px-2.5 py-1.5 bg-green-50 text-green-800 rounded-lg font-medium flex items-center gap-1.5">
+                <span>✓</span>
+                <span className="flex-1"><LatexPreview content={q.correctAnswer} placeholder={null} /></span>
+            </div>
         )}
     </div>
     );
@@ -189,8 +194,32 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
         setSaving(true);
         let saved = 0;
         for (const q of generated) {
+            // FILL_IN_THE_BLANK: editor and grader expect correctAnswer as a
+            // JSON-stringified array (one entry per `___`) and want the
+            // correct answers mirrored into `options` with isCorrect=true so
+            // they show up in the student-facing chip pool.
+            let payload = q;
+            if (q.questionType === 'FILL_IN_THE_BLANK' && q.correctAnswer) {
+                let answers;
+                try {
+                    const parsed = JSON.parse(q.correctAnswer);
+                    answers = Array.isArray(parsed) ? parsed : [q.correctAnswer];
+                } catch {
+                    answers = [q.correctAnswer];
+                }
+                const correctOpts = answers.map((a, i) => ({
+                    content: a,
+                    isCorrect: true,
+                    orderIndex: i,
+                }));
+                payload = {
+                    ...q,
+                    correctAnswer: JSON.stringify(answers),
+                    options: [...correctOpts, ...(q.options || [])],
+                };
+            }
             try {
-                await api.post('/bank/questions', q);
+                await api.post('/bank/questions', payload);
                 saved++;
             } catch (e) {
                 toast.error(`Sual ${saved + 1} saxlanıla bilmədi`);

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 import MathTextEditor from '../../components/ui/MathTextEditor';
 import MathFormulaModal from '../../components/ui/MathFormulaModal';
+import ChipContent from '../../utils/chipContent';
 
 const ExamSession = () => {
     const { sessionId } = useParams();
@@ -917,7 +918,7 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
                                     }`}
                             >
                                 {blanks[i]
-                                    ? <span className="flex items-center gap-1.5 text-base">{blanks[i]} <span className="text-xs text-blue-400">✕</span></span>
+                                    ? <span className="flex items-center gap-1.5 text-base"><ChipContent text={blanks[i]} /> <span className="text-xs text-blue-400">✕</span></span>
                                     : <span className="text-sm font-semibold">{i + 1}</span>
                                 }
                             </span>
@@ -939,13 +940,13 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
                                     draggable={!isUsed}
                                     onDragStart={e => e.dataTransfer.setData('chipText', chip.text)}
                                     onClick={() => handleChipClick(chip.text)}
-                                    className={`px-4 py-2.5 rounded-xl border-2 font-medium text-base select-none transition-all
+                                    className={`px-4 py-2.5 rounded-xl border-2 font-medium text-base select-none transition-all max-w-full overflow-hidden
                                         ${isUsed
                                             ? 'opacity-30 cursor-default border-gray-200 bg-gray-100 text-gray-400'
                                             : 'cursor-grab border-blue-200 bg-white text-blue-700 hover:border-blue-500 hover:bg-blue-50 hover:shadow-md active:scale-95'
                                         }`}
                                 >
-                                    {chip.text}
+                                    <ChipContent text={chip.text} />
                                 </div>
                             );
                         })}
@@ -966,31 +967,44 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
 
     const existingPairs = answer.matchingPairs || [];
 
-    // Build canonical maps: pairId → canonical pairId (first with same content text)
+    // Build canonical maps: pairId → canonical pairId. Keyed by text + image
+    // so image-only options get a stable canonical id too.
     const leftCanonMap = {}, rightCanonMap = {};
     const seenLText = {}, seenRText = {};
     question.matchingPairs.forEach(p => {
-        if (p.leftItem) {
-            if (seenLText[p.leftItem] === undefined) seenLText[p.leftItem] = p.id;
-            leftCanonMap[p.id] = seenLText[p.leftItem];
+        const lk = `${p.leftItem || ''}|${p.attachedImageLeft || ''}`;
+        const rk = `${p.rightItem || ''}|${p.attachedImageRight || ''}`;
+        if (lk !== '|') {
+            if (seenLText[lk] === undefined) seenLText[lk] = p.id;
+            leftCanonMap[p.id] = seenLText[lk];
         }
-        if (p.rightItem) {
-            if (seenRText[p.rightItem] === undefined) seenRText[p.rightItem] = p.id;
-            rightCanonMap[p.id] = seenRText[p.rightItem];
+        if (rk !== '|') {
+            if (seenRText[rk] === undefined) seenRText[rk] = p.id;
+            rightCanonMap[p.id] = seenRText[rk];
         }
     });
 
-    // Deduplicate by content — one card per unique text
+    // Deduplicate by content — one card per unique text/image. Image-only
+    // pairs (no text but with an attached image) used to be silently dropped
+    // by the `!p.leftItem` guard, so the teacher's image options never
+    // appeared in the exam. Build a composite key from text + image so we
+    // keep image-only entries and still collapse exact duplicates.
+    const leftKey = (p) => `${p.leftItem || ''}|${p.attachedImageLeft || ''}`;
+    const rightKey = (p) => `${p.rightItem || ''}|${p.attachedImageRight || ''}`;
     const seenLeft = new Set();
     const leftPairs = question.matchingPairs.filter(p => {
-        if (!p.leftItem || seenLeft.has(p.leftItem)) return false;
-        seenLeft.add(p.leftItem); return true;
+        const k = leftKey(p);
+        if (k === '|') return false;
+        if (seenLeft.has(k)) return false;
+        seenLeft.add(k); return true;
     });
     const seenRight = new Set();
     const rightPairs = [...question.matchingPairs]
         .filter(p => {
-            if (!p.rightItem || seenRight.has(p.rightItem)) return false;
-            seenRight.add(p.rightItem); return true;
+            const k = rightKey(p);
+            if (k === '|') return false;
+            if (seenRight.has(k)) return false;
+            seenRight.add(k); return true;
         })
         .sort((a, b) => (a.rightItem || '').localeCompare(b.rightItem || ''));
 
@@ -1051,7 +1065,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                                     if (!isActive) toast.success('İndi sağdan uyğun olanı seçin', { id: 'matching-hint', duration: 2000 });
                                 }}
                             >
-                                <LatexPreview content={pair.leftItem} />
+                                {pair.leftItem && <div className="break-words"><ChipContent text={pair.leftItem} /></div>}
                                 {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto cursor-zoom-in" onClick={e => { e.stopPropagation(); onZoomImage?.(pair.attachedImageLeft); }} /></div>}
                             </div>
                         );
@@ -1078,7 +1092,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                                     setActiveLeftId(null);
                                 }}
                             >
-                                <LatexPreview content={pair.rightItem} />
+                                {pair.rightItem && <div className="break-words"><ChipContent text={pair.rightItem} /></div>}
                                 {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto cursor-zoom-in" onClick={e => { e.stopPropagation(); onZoomImage?.(pair.attachedImageRight); }} /></div>}
                             </div>
                         );

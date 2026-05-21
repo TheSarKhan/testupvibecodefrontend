@@ -11,6 +11,7 @@ import 'katex/dist/katex.min.css';
 // to KaTeX, and fall back to plain text only when there are no LaTeX
 // commands at all.
 export const ChipContent = ({ text }) => {
+    console.log('[ChipContent] render with text:', text);
     if (!text) return null;
     let clean = String(text)
         .replace(/<[^>]+>/g, ' ')

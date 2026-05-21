@@ -200,9 +200,9 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                 />
                             </div>
 
-                            {(usedTypes.length > 1 || usedDifficulties.length > 0 || usedGrades.length > 0 || topics.length > 0) && (
+                            {(usedTypes.length > 0 || usedDifficulties.length > 0 || usedGrades.length > 0 || topics.length > 0) && (
                                 <div className="flex flex-wrap gap-1.5 items-center">
-                                    {usedTypes.length > 1 && (
+                                    {usedTypes.length > 0 && (
                                         <select
                                             value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
                                             className="text-xs px-2.5 py-1.5 border border-gray-200 rounded-full bg-white"

@@ -123,7 +123,7 @@ const SectionModal = ({ subtitleName, subjects, onSave, onClose, saving }) => {
                 </div>
 
                 {/* Form fills remaining space */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto">
                     <SectionForm
                         subjects={subjects}
                         onSave={onSave}

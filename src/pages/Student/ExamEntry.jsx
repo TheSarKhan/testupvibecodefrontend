@@ -525,6 +525,10 @@ const ExamEntry = () => {
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleStart = async () => {
         if (!exam) return;
+        if (user?.role === 'TEACHER') {
+            toast.error('Müəllimlər imtahan işləyə bilməz');
+            return;
+        }
         if (!isAuthenticated && !guestName.trim()) {
             toast.error('Zəhmət olmasa adınızı qeyd edin');
             return;

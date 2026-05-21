@@ -64,6 +64,41 @@ const LATEX_CMD_PATTERN = 'frac|sqrt|int|sum|prod|lim|binom|mathrm|mathbf|mathit
 // random `\foo` (not in our vocabulary) is ignored.
 const CMD_LOCATOR_RE = new RegExp(`\\\\(?:${LATEX_CMD_PATTERN})\\b`, 'g');
 
+// Build a boolean array of positions that fall inside any existing math
+// delimiter pair (`$$...$$`, `$...$`, `\(...\)`, `\[...\]`). Single-`$`
+// pairs are detected only AFTER `$$...$$` pairs are claimed, so a `$$`
+// boundary never gets miscounted as two separate `$` boundaries (the bug
+// that previously caused `\frac` inside `$$\frac{1}{x}$$` to be double-
+// wrapped, producing `$$$\frac{1}{x}$$$` and breaking subsequent matches).
+const buildMathMask = (segment) => {
+    const mask = new Array(segment.length).fill(false);
+    const markRange = (a, b) => { for (let i = a; i < b && i < mask.length; i++) mask[i] = true; };
+
+    // 1) $$...$$
+    {
+        const re = /\$\$([\s\S]+?)\$\$/g;
+        let m;
+        while ((m = re.exec(segment)) !== null) markRange(m.index, m.index + m[0].length);
+    }
+    // 2) \(...\) and \[...\]
+    {
+        const re = /\\\(([\s\S]+?)\\\)|\\\[([\s\S]+?)\\\]/g;
+        let m;
+        while ((m = re.exec(segment)) !== null) {
+            if (!mask[m.index]) markRange(m.index, m.index + m[0].length);
+        }
+    }
+    // 3) $...$ — skip ranges already claimed by $$...$$.
+    {
+        const re = /\$([^\n$]+?)\$/g;
+        let m;
+        while ((m = re.exec(segment)) !== null) {
+            if (!mask[m.index]) markRange(m.index, m.index + m[0].length);
+        }
+    }
+    return mask;
+};
+
 // Walk through `segment` and locate runs that look like LaTeX math, then
 // wrap each one with `$...$`. Two failure modes we have to handle:
 //
@@ -79,6 +114,7 @@ const CMD_LOCATOR_RE = new RegExp(`\\\\(?:${LATEX_CMD_PATTERN})\\b`, 'g');
 const autoWrapBareLatex = (segment) => {
     if (!segment.includes('\\')) return segment;
 
+    const mathMask = buildMathMask(segment);
     const out = [];
     let cursor = 0;
     CMD_LOCATOR_RE.lastIndex = 0;
@@ -88,15 +124,11 @@ const autoWrapBareLatex = (segment) => {
         const cmdAt = m.index;
         if (cmdAt < cursor) continue; // overlap from previous expansion
 
-        // Skip commands that already live inside an existing $...$ pair.
+        // Skip commands already inside an existing math delimiter pair.
         // Without this we'd produce `$$\frac{...}$ ... $` and break the
         // outer block — the author already delimited the math, our job is
         // only to wrap the cases where they didn't.
-        let dollarCount = 0;
-        for (let i = 0; i < cmdAt; i++) {
-            if (segment[i] === '$' && segment[i - 1] !== '\\') dollarCount++;
-        }
-        if (dollarCount % 2 === 1) continue;
+        if (mathMask[cmdAt]) continue;
 
         // Walk LEFT through any non-whitespace, non-`$`, ASCII characters to
         // absorb a numeric/variable prefix like `60` in `60\text{km}`.
@@ -179,8 +211,11 @@ const renderLatex = (text) => {
 
     const isHtml = hasHtmlTags(normalized);
     const parts = [];
-    // Match $$...$$ (display) or $...$ (inline) — non-greedy
-    const regex = /\$\$([\s\S]+?)\$\$|\$([^\n$]+?)\$/g;
+    // Match $$...$$ (display), $...$ (inline), \(...\) (inline) or \[...\] (display).
+    // We accept all four because AI providers and copy-pastes from other
+    // tools alternate freely between them; failing to match any one means
+    // raw `\frac{1}{x}` text on the student page.
+    const regex = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\$([^\n$]+?)\$|\\\(([\s\S]+?)\\\)/g;
     let last = 0;
     let match;
 
@@ -197,8 +232,8 @@ const renderLatex = (text) => {
             parts.push(isHtml ? segment.replace(/\n/g, '<br>') : escapeHtml(segment).replace(/\n/g, '<br>'));
         }
 
-        const isDisplay = match[1] !== undefined;
-        const rawMath = isDisplay ? match[1] : match[2];
+        const isDisplay = match[1] !== undefined || match[2] !== undefined;
+        const rawMath = match[1] ?? match[2] ?? match[3] ?? match[4];
         const math = normalizeLatex(rawMath);
 
         const renderFallback = () => {

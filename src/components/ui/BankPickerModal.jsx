@@ -371,7 +371,7 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
                                                 if (hasText) {
                                                     return (
                                                         <div className="text-sm text-gray-800 line-clamp-3">
-                                                            <LatexPreview content={q.content} />
+                                                            <LatexPreview content={q.content} placeholder={null} />
                                                         </div>
                                                     );
                                                 }

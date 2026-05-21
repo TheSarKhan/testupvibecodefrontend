@@ -52,7 +52,32 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }, [updateActiveFormats]);
 
-    // Convert stored value (plain text or HTML) + $$math$$ to rendered HTML
+    // Build a math-node span. Centralised so error/fallback paths stay
+    // visually consistent and `data-latex` always survives the round-trip.
+    const buildMathSpan = (rawLatex) => {
+        const clean = normalizeLatex(rawLatex.trim());
+        const safeAttr = clean.replace(/"/g, '&quot;');
+        try {
+            const mathHtml = katex.renderToString(clean, { throwOnError: false, displayMode: false, strict: 'ignore' });
+            return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${safeAttr}">${mathHtml}</span>`;
+        } catch {
+            return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-amber-50 px-1 rounded text-[12px] font-mono text-amber-700" contenteditable="false" data-latex="${safeAttr}">[math]</span>`;
+        }
+    };
+
+    // Accept all delimiter flavours we see in the wild:
+    //   - `$$...$$` (display, our canonical save format)
+    //   - `$...$`   (AI providers, copy-paste)
+    //   - `\(...\)` and `\[...\]` (KaTeX standard)
+    // Order matters in the alternation: `$$` must come before `$` so the
+    // engine claims double-dollar pairs first.
+    const MATH_DELIMS_RE = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]|\$([^$\n]+?)\$|\\\(([\s\S]*?)\\\)/g;
+
+    const replaceMath = (str) => str.replace(MATH_DELIMS_RE, (_, a, b, c, d) =>
+        buildMathSpan(a ?? b ?? c ?? d ?? '')
+    );
+
+    // Convert stored value (plain text or HTML) + math markers to rendered HTML
     const parseToHtml = (text) => {
         if (!text) return '';
 
@@ -71,22 +96,29 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         };
 
         if (hasHtmlTags(text)) {
-            // New HTML format: just replace $$math$$ markers
-            return text.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => renderMathChunk(normalizeLatex(latex.trim())));
+            // HTML format: replace any of the four math delimiter flavours.
+            // Previously this path handled only `$$...$$`, so AI content
+            // saved with single-`$` markers showed as raw `$\frac{1}{x}$`
+            // text in the editor.
+            return replaceMath(text);
         }
 
-        // Legacy plain text format: split on math markers + escape HTML + convert newlines
-        const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+?\$)/g);
+        // Legacy plain text: split, escape HTML in prose, convert math.
+        const parts = text.split(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^$\n]+?\$|\\\([\s\S]*?\\\))/g);
         let html = '';
         parts.forEach(part => {
             let math = null;
             if (part.startsWith('$$') && part.endsWith('$$') && part.length > 4) {
-                math = part.slice(2, -2).trim();
+                math = part.slice(2, -2);
+            } else if (part.startsWith('\\[') && part.endsWith('\\]') && part.length > 4) {
+                math = part.slice(2, -2);
+            } else if (part.startsWith('\\(') && part.endsWith('\\)') && part.length > 4) {
+                math = part.slice(2, -2);
             } else if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
-                math = part.slice(1, -1).trim();
+                math = part.slice(1, -1);
             }
             if (math !== null) {
-                html += renderMathChunk(normalizeLatex(math));
+                html += buildMathSpan(math);
             } else {
                 html += part
                     .replace(/&nbsp;/g, ' ')

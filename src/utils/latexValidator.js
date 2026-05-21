@@ -15,10 +15,11 @@ export const validateLatexSyntax = (content) => {
         errors.push('\\begin ve \\end sayı uyğun gəlmir');
     }
 
-    // Check for properly formatted \end
-    const malformedEnd = /end\{/g.test(content);
+    // Check for properly formatted \end (i.e. caller wrote bare "end{" without backslash).
+    // Use negative lookbehind so genuine "\end{pmatrix}" / "\end{cases}" don't trigger.
+    const malformedEnd = /(?<!\\)end\{/g.test(content);
     if (malformedEnd) {
-        errors.push('\\end{ kimi yanlış format — \\end{ istifadə edin');
+        errors.push('end{ kimi yanlış format — \\end{ istifadə edin');
     }
 
     // Check for matrix line breaks — should be \\ not \

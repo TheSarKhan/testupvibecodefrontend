@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSmartBack } from '../../hooks/useSmartBack';
 
 import { fmtDateTime } from '../../utils/date';
+import { QUESTION_TYPE_LABELS, labelOr } from '../../utils/enumLabels';
 const fmtPct  = (v) => (v == null ? '—' : `${v.toFixed(1)}%`);
 const fmtNum  = (v) => (v == null ? '—' : Number.isInteger(v) ? v : v.toFixed(2));
 const fmtDate = (iso) => iso ? fmtDateTime(iso) : '—';
@@ -210,7 +211,7 @@ const CollaborativeStats = () => {
                                                             {q.content || <span className="italic text-gray-400">(mətn yoxdur)</span>}
                                                         </p>
                                                         <p className="text-[11px] text-gray-400 mt-0.5">
-                                                            {q.questionType} · {fmtNum(q.points)} bal
+                                                            {labelOr(QUESTION_TYPE_LABELS, q.questionType)} · {fmtNum(q.points)} bal
                                                             {q.subjectGroup && ` · ${q.subjectGroup}`}
                                                             {q.pendingManualCount > 0 &&
                                                                 <span className="text-amber-600 font-semibold ml-1">

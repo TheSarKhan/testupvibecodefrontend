@@ -123,7 +123,16 @@ const Hero = ({ isAuthenticated, isTeacher, onCreateExam }) => (
                         ) : (
                             <>
                                 <BtnPrimary to="/register" size="lg">Pulsuz başla <HiOutlineArrowRight className="w-4 h-4" /></BtnPrimary>
-                                <BtnSecondary to="/imtahanlar" size="lg"><HiOutlinePlay className="w-3.5 h-3.5" /> Demo izlə</BtnSecondary>
+                                <button
+                                    type="button"
+                                    disabled
+                                    title="Tezliklə"
+                                    aria-disabled="true"
+                                    className="h-14 px-7 text-base inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--ink-500)] bg-white border border-[var(--ink-200)] opacity-60 cursor-not-allowed"
+                                >
+                                    <HiOutlinePlay className="w-3.5 h-3.5" /> Demo izlə
+                                    <span className="ml-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--ink-100)] text-[var(--ink-500)]">Tezliklə</span>
+                                </button>
                             </>
                         )}
                     </div>

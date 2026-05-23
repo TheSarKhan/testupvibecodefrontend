@@ -12,6 +12,7 @@ import {
     useRejectQuestion,
     useFinalizeReview,
 } from '../../../hooks/admin/useAdminCollaborativeExams';
+import { QUESTION_TYPE_LABELS, labelOr } from '../../../utils/enumLabels';
 
 // Per-question status badge.
 const StatusBadge = ({ status }) => {
@@ -336,7 +337,7 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                                                     <StatusBadge status={q.reviewStatus} />
-                                                    <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{q.questionType}</span>
+                                                    <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{labelOr(QUESTION_TYPE_LABELS, q.questionType)}</span>
                                                     {q.subjectGroup && (
                                                         <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">{q.subjectGroup}</span>
                                                     )}

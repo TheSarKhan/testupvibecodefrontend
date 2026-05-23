@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { fmtDateShort } from '../../utils/date';
+import { NOTIFICATION_TYPE_LABELS, labelOr } from '../../utils/enumLabels';
 
 const Navbar = () => {
     const { isAuthenticated, user, logout, isTeacher, isAdmin, isStudent, profilePicture } = useAuth();
@@ -373,8 +374,8 @@ const Navbar = () => {
                                                                     <p className="text-[10.5px] text-[var(--ink-400)] mt-1.5 flex items-center gap-2">
                                                                         {fmtTime(n.createdAt)}
                                                                         {n.type && n.type !== 'SYSTEM' && (
-                                                                            <span className="bg-[var(--ink-100)] text-[var(--ink-600)] px-1.5 py-0.5 rounded-full uppercase text-[9px] font-bold tracking-wider">
-                                                                                {n.type.replace('_', ' ')}
+                                                                            <span className="bg-[var(--ink-100)] text-[var(--ink-600)] px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider">
+                                                                                {labelOr(NOTIFICATION_TYPE_LABELS, n.type)}
                                                                             </span>
                                                                         )}
                                                                     </p>

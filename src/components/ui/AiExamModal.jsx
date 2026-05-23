@@ -2,25 +2,26 @@ import { useState, useEffect } from 'react';
 import { HiOutlineSparkles, HiOutlineX } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { QUESTION_TYPE_LABELS, DIFFICULTY_LABELS } from '../../utils/enumLabels';
 
 const QUESTION_TYPES = [
-    { key: 'MCQ', label: 'Test', sublabel: 'MCQ' },
-    { key: 'MULTI_SELECT', label: 'Çox seçimli', sublabel: 'Multi-select' },
-    { key: 'OPEN_AUTO', label: 'Açıq', sublabel: 'Open Auto' },
-    { key: 'FILL_IN_THE_BLANK', label: 'Boşluq', sublabel: 'Fill in blank' },
+    { key: 'MCQ',               label: QUESTION_TYPE_LABELS.MCQ,              sublabel: 'Bir düzgün cavab' },
+    { key: 'MULTI_SELECT',      label: QUESTION_TYPE_LABELS.MULTI_SELECT,     sublabel: 'Bir neçə düzgün cavab' },
+    { key: 'OPEN_AUTO',         label: QUESTION_TYPE_LABELS.OPEN_AUTO,        sublabel: 'Qısa açıq cavab' },
+    { key: 'FILL_IN_THE_BLANK', label: QUESTION_TYPE_LABELS.FILL_IN_THE_BLANK, sublabel: 'Boşluğa söz yaz' },
 ];
 
 const DIFFICULTIES = [
-    { key: 'EASY', label: 'Asan' },
-    { key: 'MEDIUM', label: 'Orta' },
-    { key: 'HARD', label: 'Çətin' },
+    { key: 'EASY',   label: DIFFICULTY_LABELS.EASY },
+    { key: 'MEDIUM', label: DIFFICULTY_LABELS.MEDIUM },
+    { key: 'HARD',   label: DIFFICULTY_LABELS.HARD },
 ];
 
 const LOADING_MESSAGES = {
-    MCQ: 'MCQ sualları yaradılır...',
-    MULTI_SELECT: 'Çox seçimli suallar yaradılır...',
-    OPEN_AUTO: 'Açıq suallar yaradılır...',
-    FILL_IN_THE_BLANK: 'Boşluq sualları yaradılır...',
+    MCQ:               `${QUESTION_TYPE_LABELS.MCQ} sualları yaradılır...`,
+    MULTI_SELECT:      `${QUESTION_TYPE_LABELS.MULTI_SELECT} suallar yaradılır...`,
+    OPEN_AUTO:         `${QUESTION_TYPE_LABELS.OPEN_AUTO} suallar yaradılır...`,
+    FILL_IN_THE_BLANK: `${QUESTION_TYPE_LABELS.FILL_IN_THE_BLANK} sualları yaradılır...`,
 };
 
 const AiExamModal = ({ onClose, onGenerate }) => {

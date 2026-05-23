@@ -8,18 +8,19 @@ import Modal from './Modal';
 import { LatexPreview } from './index';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { QUESTION_TYPE_LABELS, DIFFICULTY_LABELS } from '../../utils/enumLabels';
 
 const DIFFICULTY_OPTIONS = [
-    { value: 'EASY',   label: 'Asan',  color: 'text-green-600 bg-green-50' },
-    { value: 'MEDIUM', label: 'Orta',  color: 'text-yellow-600 bg-yellow-50' },
-    { value: 'HARD',   label: 'Çətin', color: 'text-red-600 bg-red-50' },
+    { value: 'EASY',   label: DIFFICULTY_LABELS.EASY,   color: 'text-green-600 bg-green-50' },
+    { value: 'MEDIUM', label: DIFFICULTY_LABELS.MEDIUM, color: 'text-yellow-600 bg-yellow-50' },
+    { value: 'HARD',   label: DIFFICULTY_LABELS.HARD,   color: 'text-red-600 bg-red-50' },
 ];
 
 const TYPE_OPTIONS = [
-    { value: 'MCQ',              label: 'Test (MCQ)'        },
-    { value: 'MULTI_SELECT',     label: 'Çox seçimli'       },
-    { value: 'OPEN_AUTO',        label: 'Açıq (avtomatik)'  },
-    { value: 'FILL_IN_THE_BLANK',label: 'Boşluq doldurma'   },
+    { value: 'MCQ',               label: QUESTION_TYPE_LABELS.MCQ               },
+    { value: 'MULTI_SELECT',      label: QUESTION_TYPE_LABELS.MULTI_SELECT      },
+    { value: 'OPEN_AUTO',         label: QUESTION_TYPE_LABELS.OPEN_AUTO         },
+    { value: 'FILL_IN_THE_BLANK', label: QUESTION_TYPE_LABELS.FILL_IN_THE_BLANK },
 ];
 
 const TYPE_COLORS = {

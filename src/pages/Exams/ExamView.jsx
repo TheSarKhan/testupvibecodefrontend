@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
 import AccessCodeModal from '../../components/ui/AccessCodeModal';
 import ChipContent from '../../utils/chipContent';
+import { QUESTION_TYPE_LABELS, labelOr } from '../../utils/enumLabels';
 
 const STATUS_LABELS = {
     PUBLISHED: 'Aktiv',
@@ -161,7 +162,7 @@ const ExamView = () => {
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                             Sual {idx + 1} • {q.points} Bal
                                         </span>
-                                        <span className="text-xs text-gray-400 font-mono">{q.questionType}</span>
+                                        <span className="text-xs text-gray-500 font-medium">{labelOr(QUESTION_TYPE_LABELS, q.questionType)}</span>
                                     </div>
 
                                     {q.questionType !== 'FILL_IN_THE_BLANK' && (

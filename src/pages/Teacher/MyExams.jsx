@@ -86,7 +86,12 @@ const ExamMgmtCard = ({
     const subjects = exam.subjects?.length ? exam.subjects : (exam.subject ? [exam.subject] : []);
     const primarySubject = subjects[0] || 'İmtahan';
     const palette = paletteFor(primarySubject);
-    const qCount = (exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0);
+    // Backend returns a pre-computed questionCount on the summary endpoint —
+    // older payloads (full ExamResponse) still get the same answer via the
+    // nested fallback.
+    const qCount = exam.questionCount != null
+        ? exam.questionCount
+        : (exam.questions?.length || 0) + (exam.passages?.reduce((s, p) => s + (p.questions?.length || 0), 0) || 0);
 
     const [genCode, setGenCode] = useState(null);
     const [genLoading, setGenLoading] = useState(false);

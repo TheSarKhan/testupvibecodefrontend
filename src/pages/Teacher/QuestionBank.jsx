@@ -372,21 +372,14 @@ const QuestionRow = ({ q, subject, selected, onToggleSelect, expanded, onToggleE
     return (
         <div className={`group bg-white rounded-2xl border transition-all ${selected ? 'border-[var(--primary)] ring-2 ring-[var(--primary-soft)]' : 'border-[var(--ink-200)] hover:border-[var(--ink-300)]'}`}>
             <div className="flex items-start gap-3 p-4 cursor-pointer" onClick={onToggleExpand}>
-                {/* Checkbox + type radio (visual) */}
-                <div className="flex items-center gap-1.5 shrink-0 pt-0.5" onClick={e => e.stopPropagation()}>
+                {/* Checkbox */}
+                <div className="flex items-center shrink-0 pt-0.5" onClick={e => e.stopPropagation()}>
                     <input
                         type="checkbox"
                         checked={selected}
                         onChange={onToggleSelect}
                         className="w-4 h-4 accent-[var(--primary)] rounded"
                     />
-                    <span
-                        className="w-6 h-6 rounded-full inline-flex items-center justify-center text-white"
-                        style={{ background: c.fg }}
-                        title={typeLabel}
-                    >
-                        <span className="w-2 h-2 rounded-full bg-white" />
-                    </span>
                 </div>
 
                 {/* Body */}

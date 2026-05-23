@@ -525,6 +525,10 @@ const ExamEntry = () => {
     // ── Handlers ─────────────────────────────────────────────────────────────
     const handleStart = async () => {
         if (!exam) return;
+        // Top-level guard against double-click: button may show isJoining
+        // state but a fast double-click can fire two handlers before React
+        // re-renders the disabled prop, creating duplicate /start requests.
+        if (isJoining) return;
         if (user?.role === 'TEACHER') {
             toast.error('Müəllimlər imtahan işləyə bilməz');
             return;
@@ -574,8 +578,18 @@ const ExamEntry = () => {
                 toast.success('Bu imtahanı artıq almışsınız. İmtahana başlaya bilərsiniz.');
                 return;
             }
+            if (!data.paymentUrl) {
+                toast.error('Ödəniş linki alınmadı, yenidən cəhd edin');
+                return;
+            }
             localStorage.setItem('pendingPaymentOrderId', data.orderId);
-            window.open(data.paymentUrl, '_blank', 'noopener');
+            const popup = window.open(data.paymentUrl, '_blank', 'noopener');
+            if (!popup) {
+                // Popup blocked — fall back to same-tab navigation so the
+                // user isn't left wondering why nothing happened.
+                toast('Ödəniş səhifəsinə yönləndirilirsiniz...', { icon: '🔒' });
+                window.location.href = data.paymentUrl;
+            }
         } catch (err) {
             if (!err._handled) toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');
         } finally {

@@ -82,6 +82,21 @@ const ExamSession = () => {
 
     useEffect(() => { setActiveLeftId(null); }, [currentSectionIndex]);
 
+    // Warn before tab close / refresh while the exam is in progress. Browsers
+    // ignore the custom message but show their own confirmation dialog as
+    // long as we set returnValue. Don't attach while submitting or after the
+    // session has been turned in — those cases navigate away on purpose.
+    useEffect(() => {
+        if (!sessionData || isSubmitting) return;
+        const onBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [sessionData, isSubmitting]);
+
     useEffect(() => {
         const el = navScrollRef.current;
         if (!el) return;
@@ -222,10 +237,20 @@ const ExamSession = () => {
     // Only icon + question items shown in nav (no passage-sub rows)
     const navGroups = buildNavGroups(navItems.filter(i => i.type !== 'passage-sub'));
 
+    // syncFailureToastRef: dedupe sync-error toasts so a flaky network doesn't
+    // spam the screen with one toast per keystroke. We only re-toast every 8s.
+    const syncFailureToastRef = useRef(0);
     const syncAnswer = async (questionId, answerData) => {
         try {
             await api.post(`/submissions/${sessionId}/save-answer`, { questionId, ...answerData });
-        } catch {
+        } catch (error) {
+            // Silent failure here means the student thinks the answer is saved
+            // but it's actually lost on refresh/submit. Surface it.
+            const now = Date.now();
+            if (now - syncFailureToastRef.current > 8000) {
+                syncFailureToastRef.current = now;
+                toast.error('Cavab serverə göndərilmədi — internet bağlantınızı yoxlayın');
+            }
         }
     };
 
@@ -267,7 +292,13 @@ const ExamSession = () => {
     };
 
     const handleManualSubmit = () => {
-        if (window.confirm("İmtahanı bitirmək istədiyinizə əminsiniz?")) submitExam(answers);
+        const totalQuestions = answers.length;
+        const answeredCount = answers.filter(answerHasContent).length;
+        const unansweredCount = totalQuestions - answeredCount;
+        const msg = unansweredCount > 0
+            ? `${unansweredCount} sual cavabsız qalıb. İmtahanı bitirmək istədiyinizə əminsiniz?`
+            : 'Bütün sualları cavablandırdınız. İmtahanı bitirmək istədiyinizə əminsiniz?';
+        if (window.confirm(msg)) submitExam(answers);
     };
 
     const submitExam = async (currentAnswers) => {

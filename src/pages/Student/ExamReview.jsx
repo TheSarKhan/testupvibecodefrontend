@@ -772,7 +772,7 @@ const ExamReview = () => {
                                                             className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all ${borderClass} ${bgClass}`}
                                                         >
                                                             <span className={`w-7 h-7 inline-flex items-center justify-center text-[12.5px] font-bold border ${letterShape} ${letterClass} shrink-0`}>
-                                                                {String.fromCharCode(65 + opt.orderIndex)}
+                                                                {String.fromCharCode(65 + (opt.orderIndex ?? 0))}
                                                             </span>
                                                             <div className={`flex-1 font-medium ${textClass}`}>
                                                                 <LatexPreview content={opt.content} placeholder={null} />

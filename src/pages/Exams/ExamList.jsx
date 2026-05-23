@@ -708,11 +708,7 @@ const ExamList = () => {
                     </div>
                     <div className="flex flex-wrap items-end justify-between gap-5">
                         <div className="max-w-[720px]">
-                            <span className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-hover)] text-[13px] font-semibold border border-blue-100">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
-                                {exams.length}+ aktiv imtahan
-                            </span>
-                            <h1 className="mt-4 text-[36px] md:text-[48px] lg:text-[56px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
+                            <h1 className="text-[36px] md:text-[48px] lg:text-[56px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink-900)] text-balance">
                                 {isTeacher ? 'İmtahanlarınızı idarə edin' : 'Mövcud imtahanları kəşf edin'}
                             </h1>
                             <p className="mt-3 text-[17px] text-[var(--ink-500)] max-w-[580px] leading-relaxed">

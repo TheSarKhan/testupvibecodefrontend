@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -7,7 +7,7 @@ import {
     HiOutlineCheckCircle, HiOutlineClock, HiOutlineLibrary,
     HiOutlineEye, HiOutlineChartBar, HiOutlinePencilAlt, HiOutlineDuplicate,
     HiOutlineTrash, HiOutlineShare, HiOutlineDownload, HiOutlineLockClosed, HiOutlineLockOpen,
-    HiOutlineFilter, HiOutlineChevronDown, HiOutlineKey,
+    HiOutlineFilter, HiOutlineChevronDown, HiOutlineKey, HiOutlineDotsVertical,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import { CreateExamModal } from '../../components/ui';
@@ -95,6 +95,18 @@ const ExamMgmtCard = ({
 
     const [genCode, setGenCode] = useState(null);
     const [genLoading, setGenLoading] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!menuOpen) return;
+        const onDocClick = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [menuOpen]);
+
     const generateCode = async () => {
         if (genLoading) return;
         setGenLoading(true);
@@ -108,155 +120,177 @@ const ExamMgmtCard = ({
         }
     };
 
+    // Single status pill — collapses Draft / Cancelled / visibility into one
+    // semantic chip so the eye doesn't have to parse a row of competing badges.
+    const status = isDraft
+        ? { label: 'Qaralama', cls: 'bg-amber-50 text-amber-800 border-amber-200', dot: '#F59E0B' }
+        : isCancelled
+            ? { label: 'Bağlı', cls: 'bg-red-50 text-red-700 border-red-200', dot: '#EF4444' }
+            : isPrivate
+                ? { label: 'Gizli', cls: 'bg-[var(--ink-100)] text-[var(--ink-700)] border-[var(--ink-200)]', dot: 'var(--ink-500)' }
+                : { label: 'Açıq', cls: 'bg-[var(--accent-soft)] text-[var(--brand-green-700)] border-[var(--brand-green-100)]', dot: 'var(--brand-green-600)' };
+
     return (
-        <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-5 flex flex-col gap-3 hover:border-[var(--primary)] hover:shadow-[var(--sh-md)] transition-all">
-            {/* Top: tags + actions */}
-            <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`text-[10.5px] font-bold uppercase tracking-wider px-2 py-1 rounded ${isFreeFormat ? 'bg-[var(--ink-100)] text-[var(--ink-700)]' : 'bg-[var(--primary-soft)] text-[var(--primary)]'}`}>
-                        {isFreeFormat ? 'SƏRBƏST' : 'ŞABLON'}
-                    </span>
-                    {isDraft && (
-                        <span className="text-[10.5px] font-bold px-2 py-1 rounded bg-amber-100 text-amber-700">
-                            Qaralama
-                        </span>
-                    )}
-                    {isPublished && (
-                        <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-1 rounded bg-[var(--accent-soft)] text-[var(--brand-green-600)]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-green-600)]" /> {exam.visibility === 'PRIVATE' ? 'Gizli' : 'Açıq'}
-                        </span>
-                    )}
-                    {isCancelled && (
-                        <span className="text-[10.5px] font-bold px-2 py-1 rounded bg-red-100 text-red-700">
-                            Bağlı
-                        </span>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-0.5 shrink-0">
-                    {!isDraft && onShare && (
-                        <IconBtn title="Paylaş" onClick={() => onShare(exam.id)}>
-                            <HiOutlineShare className="w-3.5 h-3.5" />
-                        </IconBtn>
-                    )}
-                    {!isDraft && canDownloadPdf && onDownloadPdf && (
-                        <IconBtn title="PDF yüklə" onClick={() => onDownloadPdf(exam.id)}>
-                            <HiOutlineDownload className="w-3.5 h-3.5" />
-                        </IconBtn>
-                    )}
-                    {canEdit && onEdit && (
-                        <IconBtn title="Redaktə et" onClick={() => onEdit(exam.id)}>
-                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                        </IconBtn>
-                    )}
-                    {onClone && (
-                        <IconBtn title="Köçür" onClick={() => onClone(exam.id)}>
-                            <HiOutlineDuplicate className="w-3.5 h-3.5" />
-                        </IconBtn>
-                    )}
-                    {!isDraft && onToggleStatus && (
-                        <IconBtn title={isPublished ? 'Bağla' : 'Aç'} onClick={() => onToggleStatus(exam.id)}>
-                            {isPublished
-                                ? <HiOutlineLockClosed className="w-3.5 h-3.5" />
-                                : <HiOutlineLockOpen className="w-3.5 h-3.5" />}
-                        </IconBtn>
-                    )}
-                    {onDelete && (
-                        <IconBtn title="Sil" onClick={() => onDelete(exam.id)} danger>
-                            <HiOutlineTrash className="w-3.5 h-3.5" />
-                        </IconBtn>
-                    )}
-                </div>
-            </div>
-
-            {/* Title */}
-            <div className="text-[16px] font-bold text-[var(--ink-900)] leading-snug line-clamp-2">{exam.title}</div>
-
-            {/* Note (collaborative pending review etc.) */}
-            {exam.pendingManualCount > 0 && (
-                <div className="inline-flex items-center gap-1.5 text-[12px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg self-start">
-                    <HiOutlineClock className="w-3.5 h-3.5" />
-                    {exam.pendingManualCount} yoxlanılmağı gözləyir
-                </div>
-            )}
-
-            {/* Meta row */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] text-[var(--ink-500)]">
-                <span className="inline-flex items-center gap-1.5">
-                    <span
-                        className="w-4 h-4 rounded text-[9.5px] font-bold flex items-center justify-center"
-                        style={{ background: palette.soft, color: palette.color }}
-                    >
-                        {initialOf(primarySubject)}
-                    </span>
-                    <span className="truncate max-w-[120px]">{primarySubject}</span>
-                </span>
-                {exam.durationMinutes > 0 && (
-                    <span className="inline-flex items-center gap-1">
-                        <HiOutlineClock className="w-3.5 h-3.5" /> {exam.durationMinutes} dəq
-                    </span>
-                )}
-                <span className="inline-flex items-center gap-1">
-                    <HiOutlineLibrary className="w-3.5 h-3.5" /> {qCount} sual
-                </span>
-                {exam.participantCount != null && exam.participantCount > 0 && (
-                    <span className="inline-flex items-center gap-1">
-                        <HiOutlineUserGroup className="w-3.5 h-3.5" /> {exam.participantCount}
-                    </span>
-                )}
-            </div>
-
-            {/* CTAs */}
-            <div className="flex gap-2 pt-1 mt-auto">
-                {isDraft ? (
-                    <button
-                        onClick={() => onEdit?.(exam.id)}
-                        className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 rounded-xl text-[13px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all"
-                    >
-                        <HiOutlinePencilAlt className="w-3.5 h-3.5" /> Davam et
-                    </button>
-                ) : (
-                    <>
+        <div
+            className="relative bg-white border border-[var(--ink-200)] rounded-2xl flex flex-col hover:border-[var(--primary)] hover:shadow-[var(--sh-md)] transition-all"
+            style={{ borderLeftWidth: '4px', borderLeftColor: palette.color }}
+        >
+            <div className="p-5 flex flex-col gap-3 flex-1 min-w-0">
+                {/* Title + overflow menu */}
+                <div className="flex items-start justify-between gap-2">
+                    <h3 className="flex-1 text-[16px] font-bold text-[var(--ink-900)] leading-snug line-clamp-2 min-w-0">
+                        {exam.title}
+                    </h3>
+                    <div className="relative shrink-0" ref={menuRef}>
                         <button
-                            onClick={() => onView(exam)}
-                            className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-[var(--ink-700)] bg-[var(--ink-50)] border border-[var(--ink-200)] hover:bg-white hover:border-[var(--ink-300)] transition-all"
+                            onClick={() => setMenuOpen(v => !v)}
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-[var(--ink-400)] hover:bg-[var(--ink-100)] hover:text-[var(--ink-900)] transition-colors"
+                            title="Daha çox"
                         >
-                            <HiOutlineEye className="w-3.5 h-3.5" /> İmtahana bax
+                            <HiOutlineDotsVertical className="w-4 h-4" />
                         </button>
+                        {menuOpen && (
+                            <div className="absolute top-9 right-0 z-30 bg-white border border-[var(--ink-200)] rounded-xl shadow-[var(--sh-lg)] py-1 min-w-[180px]">
+                                {canEdit && onEdit && (
+                                    <MenuItem icon={HiOutlinePencilAlt} onClick={() => { setMenuOpen(false); onEdit(exam.id); }}>
+                                        Redaktə et
+                                    </MenuItem>
+                                )}
+                                {onClone && (
+                                    <MenuItem icon={HiOutlineDuplicate} onClick={() => { setMenuOpen(false); onClone(exam.id); }}>
+                                        Köçür
+                                    </MenuItem>
+                                )}
+                                {!isDraft && onShare && (
+                                    <MenuItem icon={HiOutlineShare} onClick={() => { setMenuOpen(false); onShare(exam.id); }}>
+                                        Paylaş
+                                    </MenuItem>
+                                )}
+                                {!isDraft && canDownloadPdf && onDownloadPdf && (
+                                    <MenuItem icon={HiOutlineDownload} onClick={() => { setMenuOpen(false); onDownloadPdf(exam.id); }}>
+                                        PDF yüklə
+                                    </MenuItem>
+                                )}
+                                {!isDraft && onToggleStatus && (
+                                    <MenuItem
+                                        icon={isPublished ? HiOutlineLockClosed : HiOutlineLockOpen}
+                                        onClick={() => { setMenuOpen(false); onToggleStatus(exam.id); }}
+                                    >
+                                        {isPublished ? 'İmtahanı bağla' : 'İmtahanı aç'}
+                                    </MenuItem>
+                                )}
+                                {onDelete && (
+                                    <>
+                                        <div className="h-px bg-[var(--ink-150)] my-1" />
+                                        <MenuItem icon={HiOutlineTrash} onClick={() => { setMenuOpen(false); onDelete(exam.id); }} danger>
+                                            Sil
+                                        </MenuItem>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Status + format chips */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${status.cls}`}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: status.dot }} />
+                        {status.label}
+                    </span>
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${isFreeFormat ? 'bg-[var(--ink-100)] text-[var(--ink-600)]' : 'bg-[var(--primary-soft)] text-[var(--primary)]'}`}>
+                        {isFreeFormat ? 'Sərbəst' : 'Şablon'}
+                    </span>
+                </div>
+
+                {/* Pending warning */}
+                {exam.pendingManualCount > 0 && (
+                    <div className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg self-start">
+                        <HiOutlineClock className="w-3.5 h-3.5" />
+                        {exam.pendingManualCount} cavab yoxlanılmalı
+                    </div>
+                )}
+
+                {/* Meta — pushed to the bottom of the variable-height area */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--ink-500)] mt-auto pt-1">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--ink-700)]">
+                        <span
+                            className="w-4 h-4 rounded text-[9.5px] font-bold flex items-center justify-center"
+                            style={{ background: palette.soft, color: palette.color }}
+                        >
+                            {initialOf(primarySubject)}
+                        </span>
+                        <span className="truncate max-w-[120px]">{primarySubject}</span>
+                    </span>
+                    {exam.durationMinutes > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                            <HiOutlineClock className="w-3.5 h-3.5" /> {exam.durationMinutes} dq
+                        </span>
+                    )}
+                    <span className="inline-flex items-center gap-1">
+                        <HiOutlineLibrary className="w-3.5 h-3.5" /> {qCount} sual
+                    </span>
+                    {exam.participantCount != null && exam.participantCount > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                            <HiOutlineUserGroup className="w-3.5 h-3.5" /> {exam.participantCount}
+                        </span>
+                    )}
+                </div>
+
+                {/* CTAs — separated by a divider so they feel like the action region */}
+                <div className="flex gap-2 pt-3 mt-1 border-t border-[var(--ink-100)]">
+                    {isDraft ? (
                         <button
-                            onClick={() => onStats(exam.id)}
+                            onClick={() => onEdit?.(exam.id)}
                             className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 rounded-xl text-[13px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all"
                         >
-                            <HiOutlineChartBar className="w-3.5 h-3.5" /> Statistika
+                            <HiOutlinePencilAlt className="w-4 h-4" /> Davam et
                         </button>
-                    </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => onStats(exam.id)}
+                                className="flex-[2] h-10 inline-flex items-center justify-center gap-1.5 rounded-xl text-[13px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all"
+                            >
+                                <HiOutlineChartBar className="w-4 h-4" /> Statistika
+                            </button>
+                            <button
+                                onClick={() => onView(exam)}
+                                className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 rounded-xl text-[13px] font-semibold text-[var(--ink-700)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-50)] hover:border-[var(--ink-300)] transition-all"
+                            >
+                                <HiOutlineEye className="w-4 h-4" /> Bax
+                            </button>
+                        </>
+                    )}
+                </div>
+
+                {isPrivate && !isDraft && (
+                    <button
+                        onClick={generateCode}
+                        disabled={genLoading}
+                        className="h-9 inline-flex items-center justify-center gap-1.5 rounded-xl text-[12.5px] font-semibold bg-[var(--primary-soft)] text-[var(--primary-hover)] hover:bg-[var(--brand-blue-100)] transition-colors disabled:opacity-60"
+                    >
+                        <HiOutlineKey className={`w-3.5 h-3.5 ${genLoading ? 'animate-pulse' : ''}`} />
+                        {genLoading ? 'Yaradılır...' : 'Tələbə kodu yarat'}
+                    </button>
                 )}
             </div>
-
-            {isPrivate && !isDraft && (
-                <button
-                    onClick={generateCode}
-                    disabled={genLoading}
-                    className="h-9 inline-flex items-center justify-center gap-1.5 rounded-xl text-[12.5px] font-bold bg-[var(--primary-soft)] text-[var(--primary-hover)] hover:bg-[var(--brand-blue-100)] border border-[var(--brand-blue-200)] transition-colors disabled:opacity-60"
-                >
-                    <HiOutlineKey className={`w-3.5 h-3.5 ${genLoading ? 'animate-pulse' : ''}`} />
-                    {genLoading ? 'Yaradılır...' : 'Tələbə kodu yarat'}
-                </button>
-            )}
 
             {genCode && <AccessCodeModal code={genCode} onClose={() => setGenCode(null)} />}
         </div>
     );
 };
 
-const IconBtn = ({ children, title, onClick, danger }) => (
+const MenuItem = ({ icon: Icon, onClick, danger, children }) => (
     <button
         onClick={onClick}
-        title={title}
-        className={`w-7 h-7 inline-flex items-center justify-center rounded-md text-[var(--ink-500)] transition-colors ${
-            danger ? 'hover:bg-red-50 hover:text-red-600' : 'hover:bg-[var(--ink-100)] hover:text-[var(--ink-900)]'
+        className={`w-full px-3 py-2 text-left text-[13px] font-semibold inline-flex items-center gap-2.5 transition-colors ${
+            danger
+                ? 'text-red-600 hover:bg-red-50'
+                : 'text-[var(--ink-700)] hover:bg-[var(--ink-50)]'
         }`}
     >
+        <Icon className="w-4 h-4 shrink-0" />
         {children}
     </button>
 );

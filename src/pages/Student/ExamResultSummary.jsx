@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
     HiOutlineEye, HiOutlineClock, HiOutlineVideoCamera, HiOutlineAcademicCap,
-    HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineRefresh, HiOutlineShare,
+    HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineShare,
     HiOutlineArrowRight, HiOutlineSparkles, HiOutlineChartBar, HiOutlineLibrary,
     HiOutlineMinus,
 } from 'react-icons/hi';
@@ -23,14 +23,6 @@ const fmtSeconds = (s) => {
     if (m === 0) return `${sec} san`;
     if (sec === 0) return `${m} dəq`;
     return `${m} dəq ${sec} san`;
-};
-
-const getGrade = (pct) => {
-    if (pct >= 90) return 'A';
-    if (pct >= 80) return 'B';
-    if (pct >= 70) return 'C';
-    if (pct >= 60) return 'D';
-    return 'F';
 };
 
 const ringColorFor = (pct) => {
@@ -65,7 +57,6 @@ const ScoreRing = ({ pct, passed, score, maxScore }) => {
     const c = 2 * Math.PI * r;
     const offset = c - (pct / 100) * c;
     const color = ringColorFor(pct);
-    const grade = getGrade(pct);
     const hasPoints = score != null && maxScore != null && maxScore > 0;
     return (
         <div className="relative w-[220px] h-[220px] shrink-0">
@@ -97,12 +88,6 @@ const ScoreRing = ({ pct, passed, score, maxScore }) => {
                         <div className="text-[11px] text-[var(--ink-500)] mt-1.5 font-bold uppercase tracking-[0.12em]">Ümumi nəticə</div>
                     </>
                 )}
-            </div>
-            <div
-                className="absolute -bottom-1 -right-1 w-12 h-12 rounded-2xl bg-white border-2 flex items-center justify-center text-[22px] font-extrabold shadow-[var(--sh-md)]"
-                style={{ borderColor: color, color }}
-            >
-                {grade}
             </div>
         </div>
     );
@@ -637,18 +622,6 @@ const ExamResultSummary = () => {
                         )}
 
                         <div className="flex-1 text-center lg:text-left min-w-0">
-                            <div className="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-[12px] font-bold mb-4 border"
-                                style={{
-                                    background: passed ? 'var(--accent-soft)' : '#FEF3C7',
-                                    color:      passed ? 'var(--brand-green-600)' : '#92400E',
-                                    borderColor:passed ? 'var(--brand-green-100)' : '#FDE68A',
-                                }}>
-                                {passed ? (
-                                    <><HiOutlineAcademicCap className="w-4 h-4" /> Keçid uğurlu · 75%+</>
-                                ) : (
-                                    <><HiOutlineRefresh className="w-4 h-4" /> Yenidən cəhd üçün hazırlaşın</>
-                                )}
-                            </div>
                             <h1 className="text-[26px] md:text-[34px] font-extrabold tracking-tight leading-[1.1] text-[var(--ink-900)] text-balance">
                                 {headline}
                             </h1>
@@ -663,7 +636,13 @@ const ExamResultSummary = () => {
                             </p>
 
                             <div className="mt-6 flex flex-wrap gap-2.5 justify-center lg:justify-start">
-                                {isOwner && (
+                                {/* "Cavablarıma bax" was gated on `isOwner`, which fails when
+                                   the student refreshes or opens the link directly — the
+                                   navigation-state `submission` is gone and the JWT-vs-row
+                                   id comparison silently drops the button. The review
+                                   endpoint already enforces ownership server-side, so
+                                   gate the CTA on data-loaded instead. */}
+                                {displaySubmission && (
                                     <button
                                         onClick={() => navigate(`/test/review/${sessionId}`, { state: { fromResult: true } })}
                                         className="h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"

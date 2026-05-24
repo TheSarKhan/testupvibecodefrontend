@@ -1,7 +1,12 @@
 import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
-import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { normalizeLatex } from '../../utils/latexNormalize';
+import { safeRenderLatex, escapeHtmlAttr } from '../../utils/latexRender';
+
+const buildOkSpan = (html, latex) =>
+    `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${escapeHtmlAttr(latex)}">${html}</span>`;
+
+const buildErrorSpan = (latex) =>
+    `<span class="math-node math-error mx-1 inline-flex items-center gap-1 align-middle cursor-pointer bg-amber-50 hover:bg-amber-100 text-amber-800 text-[12px] font-semibold px-2 py-0.5 rounded-md border border-amber-200" contenteditable="false" data-latex="${escapeHtmlAttr(latex)}" title="Düstur xətalıdır — redaktə etmək üçün basın">⚠ Düstur xətalı</span>`;
 
 const FONT_SIZES = [
     { label: 'Kiçik', value: '2' },
@@ -13,7 +18,7 @@ const FONT_SIZES = [
 // Detect if a string already contains HTML tags (new format) vs plain text (old format)
 const hasHtmlTags = (text) => text && /<[a-z][\s\S]*>/i.test(text);
 
-const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, showToolbar = false }, ref) => {
+const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, showToolbar = false, editorKey }, ref) => {
     const editorRef = useRef(null);
     const isEditing = useRef(false);
     const savedSelection = useRef(null);
@@ -52,17 +57,15 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }, [updateActiveFormats]);
 
-    // Build a math-node span. Centralised so error/fallback paths stay
-    // visually consistent and `data-latex` always survives the round-trip.
+    // Build a math-node span. Routes through safeRenderLatex so a malformed
+    // expression downgrades to a clickable amber chip instead of red raw text.
+    // `data-latex` keeps the *original* source so the student's intent isn't
+    // silently rewritten by the repair pass.
     const buildMathSpan = (rawLatex) => {
-        const clean = normalizeLatex(rawLatex.trim());
-        const safeAttr = clean.replace(/"/g, '&quot;');
-        try {
-            const mathHtml = katex.renderToString(clean, { throwOnError: false, displayMode: false, strict: 'ignore' });
-            return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${safeAttr}">${mathHtml}</span>`;
-        } catch {
-            return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-amber-50 px-1 rounded text-[12px] font-mono text-amber-700" contenteditable="false" data-latex="${safeAttr}">[math]</span>`;
-        }
+        const original = String(rawLatex).trim();
+        const result = safeRenderLatex(original);
+        if (result.ok) return buildOkSpan(result.html, original);
+        return buildErrorSpan(original);
     };
 
     // Accept all delimiter flavours we see in the wild:
@@ -80,20 +83,6 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
     // Convert stored value (plain text or HTML) + math markers to rendered HTML
     const parseToHtml = (text) => {
         if (!text) return '';
-
-        const renderMathChunk = (clean) => {
-            try {
-                const mathHtml = katex.renderToString(clean, { throwOnError: false, displayMode: false, strict: 'ignore' });
-                // Only treat as broken when KaTeX produced no `.katex` wrapper
-                // at all. A partial katex-error span is still readable and
-                // strictly better than `[math]`.
-                const isBroken = !/class="katex/.test(mathHtml);
-                if (!isBroken) {
-                    return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded" contenteditable="false" data-latex="${clean}">${mathHtml}</span>`;
-                }
-            } catch { /* fall through */ }
-            return `<span class="math-node mx-1 inline-block align-middle cursor-default bg-amber-50 px-1 rounded text-[12px] font-mono text-amber-700" contenteditable="false" data-latex="${clean}">[math]</span>`;
-        };
 
         if (hasHtmlTags(text)) {
             // HTML format: replace any of the four math delimiter flavours.
@@ -183,6 +172,21 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         document.execCommand('insertText', false, text);
     };
 
+    // Click on the amber "⚠ Düstur xətalı" chip bubbles a custom event up to
+    // the parent so it can re-open MathFormulaModal with the broken LaTeX
+    // preloaded for fixing. `editorKey` lets a parent that hosts multiple
+    // editors (QuestionEditor has ~8 — main, sample, options, matching
+    // sides) route the event back to the right editor's imperative ref.
+    const handleClick = (e) => {
+        const chip = e.target.closest('.math-error');
+        if (!chip || !editorRef.current?.contains(chip)) return;
+        const latex = chip.getAttribute('data-latex') || '';
+        editorRef.current.dispatchEvent(new CustomEvent('math-edit-request', {
+            bubbles: true,
+            detail: { latex, editorKey },
+        }));
+    };
+
     const restoreSelection = () => {
         if (!savedSelection.current) return;
         const sel = window.getSelection();
@@ -237,62 +241,48 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 targetRange.selectNodeContents(editorRef.current);
                 targetRange.collapse(false);
             }
-            // Always normalise before handing to KaTeX \u2014 MathLive macros
-            // and empty sup/sub slots otherwise crash the renderer and we
-            // fall back to raw red text in the editor.
-            const cleanLatex = normalizeLatex(latexString);
-            let renderedOk = false;
-            try {
-                const mathHtml = katex.renderToString(cleanLatex, { throwOnError: false, displayMode: false, strict: 'ignore' });
-                // Only treat as broken when KaTeX produced absolutely nothing
-                // recognisable. A long expression that contains a single
-                // unsupported token still renders the rest \u2014 falling back to
-                // `[math]` in that case would hide a perfectly readable
-                // formula, which is exactly the bug the student reported.
-                const isBroken = !/class="katex/.test(mathHtml);
-                if (!isBroken) {
-                    const span = document.createElement('span');
-                    span.className = "math-node mx-1 inline-block align-middle cursor-default bg-blue-50/50 px-1 rounded";
-                    span.contentEditable = "false";
-                    span.setAttribute('data-latex', cleanLatex);
-                    span.innerHTML = mathHtml;
-                    const space = document.createTextNode('\u00A0');
-                    targetRange.deleteContents();
-                    targetRange.insertNode(space);
-                    targetRange.insertNode(span);
-                    targetRange.setStartAfter(space);
-                    targetRange.collapse(true);
-                    sel.removeAllRanges();
-                    sel.addRange(targetRange);
-                    savedSelection.current = targetRange.cloneRange();
-                    renderedOk = true;
-                }
-            } catch {
-                renderedOk = false;
-            }
-            if (!renderedOk) {
-                // KaTeX bailed (or rendered errors) \u2014 embed a compact [math]
-                // placeholder so the editor doesn't fill with red raw LaTeX.
-                // data-latex still stores the original so the math survives
-                // the round-trip and the teacher can see the source on
-                // review.
-                const placeholder = document.createElement('span');
-                placeholder.className = "math-node mx-1 inline-block align-middle cursor-default bg-amber-50 text-amber-700 text-[12px] font-mono px-1 rounded";
-                placeholder.contentEditable = "false";
-                placeholder.setAttribute('data-latex', cleanLatex);
-                placeholder.textContent = '[math]';
-                const space2 = document.createTextNode('\u00A0');
-                targetRange.deleteContents();
-                targetRange.insertNode(space2);
-                targetRange.insertNode(placeholder);
-                targetRange.setStartAfter(space2);
-                targetRange.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(targetRange);
-                savedSelection.current = targetRange.cloneRange();
-            }
+            // Goes through the same safeRenderLatex pipeline as buildMathSpan
+            // \u2014 single source of truth for "render or downgrade to chip".
+            const original = String(latexString);
+            const result = safeRenderLatex(original);
+            const wrapper = document.createElement('span');
+            wrapper.innerHTML = result.ok
+                ? buildOkSpan(result.html, original)
+                : buildErrorSpan(original);
+            const span = wrapper.firstChild;
+            const space = document.createTextNode('\u00A0');
+            targetRange.deleteContents();
+            targetRange.insertNode(space);
+            targetRange.insertNode(span);
+            targetRange.setStartAfter(space);
+            targetRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(targetRange);
+            savedSelection.current = targetRange.cloneRange();
             isEditing.current = true;
             handleChange();
+        },
+        // Replace the math-node currently focused (or the first error chip
+        // matching the given LaTeX) \u2014 used by the click-to-edit error flow
+        // so a fixed formula slots back where the broken one was.
+        replaceMath: (oldLatex, newLatex) => {
+            if (!editorRef.current) return false;
+            const nodes = editorRef.current.querySelectorAll('.math-node');
+            for (const node of nodes) {
+                if (node.getAttribute('data-latex') === oldLatex) {
+                    const original = String(newLatex);
+                    const result = safeRenderLatex(original);
+                    const wrapper = document.createElement('span');
+                    wrapper.innerHTML = result.ok
+                        ? buildOkSpan(result.html, original)
+                        : buildErrorSpan(original);
+                    node.replaceWith(wrapper.firstChild);
+                    isEditing.current = true;
+                    handleChange();
+                    return true;
+                }
+            }
+            return false;
         }
     }));
 
@@ -311,6 +301,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 onInput={handleInput}
                 onBlur={handleBlur}
                 onPaste={handlePaste}
+                onClick={handleClick}
                 className={`outline-none cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 block ${className}`}
                 data-placeholder={placeholder}
                 spellCheck={false}
@@ -380,6 +371,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 onInput={handleInput}
                 onBlur={handleBlur}
                 onPaste={handlePaste}
+                onClick={handleClick}
                 className={`outline-none cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 block ${className}`}
                 data-placeholder={placeholder}
                 spellCheck={false}

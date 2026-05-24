@@ -1180,7 +1180,24 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
 // ---- OpenAnswerInput ----
 const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {
     const [mathOpen, setMathOpen] = useState(false);
+    // When the student clicks a broken "⚠ Düstur xətalı" chip, we preload the
+    // existing LaTeX into the modal so they can fix it visually instead of
+    // deleting and starting over. `editingLatex` doubles as the "we're
+    // re-editing this one" flag for handleMathInsert.
+    const [editingLatex, setEditingLatex] = useState(null);
     const editorRef = useRef(null);
+    const wrapperRef = useRef(null);
+
+    useEffect(() => {
+        const el = wrapperRef.current;
+        if (!el) return;
+        const onEditReq = (e) => {
+            setEditingLatex(e.detail.latex || '');
+            setMathOpen(true);
+        };
+        el.addEventListener('math-edit-request', onEditReq);
+        return () => el.removeEventListener('math-edit-request', onEditReq);
+    }, []);
 
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
@@ -1192,8 +1209,23 @@ const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {
     };
 
     const handleMathInsert = (latex) => {
-        editorRef.current?.insertMath(latex);
+        if (editingLatex != null) {
+            // Re-edit flow: swap the broken/edited chip in place. If the old
+            // node can't be found (e.g. the student deleted it manually
+            // while the modal was open) fall back to a fresh insert so the
+            // edit isn't silently lost.
+            const replaced = editorRef.current?.replaceMath(editingLatex, latex);
+            if (!replaced) editorRef.current?.insertMath(latex);
+        } else {
+            editorRef.current?.insertMath(latex);
+        }
         setMathOpen(false);
+        setEditingLatex(null);
+    };
+
+    const handleMathClose = () => {
+        setMathOpen(false);
+        setEditingLatex(null);
     };
 
     return (
@@ -1216,7 +1248,7 @@ const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {
                         fx Riyaziyyat
                     </button>
                 </div>
-                <div className="border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
+                <div ref={wrapperRef} className="border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
                     <MathTextEditor
                         ref={editorRef}
                         value={answer.textAnswer || ''}
@@ -1251,8 +1283,9 @@ const OpenAnswerInput = ({ answer, questionType, onAnswerChange }) => {
             )}
             <MathFormulaModal
                 isOpen={mathOpen}
-                onClose={() => setMathOpen(false)}
+                onClose={handleMathClose}
                 onInsert={handleMathInsert}
+                initialLatex={editingLatex || ''}
             />
         </div>
     );

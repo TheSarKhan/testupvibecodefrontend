@@ -3,22 +3,23 @@ import Modal from './Modal';
 import 'mathlive';
 import { normalizeLatex } from '../../utils/latexNormalize';
 
-const MathFormulaModal = ({ isOpen, onClose, onInsert }) => {
+const MathFormulaModal = ({ isOpen, onClose, onInsert, initialLatex = '' }) => {
     const mathFieldRef = useRef(null);
     const [formula, setFormula] = useState('');
 
     useEffect(() => {
         if (isOpen && mathFieldRef.current) {
-            mathFieldRef.current.value = '';
-            setFormula('');
-            // Focus the math field after modal opens
+            // Preload existing LaTeX (e.g. when re-opening to fix a broken
+            // formula). Empty string clears the field for a fresh insert.
+            mathFieldRef.current.value = initialLatex || '';
+            setFormula(initialLatex || '');
             setTimeout(() => {
                 if (mathFieldRef.current) {
                     mathFieldRef.current.focus();
                 }
             }, 100);
         }
-    }, [isOpen]);
+    }, [isOpen, initialLatex]);
 
     const handleInsert = () => {
         const mf = mathFieldRef.current;

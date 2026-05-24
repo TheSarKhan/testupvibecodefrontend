@@ -2059,7 +2059,23 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
     const audioInputRef = useRef(null);
     const imageInputRef = useRef(null);
     const textEditorRef = useRef(null);
+    const textEditorWrapperRef = useRef(null);
     const [mathModalOpen, setMathModalOpen] = useState(false);
+    // When set, MathFormulaModal opens with this LaTeX preloaded so the
+    // teacher can fix a broken "⚠ Düstur xətalı" chip in place. Cleared
+    // both on insert and on close so a fresh fx-click starts blank again.
+    const [editingLatex, setEditingLatex] = useState(null);
+
+    useEffect(() => {
+        const el = textEditorWrapperRef.current;
+        if (!el) return;
+        const onEditReq = (e) => {
+            setEditingLatex(e.detail?.latex || '');
+            setMathModalOpen(true);
+        };
+        el.addEventListener('math-edit-request', onEditReq);
+        return () => el.removeEventListener('math-edit-request', onEditReq);
+    }, []);
 
     const handleAudioUpload = (e) => {
         const file = e.target.files[0];
@@ -2127,19 +2143,32 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                                     fx Riyaziyyat
                                 </button>
                             </div>
-                            <MathTextEditor
-                                ref={textEditorRef}
-                                value={passage.textContent || ''}
-                                onChange={(val) => onChange(passage.id, { ...passage, textContent: val })}
-                                placeholder="Mətn parçasını bura daxil edin."
-                                className="w-full px-4 py-3 text-sm min-h-[140px] bg-transparent"
-                                showToolbar={true}
-                            />
+                            <div ref={textEditorWrapperRef}>
+                                <MathTextEditor
+                                    ref={textEditorRef}
+                                    editorKey="passage-text"
+                                    value={passage.textContent || ''}
+                                    onChange={(val) => onChange(passage.id, { ...passage, textContent: val })}
+                                    placeholder="Mətn parçasını bura daxil edin."
+                                    className="w-full px-4 py-3 text-sm min-h-[140px] bg-transparent"
+                                    showToolbar={true}
+                                />
+                            </div>
                         </div>
                         <MathFormulaModal
                             isOpen={mathModalOpen}
-                            onClose={() => setMathModalOpen(false)}
-                            onInsert={(latex) => { textEditorRef.current?.insertMath(latex); setMathModalOpen(false); }}
+                            onClose={() => { setMathModalOpen(false); setEditingLatex(null); }}
+                            onInsert={(latex) => {
+                                if (editingLatex != null) {
+                                    const ok = textEditorRef.current?.replaceMath(editingLatex, latex);
+                                    if (!ok) textEditorRef.current?.insertMath(latex);
+                                } else {
+                                    textEditorRef.current?.insertMath(latex);
+                                }
+                                setMathModalOpen(false);
+                                setEditingLatex(null);
+                            }}
+                            initialLatex={editingLatex || ''}
                         />
                         {/* Image for text passage */}
                         <div className="flex items-center gap-3 flex-wrap">

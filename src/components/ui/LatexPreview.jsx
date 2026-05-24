@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import katex from 'katex';
-import { normalizeLatex } from '../../utils/latexNormalize';
+import { safeRenderLatex } from '../../utils/latexRender';
 
 // Restore C-escape glyphs that have collapsed into real control characters
 // somewhere in the pipeline. The classic case is `\frac` getting JSON-parsed
@@ -234,35 +233,17 @@ const renderLatex = (text) => {
 
         const isDisplay = match[1] !== undefined || match[2] !== undefined;
         const rawMath = match[1] ?? match[2] ?? match[3] ?? match[4];
-        const math = normalizeLatex(rawMath);
 
-        const renderFallback = () => {
-            // Subdued gray block — far easier on the eye than KaTeX's red
-            // error styling for an expression riddled with unknown commands.
-            const safe = escapeHtml(rawMath);
-            return `<code class="text-[12.5px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">${safe}</code>`;
-        };
-
-        try {
-            const out = katex.renderToString(math, {
-                displayMode: isDisplay,
-                throwOnError: false,
-                output: 'html',
-                strict: 'ignore',
-            });
-            // Only treat the render as broken if KaTeX returned literally
-            // nothing renderable (no `<span class="katex"` wrapper). The
-            // earlier `katex-error` heuristic was over-eager — KaTeX can
-            // surface a single non-critical warning span while still
-            // rendering valid math like `\frac{1}{x}`, and dropping the
-            // whole expression into the gray fallback hid perfectly good
-            // formulas. KaTeX's inline error spans (red text on undefined
-            // commands) are acceptable; we only intervene when nothing was
-            // produced at all.
-            const looksEmpty = !out || !/class="katex/.test(out);
-            parts.push(looksEmpty ? renderFallback() : out);
-        } catch {
-            parts.push(renderFallback());
+        // safeRenderLatex normalises, renders, retries with repair on parse
+        // error, and only reports !ok when KaTeX still can't read the
+        // expression after both passes. Static previews use a subdued gray
+        // <code> block as fallback rather than the editor's amber chip —
+        // teachers / students reading content just need it not to scream.
+        const result = safeRenderLatex(rawMath, { displayMode: isDisplay });
+        if (result.ok) {
+            parts.push(result.html);
+        } else {
+            parts.push(`<code class="text-[12.5px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">${escapeHtml(rawMath)}</code>`);
         }
 
         last = match.index + match[0].length;

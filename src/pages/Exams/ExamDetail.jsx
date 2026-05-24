@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
     HiOutlineArrowLeft, HiOutlineClock, HiOutlineQuestionMarkCircle,
-    HiOutlineBookOpen, HiOutlineUser, HiOutlineLockClosed,
+    HiOutlineBookOpen, HiOutlineLockClosed,
     HiOutlineBookmark, HiBookmark, HiOutlineShare,
     HiOutlineArrowRight, HiOutlineCheckCircle, HiOutlineTag,
     HiOutlineCurrencyDollar, HiOutlineAcademicCap, HiOutlineCalendar,
@@ -333,14 +333,8 @@ const ExamDetail = () => {
                                     {exam.title}
                                 </h1>
 
-                                {/* Teacher + rating */}
+                                {/* Rating */}
                                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                                    {exam.teacherName && (
-                                        <span className="inline-flex items-center gap-1.5">
-                                            <HiOutlineUser className="w-4 h-4" />
-                                            <span className="font-semibold text-gray-700">{exam.teacherName}</span>
-                                        </span>
-                                    )}
                                     {avgRating !== null && (
                                         <span className="inline-flex items-center gap-1">
                                             <HiOutlineStar className="w-4 h-4 text-yellow-500" />
@@ -533,22 +527,6 @@ const ExamDetail = () => {
                                 )}
                             </dl>
                         </div>
-
-                        {/* Teacher card */}
-                        {exam.teacherName && (
-                            <div className="bg-gradient-to-br from-blue-500 to-emerald-600 rounded-2xl shadow-md p-6 text-white">
-                                <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-2">Müəllim</p>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center font-extrabold text-lg shrink-0">
-                                        {(exam.teacherName || '?').charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="font-bold leading-tight truncate">{exam.teacherName}</p>
-                                        <p className="text-xs opacity-80">İmtahan müəllifi</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
                         {/* Mobile-friendly bottom CTA */}
                         <button

@@ -19,6 +19,10 @@ const QUESTION_TYPES = {
 
 const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false, pointsReadOnly = false, typeReadOnly = false }) => {
     const { hasPermission } = useAuth();
+    // mathModalField shape: { type, id?, editingLatex? }
+    // editingLatex set when the modal was opened by clicking an existing
+    // "⚠ Düstur xətalı" chip — handleMathInsert then replaces that node
+    // in-place instead of inserting a new one.
     const [mathModalField, setMathModalField] = useState(null);
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [pdfFile, setPdfFile] = useState(null);
@@ -29,11 +33,44 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
     const [, forceArrowUpdate] = useState(0);
     const matchingContainerRef = useRef(null);
     const editorsRefs = useRef({});
+    const rootRef = useRef(null);
 
-    // Register a ref dynamically
-    const setEditorRef = (key) => (el) => {
-        editorsRefs.current[key] = el;
+    // Register a ref dynamically. Returns both the ref fn and the matching
+    // editorKey so we can spread it as `{...setEditor('main')}` — the
+    // editorKey shows up in `math-edit-request` events so the chip-click
+    // handler can route back to the right MathTextEditor instance.
+    const setEditor = (key) => ({
+        ref: (el) => { editorsRefs.current[key] = el; },
+        editorKey: key,
+    });
+
+    // Parse the editorKey (e.g. "main", "sampleAnswer", "fillAnswer-3",
+    // "option-7", "matching-12-left") back into the mathModalField shape
+    // handleMathInsert expects.
+    const editorKeyToField = (key) => {
+        if (!key) return null;
+        if (key === 'main') return { type: 'main' };
+        if (key === 'sampleAnswer') return { type: 'sampleAnswer' };
+        if (key.startsWith('fillAnswer-')) return { type: 'fillAnswer', id: key.slice('fillAnswer-'.length) };
+        const dash = key.indexOf('-');
+        if (dash === -1) return null;
+        return { type: key.slice(0, dash), id: key.slice(dash + 1) };
     };
+
+    // Re-edit flow: chip click in any of the ~8 editors bubbles a
+    // `math-edit-request` up here. We translate the editorKey back into
+    // the field shape and preload the modal with the broken LaTeX.
+    useEffect(() => {
+        const el = rootRef.current;
+        if (!el) return;
+        const onEditReq = (e) => {
+            const field = editorKeyToField(e.detail?.editorKey);
+            if (!field) return;
+            setMathModalField({ ...field, editingLatex: e.detail.latex || '' });
+        };
+        el.addEventListener('math-edit-request', onEditReq);
+        return () => el.removeEventListener('math-edit-request', onEditReq);
+    }, []);
 
     const handleMathInsert = (latexString) => {
         if (!mathModalField) return;
@@ -46,7 +83,15 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
 
         const editor = editorsRefs.current[refKey];
         if (editor) {
-            editor.insertMath(latexString);
+            if (mathModalField.editingLatex != null) {
+                // Replace the existing chip in place. If the node has gone
+                // (e.g. teacher deleted it manually while modal was open)
+                // fall back to a fresh insert so the edit isn't lost.
+                const replaced = editor.replaceMath(mathModalField.editingLatex, latexString);
+                if (!replaced) editor.insertMath(latexString);
+            } else {
+                editor.insertMath(latexString);
+            }
         }
 
         setMathModalField(null);
@@ -109,7 +154,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                         <div className="flex-1 flex flex-col gap-2">
                             <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
                                 <MathTextEditor
-                                    ref={setEditorRef(`option-${opt.id}`)}
+                                    {...setEditor(`option-${opt.id}`)}
                                     value={opt.text}
                                     onChange={(val) => updateOption(opt.id, 'text', val)}
                                     placeholder={`${String.fromCharCode(65 + i)} variantı`}
@@ -207,7 +252,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                 <label className="block text-sm font-medium text-gray-700 mb-1">Düzgün cavab <span className="text-red-500">*</span></label>
                 <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
                     <MathTextEditor
-                        ref={setEditorRef('sampleAnswer')}
+                        {...setEditor('sampleAnswer')}
                         value={question.sampleAnswer || ''}
                         onChange={(val) => handleChange('sampleAnswer', val)}
                         placeholder="Avtomatik yoxlama üçün düzgün cavabı daxil edin..."
@@ -235,7 +280,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                 <label className="block text-sm font-medium text-gray-700 mb-1">İstinad cavab (İstəyə bağlı — yalnız müəllim görür)</label>
                 <div className="flex bg-white border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
                     <MathTextEditor
-                        ref={setEditorRef('sampleAnswer')}
+                        {...setEditor('sampleAnswer')}
                         value={question.sampleAnswer || ''}
                         onChange={(val) => handleChange('sampleAnswer', val)}
                         placeholder="İstinad olaraq düzgün cavabı buraya yazın (şagirdə göstərilmir)..."
@@ -350,7 +395,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold text-xs shrink-0">{i + 1}</span>
                             <div className="flex-1 min-w-0 flex bg-white border border-blue-200 rounded-lg focus-within:ring-2 focus-within:ring-blue-400 overflow-hidden">
                                 <MathTextEditor
-                                    ref={setEditorRef(`fillAnswer-${i}`)}
+                                    {...setEditor(`fillAnswer-${i}`)}
                                     value={val}
                                     onChange={(v) => updateAnswer(i, v)}
                                     placeholder={`Boşluq ${i + 1} üçün düzgün cavab`}
@@ -380,7 +425,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                         <div key={d.id} className="flex items-center gap-2">
                             <div className="flex-1 min-w-0 flex bg-white border border-gray-200 rounded-lg focus-within:ring-2 focus-within:ring-gray-300 overflow-hidden">
                                 <MathTextEditor
-                                    ref={setEditorRef(`option-${d.id}`)}
+                                    {...setEditor(`option-${d.id}`)}
                                     value={d.text}
                                     onChange={(v) => updateDistractor(d.id, v)}
                                     placeholder={`Yanlış seçim ${i + 1}`}
@@ -653,7 +698,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             >
                                 <div className="flex items-start gap-2">
                                     <MathTextEditor
-                                        ref={setEditorRef(`matching-left-${node.visualId}`)}
+                                        {...setEditor(`matching-left-${node.visualId}`)}
                                         value={node.content || ''}
                                         onChange={(val) => updateItemContents(node.visualId, 'left', 'leftItem', val)}
                                         placeholder="Sol maddə..."
@@ -713,7 +758,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             >
                                 <div className="flex items-start gap-2">
                                     <MathTextEditor
-                                        ref={setEditorRef(`matching-right-${node.visualId}`)}
+                                        {...setEditor(`matching-right-${node.visualId}`)}
                                         value={node.content || ''}
                                         onChange={(val) => updateItemContents(node.visualId, 'right', 'rightItem', val)}
                                         placeholder="Sağ maddə..."
@@ -867,7 +912,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative group transition-all hover:border-blue-200">
+        <div ref={rootRef} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative group transition-all hover:border-blue-200">
             {renderReviewBanner()}
             {/* Question Header & Controls */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-100">
@@ -998,7 +1043,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                 </div>
 
                 <MathTextEditor
-                    ref={setEditorRef('main')}
+                    {...setEditor('main')}
                     value={question.text}
                     onChange={(val) => handleChange('text', val)}
                     placeholder="Sualın mətnini buraya yazın... Müntəzəm mətn daxil edə, enterlə aşağı düşə bilərsiniz."
@@ -1067,6 +1112,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                 isOpen={!!mathModalField}
                 onClose={() => setMathModalField(null)}
                 onInsert={handleMathInsert}
+                initialLatex={mathModalField?.editingLatex || ''}
             />
 
             {/* Image Zoom Overlay */}

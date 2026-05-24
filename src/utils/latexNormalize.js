@@ -81,3 +81,63 @@ export const normalizeLatex = (raw) => {
 
     return out;
 };
+
+/**
+ * Best-effort *syntactic* repair for LaTeX that students sometimes produce
+ * (esp. via MathLive — chaining \^ on top of an already-superscripted token,
+ * pasting partial expressions, etc.). The function never changes meaning of
+ * already-valid LaTeX; it only tries to make broken expressions parseable so
+ * KaTeX renders something readable instead of falling back to red raw text.
+ *
+ * Pipeline:
+ *   1. Run {@link normalizeLatex} (macros, invisible unicode, empty slots).
+ *   2. Balance unmatched curly braces.
+ *      • If too few `}` → append the missing closes at the end.
+ *      • If too many `}` → strip trailing extras (common copy/paste artefact).
+ *   3. Wrap chained `^^…` / `__…` into a single group. KaTeX rejects
+ *      `x^a^b` with "Double superscript"; we collapse it into `x^{ab}`. The
+ *      heuristic may change the *meaning* (was the intent `(x^a)^b` or
+ *      `x^{ab}`?) but the alternative is total parse failure, which is what
+ *      the student actually sees today.
+ *
+ * Applies the rewrites repeatedly until the string stops changing so chains
+ * longer than two (`^a^b^c^d`) collapse fully in one call.
+ */
+export const repairLatex = (raw) => {
+    if (!raw) return '';
+    let out = normalizeLatex(raw);
+
+    // ── 1. Balance braces ───────────────────────────────────────────────
+    let depth = 0;
+    let unmatchedCloses = 0;
+    for (const ch of out) {
+        if (ch === '{') depth++;
+        else if (ch === '}') {
+            if (depth > 0) depth--;
+            else unmatchedCloses++;
+        }
+    }
+    if (depth > 0) out += '}'.repeat(depth);
+    if (unmatchedCloses > 0) {
+        // Strip trailing `}` first — that's where the noise usually lives.
+        let toStrip = unmatchedCloses;
+        while (toStrip > 0 && out.endsWith('}')) {
+            out = out.slice(0, -1);
+            toStrip--;
+        }
+        // Anything still unmatched is mid-string; leave it alone rather than
+        // guess at the right position.
+    }
+
+    // ── 2. Collapse chained ^^ / __ into single groups ──────────────────
+    // Token after the operator is either a single char/word or a {…} group.
+    const CHAIN_RE = /([\^_])((?:[A-Za-z0-9]|\\[a-zA-Z]+|\{[^{}]*\}))\1((?:[A-Za-z0-9]|\\[a-zA-Z]+|\{[^{}]*\}))/g;
+    const unwrap = (tok) => tok.startsWith('{') && tok.endsWith('}') ? tok.slice(1, -1) : tok;
+    let prev;
+    do {
+        prev = out;
+        out = out.replace(CHAIN_RE, (_, op, a, b) => `${op}{${unwrap(a)}${unwrap(b)}}`);
+    } while (out !== prev);
+
+    return out;
+};

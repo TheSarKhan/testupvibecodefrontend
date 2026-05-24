@@ -11,20 +11,17 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
+import { QUESTION_TYPE_LABELS } from '../../utils/enumLabels';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Constants
 // ───────────────────────────────────────────────────────────────────────────
 
+// Use centralised enum labels (MCQ → "Test (Birseçimli)" etc.) so the bank
+// uses the same Azerbaijani wording as the rest of the app.
 const TYPE_LABELS = {
-    MCQ: 'Çoxseçimli',
-    MULTIPLE_CHOICE: 'Çoxseçimli',
-    MULTI_SELECT: 'Çoxlu cavab',
-    TRUE_FALSE: 'Doğru / Yalan',
-    OPEN_AUTO: 'Açıq cavab',
-    OPEN_MANUAL: 'Açıq cavab',
-    FILL_IN_THE_BLANK: 'Boşluq doldurma',
-    MATCHING: 'Uyğunluq',
+    ...QUESTION_TYPE_LABELS,
+    MULTIPLE_CHOICE: QUESTION_TYPE_LABELS.MCQ,
 };
 
 const DIFFICULTY_LABELS = { EASY: 'Asan', MEDIUM: 'Orta', HARD: 'Çətin' };
@@ -875,7 +872,7 @@ const QuestionBank = () => {
                                 placeholder="Sual, mövzu və ya fənn adında axtar..."
                                 className="w-full h-10 pl-10 pr-14 text-[13px] bg-white border border-[var(--ink-200)] rounded-full focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-colors"
                             />
-                            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[var(--ink-400)] bg-[var(--ink-50)] border border-[var(--ink-150)] rounded-md px-1.5 py-0.5">⌘ K</kbd>
+                            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[var(--ink-400)] bg-[var(--ink-50)] border border-[var(--ink-150)] rounded-md px-1.5 py-0.5">/</kbd>
                         </div>
 
                         <div className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1 border border-[var(--ink-200)] rounded-full bg-white">
@@ -1087,24 +1084,32 @@ const FilterChip = ({ label, onClear }) => (
     </span>
 );
 
-const EmptyState = ({ isAdmin, hasFilters, onCreate }) => (
-    <div className="bg-white rounded-3xl border border-[var(--ink-200)] py-16 text-center">
-        <span className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--ink-50)] inline-flex items-center justify-center">
-            <HiOutlineSearch className="w-7 h-7 text-[var(--ink-300)]" />
-        </span>
-        <p className="text-[15px] font-bold text-[var(--ink-800)] tracking-tight">
-            {hasFilters ? 'Filtrlərə uyğun sual tapılmadı' : 'Hələ sual yoxdur'}
-        </p>
-        <p className="text-[12.5px] text-[var(--ink-500)] mt-1">
-            {hasFilters ? 'Filtrləri sıfırlayın və ya başqa açar sözə keçin' : 'İlk fənninizi və sualınızı əlavə edin'}
-        </p>
-        <button
-            onClick={onCreate}
-            className="mt-5 inline-flex items-center gap-2 h-11 px-5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-full font-bold text-[13px] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-colors"
-        >
-            <HiOutlinePlus className="w-4 h-4" /> {isAdmin ? 'Yeni fənn / sual' : 'İlk sualı yarat'}
-        </button>
-    </div>
-);
+const EmptyState = ({ isAdmin, hasFilters, hasSubjects, onCreate }) => {
+    // CTA label must match what clicking actually does. With no subjects,
+    // onCreate opens the "add subject" form — calling that button "İlk sualı
+    // yarat" was misleading because no question form opened.
+    const ctaLabel = !hasSubjects
+        ? 'İlk fənni əlavə et'
+        : (isAdmin ? 'Yeni fənn / sual' : 'İlk sualı yarat');
+    return (
+        <div className="bg-white rounded-3xl border border-[var(--ink-200)] py-16 text-center">
+            <span className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--ink-50)] inline-flex items-center justify-center">
+                <HiOutlineSearch className="w-7 h-7 text-[var(--ink-300)]" />
+            </span>
+            <p className="text-[15px] font-bold text-[var(--ink-800)] tracking-tight">
+                {hasFilters ? 'Filtrlərə uyğun sual tapılmadı' : 'Hələ sual yoxdur'}
+            </p>
+            <p className="text-[12.5px] text-[var(--ink-500)] mt-1">
+                {hasFilters ? 'Filtrləri sıfırlayın və ya başqa açar sözə keçin' : 'İlk fənninizi və sualınızı əlavə edin'}
+            </p>
+            <button
+                onClick={onCreate}
+                className="mt-5 inline-flex items-center gap-2 h-11 px-5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-full font-bold text-[13px] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-colors"
+            >
+                <HiOutlinePlus className="w-4 h-4" /> {ctaLabel}
+            </button>
+        </div>
+    );
+};
 
 export default QuestionBank;

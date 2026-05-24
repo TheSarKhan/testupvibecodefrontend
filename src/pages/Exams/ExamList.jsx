@@ -223,9 +223,13 @@ const StudentExamCard = ({ exam, view = 'grid', isSaved, savingLink, isPurchased
                     )}
                     <button
                         onClick={e => { e.stopPropagation(); onToggleDepot(exam); }}
-                        className={`p-2 rounded-lg transition-all ${isSaved ? 'text-[var(--primary)] bg-[var(--primary-soft)]' : 'text-[var(--ink-400)] hover:text-[var(--primary)] hover:bg-[var(--ink-100)]'}`}
+                        disabled={savingLink === exam.shareLink}
+                        className={`p-2 rounded-lg transition-all disabled:opacity-50 ${isSaved ? 'text-[var(--primary)] bg-[var(--primary-soft)]' : 'text-[var(--ink-400)] hover:text-[var(--primary)] hover:bg-[var(--ink-100)]'}`}
                     >
-                        {isSaved ? <HiBookmark className="w-4 h-4" /> : <HiOutlineBookmark className="w-4 h-4" />}
+                        {savingLink === exam.shareLink
+                            ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            : isSaved ? <HiBookmark className="w-4 h-4" /> : <HiOutlineBookmark className="w-4 h-4" />
+                        }
                     </button>
                     <HiOutlineArrowRight className="w-4 h-4 text-[var(--ink-400)] group-hover:text-[var(--primary)] group-hover:translate-x-1 transition-all" />
                 </div>
@@ -501,6 +505,10 @@ const ExamList = () => {
             }
         }
 
+        // OR semantics — tags are descriptive/discovery labels (DİM,
+        // 11-sinif, buraxılış…), so adding a second chip is expected to
+        // broaden the result set, not narrow it. Matches the convention
+        // students see on Instagram/YouTube/Pinterest tag chips.
         if (selectedTags.length > 0) list = list.filter(e => selectedTags.some(t => (e.tags || []).includes(t)));
         if (subjectFilter)            list = list.filter(e => (e.subjects || []).includes(subjectFilter));
 
@@ -587,9 +595,10 @@ const ExamList = () => {
 
     const handleDownloadPdf = async (examId) => {
         const loadingToast = toast.loading('PDF hazırlanır...');
+        let url;
         try {
             const response = await api.get(`/exams/${examId}/pdf`, { responseType: 'blob' });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', `exam_${examId}.pdf`);
@@ -599,6 +608,10 @@ const ExamList = () => {
             toast.success('PDF uğurla yükləndi', { id: loadingToast });
         } catch {
             toast.error('PDF yükləyərkən xəta baş verdi', { id: loadingToast });
+        } finally {
+            // Each blob URL pins its data in memory until revoked — without
+            // this the user accumulates one stale blob per download.
+            if (url) window.URL.revokeObjectURL(url);
         }
     };
 

@@ -34,8 +34,9 @@ const formatDuration = (startedAt, submittedAt) => {
 };
 
 const initialsOf = (name) => {
-    if (!name) return '?';
-    return name.trim().split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase();
+    const trimmed = (name || '').trim();
+    if (!trimmed) return '?';
+    return trimmed.split(/\s+/).map(s => s[0]).slice(0, 2).join('').toUpperCase();
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -212,6 +213,13 @@ const ParticipantsTable = ({
     useEffect(() => { setPage(0); }, [search, sort, pageSize]);
 
     const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+
+    // If the visible list shrinks under us (delete / hide), pull the page
+    // back into range — otherwise the teacher ends up on an empty page
+    // with the pagination showing "5 / 5".
+    useEffect(() => {
+        if (page > totalPages - 1) setPage(Math.max(0, totalPages - 1));
+    }, [totalPages, page]);
     const paged = sorted.slice(page * pageSize, (page + 1) * pageSize);
 
     const setSortKey = (key) => {
@@ -471,10 +479,15 @@ const ExamResults = () => {
         try {
             await api.delete(`/submissions/${id}/teacher-hide`);
             setSubmissions(prev => prev.filter(s => s.id !== id));
-            setStatistics(prev => prev ? {
-                ...prev,
-                totalParticipants: Math.max(0, (prev.totalParticipants || 1) - 1),
-            } : prev);
+            // Refetch authoritative statistics from the backend rather than
+            // patching them locally. The earlier local decrement only
+            // touched totalParticipants, leaving averageScore /
+            // averageDurationMinutes / distribution stale — hiding a
+            // top-scorer would still show the inflated average.
+            try {
+                const statsRes = await api.get(`/submissions/exam/${examId}/statistics`);
+                setStatistics(statsRes.data);
+            } catch { /* keep stale stats over crashing the page */ }
             toast.success('Nəticə statistikadan silindi');
         } catch {
             toast.error('Əməliyyat uğursuz oldu');
@@ -531,7 +544,11 @@ const ExamResults = () => {
                             {statistics?.examTitle || 'İmtahan Nəticələri'}
                         </h1>
                         <div className="flex items-center gap-2 text-[12px] text-[var(--ink-500)] mt-0.5 flex-wrap">
-                            <span>İmtahan ID: <strong className="text-[var(--ink-700)]">{examId}</strong></span>
+                            {/* İmtahan ID xam DB identifikatorudur — müəllim üçün heç bir məna kəsb etmir.
+                                Yalnız adminə göstəririk (dəstək/debug üçün lazım ola bilər). */}
+                            {isAdmin && (
+                                <span>İmtahan ID: <strong className="text-[var(--ink-700)]">{examId}</strong></span>
+                            )}
                             {isAdmin && statistics?.examPrice != null && (
                                 statistics.examPrice > 0 ? (
                                     <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">

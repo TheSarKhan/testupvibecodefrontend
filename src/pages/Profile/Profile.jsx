@@ -408,8 +408,12 @@ const StudentProfile = ({ user }) => {
     useEffect(() => {
         const load = async () => {
             try {
+                // All four requests share the .catch fallback now — the
+                // earlier asymmetry let a transient /my-results 500 blank
+                // the whole profile even though the rest had loaded fine.
+                let resultsFailed = false;
                 const [res, on, me, dep] = await Promise.all([
-                    api.get('/submissions/my-results'),
+                    api.get('/submissions/my-results').catch(() => { resultsFailed = true; return { data: [] }; }),
                     api.get('/submissions/ongoing').catch(() => ({ data: [] })),
                     api.get('/users/me').catch(() => ({ data: {} })),
                     api.get('/depot').catch(() => ({ data: [] })),
@@ -418,8 +422,7 @@ const StudentProfile = ({ user }) => {
                 setOngoing(on.data || []);
                 setProfilePicture(me.data?.profilePicture || '');
                 setDepot(dep.data || []);
-            } catch {
-                toast.error('Profil məlumatları yüklənmədi');
+                if (resultsFailed) toast.error('Nəticələr yüklənə bilmədi');
             } finally {
                 setLoading(false);
             }

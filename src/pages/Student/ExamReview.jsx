@@ -873,8 +873,14 @@ const ExamReview = () => {
                                         {q.questionType === 'FILL_IN_THE_BLANK' && (() => {
                                             let correctAnswers = [];
                                             let studentAnswers = [];
-                                            try { correctAnswers = JSON.parse(q.correctAnswer || '[]'); } catch (e) {}
-                                            try { studentAnswers = JSON.parse(q.studentAnswerText || '[]'); } catch (e) {}
+                                            try {
+                                                const p = JSON.parse(q.correctAnswer || '[]');
+                                                if (Array.isArray(p)) correctAnswers = p;
+                                            } catch (e) {}
+                                            try {
+                                                const p = JSON.parse(q.studentAnswerText || '[]');
+                                                if (Array.isArray(p)) studentAnswers = p;
+                                            } catch (e) {}
                                             return (
                                                 <div className="flex flex-col gap-2.5">
                                                     <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-[0.1em] mb-1">Boşluq nəticələri</p>
@@ -948,6 +954,7 @@ const ExamReview = () => {
                     <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                         <button
                             disabled
+                            aria-disabled="true"
                             title="Tezliklə əlavə ediləcək"
                             className="relative h-12 px-5 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-semibold text-[var(--ink-400)] bg-white border border-[var(--ink-200)] cursor-not-allowed opacity-70"
                         >

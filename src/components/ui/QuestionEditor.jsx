@@ -6,6 +6,8 @@ import MathTextEditor from './MathTextEditor';
 import LatexPreview from './LatexPreview';
 import { useAuth } from '../../context/AuthContext';
 import ChipContent from '../../utils/chipContent';
+import { readFileAsDataUrl, MAX_IMAGE_BYTES } from '../../utils/fileUpload';
+import toast from 'react-hot-toast';
 
 // Supported Question Types
 const QUESTION_TYPES = {
@@ -174,11 +176,9 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                                     setPdfTarget({ type: 'option', id: opt.id });
                                                     setIsPdfModalOpen(true);
                                                 } else if (file.type.startsWith('image/')) {
-                                                    const reader = new FileReader();
-                                                    reader.onload = (event) => {
-                                                        updateOption(opt.id, 'attachedImage', event.target.result);
-                                                    };
-                                                    reader.readAsDataURL(file);
+                                                    readFileAsDataUrl(file, { maxBytes: MAX_IMAGE_BYTES, kind: 'Şəkil' })
+                                                        .then(url => updateOption(opt.id, 'attachedImage', url))
+                                                        .catch(() => {});
                                                 }
                                             }
                                             e.target.value = null;
@@ -305,8 +305,14 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
         const text = question.text || '';
         const blankCount = text.split('___').length - 1;
 
+        // sampleAnswer may parse to null/object if backend persisted a
+        // corrupted value — guard so the editor doesn't crash on
+        // correctAnswers[i] access.
         let correctAnswers = [];
-        try { correctAnswers = JSON.parse(question.sampleAnswer || '[]'); } catch (e) {}
+        try {
+            const parsed = JSON.parse(question.sampleAnswer || '[]');
+            if (Array.isArray(parsed)) correctAnswers = parsed;
+        } catch (e) { /* malformed — start fresh */ }
         const answers = Array.from({ length: blankCount }, (_, i) => correctAnswers[i] || '');
 
         const distractors = (question.options || []).filter(o => !o.isCorrect);
@@ -612,11 +618,9 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                 setPdfTarget({ type: 'matching', id: targetPair.id, visualId, side });
                 setIsPdfModalOpen(true);
             } else if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    updateItemContents(visualId, side, side === 'left' ? 'attachedImageLeft' : 'attachedImageRight', event.target.result);
-                };
-                reader.readAsDataURL(file);
+                readFileAsDataUrl(file, { maxBytes: MAX_IMAGE_BYTES, kind: 'Şəkil' })
+                    .then(url => updateItemContents(visualId, side, side === 'left' ? 'attachedImageLeft' : 'attachedImageRight', url))
+                    .catch(() => {});
             }
         };
 
@@ -960,7 +964,17 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     )}
                     {!hideDelete && question.reviewStatus !== 'APPROVED' && (
                         <button
-                            onClick={() => onDelete(question.id)}
+                            onClick={() => {
+                                // Confirm only when there's meaningful content — clicking
+                                // delete on an empty new question shouldn't pop a dialog.
+                                const hasContent = question.text?.trim()
+                                    || question.attachedImage
+                                    || (question.options || []).some(o => o.text?.trim() || o.attachedImage)
+                                    || (question.matchingPairs || []).some(p => p.leftItem || p.rightItem)
+                                    || question.sampleAnswer?.trim();
+                                if (hasContent && !window.confirm('Bu sualı silmək istədiyinizə əminsiniz?')) return;
+                                onDelete(question.id);
+                            }}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                             title="Sualı Sil"
                         >
@@ -993,11 +1007,9 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                             setPdfTarget({ type: 'main' });
                                             setIsPdfModalOpen(true);
                                         } else if (file.type.startsWith('image/') && hasPermission('addImage')) {
-                                            const reader = new FileReader();
-                                            reader.onload = (event) => {
-                                                handleChange('attachedImage', event.target.result);
-                                            };
-                                            reader.readAsDataURL(file);
+                                            readFileAsDataUrl(file, { maxBytes: MAX_IMAGE_BYTES, kind: 'Şəkil' })
+                                                .then(url => handleChange('attachedImage', url))
+                                                .catch(() => {});
                                         }
                                     }
                                     e.target.value = null; // reset 
@@ -1098,9 +1110,20 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                         );
                         handleChange('options', newOptions);
                     } else if (pdfTarget?.type === 'matching') {
+                        // The original `updateItem(...)` here referenced a function
+                        // that only existed inside renderMatching's closure — calling
+                        // it from this handler threw "updateItem is not defined" and
+                        // crashed the editor whenever a teacher cropped a PDF for a
+                        // matching pair image. Inline the equivalent visualId-based
+                        // mutation so the handler is self-contained.
                         const pairs = question.matchingPairs || [];
                         const field = pdfTarget.side === 'left' ? 'attachedImageLeft' : 'attachedImageRight';
-                        updateItem(pdfTarget.id, field, base64Img);
+                        const newPairs = pairs.map(p => {
+                            if (pdfTarget.side === 'left' && p.leftVisualId === pdfTarget.visualId) return { ...p, [field]: base64Img };
+                            if (pdfTarget.side === 'right' && p.rightVisualId === pdfTarget.visualId) return { ...p, [field]: base64Img };
+                            return p;
+                        });
+                        handleChange('matchingPairs', newPairs);
                     } else {
                         handleChange('attachedImage', base64Img);
                     }

@@ -442,48 +442,66 @@ const ExamResultSummary = () => {
     useEffect(() => {
         if (!sessionId) return;
 
+        // `cancelled` covers two races:
+        //   1. The setInterval is created INSIDE a .then() that resolves
+        //      asynchronously. If the effect cleanup runs before the
+        //      promise resolves, the local `interval` is still null and
+        //      `clearInterval(null)` is a no-op — then the interval gets
+        //      installed and never gets torn down.
+        //   2. fetchData callbacks (await api.get) outliving the unmount
+        //      and pushing stale state into the new mount.
+        let cancelled = false;
+        let interval = null;
+
         const fetchData = (isInitial = false) => {
             if (isInitial) setLoading(true);
             return api.get(`/submissions/${sessionId}`)
                 .then(res => {
+                    if (cancelled) return null;
                     setSubmissionData(res.data);
                     setRating(r => r || res.data.rating || 0);
                     setRated(res.data.rating != null);
                     return res.data;
                 })
                 .catch(() => {
-                    if (isInitial) {
+                    if (!cancelled && isInitial) {
                         toast.error('Nəticə yüklənə bilmədi');
                     }
                     return null;
                 })
-                .finally(() => { if (isInitial) setLoading(false); });
+                .finally(() => { if (!cancelled && isInitial) setLoading(false); });
         };
 
         const initialPromise = submission ? Promise.resolve(submission) : fetchData(true);
 
-        let interval = null;
         initialPromise.then(data => {
+            if (cancelled) return;
             if (!data?.isFullyGraded) {
                 interval = setInterval(() => {
                     fetchData(false).then(updated => {
-                        if (updated?.isFullyGraded) clearInterval(interval);
+                        if (updated?.isFullyGraded && interval) clearInterval(interval);
                     });
                 }, 20000);
             }
         });
 
-        return () => { if (interval) clearInterval(interval); };
+        return () => {
+            cancelled = true;
+            if (interval) clearInterval(interval);
+        };
     }, [sessionId]);
 
     useEffect(() => {
         if (!sessionId) return;
+        let cancelled = false;
         api.get(`/submissions/${sessionId}/review`)
             .then(res => {
+                if (cancelled) return;
                 const sorted = [...res.data.questions].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
                 setReviewQuestions(sorted);
             })
             .catch(() => {});
+        return () => { cancelled = true; };
     }, [sessionId]);
 
     const displaySubmission = submissionData || submission;

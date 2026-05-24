@@ -194,7 +194,9 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
 
         setSaving(true);
         let saved = 0;
-        for (const q of generated) {
+        let failed = 0;
+        for (let i = 0; i < generated.length; i++) {
+            const q = generated[i];
             // FILL_IN_THE_BLANK: editor and grader expect correctAnswer as a
             // JSON-stringified array (one entry per `___`) and want the
             // correct answers mirrored into `options` with isCorrect=true so
@@ -208,10 +210,10 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 } catch {
                     answers = [q.correctAnswer];
                 }
-                const correctOpts = answers.map((a, i) => ({
+                const correctOpts = answers.map((a, idx) => ({
                     content: a,
                     isCorrect: true,
-                    orderIndex: i,
+                    orderIndex: idx,
                 }));
                 payload = {
                     ...q,
@@ -223,13 +225,21 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 await api.post('/bank/questions', payload);
                 saved++;
             } catch (e) {
-                toast.error(`Sual ${saved + 1} saxlanıla bilmədi`);
+                // Use the loop index so the toast points to the actually-failed
+                // question. The previous `saved + 1` reported a misleading
+                // number whenever multiple saves failed.
+                failed++;
+                toast.error(`Sual ${i + 1} saxlanıla bilmədi`);
             }
         }
         setSaving(false);
-        toast.success(`${saved} sual sual bazasına əlavə edildi`);
-        onSave?.();
-        onClose();
+        if (saved > 0) {
+            toast.success(`${saved} sual bazaya əlavə edildi${failed > 0 ? ` (${failed} uğursuz)` : ''}`);
+            onSave?.();
+            onClose();
+        } else {
+            toast.error('Heç bir sual saxlanıla bilmədi');
+        }
     };
 
     const diffObj = DIFFICULTY_OPTIONS.find(d => d.value === difficulty);

@@ -79,9 +79,27 @@ const bankToEditor = (bq) => ({
     options: (bq.options || [])
         .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
         .map(o => ({ id: String(o.id), text: o.content || '', isCorrect: !!o.isCorrect, attachedImage: o.attachedImage || null })),
-    matchingPairs: (bq.matchingPairs || [])
-        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-        .map(mp => ({ id: String(mp.id), left: mp.leftItem || '', right: mp.rightItem || '' })),
+    // Use the same field names QuestionEditor consumes (leftItem /
+    // rightItem / attachedImage*). The earlier `left` / `right` aliases
+    // meant matching questions opened from the bank rendered empty in
+    // the editor — none of the matching-pair JSX matched.
+    matchingPairs: (() => {
+        const sorted = (bq.matchingPairs || []).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+        const lvMap = {}, rvMap = {};
+        sorted.forEach(p => {
+            if (p.leftItem && !lvMap[p.leftItem]) lvMap[p.leftItem] = `lv-${p.id}`;
+            if (p.rightItem && !rvMap[p.rightItem]) rvMap[p.rightItem] = `rv-${p.id}`;
+        });
+        return sorted.map(p => ({
+            id: String(p.id),
+            leftItem: p.leftItem || null,
+            rightItem: p.rightItem || null,
+            attachedImageLeft: p.attachedImageLeft || null,
+            attachedImageRight: p.attachedImageRight || null,
+            leftVisualId: p.leftItem ? lvMap[p.leftItem] : null,
+            rightVisualId: p.rightItem ? rvMap[p.rightItem] : null,
+        }));
+    })(),
     sampleAnswer: bq.correctAnswer || '',
 });
 
@@ -103,11 +121,17 @@ const editorToBank = (subjectId, eq) => ({
         orderIndex: i,
         attachedImage: o.attachedImage || null,
     })),
-    matchingPairs: (eq.matchingPairs || []).map((mp, i) => ({
-        leftItem: mp.left || '',
-        rightItem: mp.right || '',
-        orderIndex: i,
-    })),
+    // Filter out the synthetic distractor halves (where one side is null)
+    // that QuestionEditor creates internally — backend wants real pairs.
+    matchingPairs: (eq.matchingPairs || [])
+        .filter(mp => mp.leftItem || mp.rightItem)
+        .map((mp, i) => ({
+            leftItem: mp.leftItem || '',
+            rightItem: mp.rightItem || '',
+            attachedImageLeft: mp.attachedImageLeft || null,
+            attachedImageRight: mp.attachedImageRight || null,
+            orderIndex: i,
+        })),
 });
 
 const newEditorQuestion = (orderIndex) => ({
@@ -229,9 +253,9 @@ const ViewModal = ({ question, onClose }) => {
                         <div className="space-y-2">
                             {question.matchingPairs.map((mp) => (
                                 <div key={mp.id} className="flex items-center gap-3 text-sm bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
-                                    <span className="font-medium text-blue-700 min-w-0 flex-1 break-words"><ChipContent text={mp.left} /></span>
+                                    <span className="font-medium text-blue-700 min-w-0 flex-1 break-words"><ChipContent text={mp.leftItem} /></span>
                                     <span className="text-gray-400">→</span>
-                                    <span className="text-gray-700 min-w-0 flex-1 text-right break-words"><ChipContent text={mp.right} /></span>
+                                    <span className="text-gray-700 min-w-0 flex-1 text-right break-words"><ChipContent text={mp.rightItem} /></span>
                                 </div>
                             ))}
                         </div>
@@ -800,7 +824,9 @@ const QuestionBankSubject = () => {
         setBulkDeleting(true);
         try {
             const { data } = await api.post('/bank/questions/bulk-delete', { ids });
-            toast.success(`${data.deleted} sual silindi`);
+            // Older backend builds don't return `deleted` — fall back to the
+            // count we requested so the toast never shows "undefined sual silindi".
+            toast.success(`${data?.deleted ?? ids.length} sual silindi`);
             setSelectedIds(new Set());
             await Promise.all([fetchPaged(), refreshStats()]);
         } catch {

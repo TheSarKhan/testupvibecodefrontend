@@ -103,8 +103,13 @@ const ExamMgmtCard = ({
         const onDocClick = (e) => {
             if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
         };
+        const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
         document.addEventListener('mousedown', onDocClick);
-        return () => document.removeEventListener('mousedown', onDocClick);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDocClick);
+            document.removeEventListener('keydown', onKey);
+        };
     }, [menuOpen]);
 
     const generateCode = async () => {
@@ -435,9 +440,10 @@ const MyExams = () => {
 
     const handleDownloadPdf = async (examId) => {
         const loadingToast = toast.loading('PDF hazırlanır...');
+        let url;
         try {
             const response = await api.get(`/exams/${examId}/pdf`, { responseType: 'blob' });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', `exam_${examId}.pdf`);
@@ -447,15 +453,27 @@ const MyExams = () => {
             toast.success('PDF uğurla yükləndi', { id: loadingToast });
         } catch {
             toast.error('PDF yükləyərkən xəta baş verdi', { id: loadingToast });
+        } finally {
+            // Free the blob URL — without this each download pins a copy of
+            // the PDF in memory until the tab is closed.
+            if (url) window.URL.revokeObjectURL(url);
         }
     };
 
-    const handleShare = (id) => {
+    const handleShare = async (id) => {
         const exam = exams.find(e => e.id === id);
         if (!exam) return;
+        if (!exam.shareLink) { toast.error('Bu imtahan üçün paylaşım linki yoxdur'); return; }
         const link = `${window.location.origin}/imtahan/${exam.shareLink}`;
-        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link);
-        toast.success('Paylaşım linki kopyalandı');
+        try {
+            if (!navigator.clipboard?.writeText) throw new Error('no-clipboard');
+            await navigator.clipboard.writeText(link);
+            toast.success('Paylaşım linki kopyalandı');
+        } catch {
+            // Insecure context, denied permission, or no API — fall back to a prompt so the
+            // teacher can still grab the link instead of getting a false success toast.
+            window.prompt('Linki əl ilə kopyalayın:', link);
+        }
     };
 
     const handleView = (exam) => navigate(`/imtahanlar/melumat/${exam.shareLink}`);

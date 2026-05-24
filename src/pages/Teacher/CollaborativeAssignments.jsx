@@ -53,11 +53,6 @@ const CollaborativeAssignments = () => {
     const active   = assignments.filter(a => a.status !== 'APPROVED');
     const approved = assignments.filter(a => a.status === 'APPROVED');
 
-    const fmtDate = (iso) => {
-        if (!iso) return null;
-        return fmtDate(iso);
-    };
-
     return (
         <div className="bg-gray-50/50 min-h-screen py-10">
             <Helmet>

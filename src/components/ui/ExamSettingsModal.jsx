@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { HiOutlineDocumentText, HiOutlineClock, HiOutlineEye, HiOutlineBookOpen, HiLockClosed, HiOutlineX, HiOutlineVideoCamera } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
 const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) => {
@@ -97,7 +98,21 @@ const ExamSettingsModal = ({ isOpen, onClose, examConfig, onSave, onPublish }) =
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!isValidVideoUrl(formData.explanationVideoUrl)) {
+            // Previously this returned silently — teacher clicked Yayımla
+            // and nothing happened, with no hint that the video URL was
+            // the problem.
+            toast.error('İzah video linki düzgün deyil — http:// və ya https:// ilə başlamalıdır');
             return;
+        }
+        // HTML min/max on the input doesn't always block form submit in every browser
+        // (Firefox in particular). Validate explicitly so negative or absurdly large
+        // durations don't slip through to the backend.
+        if (hasPermission('selectExamDuration') && formData.duration !== '' && formData.duration != null) {
+            const d = Number(formData.duration);
+            if (!Number.isFinite(d) || d < 1 || d > 360) {
+                toast.error('İmtahan müddəti 1 ilə 360 dəqiqə arasında olmalıdır');
+                return;
+            }
         }
         const cleaned = {
             ...formData,

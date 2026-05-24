@@ -8,6 +8,7 @@ import MathFormulaModal from '../../components/ui/MathFormulaModal';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { readFileAsDataUrl, MAX_AUDIO_BYTES, MAX_IMAGE_BYTES } from '../../utils/fileUpload';
 import { useSmartBack } from '../../hooks/useSmartBack';
 
 const TYPE_TO_FRONTEND = {
@@ -246,7 +247,10 @@ const ExamEditor = () => {
     const [batchPdfFile, setBatchPdfFile] = useState(null);
     const [loading, setLoading] = useState(isEditMode);
     const [showPassageTypeModal, setShowPassageTypeModal] = useState(false);
-    const [autoSaveStatus, setAutoSaveStatus] = useState(null); // 'saving' | 'saved'
+    const [autoSaveStatus, setAutoSaveStatus] = useState(null); // 'saving' | 'saved' | 'error'
+    // Dedupe failure toasts the same way ExamSession does — a flaky
+    // network shouldn't paint the corner with toasts every 1.5s.
+    const autoSaveFailToastRef = useRef(0);
 
     // Collaborative mode
     const [collaborativeParentId, setCollaborativeParentId] = useState(null);
@@ -348,6 +352,9 @@ const ExamEditor = () => {
 
     const handleAiGenerate = async () => {
         if (!aiModal) return;
+        // Top-level guard against a fast double-click before the disabled
+        // state propagates to the modal button.
+        if (aiLoading) return;
         if (!aiForm.topic.trim()) { toast.error('Mövzu daxil edin'); return; }
         setAiLoading(true);
         try {
@@ -439,6 +446,14 @@ const ExamEditor = () => {
     // Tracks the backend ID of the draft (for new exams created silently via auto-save)
     const createdIdRef = useRef(isEditMode ? id : null);
     const autoSaveTimerRef = useRef(null);
+    // Reentrancy guard for explicit save/publish/submit actions — a fast
+    // double-click on "Yayımla" used to fire two POST /exams in parallel
+    // and create two duplicate exam rows.
+    const submittingRef = useRef(false);
+    // Separate guard for autosave: while a POST /exams (first-save) is in
+    // flight, createdIdRef.current is still null, so a second autosave tick
+    // would otherwise fire ANOTHER POST and create a duplicate draft.
+    const autoSavingRef = useRef(false);
 
     useEffect(() => {
         if (isEditMode) fetchExamData();
@@ -625,7 +640,16 @@ const ExamEditor = () => {
         if (loading) return;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(async () => {
+            // Skip when an explicit save/publish/submit is mid-flight —
+            // racing those would let an autosaved DRAFT payload overwrite
+            // the freshly PUBLISHED status (last write wins on backend).
+            if (submittingRef.current) return;
+            // Skip when a previous autosave is still running. Without this,
+            // a slow first-save POST (createdIdRef still null) lets the next
+            // debounce tick fire a second POST and create a duplicate draft.
+            if (autoSavingRef.current) return;
             if (type !== 'template' && type !== 'olimpiyada' && (!examConfig.title || !examConfig.title.trim())) return;
+            autoSavingRef.current = true;
             const payload = buildPayload(examStatus);
             setAutoSaveStatus('saving');
             try {
@@ -639,11 +663,35 @@ const ExamEditor = () => {
                 setAutoSaveStatus('saved');
                 setTimeout(() => setAutoSaveStatus(null), 3000);
             } catch {
-                setAutoSaveStatus(null);
+                // Surface the failure — the previous silent reset left
+                // teachers thinking their changes were saved when they
+                // weren't, and they only noticed on refresh.
+                setAutoSaveStatus('error');
+                const now = Date.now();
+                if (now - autoSaveFailToastRef.current > 8000) {
+                    autoSaveFailToastRef.current = now;
+                    toast.error('Avtomatik saxlama uğursuz oldu — internet bağlantınızı yoxlayın');
+                }
+            } finally {
+                autoSavingRef.current = false;
             }
         }, 1500);
         return () => clearTimeout(autoSaveTimerRef.current);
     }, [questions, passages, examConfig, type, loading, examStatus]);
+
+    // Warn on close/refresh while autosave is mid-flight or has failed —
+    // these are the windows where the teacher can lose unsaved edits.
+    // Don't fire on every exit (would be annoying when everything is saved).
+    useEffect(() => {
+        if (autoSaveStatus !== 'saving' && autoSaveStatus !== 'error') return;
+        const onBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [autoSaveStatus]);
 
     const fetchExamData = async () => {
         try {
@@ -807,8 +855,19 @@ const ExamEditor = () => {
     };
 
     const handleRemoveSection = (subjectName) => {
+        // Template / olimpiyada mode deletes questions hard — confirm so a
+        // mis-click doesn't wipe a teacher's work. Free mode only moves
+        // questions to the main section, so it stays one-click.
         if (type === 'template' || type === 'olimpiyada') {
-            // In template/olimpiyada mode: delete questions and update template section lists
+            const sectionQCount = questions.filter(q => q.subjectGroup === subjectName).length
+                + passages.filter(p => p.subjectGroup === subjectName)
+                    .reduce((s, p) => s + (p.questions?.length || 0), 0);
+            if (sectionQCount > 0) {
+                const ok = window.confirm(
+                    `"${subjectName}" bölməsi və içindəki ${sectionQCount} sual silinəcək. Davam edilsin?`
+                );
+                if (!ok) return;
+            }
             setQuestions(prev => prev.filter(q => q.subjectGroup !== subjectName));
             setPassages(prev => prev.filter(p => p.subjectGroup !== subjectName));
             setTemplateSections(prev => prev.filter(s => s.subjectName !== subjectName));
@@ -1063,6 +1122,8 @@ const ExamEditor = () => {
     };
 
     const handleSaveDraft = async () => {
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         const currentId = createdIdRef.current;
         const loadId = toast.loading('Qaralama saxlanılır...');
@@ -1078,6 +1139,8 @@ const ExamEditor = () => {
             }
         } catch (error) {
             if (!error._handled) toast.error(error.message || 'Əməliyyat uğursuz oldu', { id: loadId });
+        } finally {
+            submittingRef.current = false;
         }
     };
 
@@ -1125,7 +1188,10 @@ const ExamEditor = () => {
                 }
             } else if (q.type === 'FILL_IN_THE_BLANK') {
                 let blanks = [];
-                try { blanks = JSON.parse(q.sampleAnswer || '[]'); } catch (e) {}
+                try {
+                    const p = JSON.parse(q.sampleAnswer || '[]');
+                    if (Array.isArray(p)) blanks = p;
+                } catch (e) {}
                 if (!blanks.some(b => b && b.trim() !== '')) {
                     toast.error(`${label}: boşluqların düzgün cavabları daxil edilməyib`);
                     return;
@@ -1145,6 +1211,7 @@ const ExamEditor = () => {
 
     // Step 2: called from settings modal "Yayımla" button with final config
     const handlePublishConfirm = async (configFromModal) => {
+        if (submittingRef.current) return;
         if (!configFromModal.title) {
             toast.error('İmtahanın adını qeyd edin');
             setIsSettingsOpen(true);
@@ -1157,6 +1224,7 @@ const ExamEditor = () => {
         }
         setExamConfig(configToSend);
 
+        submittingRef.current = true;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         const currentId = createdIdRef.current;
         const loadId = toast.loading(currentId ? 'Dəyişikliklər saxlanılır...' : 'İmtahan yayımlanır...');
@@ -1166,24 +1234,31 @@ const ExamEditor = () => {
                 setExamStatus('PUBLISHED');
                 toast.success('İmtahan yayımlandı!', { id: loadId });
             } else {
-                await api.post('/exams', buildPayload('PUBLISHED', configToSend));
+                // Capture the new exam id so a quick "another tab" / refresh
+                // doesn't trigger a second POST and create a duplicate row.
+                const { data } = await api.post('/exams', buildPayload('PUBLISHED', configToSend));
+                if (data?.id) createdIdRef.current = data.id;
                 toast.success('İmtahan uğurla yayımlandı!', { id: loadId });
             }
             navigate(backPath);
         } catch (error) {
             if (!error._handled) toast.error(error.response?.data?.message || error.message || 'Əməliyyat uğursuz oldu', { id: loadId });
+        } finally {
+            submittingRef.current = false;
         }
     };
 
     const isCollaborativeMode = !!collaborativeParentId;
 
     const handleSubmitDraft = async () => {
+        if (submittingRef.current) return;
         const currentId = createdIdRef.current;
         if (!currentId) { toast.error('Əvvəlcə ən azı bir sual əlavə edin'); return; }
         if (questions.length === 0 && passages.length === 0) {
             toast.error('Göndərməzdən əvvəl ən azı bir sual əlavə edin');
             return;
         }
+        submittingRef.current = true;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         const loadId = toast.loading('Göndərilir...');
         try {
@@ -1193,6 +1268,8 @@ const ExamEditor = () => {
             navigate('/imtahanlar');
         } catch (err) {
             if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu', { id: loadId });
+        } finally {
+            submittingRef.current = false;
         }
     };
 
@@ -2025,6 +2102,12 @@ const ExamEditor = () => {
                         Yadda saxlanıldı
                     </span>
                 )}
+                {autoSaveStatus === 'error' && (
+                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-white bg-red-500 px-3 py-1.5 rounded-full shadow-[var(--sh-sm)]">
+                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        Saxlanmadı — yenidən cəhd edilir
+                    </span>
+                )}
                 {isCollaborativeMode ? (
                     <button
                         onClick={examStatus === 'SUBMITTED' ? undefined : handleSubmitDraft}
@@ -2079,20 +2162,18 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
 
     const handleAudioUpload = (e) => {
         const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => onChange(passage.id, { ...passage, audioContent: ev.target.result });
-        reader.readAsDataURL(file);
         e.target.value = null;
+        readFileAsDataUrl(file, { maxBytes: MAX_AUDIO_BYTES, kind: 'Audio fayl' })
+            .then(url => onChange(passage.id, { ...passage, audioContent: url }))
+            .catch(() => {});
     };
 
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => onChange(passage.id, { ...passage, attachedImage: ev.target.result });
-        reader.readAsDataURL(file);
         e.target.value = null;
+        readFileAsDataUrl(file, { maxBytes: MAX_IMAGE_BYTES, kind: 'Şəkil' })
+            .then(url => onChange(passage.id, { ...passage, attachedImage: url }))
+            .catch(() => {});
     };
 
     const isText = passage.passageType === 'TEXT';
@@ -2112,7 +2193,14 @@ const PassageEditor = ({ passage, onChange, onDelete, onAddQuestion, onUpdateQue
                     </span>
                 </div>
                 {!isQuestionCountLocked && (
-                    <button onClick={() => onDelete(passage.id)} className="p-1.5 text-[var(--ink-400)] hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+                    <button
+                        onClick={() => {
+                            const hasContent = passage.title?.trim() || passage.textContent?.trim() || passage.audioContent || passage.attachedImage || (passage.questions || []).length > 0;
+                            if (hasContent && !window.confirm(`Bu ${isText ? 'mətn parçası' : 'dinləmə'} və içindəki ${(passage.questions || []).length} sual silinəcək. Davam edilsin?`)) return;
+                            onDelete(passage.id);
+                        }}
+                        className="p-1.5 text-[var(--ink-400)] hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                    >
                         <HiOutlineX className="w-5 h-5" />
                     </button>
                 )}

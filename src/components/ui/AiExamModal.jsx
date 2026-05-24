@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { HiOutlineSparkles, HiOutlineX } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -28,7 +28,12 @@ const AiExamModal = ({ onClose, onGenerate }) => {
     const [subjects, setSubjects] = useState([]);
     const [topics, setTopics] = useState([]);
     const [selectedSubject, setSelectedSubject] = useState('');
-    const [selectedTopic, setSelectedTopic] = useState('');
+    // Multi-topic: user can pick OR type multiple topics. Chips render below input.
+    // Sent to backend as `topicNames` (new field); backend also accepts the legacy
+    // comma-joined `topicName` for older builds.
+    const [selectedTopics, setSelectedTopics] = useState([]);
+    const [topicInput, setTopicInput] = useState('');
+    const topicInputRef = useRef(null);
     const [difficulty, setDifficulty] = useState('MEDIUM');
     const [counts, setCounts] = useState({ MCQ: 5, MULTI_SELECT: 0, OPEN_AUTO: 0, FILL_IN_THE_BLANK: 0 });
     const [loading, setLoading] = useState(false);
@@ -55,11 +60,41 @@ const AiExamModal = ({ onClose, onGenerate }) => {
     }, []);
 
     useEffect(() => {
-        if (!selectedSubject) { setTopics([]); setSelectedTopic(''); return; }
+        if (!selectedSubject) { setTopics([]); setSelectedTopics([]); setTopicInput(''); return; }
+        // Cancel guard — rapid subject switches must not let a slow A-response
+        // overwrite topics for the currently-selected subject B.
+        let cancelled = false;
         api.get(`/subjects/topics?name=${encodeURIComponent(selectedSubject)}`)
-            .then(res => { setTopics(res.data || []); setSelectedTopic(''); })
-            .catch(() => { setTopics([]); setSelectedTopic(''); });
+            .then(res => { if (!cancelled) { setTopics(res.data || []); setSelectedTopics([]); setTopicInput(''); } })
+            .catch(() => { if (!cancelled) { setTopics([]); setSelectedTopics([]); setTopicInput(''); } });
+        return () => { cancelled = true; };
     }, [selectedSubject]);
+
+    const addTopic = (raw) => {
+        const t = (raw || '').trim();
+        if (!t) return;
+        // Case-insensitive dedupe so "Cəbr" and "cəbr" don't both land in the chip row.
+        const normalised = t.toLowerCase();
+        if (selectedTopics.some(x => x.toLowerCase() === normalised)) {
+            setTopicInput('');
+            return;
+        }
+        setSelectedTopics(prev => [...prev, t]);
+        setTopicInput('');
+    };
+
+    const removeTopic = (t) => {
+        setSelectedTopics(prev => prev.filter(x => x !== t));
+    };
+
+    // Esc closes the modal — but never while a generation is in flight,
+    // because the request can't be aborted and closing the modal would
+    // leave the user thinking nothing happened while it kept running.
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape' && !loading) onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [loading, onClose]);
 
     const totalCount = Object.values(counts).reduce((s, v) => s + v, 0);
 
@@ -85,10 +120,20 @@ const AiExamModal = ({ onClose, onGenerate }) => {
             setLoadingMsg(LOADING_MESSAGES[activeTypes[msgIdx]] || 'Suallar yaradılır...');
         }, 2500);
 
+        // Commit any unsubmitted text in the topic input so a teacher who typed
+        // "Cəbr" then hit Yarat without pressing Enter doesn't lose the topic.
+        const pendingTopic = topicInput.trim();
+        const finalTopics = pendingTopic && !selectedTopics.some(x => x.toLowerCase() === pendingTopic.toLowerCase())
+            ? [...selectedTopics, pendingTopic]
+            : selectedTopics;
+
         try {
             const { data } = await api.post('/ai/generate-exam', {
                 subjectName: selectedSubject,
-                topicName: selectedTopic || null,
+                // Keep both fields: `topicNames` is the new multi-topic field,
+                // `topicName` is a legacy comma-joined fallback for older backends.
+                topicNames: finalTopics,
+                topicName: finalTopics.length > 0 ? finalTopics.join(', ') : null,
                 difficulty,
                 typeCounts,
             });
@@ -169,24 +214,72 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                                Mövzu <span className="text-gray-300 font-normal">(istəyə bağlı)</span>
+                                Mövzular <span className="text-gray-300 font-normal">(istəyə bağlı, bir neçə əlavə et)</span>
                             </label>
-                            {/* Combobox: free text input + datalist of presets so every
-                                subject — even those without a preset topic list — lets
-                                the teacher type their own. */}
-                            <input
-                                type="text"
-                                list="ai-exam-topic-suggestions"
-                                value={selectedTopic}
-                                onChange={e => setSelectedTopic(e.target.value)}
-                                disabled={loading}
-                                placeholder={topics.length > 0 ? 'Siyahıdan seç və ya öz mövzunu yaz' : 'Mövzu adı'}
-                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors"
-                            />
-                            {topics.length > 0 && (
-                                <datalist id="ai-exam-topic-suggestions">
-                                    {topics.map(t => <option key={t.id} value={t.name} />)}
-                                </datalist>
+                            {/* Chip-based multi-topic picker: user can pick from preset
+                                topics via the datalist OR type their own. Each topic
+                                becomes a removable chip. Enter / comma commits the
+                                pending text into a chip; Backspace on empty input
+                                removes the last chip. */}
+                            <div
+                                className={`w-full min-h-[40px] px-2 py-1.5 rounded-xl border border-gray-200 bg-white focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400 transition-colors flex flex-wrap items-center gap-1.5 ${loading ? 'opacity-60 pointer-events-none' : ''}`}
+                                onClick={() => topicInputRef.current?.focus()}
+                            >
+                                {selectedTopics.map(t => (
+                                    <span key={t} className="inline-flex items-center gap-1 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 rounded-full pl-2.5 pr-1 py-0.5">
+                                        {t}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeTopic(t)}
+                                            className="w-4 h-4 inline-flex items-center justify-center rounded-full hover:bg-blue-200/60 text-blue-500"
+                                            title="Mövzunu sil"
+                                        >
+                                            <HiOutlineX className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                                <input
+                                    ref={topicInputRef}
+                                    type="text"
+                                    list="ai-exam-topic-suggestions"
+                                    value={topicInput}
+                                    onChange={e => {
+                                        const v = e.target.value;
+                                        // datalist click pastes the full value; commit it as a chip immediately.
+                                        if (v && topics.some(t => t.name === v)) {
+                                            addTopic(v);
+                                        } else {
+                                            setTopicInput(v);
+                                        }
+                                    }}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' || e.key === ',') {
+                                            e.preventDefault();
+                                            addTopic(topicInput);
+                                        } else if (e.key === 'Backspace' && !topicInput && selectedTopics.length > 0) {
+                                            // Quick-delete the last chip when the input is empty.
+                                            removeTopic(selectedTopics[selectedTopics.length - 1]);
+                                        }
+                                    }}
+                                    onBlur={() => { if (topicInput.trim()) addTopic(topicInput); }}
+                                    disabled={loading}
+                                    placeholder={selectedTopics.length === 0
+                                        ? (topics.length > 0 ? 'Siyahıdan seç və ya yaz...' : 'Mövzu adı yazıb Enter')
+                                        : 'Daha bir mövzu əlavə et...'}
+                                    className="flex-1 min-w-[120px] text-sm font-medium text-gray-800 bg-transparent border-none focus:ring-0 focus:outline-none px-1"
+                                />
+                                {topics.length > 0 && (
+                                    <datalist id="ai-exam-topic-suggestions">
+                                        {topics.map(t => <option key={t.id} value={t.name} />)}
+                                    </datalist>
+                                )}
+                            </div>
+                            {selectedTopics.length > 1 && (
+                                <p className="text-[10.5px] text-gray-400 mt-1.5 leading-snug">
+                                    {totalCount > 1
+                                        ? 'Suallar bu mövzular arasında bərabər paylaşdırılacaq.'
+                                        : 'Yalnız 1 sual — AI ya bütün mövzuları bir sualda birləşdirəcək, ya da birini seçəcək.'}
+                                </p>
                             )}
                         </div>
                     </div>

@@ -407,7 +407,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={getTitle()} maxWidth="max-w-lg">
+        <Modal isOpen={isOpen} onClose={() => { onClose(); setTimeout(reset, 300); }} title={getTitle()} maxWidth="max-w-lg">
             {renderStep()}
         </Modal>
     );

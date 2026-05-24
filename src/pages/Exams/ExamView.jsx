@@ -216,7 +216,8 @@ const ExamView = () => {
                                         const parts = (q.content || '').split('___');
                                         let correctAnswers = [];
                                         try {
-                                            correctAnswers = JSON.parse(q.correctAnswer || '[]');
+                                            const p = JSON.parse(q.correctAnswer || '[]');
+                                            if (Array.isArray(p)) correctAnswers = p;
                                         } catch (e) {}
 
                                         return (

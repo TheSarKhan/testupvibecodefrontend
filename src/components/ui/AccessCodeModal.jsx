@@ -1,14 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { HiOutlineKey, HiOutlineX } from 'react-icons/hi';
+import toast from 'react-hot-toast';
 
 const AccessCodeModal = ({ code, onClose }) => {
     const [copied, setCopied] = useState(false);
 
-    const copy = () => {
-        navigator.clipboard.writeText(code);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    // Escape key closes — small UX touch, but missing before so spec-key
+    // users had to mouse to the close button.
+    useEffect(() => {
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+
+    const copy = async () => {
+        // Async clipboard API can reject on http://, in iframes, or when
+        // permission is denied. Don't flip the "✓ Kopyalandı" state in
+        // that case — fall back to a manual textarea copy so the teacher
+        // still gets the code out.
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(code);
+            } else {
+                const el = document.createElement('textarea');
+                el.value = code;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                el.remove();
+            }
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            toast.error('Kod kopyalanmadı — kodu əl ilə qeyd edin');
+        }
     };
 
     return createPortal(

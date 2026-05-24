@@ -485,7 +485,11 @@ const StudentDashboard = () => {
     }, []);
 
     const stats = useMemo(() => {
-        const submitted = results.filter(r => r.submittedAt && r.maxScore > 0);
+        // Both `maxScore > 0` and `totalScore != null` need to hold — an
+        // OPEN_MANUAL submission can sit graded=false with totalScore=null
+        // even after the student submitted, which would otherwise turn
+        // avgScore / bestScore into NaN.
+        const submitted = results.filter(r => r.submittedAt && r.maxScore > 0 && r.totalScore != null);
         const examsTaken = submitted.length;
         const avgScore = examsTaken > 0
             ? Math.round(submitted.reduce((s, r) => s + (r.totalScore / r.maxScore) * 100, 0) / examsTaken)

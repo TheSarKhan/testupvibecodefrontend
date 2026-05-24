@@ -8,6 +8,7 @@ import {
     HiOutlineRefresh, HiOutlineAcademicCap, HiOutlineExclamation,
 } from 'react-icons/hi';
 import api from '../../api/axios';
+import toast from 'react-hot-toast';
 import { fmtDate } from '../../utils/date';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -356,15 +357,23 @@ const StudentExams = () => {
 
     useEffect(() => {
         let cancelled = false;
+        // Each request swallows its own error to an empty payload so a
+        // single failing endpoint doesn't blank the whole page — but we
+        // still want to surface it. Track failures here and toast once
+        // (chained toasts spam the corner when the API is fully down).
+        const failures = [];
         Promise.all([
-            api.get('/exams/my-purchased-exam-details').catch(() => ({ data: [] })),
-            api.get('/depot').catch(() => ({ data: [] })),
-            api.get('/submissions/my-results').catch(() => ({ data: [] })),
+            api.get('/exams/my-purchased-exam-details').catch(() => { failures.push('alınmış imtahanlar'); return { data: [] }; }),
+            api.get('/depot').catch(() => { failures.push('saxlanılmışlar'); return { data: [] }; }),
+            api.get('/submissions/my-results').catch(() => { failures.push('nəticələr'); return { data: [] }; }),
         ]).then(([purchasedRes, depotRes, resultsRes]) => {
             if (cancelled) return;
             setPurchasedExams(purchasedRes.data || []);
             setSavedExams(depotRes.data || []);
             setResults(resultsRes.data || []);
+            if (failures.length) {
+                toast.error(`Yüklənmədi: ${failures.join(', ')}`);
+            }
         }).finally(() => { if (!cancelled) setLoading(false); });
         return () => { cancelled = true; };
     }, []);
@@ -466,9 +475,16 @@ const StudentExams = () => {
     const newCount = receivedItems.filter(r => r.status === 'NEW' || r.status === 'PURCHASED').length;
     const ongoingCount = receivedItems.filter(r => r.status === 'ONGOING').length;
     const completedCount = completedItems.length;
-    const avgScore = completedCount > 0
-        ? Math.round(completedItems.filter(r => r.maxScore > 0).reduce((s, r) => s + (r.totalScore / r.maxScore) * 100, 0) / completedItems.filter(r => r.maxScore > 0).length)
-        : 0;
+    // Compute on the *scoreable* subset only — ungraded submissions and
+    // exams with maxScore == 0 would otherwise inflate the denominator or
+    // produce a NaN (divide by zero / null totalScore). When nothing
+    // qualifies, fall back to 0 rather than rendering "NaN%" on the page.
+    const avgScore = (() => {
+        const scoreable = completedItems.filter(r => r.maxScore > 0 && r.totalScore != null);
+        if (scoreable.length === 0) return 0;
+        const total = scoreable.reduce((s, r) => s + (r.totalScore / r.maxScore) * 100, 0);
+        return Math.round(total / scoreable.length);
+    })();
 
     // Subjects for filter
     const subjectsInTab = useMemo(() => {

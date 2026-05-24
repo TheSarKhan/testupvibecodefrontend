@@ -40,9 +40,19 @@ const ExamSession = () => {
     const autoSubmitRef = useRef(false);
     const navScrollRef = useRef(null);
 
+    // Holds the teardown closure for whichever element the callback ref
+    // currently owns. Without this the wheel / mousedown listeners (and
+    // any mid-drag document listeners) outlive the nav element when the
+    // user navigates away mid-exam.
+    const navCleanupRef = useRef(null);
+
     const navScrollCallbackRef = useCallback((el) => {
-        if (!el) return;
+        if (navCleanupRef.current) {
+            navCleanupRef.current();
+            navCleanupRef.current = null;
+        }
         navScrollRef.current = el;
+        if (!el) return;
 
         const onWheel = (e) => {
             if (e.deltaY === 0) return;
@@ -65,6 +75,23 @@ const ExamSession = () => {
             document.addEventListener('mouseup', onMouseUp);
         };
         el.addEventListener('mousedown', onMouseDown);
+
+        navCleanupRef.current = () => {
+            el.removeEventListener('wheel', onWheel);
+            el.removeEventListener('mousedown', onMouseDown);
+            // Cover the rare case where the user navigates away while
+            // still holding the mouse button — onMouseUp would normally
+            // remove these but it never fires if the element is gone.
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+    }, []);
+
+    useEffect(() => () => {
+        if (navCleanupRef.current) {
+            navCleanupRef.current();
+            navCleanupRef.current = null;
+        }
     }, []);
 
     useEffect(() => { fetchSessionDetails(); }, [sessionId]);
@@ -78,6 +105,17 @@ const ExamSession = () => {
             });
         }, 1000);
         return () => clearInterval(timerId);
+    }, [timeLeft]);
+
+    // One-shot 5-minute warning. The timer pill already shifts to red below
+    // 300s, but a student focused on a question often doesn't notice colour
+    // alone — a toast pulls their attention up to the clock.
+    const fiveMinWarnedRef = useRef(false);
+    useEffect(() => {
+        if (timeLeft != null && timeLeft <= 300 && timeLeft > 0 && !fiveMinWarnedRef.current) {
+            fiveMinWarnedRef.current = true;
+            toast('5 dəqiqədən az qaldı!', { icon: '⏱️', duration: 5000 });
+        }
     }, [timeLeft]);
 
     useEffect(() => { setActiveLeftId(null); }, [currentSectionIndex]);
@@ -389,7 +427,13 @@ const ExamSession = () => {
                     </div>
                     <div className="flex items-center gap-4">
                         {timeLeft !== null && (
-                            <div className={`flex items-center gap-2 font-mono text-lg font-bold px-4 py-2 rounded-lg ${timeLeft < 300 ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-800'}`}>
+                            <div className={`flex items-center gap-2 font-mono text-lg font-bold px-4 py-2 rounded-lg transition-colors ${
+                                timeLeft < 60
+                                    ? 'bg-red-100 text-red-700 ring-2 ring-red-300 animate-pulse'
+                                    : timeLeft < 300
+                                        ? 'bg-red-50 text-red-600 ring-1 ring-red-200'
+                                        : 'bg-gray-100 text-gray-800'
+                            }`}>
                                 <HiOutlineClock className="w-6 h-6" />
                                 {formatTime(timeLeft)}
                             </div>
@@ -875,8 +919,16 @@ const FillInTheBlankInput = ({ question, answer, onAnswerChange }) => {
         setDragOver(null);
     }, [question.id]);
 
+    // Saved value must be a JSON array of strings. Defending against the
+    // edge cases where it's not: literal "null" (parsed → null, crashes on
+    // index access), object/number (silently wrong shape), or simply
+    // corrupted JSON. All paths fall back to an empty list rather than
+    // breaking the question render.
     let blanks = [];
-    try { blanks = JSON.parse(answer.textAnswer || '[]'); } catch (e) {}
+    try {
+        const parsed = JSON.parse(answer.textAnswer || '[]');
+        if (Array.isArray(parsed)) blanks = parsed;
+    } catch (e) { /* malformed — start fresh */ }
     blanks = Array.from({ length: blankCount }, (_, i) => blanks[i] || null);
 
     const usedTexts = new Set(blanks.filter(Boolean));
@@ -1114,7 +1166,15 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                                 className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer min-h-[38px] flex flex-col justify-center ${isConnected ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'}`}
                                 onClick={() => {
                                     if (!activeLeftId) { toast.error('Əvvəlcə soldan bir bənd seçin'); return; }
-                                    const alreadyExists = existingPairs.some(m => m.leftItemId === activeLeftId && m.rightItemId === pair.id);
+                                    // Normalise existing pair IDs through the canon maps so a
+                                    // saved pair stored against a non-canonical raw id still
+                                    // matches the canonical click. Without this, dedup only
+                                    // catches exact-id repeats and the same visible connection
+                                    // could be added twice.
+                                    const alreadyExists = existingPairs.some(m =>
+                                        (leftCanonMap[m.leftItemId] ?? m.leftItemId) === activeLeftId
+                                        && (rightCanonMap[m.rightItemId] ?? m.rightItemId) === pair.id
+                                    );
                                     if (alreadyExists) {
                                         toast.error('Bu birləşmə artıq mövcuddur');
                                     } else {

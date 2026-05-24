@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
     HiOutlineX, HiOutlineBookOpen, HiOutlineSearch,
     HiOutlineChevronRight, HiOutlineArrowLeft, HiOutlineGlobe, HiOutlineUser,
@@ -61,25 +61,55 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
             .finally(() => setLoadingSubjects(false));
     }, []);
 
+    // Esc: if we're inside a subject, back to the subject grid; otherwise close.
+    // Mirrors the back-arrow / X buttons so keyboard users have the same flow.
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.key !== 'Escape') return;
+            if (selectedSubject) {
+                e.preventDefault();
+                subjectFetchTokenRef.current++;
+                setSelectedSubject(null);
+                setQuestions([]);
+                setSelectedIds(new Set());
+                setLoadingQuestions(false);
+            } else {
+                onClose?.();
+            }
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [selectedSubject, onClose]);
+
+    // Tracks the last-clicked subject so a slow A response can't overwrite
+    // a quick switch to B (or back to the subject list).
+    const subjectFetchTokenRef = useRef(0);
+
     const openSubject = async (subject) => {
+        const token = ++subjectFetchTokenRef.current;
         setSelectedSubject(subject);
         setLoadingQuestions(true);
         setSelectedIds(new Set());
         setSearch(''); setTypeFilter('ALL'); setDifficultyFilter('ALL'); setGradeFilter('ALL'); setTopicFilter('ALL');
         try {
             const { data } = await api.get(`/bank/subjects/${subject.id}/questions`);
+            if (token !== subjectFetchTokenRef.current) return;
             setQuestions(data);
         } catch {
-            toast.error('Suallar yüklənmədi');
+            if (token === subjectFetchTokenRef.current) toast.error('Suallar yüklənmədi');
         } finally {
-            setLoadingQuestions(false);
+            if (token === subjectFetchTokenRef.current) setLoadingQuestions(false);
         }
     };
 
     const handleBack = () => {
+        // Invalidate any in-flight questions fetch so it can't populate
+        // the list after the user has gone back to the subject grid.
+        subjectFetchTokenRef.current++;
         setSelectedSubject(null);
         setQuestions([]);
         setSelectedIds(new Set());
+        setLoadingQuestions(false);
     };
 
     const filteredQuestions = useMemo(() => {

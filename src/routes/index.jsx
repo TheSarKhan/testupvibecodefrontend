@@ -12,6 +12,7 @@ import Register from '../pages/Auth/Register';
 import ExamList from '../pages/Exams/ExamList';
 import ExamView from '../pages/Exams/ExamView';
 import ExamDetail from '../pages/Exams/ExamDetail';
+import PublicExamStats from '../pages/Exams/PublicExamStats';
 import ExamEditor from '../pages/Teacher/ExamEditor';
 import Profile from '../pages/Profile/Profile';
 import Pricing from '../pages/Pricing/Pricing';
@@ -82,6 +83,10 @@ const router = createBrowserRouter([
             { path: 'birge-imtahanlari', element: <CollaborativeAssignments /> },
             { path: 'birge-imtahanlari/:collaboratorId/statistika', element: <CollaborativeStats /> },
             { path: 'imtahanlar/melumat/:shareLink', element: <ExamDetail /> },
+            // Public statistics — anyone with the shareLink can see aggregate
+            // stats + top-5 leaderboard. No auth required (handled in
+            // PublicExamStats by hitting the share-link statistics endpoint).
+            { path: 'imtahanlar/paylas/:shareLink/statistika', element: <PublicExamStats /> },
             { path: 'imtahanlar/:examId/neticeler', element: <ExamResults /> },
             { path: 'imtahanlar/:examId/statistika', element: <ExamResults /> },
             { path: 'imtahanlar/:id', element: <ExamView /> },

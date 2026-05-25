@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { validateLatexSyntax, getLatexErrorMessage } from '../../utils/latexValidator';
+import { validateLatexSyntax, getLatexErrorMessage, autoWrapBareLatex } from '../../utils/latexValidator';
 import {
     HiOutlineSparkles, HiOutlineRefresh, HiOutlineCheck, HiOutlineX,
     HiOutlineChevronDown, HiOutlineExclamation, HiOutlineLightningBolt
@@ -166,9 +166,21 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
     const handleSave = async () => {
         if (!generated || generated.length === 0) return;
 
-        // Validate LaTeX syntax in all generated questions
+        // Validate LaTeX syntax in all generated questions.
+        // The AI sometimes forgets to wrap math in `$...$` (especially in
+        // FILL_IN_THE_BLANK correctAnswer / OPEN_AUTO answer fields, e.g.
+        // `\frac{x^2}{2}+C` for an integral question). autoWrapBareLatex
+        // fixes that silently so the teacher doesn't have to manually edit
+        // every AI-generated answer to make it pass validation.
         for (let i = 0; i < generated.length; i++) {
             const q = generated[i];
+            if (q.content) q.content = autoWrapBareLatex(q.content);
+            if (q.correctAnswer) q.correctAnswer = autoWrapBareLatex(q.correctAnswer);
+            if (Array.isArray(q.options)) {
+                q.options.forEach(opt => {
+                    if (opt.content) opt.content = autoWrapBareLatex(opt.content);
+                });
+            }
             const contentValidation = validateLatexSyntax(q.content);
             if (!contentValidation.valid) {
                 toast.error(`Sual ${i + 1}-də LaTeX xətası:\n${getLatexErrorMessage(contentValidation.errors)}`);

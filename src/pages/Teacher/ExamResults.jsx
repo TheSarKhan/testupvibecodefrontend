@@ -511,10 +511,26 @@ const ExamResults = () => {
         }
     };
 
-    const handleShare = () => {
-        const url = `${window.location.origin}/imtahanlar/${examId}/statistika`;
-        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url);
-        toast.success('Link kopyalandı');
+    const handleShare = async () => {
+        // The shared link must be PUBLIC — the old version copied the
+        // teacher-only `/imtahanlar/{examId}/statistika` URL, which 401's for
+        // anyone else and exposes the internal DB id. The new path goes
+        // through the exam's shareLink and hits a public stats endpoint.
+        const shareLink = statistics?.shareLink;
+        if (!shareLink) {
+            toast.error('Bu imtahan üçün paylaşım linki yoxdur');
+            return;
+        }
+        const url = `${window.location.origin}/imtahanlar/paylas/${shareLink}/statistika`;
+        try {
+            if (!navigator.clipboard?.writeText) throw new Error('no-clipboard');
+            await navigator.clipboard.writeText(url);
+            toast.success('Paylaşım linki kopyalandı');
+        } catch {
+            // Insecure context / denied permission — fall back to a prompt
+            // so the teacher can still grab the link manually.
+            window.prompt('Linki əl ilə kopyalayın:', url);
+        }
     };
 
     const isPaid = isAdmin && statistics?.examPrice != null && statistics.examPrice > 0;

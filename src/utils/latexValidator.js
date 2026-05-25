@@ -75,3 +75,31 @@ export const getLatexErrorMessage = (errors) => {
     if (!errors || errors.length === 0) return null;
     return errors.map(err => `• ${err}`).join('\n');
 };
+
+// LaTeX commands the validator flags as "must be inside $…$".
+const COMMON_LATEX_COMMANDS_RE = /\\(frac|cdot|sqrt|begin|end|sum|prod|int|log|sin|cos|tan|forall|exists|alpha|beta|gamma|delta|pi|lambda|sigma|omega|infty|partial|nabla|theta|phi|mu|rho|xi|eta|epsilon|chi|psi|zeta|kappa|nu|tau)\b/;
+
+/**
+ * Auto-wrap bare LaTeX commands in `$…$` when the AI forgets to do so.
+ *
+ * Problem: the AI prompt insists on `$...$` wrapping but sometimes emits
+ * `\frac{x^2}{2} + C` or `\int_0^1 x\,dx` directly. Frontend validation
+ * then rejects the answer with "LaTeX komandaları $...$ içərisində
+ * yazılmalıdır" and the teacher can't save the AI-generated question.
+ *
+ * This wrapper:
+ *   1) returns the value unchanged if it already contains a `$` (assume
+ *      teacher/AI knew what they were doing)
+ *   2) wraps the entire string in `$…$` if a LaTeX command is detected
+ *      anywhere in plain text
+ *
+ * Designed for short answer-like strings (FILL_IN_THE_BLANK answers,
+ * OPEN_AUTO answers). For long stem text containing multiple bare formulas
+ * we'd need a smarter tokenizer — out of scope here.
+ */
+export const autoWrapBareLatex = (content) => {
+    if (!content || typeof content !== 'string') return content;
+    if (content.includes('$')) return content;            // already wrapped
+    if (!COMMON_LATEX_COMMANDS_RE.test(content)) return content; // no LaTeX detected
+    return '$' + content.trim() + '$';
+};

@@ -1138,25 +1138,32 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                 initialLatex={mathModalField?.editingLatex || ''}
             />
 
-            {/* Image Zoom Overlay */}
+            {/* Image Zoom Overlay
+                — The previous version capped the wrapper at `max-w-5xl` (~1024px)
+                and the image at `max-w-full max-h-[90vh]`. With those caps, a small
+                cropped image (e.g. a 400px-wide PDF kəsim) rendered at its NATURAL
+                size and stayed tiny in the middle of the dark backdrop. Setting an
+                explicit viewport-sized box with `object-contain` forces the image
+                to scale UP to fill 95vw × 95vh while preserving aspect ratio. */}
             {zoomedImage && (
                 <div
                     className="fixed inset-0 z-[999] bg-black/80 flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
                     onClick={() => setZoomedImage(null)}
                 >
-                    <div className="relative max-w-5xl max-h-full">
-                        <img
-                            src={zoomedImage}
-                            alt="Böyüdülmüş baxış"
-                            className="max-w-full max-h-[90vh] rounded-lg shadow-2xl border-4 border-white/10"
-                        />
-                        <button
-                            className="absolute -top-4 -right-4 bg-white text-gray-900 rounded-full p-2 shadow-xl hover:bg-gray-100"
-                            onClick={() => setZoomedImage(null)}
-                        >
-                            <HiOutlineX className="w-6 h-6" />
-                        </button>
-                    </div>
+                    <img
+                        src={zoomedImage}
+                        alt="Böyüdülmüş baxış"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-auto h-auto max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl border-4 border-white/10 cursor-default"
+                        style={{ minWidth: 'min(95vw, 800px)', minHeight: 'min(95vh, 600px)' }}
+                    />
+                    <button
+                        className="fixed top-6 right-6 bg-white text-gray-900 rounded-full p-2.5 shadow-xl hover:bg-gray-100 z-10"
+                        onClick={(e) => { e.stopPropagation(); setZoomedImage(null); }}
+                        title="Bağla"
+                    >
+                        <HiOutlineX className="w-6 h-6" />
+                    </button>
                 </div>
             )}
         </div>

@@ -955,8 +955,28 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     type="number"
                                     min="1"
                                     max="100"
-                                    value={question.points}
-                                    onChange={(e) => handleChange('points', Math.min(100, Math.max(1, parseFloat(e.target.value) || 1)))}
+                                    // `value ?? ''` lets the input go briefly empty while the
+                                    // teacher backspaces over "1" to type "5". Earlier
+                                    // `parseFloat(value) || 1` snapped to 1 on every empty
+                                    // keystroke, so the user couldn't actually clear the digit.
+                                    value={question.points ?? ''}
+                                    onChange={(e) => {
+                                        const raw = e.target.value;
+                                        if (raw === '') {
+                                            // Mid-edit: leave the field empty. onBlur reclamps
+                                            // to a valid number so the saved payload is never null.
+                                            handleChange('points', null);
+                                            return;
+                                        }
+                                        const n = parseInt(raw, 10);
+                                        if (Number.isFinite(n)) {
+                                            handleChange('points', Math.min(100, Math.max(1, n)));
+                                        }
+                                    }}
+                                    onBlur={(e) => {
+                                        const n = parseInt(e.target.value, 10);
+                                        if (!Number.isFinite(n) || n < 1) handleChange('points', 1);
+                                    }}
                                     className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-blue-700"
                                 />
                             )}

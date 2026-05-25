@@ -214,7 +214,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                                Mövzular <span className="text-gray-300 font-normal">(istəyə bağlı, bir neçə əlavə et)</span>
+                                Mövzular
                             </label>
                             {/* Chip-based multi-topic picker: user can pick from preset
                                 topics via the datalist OR type their own. Each topic

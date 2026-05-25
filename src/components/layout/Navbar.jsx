@@ -12,7 +12,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
-import { fmtDateShort } from '../../utils/date';
+import { fmtDateShort, parseBackendDate } from '../../utils/date';
 import { NOTIFICATION_TYPE_LABELS, labelOr } from '../../utils/enumLabels';
 
 const Navbar = () => {
@@ -218,11 +218,11 @@ const Navbar = () => {
     };
 
     const fmtTime = (iso) => {
-        if (!iso) return '';
         // Backend sends LocalDateTime without timezone (e.g. "2026-03-25T18:30:00").
-        // Parse as-is (browser treats it as local time). If it has timezone info, use it directly.
-        const d = new Date(iso);
-        if (isNaN(d.getTime())) return '';
+        // parseBackendDate treats naked ISO strings as UTC so notifications
+        // render in the user's *local* time regardless of where the server runs.
+        const d = parseBackendDate(iso);
+        if (!d) return '';
         const now = new Date();
         const diff = Math.floor((now - d) / 60000);
         if (diff < 1) return 'İndicə';

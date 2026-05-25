@@ -216,17 +216,34 @@ const ExamMgmtCard = ({
                     </div>
                 )}
 
-                {/* Meta — pushed to the bottom of the variable-height area */}
+                {/* Meta — pushed to the bottom of the variable-height area.
+                    Multi-subject exams now show every subject chip — earlier the
+                    card only rendered `primarySubject` so a 3-fənn imtahanı looked
+                    single-subject. Show first two inline, collapse the rest into
+                    a "+N" badge that titles the full list on hover. */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--ink-500)] mt-auto pt-1">
-                    <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--ink-700)]">
+                    {(subjects.length > 0 ? subjects : [primarySubject]).slice(0, 2).map(s => {
+                        const p = paletteFor(s);
+                        return (
+                            <span key={s} className="inline-flex items-center gap-1.5 font-semibold text-[var(--ink-700)]">
+                                <span
+                                    className="w-4 h-4 rounded text-[9.5px] font-bold flex items-center justify-center"
+                                    style={{ background: p.soft, color: p.color }}
+                                >
+                                    {initialOf(s)}
+                                </span>
+                                <span className="truncate max-w-[120px]">{s}</span>
+                            </span>
+                        );
+                    })}
+                    {subjects.length > 2 && (
                         <span
-                            className="w-4 h-4 rounded text-[9.5px] font-bold flex items-center justify-center"
-                            style={{ background: palette.soft, color: palette.color }}
+                            className="inline-flex items-center font-bold text-[var(--ink-600)] bg-[var(--ink-100)] px-1.5 py-0.5 rounded-full text-[10.5px]"
+                            title={subjects.slice(2).join(', ')}
                         >
-                            {initialOf(primarySubject)}
+                            +{subjects.length - 2}
                         </span>
-                        <span className="truncate max-w-[120px]">{primarySubject}</span>
-                    </span>
+                    )}
                     {exam.durationMinutes > 0 && (
                         <span className="inline-flex items-center gap-1">
                             <HiOutlineClock className="w-3.5 h-3.5" /> {exam.durationMinutes} dq

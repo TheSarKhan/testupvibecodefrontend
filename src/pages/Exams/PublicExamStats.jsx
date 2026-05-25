@@ -139,14 +139,6 @@ const PublicExamStats = () => {
                 </div>
             </div>
 
-            <div className="container-main mt-8 text-center">
-                <Link
-                    to={`/imtahanlar/melumat/${shareLink}`}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-full text-sm font-bold transition-colors"
-                >
-                    İmtahana keç
-                </Link>
-            </div>
         </div>
     );
 };

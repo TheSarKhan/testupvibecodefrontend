@@ -402,17 +402,31 @@ const TopicCombobox = ({ value, onChange, availableTopics }) => {
                                 {name}
                             </button>
                         ))}
-                        {showCreate && (
-                            <button
-                                type="button"
-                                onClick={() => commit(q)}
-                                className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-blue-50 border-t border-gray-100 text-blue-700 font-semibold"
-                            >
-                                <HiOutlinePlus className="w-4 h-4" />
-                                "{q}" mövzusunu yarat
-                            </button>
-                        )}
                     </div>
+                    {/* Always-visible create action — earlier the "+ Yeni mövzu yarat"
+                        only appeared after the user typed something the existing
+                        topic list didn't match, so the option was easy to miss.
+                        Pinning it to the dropdown footer makes new-topic creation
+                        discoverable: with a query it commits the typed name, with
+                        no query it focuses the search input so the user knows
+                        where to type. */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (q) {
+                                commit(q);
+                            } else {
+                                // Focus the input so the user knows what to do next.
+                                const input = rootRef.current?.querySelector('input');
+                                input?.focus();
+                            }
+                        }}
+                        className="w-full text-left px-3 py-2.5 text-sm flex items-center gap-2 border-t border-gray-100 text-blue-700 font-semibold hover:bg-blue-50 bg-blue-50/30"
+                    >
+                        <HiOutlinePlus className="w-4 h-4" />
+                        {q ? `"${q}" mövzusunu yarat` : 'Yeni mövzu əlavə et'}
+                        {!q && <span className="text-xs font-normal text-gray-400 ml-auto">adını yuxarıda yazın</span>}
+                    </button>
                 </div>
             )}
         </div>

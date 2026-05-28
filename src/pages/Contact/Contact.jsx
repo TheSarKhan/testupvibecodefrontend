@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-    HiOutlineMail, HiOutlineShieldCheck, HiOutlinePhone, HiOutlineLocationMarker,
+    HiOutlineShieldCheck, HiOutlinePhone, HiOutlineLocationMarker,
     HiOutlineArrowRight, HiOutlinePlus, HiOutlineCheck,
     HiOutlineLibrary, HiOutlinePlay, HiOutlineUsers,
 } from 'react-icons/hi';
@@ -134,13 +134,6 @@ const ContactBody = () => {
 
                         <div className="flex flex-col gap-3">
                             <InfoCard
-                                href="mailto:hello@testup.az"
-                                Icon={HiOutlineMail}
-                                label="Email"
-                                value="hello@testup.az"
-                                sub="Ümumi məlumatlar və satış üçün"
-                            />
-                            <InfoCard
                                 href="mailto:support@testup.az"
                                 Icon={HiOutlineShieldCheck}
                                 green
@@ -169,37 +162,6 @@ const ContactBody = () => {
                                 value="Bakı, Azərbaycan"
                                 sub="Nərimanov m/s çıxışı"
                             />
-                        </div>
-
-                        {/* Map card */}
-                        <div className="relative mt-4 h-[280px] rounded-2xl overflow-hidden border border-[var(--ink-200)]">
-                            <div
-                                className="absolute inset-0 flex items-center justify-center"
-                                style={{
-                                    background: 'radial-gradient(circle at 30% 40%, rgba(37,99,235,0.15), transparent 60%), radial-gradient(circle at 70% 60%, rgba(34,197,94,0.1), transparent 60%), linear-gradient(135deg, #E8EEF7 0%, #DCE5F0 100%)',
-                                }}
-                            >
-                                {/* Subtle grid overlay */}
-                                <div
-                                    className="absolute inset-0 opacity-50"
-                                    style={{
-                                        backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
-                                        backgroundSize: '28px 28px',
-                                    }}
-                                />
-                                {/* Pin */}
-                                <div className="relative w-14 h-14 rounded-full bg-[var(--primary)] text-white flex items-center justify-center shadow-[0_12px_30px_-8px_rgba(37,99,235,0.6)] z-10">
-                                    <span
-                                        className="absolute -inset-2 rounded-full bg-[var(--primary)] opacity-25 animate-ping"
-                                        style={{ animationDuration: '2.4s' }}
-                                    />
-                                    <HiOutlineLocationMarker className="w-6 h-6 relative" />
-                                </div>
-                            </div>
-                            <div className="absolute bottom-4 left-4 bg-white rounded-xl shadow-[var(--sh-md)] px-4 py-3 text-[13px]">
-                                <div className="font-bold text-[var(--ink-900)]">testup.az HQ</div>
-                                <div className="text-[var(--ink-500)] mt-0.5">Nizami küçəsi 203, Bakı</div>
-                            </div>
                         </div>
                     </div>
 

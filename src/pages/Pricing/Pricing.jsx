@@ -216,7 +216,7 @@ const PlanCard = ({
                             : action === 'renew'   ? <><HiOutlineCreditCard className="w-4 h-4" /> Uzat</>
                             : isFreeSwitch         ? <><HiOutlineCheck className="w-4 h-4" /> Ödənişsiz keçid</>
                             : action === 'switch'  ? <><HiOutlineCreditCard className="w-4 h-4" /> Plana keçid</>
-                                                     : <>14 gün pulsuz sına <HiOutlineArrowRight className="w-4 h-4" /></>}
+                                                     : <>Planı seç <HiOutlineArrowRight className="w-4 h-4" /></>}
                     </button>
                 )}
             </div>
@@ -389,7 +389,7 @@ const ExtraCTA = () => (
 const PlansFAQ = () => {
     const items = [
         { q: 'Planı istənilən vaxt dəyişə bilərəmmi?', a: 'Bəli. Yüksək plana keçəndə fərq dərhal hesablanır. Aşağı plana keçəndə isə cari dövr başa çatdıqdan sonra dəyişiklik tətbiq olunur.' },
-        { q: 'Pulsuz sınaq müddətindən sonra avtomatik ödəniş çıxılır?', a: 'Xeyr. Sınaq müddəti bitdikdən sonra avtomatik olaraq Başlanğıc plana keçirilirsiniz. Davam etmək istəsəniz, ödənişi özünüz təsdiqləyirsiniz.' },
+        { q: 'Pulsuz Başlanğıc planı nə qədər müddətə pulsuzdur?', a: 'Başlanğıc plan həmişə pulsuzdur — vaxt limiti yoxdur. Daha çox imkan istəsəniz, istənilən vaxt ödənişli plana keçə bilərsiniz.' },
         { q: 'Hansı ödəniş üsullarını qəbul edirsiniz?', a: 'Visa, Mastercard, MilliÖn, Hesab.az və bank köçürməsi. Mərkəz planı üçün rəsmi faktura təqdim edilir.' },
         { q: 'AZN-dən başqa valyuta ilə ödəyə bilərəmmi?', a: 'Bəli. Beynəlxalq kartlardan USD və EUR ilə ödəniş qəbul edirik. Konvertasiya bankınız tərəfindən aparılır.' },
         { q: 'Endirim kuponları və promo kodlar varmı?', a: 'Müəllim təsdiqi ilə 50%, illik ödənişlə 20% endirim mümkündür. Ayrıca yaz/payız tədris ilinin başlanğıcında xüsusi kampaniyalar elan olunur.' },
@@ -431,9 +431,43 @@ const PlansFAQ = () => {
 // Confirmation modal
 // ───────────────────────────────────────────────────────────────────────────
 
-const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, onConfirm }) => {
+// Build a list of meaningful differences between current plan and target plan.
+// Numbers: only flag if they actually changed; surface direction (yüksəliş /
+// enmə) so the teacher sees whether they're losing capacity.
+// Booleans: only flag features that flip — gained features in green, lost ones
+// in amber. Identical feature values are skipped to keep the modal scannable.
+const computePlanDiffs = (currentPlan, targetPlan) => {
+    if (!currentPlan || !targetPlan) return { gained: [], lost: [], numericChanges: [] };
+    const fmt = (v) => v === -1 ? 'Limitsiz' : v == null ? '—' : String(v);
+    const gained = [];
+    const lost = [];
+    const numericChanges = [];
+    for (const f of FEATURE_LIST) {
+        const cur = currentPlan[f.key];
+        const tgt = targetPlan[f.key];
+        if (f.type === 'boolean') {
+            if (cur === tgt) continue;
+            if (tgt === true) gained.push(f.label);
+            else lost.push(f.label);
+        } else {
+            // Numeric: -1 means unlimited (best). Compare by ranking unlimited > finite.
+            if (cur === tgt) continue;
+            const rank = (v) => v === -1 ? Infinity : (v == null ? -Infinity : v);
+            const up = rank(tgt) > rank(cur);
+            numericChanges.push({ label: f.label, from: fmt(cur), to: fmt(tgt), up });
+        }
+    }
+    return { gained, lost, numericChanges };
+};
+
+const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, currentPlan, onConfirm }) => {
     if (!confirmModal) return null;
     const { plan, action, wallet, isFreeSwitch } = confirmModal;
+    // Only show diffs when actually switching to a DIFFERENT plan; renewals
+    // and same-plan top-ups would just show an empty diff section.
+    const showDiffs = action === 'switch' && currentPlan && currentPlan.id !== plan.id;
+    const diffs = showDiffs ? computePlanDiffs(currentPlan, plan) : null;
+    const hasAnyDiff = diffs && (diffs.gained.length > 0 || diffs.lost.length > 0 || diffs.numericChanges.length > 0);
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
@@ -448,27 +482,48 @@ const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, onConfirm
                         <span className="font-semibold text-[var(--ink-800)]">{plan.name}</span> planına keçmək istədiyinizdən əminsiniz?
                     </p>
 
-                    {action === 'switch' && wallet.creditAzn > 0 ? (
-                        <div className={`rounded-xl p-4 mb-5 text-sm space-y-2 ${isFreeSwitch ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                    {action === 'switch' ? (
+                        // Always show the breakdown on switches so the teacher
+                        // can see exactly how their existing balance gets
+                        // applied — even when the credit is 0 (i.e. coming
+                        // from the free Başlanğıc plan), being explicit beats
+                        // a vague "Ödəniləcək: 2.00 AZN" that looks like the
+                        // discount system isn't engaged.
+                        <div className={`rounded-xl p-4 mb-4 text-sm space-y-2 ${
+                            isFreeSwitch ? 'bg-emerald-50'
+                                : wallet.creditAzn > 0 ? 'bg-amber-50'
+                                : 'bg-gray-50'
+                        }`}>
                             <div className="flex justify-between text-gray-600">
-                                <span>Plan qiyməti ({selectedMonths} ay)</span>
+                                <span>Yeni planın qiyməti ({selectedMonths} ay)</span>
                                 <span>{(plan.price * selectedMonths).toFixed(2)} AZN</span>
                             </div>
-                            <div className={`flex justify-between font-semibold ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                <span>Cari plan krediti</span>
-                                <span>−{wallet.creditAzn.toFixed(2)} AZN</span>
-                            </div>
-                            <div className={`flex justify-between font-bold pt-2 border-t ${isFreeSwitch ? 'border-emerald-200 text-emerald-800' : 'border-amber-200 text-gray-900'}`}>
-                                <span>Ödəniləcək</span>
+                            {wallet.creditAzn > 0 ? (
+                                <div className={`flex justify-between font-semibold ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                    <span>Cari planın qalan dəyəri{wallet.remainingDays != null ? ` (${wallet.remainingDays} gün)` : ''}</span>
+                                    <span>−{wallet.creditAzn.toFixed(2)} AZN</span>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between text-gray-400 text-[12.5px]">
+                                    <span>Cari planın qalıq krediti</span>
+                                    <span>0.00 AZN</span>
+                                </div>
+                            )}
+                            <div className={`flex justify-between font-bold pt-2 border-t ${
+                                isFreeSwitch ? 'border-emerald-200 text-emerald-800'
+                                    : wallet.creditAzn > 0 ? 'border-amber-200 text-gray-900'
+                                    : 'border-gray-200 text-gray-900'
+                            }`}>
+                                <span>Hesabınızdan çıxılacaq</span>
                                 <span>{isFreeSwitch ? 'Pulsuz' : wallet.chargeAmount.toFixed(2) + ' AZN'}</span>
                             </div>
                             <div className="flex justify-between text-gray-600 pt-1">
-                                <span>Müddət</span>
-                                <span>{wallet.durationDays} gün</span>
+                                <span>{isFreeSwitch ? 'Yeni planın müddəti' : 'Müddət'}</span>
+                                <span className="font-semibold text-gray-800">{wallet.durationDays} gün</span>
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-gray-50 rounded-xl p-4 mb-5 text-sm">
+                        <div className="bg-gray-50 rounded-xl p-4 mb-4 text-sm">
                             <div className="flex justify-between font-semibold text-gray-800">
                                 <span>Ödəniləcək məbləğ</span>
                                 <span>{(plan.price * selectedMonths).toFixed(2)} AZN</span>
@@ -477,6 +532,58 @@ const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, onConfirm
                                 <span>Müddət</span>
                                 <span>{selectedMonths * 30} gün</span>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Plan diff — only on actual plan switches. For free switches
+                        the teacher specifically wanted to see WHAT they're getting
+                        (or giving up) before confirming. */}
+                    {showDiffs && hasAnyDiff && (
+                        <div className="rounded-xl border border-gray-200 p-4 mb-5 text-[13px] space-y-3 max-h-56 overflow-y-auto">
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                                {currentPlan.name} → {plan.name}
+                            </div>
+                            {diffs.numericChanges.length > 0 && (
+                                <ul className="space-y-1">
+                                    {diffs.numericChanges.map((c, i) => (
+                                        <li key={i} className="flex items-start gap-2">
+                                            <span className={`shrink-0 mt-0.5 text-[14px] font-bold ${c.up ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                {c.up ? '↑' : '↓'}
+                                            </span>
+                                            <span className="flex-1 text-gray-700">
+                                                {c.label}: <span className="text-gray-400 line-through">{c.from}</span>{' '}
+                                                <span className={`font-semibold ${c.up ? 'text-emerald-700' : 'text-amber-700'}`}>{c.to}</span>
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            {diffs.gained.length > 0 && (
+                                <div>
+                                    <div className="text-[11px] font-bold text-emerald-700 mb-1">Yeni açılan imkanlar</div>
+                                    <ul className="space-y-1">
+                                        {diffs.gained.map((g, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-gray-700">
+                                                <HiOutlineCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                                <span>{g}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {diffs.lost.length > 0 && (
+                                <div>
+                                    <div className="text-[11px] font-bold text-amber-700 mb-1">İtirəcəyiniz imkanlar</div>
+                                    <ul className="space-y-1">
+                                        {diffs.lost.map((l, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-gray-600">
+                                                <HiOutlineX className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                                <span>{l}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -540,7 +647,7 @@ const Pricing = ({ isEmbedded = false }) => {
     const getWalletInfo = (plan) => {
         const baseCharge = plan.price * selectedMonths;
         const baseDuration = selectedMonths * 30;
-        const empty = { creditAzn: 0, chargeAmount: baseCharge, durationDays: baseDuration, bonusDays: 0, isFree: false };
+        const empty = { creditAzn: 0, chargeAmount: baseCharge, durationDays: baseDuration, bonusDays: 0, remainingDays: 0, isFree: false };
         if (!subscription || !subscription.startDate || !subscription.endDate) return empty;
         if (subscription.plan?.id === plan.id || !plan.price) return empty;
         const totalDays = Math.max(1, Math.floor(
@@ -550,13 +657,22 @@ const Pricing = ({ isEmbedded = false }) => {
             (new Date(subscription.endDate) - Date.now()) / 86400000
         ));
         if (remainingDays === 0) return empty;
-        const oldDailyRate = (subscription.amountPaid || 0) / totalDays;
+        // Prefer the actual amount paid for the active subscription; fall back
+        // to the current plan's list price ÷ 30 when amountPaid is missing
+        // (older subscriptions, gift codes, or backend not surfacing the field
+        // were producing daily-rate=0 here and the credit silently collapsed).
+        const currentPlanPrice = subscription.plan?.price || 0;
+        const fallbackDailyRate = currentPlanPrice / 30;
+        const paidDailyRate = subscription.amountPaid && subscription.amountPaid > 0
+            ? subscription.amountPaid / totalDays
+            : 0;
+        const oldDailyRate = paidDailyRate > 0 ? paidDailyRate : fallbackDailyRate;
         const creditAzn = oldDailyRate * remainingDays;
         const chargeAmount = Math.max(0, baseCharge - creditAzn);
         const totalValue = creditAzn + chargeAmount;
         const durationDays = Math.floor(totalValue / (plan.price / 30));
         const bonusDays = Math.max(0, durationDays - baseDuration);
-        return { creditAzn, chargeAmount, durationDays, bonusDays, isFree: chargeAmount === 0 };
+        return { creditAzn, chargeAmount, durationDays, bonusDays, remainingDays, isFree: chargeAmount === 0 };
     };
 
     const getPlanAction = (plan) => {
@@ -670,6 +786,7 @@ const Pricing = ({ isEmbedded = false }) => {
                 confirmModal={confirmModal}
                 setConfirmModal={setConfirmModal}
                 selectedMonths={selectedMonths}
+                currentPlan={subscription?.plan}
                 onConfirm={() => handleSubscribe(confirmModal.plan.id)}
             />
         </>

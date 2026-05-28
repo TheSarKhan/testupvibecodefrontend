@@ -265,7 +265,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 </div>
                 <div className="flex-1">
                     <h2 className="text-lg font-bold text-gray-900">AI ilə Sual Yarat</h2>
-                    <p className="text-xs text-gray-400">Gemini 2.0 Flash · {subjectName}</p>
+                    <p className="text-xs text-gray-400">GPT-4o · {subjectName}</p>
                 </div>
                 {aiUsage && (
                     <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${

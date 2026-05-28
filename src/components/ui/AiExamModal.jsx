@@ -164,7 +164,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                             <div className="flex-1">
                                 <h2 className="text-lg font-extrabold leading-tight">AI ilə İmtahan Yarat</h2>
                                 <p className="text-xs text-blue-200 mt-0.5">
-                                    Groq LLaMA 3.3{selectedSubject ? ` · ${selectedSubject}` : ''}
+                                    GPT-4o{selectedSubject ? ` · ${selectedSubject}` : ''}
                                 </p>
                             </div>
                             {aiUsage && (

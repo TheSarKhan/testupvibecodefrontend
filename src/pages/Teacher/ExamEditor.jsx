@@ -1839,27 +1839,44 @@ const ExamEditor = () => {
                                         <div className="w-3.5 h-3.5 border-2 border-[var(--ink-200)] border-t-[var(--brand-green-600)] rounded-full animate-spin" />
                                         Mövzular yüklənir...
                                     </div>
-                                ) : aiTopics.length > 0 ? (
-                                    <select
-                                        value={aiForm.topic}
-                                        onChange={e => setAiForm(f => ({ ...f, topic: e.target.value }))}
-                                        className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] focus:ring-2 focus:ring-[var(--brand-green-600)]/30 focus:border-[var(--brand-green-600)] outline-none text-[13px] bg-white"
-                                        autoFocus
-                                    >
-                                        <option value="">Mövzu seçin...</option>
-                                        {aiTopics.map(t => (
-                                            <option key={t.id} value={t.name}>{t.name}{t.gradeLevel ? ` (${t.gradeLevel})` : ''}</option>
-                                        ))}
-                                    </select>
                                 ) : (
-                                    <input
-                                        type="text"
-                                        value={aiForm.topic}
-                                        onChange={e => setAiForm(f => ({ ...f, topic: e.target.value }))}
-                                        placeholder="məs. Kvadrat tənliklər, Past Simple..."
-                                        className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] focus:ring-2 focus:ring-[var(--brand-green-600)]/30 focus:border-[var(--brand-green-600)] outline-none text-[13px]"
-                                        autoFocus
-                                    />
+                                    // Combobox: native <datalist> lets the teacher pick a
+                                    // curriculum topic from the backend list OR type any
+                                    // custom topic (useful for subjects without a fixed
+                                    // taxonomy and for ad-hoc sub-topics). The backend
+                                    // accepts free-text topicName, so no extra mapping is
+                                    // needed — whatever the teacher types is forwarded.
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            list="ai-exam-topic-suggestions"
+                                            value={aiForm.topic}
+                                            onChange={e => setAiForm(f => ({ ...f, topic: e.target.value }))}
+                                            placeholder={aiTopics.length > 0
+                                                ? 'Siyahıdan seç və ya öz mövzunu yaz...'
+                                                : 'məs. Kvadrat tənliklər, Past Simple...'}
+                                            className="w-full px-3.5 py-2.5 pr-9 rounded-2xl border border-[var(--ink-200)] focus:ring-2 focus:ring-[var(--brand-green-600)]/30 focus:border-[var(--brand-green-600)] outline-none text-[13px] bg-white"
+                                            autoFocus
+                                        />
+                                        {aiTopics.length > 0 && (
+                                            <>
+                                                <datalist id="ai-exam-topic-suggestions">
+                                                    {aiTopics.map(t => (
+                                                        <option
+                                                            key={t.id}
+                                                            value={t.name}
+                                                        >{t.gradeLevel ? `${t.gradeLevel}` : ''}</option>
+                                                    ))}
+                                                </datalist>
+                                                <svg
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--ink-400)] pointer-events-none"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             <div>

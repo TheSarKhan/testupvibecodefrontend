@@ -30,7 +30,11 @@ const DIFFICULTY_COLORS = {
     MEDIUM: 'bg-yellow-50 text-yellow-700',
     HARD: 'bg-red-50 text-red-700',
 };
-const GRADE_LEVELS = ['1-4', '5-8', '9-11', 'Buraxılış'];
+// Keep in sync with QuestionBankSubject.GRADE_LEVELS — per-class
+// granularity. Backend stores gradeLevel as a free string, so any value
+// already saved (including the legacy '1-4'/'5-8'/'9-11' buckets) still
+// works; this constant only drives the picker UI.
+const GRADE_LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
 
 /**
  * BankPickerModal

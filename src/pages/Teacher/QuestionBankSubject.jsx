@@ -48,7 +48,11 @@ const DIFFICULTY_COLORS = {
     HARD: 'bg-red-50 text-red-700',
 };
 
-const GRADE_LEVELS = ['1-4', '5-8', '9-11', 'Buraxılış'];
+// Per-class granularity (was '1-4' / '5-8' / '9-11' grouped buckets).
+// Old questions saved with the legacy buckets still render in lists since
+// `gradeLevel` is a free-text string in the backend; only the picker UI
+// here changes. The filter dropdown reflects this list too.
+const GRADE_LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
 
 const SORT_OPTIONS = [
     { value: 'order',           label: 'Sıra üzrə' },
@@ -514,13 +518,13 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
                             <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
                                 <span className="inline-block w-1 h-3.5 bg-sky-500 rounded-full" /> Sinif
                             </label>
-                            <div className="flex items-center gap-1.5 flex-wrap">
+                            <div className="flex items-center gap-1 flex-wrap">
                                 {GRADE_LEVELS.map(g => {
                                     const active = local.gradeLevel === g;
                                     return (
                                         <button key={g} type="button"
                                             onClick={() => setLocal(p => ({ ...p, gradeLevel: p.gradeLevel === g ? null : g }))}
-                                            className={`px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                                            className={`min-w-[2.25rem] px-2 py-1.5 rounded-lg text-xs font-bold border-2 transition-all ${
                                                 active ? 'bg-sky-500 text-white border-sky-500' : 'bg-white text-sky-700 border-sky-200 hover:border-sky-400 hover:bg-sky-50'
                                             }`}>
                                             {g}
@@ -529,7 +533,7 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
                                 })}
                                 {local.gradeLevel && (
                                     <button type="button" onClick={() => setLocal(p => ({ ...p, gradeLevel: null }))}
-                                        className="px-2 py-2 text-xs text-gray-500 hover:bg-gray-100 rounded-xl"><HiOutlineX className="w-4 h-4" /></button>
+                                        className="px-1.5 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg"><HiOutlineX className="w-3.5 h-3.5" /></button>
                                 )}
                             </div>
                         </div>

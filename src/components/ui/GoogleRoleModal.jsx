@@ -83,7 +83,7 @@ const GoogleRoleModal = ({ accessToken, userInfo, onSuccess, onClose }) => {
                         {role === 'TEACHER' && (
                             <p className="mt-2 text-xs text-blue-600 flex items-center gap-1">
                                 <HiOutlineSparkles className="w-3.5 h-3.5" />
-                                Müəllim kimi qeydiyyat keçin — 3 aylıq Basic plan hədiyyəsi alın!
+                                Müəllim kimi qeydiyyat keçin — 2 aylıq Standart plan hədiyyəsi alın!
                             </p>
                         )}
                     </div>

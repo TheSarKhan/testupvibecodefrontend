@@ -657,16 +657,18 @@ const Pricing = ({ isEmbedded = false }) => {
             (new Date(subscription.endDate) - Date.now()) / 86400000
         ));
         if (remainingDays === 0) return empty;
-        // Prefer the actual amount paid for the active subscription; fall back
-        // to the current plan's list price ÷ 30 when amountPaid is missing
-        // (older subscriptions, gift codes, or backend not surfacing the field
-        // were producing daily-rate=0 here and the credit silently collapsed).
-        const currentPlanPrice = subscription.plan?.price || 0;
-        const fallbackDailyRate = currentPlanPrice / 30;
+        // Credit ONLY when the active subscription was actually paid in cash.
+        // Gift / welcome-bonus and internal credit-rollovers store
+        // amountPaid=0, so they should never generate a credit on the
+        // upgrade path — otherwise a new teacher with the 60-day Standart
+        // gift could roll it into ~20 free days of Pro. The backend enforces
+        // the same rule; this mirror is for UX so the popup shows
+        // "Cari planın qalıq krediti: 0" instead of a fake non-zero number.
         const paidDailyRate = subscription.amountPaid && subscription.amountPaid > 0
             ? subscription.amountPaid / totalDays
             : 0;
-        const oldDailyRate = paidDailyRate > 0 ? paidDailyRate : fallbackDailyRate;
+        if (paidDailyRate <= 0) return { ...empty, remainingDays };
+        const oldDailyRate = paidDailyRate;
         const creditAzn = oldDailyRate * remainingDays;
         const chargeAmount = Math.max(0, baseCharge - creditAzn);
         const totalValue = creditAzn + chargeAmount;

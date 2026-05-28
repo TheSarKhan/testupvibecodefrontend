@@ -91,7 +91,7 @@ const RegisterBrand = ({ role }) => {
                 </h1>
                 <p className="text-white/75 text-[15px] xl:text-[16px] leading-relaxed max-w-[440px]">
                     {isTeacher ? (
-                        <>Müəllim kimi qeydiyyatdan keçin — <strong className="text-white font-semibold">3 aylıq Peşəkar plan</strong> sizindir. Pulsuz.</>
+                        <>Müəllim kimi qeydiyyatdan keçin — <strong className="text-white font-semibold">2 aylıq Standart plan</strong> sizindir. Pulsuz.</>
                     ) : isStudent ? (
                         <>Hesabınızı yaradın, imtahanlara qoşulun, nəticələrinizi və inkişafınızı bir yerdə izləyin.</>
                     ) : (
@@ -465,11 +465,11 @@ const WelcomeGiftModal = ({ onClose }) => (
             <div className="p-6 text-center">
                 <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-[12.5px] font-bold px-3 py-1.5 rounded-full mb-4">
                     <HiOutlineSparkles className="w-3.5 h-3.5" />
-                    3 aylıq Basic plan — Pulsuz hədiyyə!
+                    2 aylıq Standart plan — Pulsuz hədiyyə!
                 </div>
                 <p className="text-[var(--ink-600)] text-[13.5px] leading-relaxed mb-5">
                     Müəllim kimi qeydiyyatdan keçdiyiniz üçün sizə{' '}
-                    <strong className="text-[var(--ink-900)]">3 aylıq Basic abunəlik</strong> hədiyyə edildi.
+                    <strong className="text-[var(--ink-900)]">2 aylıq Standart abunəlik</strong> hədiyyə edildi.
                 </p>
                 <div className="grid grid-cols-2 gap-2 mb-5 text-left">
                     {['Sınırsız sual bazası', 'PDF yükləmə', 'Detallı statistika', 'Şablon imtahanlar'].map(f => (

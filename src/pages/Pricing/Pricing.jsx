@@ -460,6 +460,126 @@ const computePlanDiffs = (currentPlan, targetPlan) => {
     return { gained, lost, numericChanges };
 };
 
+// Dedicated popup for the case where the teacher's remaining credit fully
+// covers the new plan — keeps the success messaging separated from the regular
+// "you will be charged X AZN" flow so it doesn't read like a payment confirm.
+const FreeSwitchModal = ({ confirmModal, setConfirmModal, selectedMonths, currentPlan, onConfirm }) => {
+    if (!confirmModal) return null;
+    const { plan, wallet } = confirmModal;
+    const diffs = currentPlan && currentPlan.id !== plan.id ? computePlanDiffs(currentPlan, plan) : null;
+    const hasAnyDiff = diffs && (diffs.gained.length > 0 || diffs.lost.length > 0 || diffs.numericChanges.length > 0);
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                <button onClick={() => setConfirmModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <HiOutlineX className="w-5 h-5" />
+                </button>
+                <div className="px-6 pt-7 pb-6">
+                    <div className="flex flex-col items-center text-center mb-5">
+                        <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                            <HiOutlineCheck className="w-7 h-7 text-emerald-600" />
+                        </div>
+                        <h3 className="text-lg font-bold text-[var(--ink-900)]">Pulsuz keçid mümkündür</h3>
+                        <p className="text-sm text-[var(--ink-500)] mt-1">
+                            Cari planınızın qalıq krediti <span className="font-semibold text-[var(--ink-800)]">{plan.name}</span> planına keçidi tam ödəyir.
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl p-4 mb-4 text-sm space-y-2 bg-emerald-50">
+                        <div className="flex justify-between text-gray-600">
+                            <span>Yeni planın qiyməti ({selectedMonths} ay)</span>
+                            <span>{(plan.price * selectedMonths).toFixed(2)} AZN</span>
+                        </div>
+                        <div className="flex justify-between font-semibold text-emerald-700">
+                            <span>Cari planın qalan dəyəri{wallet.remainingDays != null ? ` (${wallet.remainingDays} gün)` : ''}</span>
+                            <span>−{wallet.creditAzn.toFixed(2)} AZN</span>
+                        </div>
+                        <div className="flex justify-between font-bold pt-2 border-t border-emerald-200 text-emerald-800">
+                            <span>Hesabınızdan çıxılacaq</span>
+                            <span>Pulsuz</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600 pt-1">
+                            <span>Yeni planın müddəti</span>
+                            <span className="font-semibold text-gray-800">{wallet.durationDays} gün</span>
+                        </div>
+                        {wallet.bonusDays > 0 && (
+                            <div className="flex justify-between text-emerald-700 text-[12.5px]">
+                                <span>Bonus müddət</span>
+                                <span className="font-semibold">+{wallet.bonusDays} gün</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {hasAnyDiff && (
+                        <div className="rounded-xl border border-gray-200 p-4 mb-5 text-[13px] space-y-3 max-h-56 overflow-y-auto">
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                                {currentPlan.name} → {plan.name}
+                            </div>
+                            {diffs.numericChanges.length > 0 && (
+                                <ul className="space-y-1">
+                                    {diffs.numericChanges.map((c, i) => (
+                                        <li key={i} className="flex items-start gap-2">
+                                            <span className={`shrink-0 mt-0.5 text-[14px] font-bold ${c.up ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                {c.up ? '↑' : '↓'}
+                                            </span>
+                                            <span className="flex-1 text-gray-700">
+                                                {c.label}: <span className="text-gray-400 line-through">{c.from}</span>{' '}
+                                                <span className={`font-semibold ${c.up ? 'text-emerald-700' : 'text-amber-700'}`}>{c.to}</span>
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            {diffs.gained.length > 0 && (
+                                <div>
+                                    <div className="text-[11px] font-bold text-emerald-700 mb-1">Yeni açılan imkanlar</div>
+                                    <ul className="space-y-1">
+                                        {diffs.gained.map((g, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-gray-700">
+                                                <HiOutlineCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                                <span>{g}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {diffs.lost.length > 0 && (
+                                <div>
+                                    <div className="text-[11px] font-bold text-amber-700 mb-1">İtirəcəyiniz imkanlar</div>
+                                    <ul className="space-y-1">
+                                        {diffs.lost.map((l, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-gray-600">
+                                                <HiOutlineX className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                                <span>{l}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setConfirmModal(null)}
+                            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                        >
+                            Ləğv et
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[#06351A] bg-[var(--accent)] hover:bg-[var(--brand-green-600)] hover:text-white inline-flex items-center justify-center gap-2"
+                        >
+                            <HiOutlineCheck className="w-4 h-4" />
+                            Pulsuz keç
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, currentPlan, onConfirm }) => {
     if (!confirmModal) return null;
     const { plan, action, wallet, isFreeSwitch } = confirmModal;
@@ -657,20 +777,36 @@ const Pricing = ({ isEmbedded = false }) => {
             (new Date(subscription.endDate) - Date.now()) / 86400000
         ));
         if (remainingDays === 0) return empty;
-        // Credit ONLY when the active subscription was actually paid in cash.
-        // Gift / welcome-bonus and internal credit-rollovers store
-        // amountPaid=0, so they should never generate a credit on the
-        // upgrade path — otherwise a new teacher with the 60-day Standart
-        // gift could roll it into ~20 free days of Pro. The backend enforces
-        // the same rule; this mirror is for UX so the popup shows
-        // "Cari planın qalıq krediti: 0" instead of a fake non-zero number.
-        const paidDailyRate = subscription.amountPaid && subscription.amountPaid > 0
+        // Credit policy (mirrors PaymentController):
+        //   - Paid (amountPaid > 0): prorated cash credit, capped at the
+        //     remaining listed value so previous credit rollovers can't
+        //     compound into more than the time is worth.
+        //   - Gift / admin-assigned (amountPaid = 0): list-price credit ONLY
+        //     when switching to an equal-or-cheaper tier. The cash guard exists
+        //     to block gift→higher-tier rollover abuse (e.g. 60-day Standart
+        //     gift → ~20 free Pro days); downgrades and lateral moves don't
+        //     have that risk because the user is reducing what they already
+        //     hold rather than extracting more value.
+        const currentPlanPrice = subscription.plan?.price || 0;
+        const remainingListedValue = (currentPlanPrice / 30) * remainingDays;
+        const paidDailyRate = subscription.amountPaid > 0
             ? subscription.amountPaid / totalDays
             : 0;
-        if (paidDailyRate <= 0) return { ...empty, remainingDays };
-        const oldDailyRate = paidDailyRate;
-        const creditAzn = oldDailyRate * remainingDays;
-        const chargeAmount = Math.max(0, baseCharge - creditAzn);
+        let rawCredit;
+        if (paidDailyRate > 0) {
+            rawCredit = Math.min(paidDailyRate * remainingDays, remainingListedValue);
+        } else if (plan.price <= currentPlanPrice) {
+            rawCredit = remainingListedValue;
+        } else {
+            rawCredit = 0;
+        }
+        const rawCharge = Math.max(0, baseCharge - rawCredit);
+        // Round to AZN cents so the displayed value (toFixed(2)) matches what
+        // `chargeAmount === 0` decides — without this, float drift leaves e.g.
+        // 0.00004 AZN which renders as "0.00 AZN" but never trips the isFree
+        // branch, leaving the user with a meaningless zero charge label.
+        const creditAzn = Math.round(rawCredit * 100) / 100;
+        const chargeAmount = Math.round(rawCharge * 100) / 100;
         const totalValue = creditAzn + chargeAmount;
         const durationDays = Math.floor(totalValue / (plan.price / 30));
         const bonusDays = Math.max(0, durationDays - baseDuration);
@@ -784,13 +920,23 @@ const Pricing = ({ isEmbedded = false }) => {
             <CompareTable plans={plans} />
             <ExtraCTA />
             <PlansFAQ />
-            <ConfirmModal
-                confirmModal={confirmModal}
-                setConfirmModal={setConfirmModal}
-                selectedMonths={selectedMonths}
-                currentPlan={subscription?.plan}
-                onConfirm={() => handleSubscribe(confirmModal.plan.id)}
-            />
+            {confirmModal?.isFreeSwitch ? (
+                <FreeSwitchModal
+                    confirmModal={confirmModal}
+                    setConfirmModal={setConfirmModal}
+                    selectedMonths={selectedMonths}
+                    currentPlan={subscription?.plan}
+                    onConfirm={() => handleSubscribe(confirmModal.plan.id)}
+                />
+            ) : (
+                <ConfirmModal
+                    confirmModal={confirmModal}
+                    setConfirmModal={setConfirmModal}
+                    selectedMonths={selectedMonths}
+                    currentPlan={subscription?.plan}
+                    onConfirm={() => handleSubscribe(confirmModal.plan.id)}
+                />
+            )}
         </>
     );
 

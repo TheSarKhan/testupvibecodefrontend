@@ -231,12 +231,6 @@ const PaymentSuccess = () => {
                             </Link>
                         </div>
                     )}
-
-                    {/* Receipt note */}
-                    <p className="mt-5 text-[11.5px] text-[var(--ink-400)] flex items-center justify-center gap-1.5">
-                        <HiOutlineShieldCheck className="w-3.5 h-3.5" />
-                        Qəbz emailinizə göndərildi
-                    </p>
                 </ResultCard>
             </PaymentShell>
         );

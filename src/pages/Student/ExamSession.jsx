@@ -36,6 +36,25 @@ const ExamSession = () => {
         try { localStorage.setItem(listenCountsStorageKey, JSON.stringify(listenCounts)); }
         catch { /* localStorage full / disabled — best-effort */ }
     }, [listenCounts, listenCountsStorageKey]);
+    // listenActive: { [passageId]: true } — a listen that has been started but
+    // not yet played to its natural end. The audio player unmounts whenever the
+    // student navigates to another question, so without this flag, pressing Play
+    // again to *resume* an interrupted listen would be miscounted as a brand-new
+    // listen and burn a credit (BUG-256). Persisted alongside listenCounts so it
+    // survives navigation and refresh.
+    const listenActiveStorageKey = sessionId ? `examListenActive:${sessionId}` : null;
+    const [listenActive, setListenActive] = useState(() => {
+        if (!listenActiveStorageKey) return {};
+        try {
+            const raw = localStorage.getItem(listenActiveStorageKey);
+            return raw ? JSON.parse(raw) : {};
+        } catch { return {}; }
+    });
+    useEffect(() => {
+        if (!listenActiveStorageKey) return;
+        try { localStorage.setItem(listenActiveStorageKey, JSON.stringify(listenActive)); }
+        catch { /* best-effort */ }
+    }, [listenActive, listenActiveStorageKey]);
     const [zoomImage, setZoomImage] = useState(null);
     const autoSubmitRef = useRef(false);
     const navScrollRef = useRef(null);
@@ -479,6 +498,8 @@ const ExamSession = () => {
                             passage={currentSection.data}
                             listenCounts={listenCounts}
                             setListenCounts={setListenCounts}
+                            listenActive={listenActive}
+                            setListenActive={setListenActive}
                             onZoomImage={setZoomImage}
                         />
                         {(currentSection.data.questions || []).map((q) => (
@@ -600,7 +621,7 @@ const ExamSession = () => {
 // Seeking is also blocked at the media-element level (any `seeking` event
 // snaps `currentTime` back to the last allowed position) so even keyboard
 // shortcuts can't bypass the UI.
-const SecureAudioPlayer = ({ src, disabled, onStart }) => {
+const SecureAudioPlayer = ({ src, disabled, resuming, onStart, onEnded }) => {
     const audioRef = useRef(null);
     const [playing, setPlaying] = useState(false);
     // Once a play session has started this stays true until the audio
@@ -669,7 +690,9 @@ const SecureAudioPlayer = ({ src, disabled, onStart }) => {
                 disabled={disabled || hasStarted}
                 className="w-11 h-11 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center transition-colors shadow disabled:cursor-not-allowed disabled:bg-emerald-500"
                 aria-label="Oynat"
-                title={hasStarted ? 'Dinləmə başlayıb — dayandırıla bilməz' : 'Oynat'}
+                title={hasStarted
+                    ? 'Dinləmə başlayıb — dayandırıla bilməz'
+                    : (resuming ? 'Dinləməyə davam et (haqq azalmır)' : 'Oynat')}
             >
                 {hasStarted ? (
                     // Animated "playing" indicator (3 vertical bars). Tells
@@ -704,6 +727,9 @@ const SecureAudioPlayer = ({ src, disabled, onStart }) => {
                     setHasStarted(false);
                     hasStartedRef.current = false;
                     lastAllowedTimeRef.current = 0;
+                    // Tell the parent the listen finished naturally so the next
+                    // Play press is treated as a new listen, not a resume.
+                    onEnded?.();
                 }}
                 onPause={(e) => {
                     // The student (or an OS-level media key) tried to pause
@@ -723,19 +749,40 @@ const SecureAudioPlayer = ({ src, disabled, onStart }) => {
 };
 
 // ---- PassageContentCard — shown above each passage question ----
-const PassageContentCard = ({ passage, listenCounts, setListenCounts, onZoomImage }) => {
+const PassageContentCard = ({ passage, listenCounts, setListenCounts, listenActive, setListenActive, onZoomImage }) => {
     const isText = passage.passageType === 'TEXT';
     const listenCount = listenCounts[passage.id] || 0;
     const isLimited = passage.listenLimit !== null && passage.listenLimit !== undefined;
-    const limitReached = isLimited && listenCount >= passage.listenLimit;
+    // A listen that was started but hasn't ended yet. While one is active the
+    // student may resume it (e.g. after navigating away) without spending
+    // another credit, so the limit does not block playback in that case.
+    const active = !!listenActive[passage.id];
+    const limitReached = isLimited && listenCount >= passage.listenLimit && !active;
 
     // Count a listen the moment the student clicks Play — not when the
     // audio reaches its end. Otherwise refreshing mid-track or simply
     // navigating away wipes the in-progress play and the limit is never
     // hit. Together with the localStorage persistence of `listenCounts`
     // this makes the cap actually enforceable.
+    //
+    // A resume of an already-active listen must NOT increment the counter:
+    // navigating to another question unmounts the audio player, and pressing
+    // Play again to continue is the same listen, not a new one (BUG-256).
     const handleAudioStarted = () => {
+        if (active) return; // resuming an in-progress listen — already counted
         if (isLimited) setListenCounts(prev => ({ ...prev, [passage.id]: (prev[passage.id] || 0) + 1 }));
+        setListenActive(prev => ({ ...prev, [passage.id]: true }));
+    };
+
+    // The track reached its natural end — the listen is complete, so the next
+    // Play press is a genuinely new listen and should count again.
+    const handleAudioEnded = () => {
+        setListenActive(prev => {
+            if (!prev[passage.id]) return prev;
+            const next = { ...prev };
+            delete next[passage.id];
+            return next;
+        });
     };
 
     return (
@@ -772,7 +819,9 @@ const PassageContentCard = ({ passage, listenCounts, setListenCounts, onZoomImag
                             <SecureAudioPlayer
                                 src={passage.audioContent}
                                 disabled={limitReached}
+                                resuming={active}
                                 onStart={handleAudioStarted}
+                                onEnded={handleAudioEnded}
                             />
                         ) : (
                             <div className="p-8 text-center text-gray-400 border-2 border-dashed rounded-xl">Audio fayl mövcud deyil</div>

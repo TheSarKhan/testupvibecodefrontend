@@ -953,8 +953,9 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             ) : (
                                 <input
                                     type="number"
-                                    min="1"
+                                    min="0.5"
                                     max="100"
+                                    step="0.5"
                                     // `value ?? ''` lets the input go briefly empty while the
                                     // teacher backspaces over "1" to type "5". Earlier
                                     // `parseFloat(value) || 1` snapped to 1 on every empty
@@ -968,14 +969,16 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                             handleChange('points', null);
                                             return;
                                         }
-                                        const n = parseInt(raw, 10);
+                                        // parseFloat (not parseInt) so decimal scores like 1.5
+                                        // are preserved instead of being truncated to 1.
+                                        const n = parseFloat(raw);
                                         if (Number.isFinite(n)) {
-                                            handleChange('points', Math.min(100, Math.max(1, n)));
+                                            handleChange('points', Math.min(100, Math.max(0.5, n)));
                                         }
                                     }}
                                     onBlur={(e) => {
-                                        const n = parseInt(e.target.value, 10);
-                                        if (!Number.isFinite(n) || n < 1) handleChange('points', 1);
+                                        const n = parseFloat(e.target.value);
+                                        if (!Number.isFinite(n) || n < 0.5) handleChange('points', 1);
                                     }}
                                     className="w-16 bg-transparent border-none p-0 text-sm focus:ring-0 font-bold text-blue-700"
                                 />

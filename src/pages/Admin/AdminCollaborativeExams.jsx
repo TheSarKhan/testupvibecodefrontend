@@ -19,19 +19,11 @@ import CreateModal from './collaborative-exams/CreateModal';
 import ReviewModal from './collaborative-exams/ReviewModal';
 import { STATUS_CONFIG } from './collaborative-exams/constants';
 import Pagination from '../../components/admin/Pagination';
-import { fmtDate } from '../../utils/date';
+import { formatRelativeTime } from '../../utils/date';
 
-const formatRelative = (iso) => {
-    if (!iso) return null;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return null;
-    const diff = (Date.now() - d.getTime()) / 1000;
-    if (diff < 60) return 'indicə';
-    if (diff < 3600) return `${Math.floor(diff / 60)} dəq öncə`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} saat öncə`;
-    if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} gün öncə`;
-    return fmtDate(d);
-};
+// Shared helper (utils/date) — parses naked backend timestamps as UTC, fixing
+// the per-page `new Date(iso)` drift (BUG-10).
+const formatRelative = (iso) => formatRelativeTime(iso) || null;
 
 const ProgressBar = ({ approved, pending, rejected, total }) => {
     if (!total) return null;

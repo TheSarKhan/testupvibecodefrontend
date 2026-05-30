@@ -12,7 +12,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
-import { fmtDateShort, parseBackendDate } from '../../utils/date';
+import { formatRelativeTime } from '../../utils/date';
 import { NOTIFICATION_TYPE_LABELS, labelOr } from '../../utils/enumLabels';
 
 const Navbar = () => {
@@ -217,19 +217,9 @@ const Navbar = () => {
         navigate('/');
     };
 
-    const fmtTime = (iso) => {
-        // Backend sends LocalDateTime without timezone (e.g. "2026-03-25T18:30:00").
-        // parseBackendDate treats naked ISO strings as UTC so notifications
-        // render in the user's *local* time regardless of where the server runs.
-        const d = parseBackendDate(iso);
-        if (!d) return '';
-        const now = new Date();
-        const diff = Math.floor((now - d) / 60000);
-        if (diff < 1) return 'İndicə';
-        if (diff < 60) return `${diff} dəq əvvəl`;
-        if (diff < 1440) return `${Math.floor(diff / 60)} saat əvvəl`;
-        return fmtDateShort(d);
-    };
+    // Shared relative-time helper (utils/date) — single source of truth so
+    // notification timestamps parse identically to every other page.
+    const fmtTime = formatRelativeTime;
 
     const UserAvatar = ({ size = 'sm' }) => {
         const cls = size === 'sm' ? 'h-8 w-8 text-[12.5px]' : 'h-10 w-10 text-[14px]';

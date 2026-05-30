@@ -52,6 +52,7 @@ import {
 } from 'react-icons/hi';
 import { useAdminLogs } from '../../hooks/admin/useAdminLogs';
 import Pagination from '../../components/admin/Pagination';
+import { formatRelativeTime, parseBackendDate } from '../../utils/date';
 
 // ─── Action metadata: icon + label + intent color ──────────────────────────
 // intent: emerald (create/success) | blue (update/auth) | rose (delete/fail) |
@@ -201,23 +202,17 @@ const PERIODS = [
     { key: 'MONTH', label: 'Bu ay' },
 ];
 
-const relativeTime = (isoStr) => {
-    if (!isoStr) return '';
-    const diff = Date.now() - new Date(isoStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'İndicə';
-    if (mins < 60) return `${mins} dəq əvvəl`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} saat əvvəl`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return 'Dünən';
-    return `${days} gün əvvəl`;
-};
+// Shared helper (utils/date) — single source of truth, parses naked backend
+// timestamps as UTC instead of local time (BUG-10).
+const relativeTime = (isoStr) => formatRelativeTime(isoStr);
 
 const formatExact = (isoStr) => {
-    if (!isoStr) return '';
+    // Normalise through parseBackendDate so the exact tooltip matches the
+    // relative label instead of drifting by the server offset.
+    const d = parseBackendDate(isoStr);
+    if (!d) return '';
     try {
-        return new Date(isoStr).toLocaleString('az-AZ', {
+        return d.toLocaleString('az-AZ', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit', second: '2-digit',
         });

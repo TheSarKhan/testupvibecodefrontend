@@ -60,3 +60,24 @@ export const fmtTime = (v) => {
 // Exposed so callers that need a `Date` (e.g. relative-time diffs) parse the
 // backend's naked LocalDateTime strings as UTC instead of local time.
 export const parseBackendDate = toDate;
+
+/**
+ * Relative time in Azerbaijani: "İndicə" / "5 dəq əvvəl" / "3 saat əvvəl",
+ * falling back to a compact "DD.MM" once the event is older than a day.
+ *
+ * Single source of truth — every page that shows a relative timestamp must use
+ * this so parsing stays consistent. It goes through parseBackendDate(), which
+ * normalises naked backend timestamps to UTC; calling `new Date(iso)` directly
+ * (the old per-page pattern) mis-parsed them as local time and drifted by the
+ * server offset (BUG-10).
+ */
+export const formatRelativeTime = (v) => {
+    const d = toDate(v);
+    if (!d) return '';
+    const diff = Math.floor((Date.now() - d.getTime()) / 60000);
+    // Clamp tiny future skew (clock drift / sub-second rounding) to "İndicə".
+    if (diff < 1) return 'İndicə';
+    if (diff < 60) return `${diff} dəq əvvəl`;
+    if (diff < 1440) return `${Math.floor(diff / 60)} saat əvvəl`;
+    return fmtDateShort(d);
+};

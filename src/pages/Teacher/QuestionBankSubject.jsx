@@ -12,6 +12,7 @@ import {
 import { QuestionEditor, LatexPreview, AiGenerateModal } from '../../components/ui';
 import ChipContent from '../../utils/chipContent';
 import { useAuth } from '../../context/AuthContext';
+import { formatRelativeTime } from '../../utils/date';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import { validateLatexSyntax, getLatexErrorMessage } from '../../utils/latexValidator';
@@ -590,15 +591,9 @@ const EditModal = ({ question, onSave, onClose, saving, availableTopics }) => {
 // ── Stats Card ───────────────────────────────────────────────────────────────
 const StatsCard = ({ stats }) => {
     if (!stats) return null;
-    const fmt = (iso) => {
-        if (!iso) return '—';
-        const d = new Date(iso);
-        const diff = (Date.now() - d.getTime()) / 1000;
-        if (diff < 60) return 'indi';
-        if (diff < 3600) return `${Math.floor(diff / 60)} dəq əvvəl`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)} saat əvvəl`;
-        return `${Math.floor(diff / 86400)} gün əvvəl`;
-    };
+    // Shared helper (utils/date) — parses naked backend timestamps as UTC so
+    // "Son əlavə" no longer drifts by the server offset (BUG-10).
+    const fmt = (iso) => formatRelativeTime(iso) || '—';
     const totalByType = Object.entries(stats.byType || {});
     return (
         <div className="flex flex-wrap gap-2">

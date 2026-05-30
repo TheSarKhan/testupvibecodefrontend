@@ -583,13 +583,17 @@ const ExamEntry = () => {
                 return;
             }
             localStorage.setItem('pendingPaymentOrderId', data.orderId);
-            const popup = window.open(data.paymentUrl, '_blank', 'noopener');
-            if (!popup) {
-                // Popup blocked — fall back to same-tab navigation so the
-                // user isn't left wondering why nothing happened.
-                toast('Ödəniş səhifəsinə yönləndirilirsiniz...', { icon: '🔒' });
-                window.location.href = data.paymentUrl;
-            }
+            // Stash the order type + exam link so the payment-return page shows
+            // exam-context text even if the bank confirmation is slow (#XXX).
+            localStorage.setItem('pendingPaymentType', 'EXAM');
+            localStorage.setItem('pendingPaymentExamShareLink', data.examShareLink || shareLink);
+            // Navigate the CURRENT tab to the HPP page instead of opening a
+            // popup. The popup approach opened two HPP Flex pages in Chrome
+            // (window.open with 'noopener' returns null, which tripped the
+            // popup-blocked fallback). After payment the bank redirects back to
+            // /odenis/ugurlu (the success page), where we resume via the
+            // pendingPayment* values kept in localStorage (same origin).
+            window.location.href = data.paymentUrl;
         } catch (err) {
             if (!err._handled) toast.error(err.response?.data?.message || 'Ödəniş başladıla bilmədi');
         } finally {

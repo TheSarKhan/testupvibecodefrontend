@@ -859,6 +859,9 @@ const Pricing = ({ isEmbedded = false }) => {
                 return;
             }
             localStorage.setItem('pendingPaymentOrderId', data.orderId);
+            // Mark the pending payment as a subscription so the return page
+            // keeps plan-context text even on a slow bank confirmation (#XXX).
+            localStorage.setItem('pendingPaymentType', 'SUBSCRIPTION');
             window.open(data.paymentUrl, '_blank', 'noopener');
             setPaymentWindowOpen(true);
             toast('Ödəniş pəncərəsi açıldı. Ödənişi tamamlayıb bu səhifəyə qayıdın.', { icon: '💳', duration: 6000 });

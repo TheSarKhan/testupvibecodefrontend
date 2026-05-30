@@ -98,6 +98,7 @@ const PaymentSuccess = () => {
     const navigate = useNavigate();
     const { refreshSubscription, loading: authLoading } = useAuth();
     const [status, setStatus] = useState('verifying'); // verifying | success | pending | failed
+    const [orderType, setOrderType] = useState(null);   // 'EXAM' | 'SUBSCRIPTION' | null
     const [examShareLink, setExamShareLink] = useState(null);
     const [waitSeconds, setWaitSeconds] = useState(0);
     const verified = useRef(false);
@@ -108,6 +109,17 @@ const PaymentSuccess = () => {
         if (authLoading) return;
         if (verified.current) return;
         verified.current = true;
+
+        // Order type (and exam link) captured at initiate time, so even a slow
+        // verify that hasn't reached a terminal PAID — or a PAID without a
+        // share link — still shows exam-context text instead of falling back
+        // to subscription wording (#XXX).
+        const storedType = localStorage.getItem('pendingPaymentType');
+        if (storedType) setOrderType(storedType);
+        const storedExamLink = localStorage.getItem('pendingPaymentExamShareLink');
+        if (storedExamLink) setExamShareLink(storedExamLink);
+        localStorage.removeItem('pendingPaymentType');
+        localStorage.removeItem('pendingPaymentExamShareLink');
 
         const orderId = searchParams.get('orderId')
             || searchParams.get('order_id')
@@ -127,10 +139,15 @@ const PaymentSuccess = () => {
     const verify = async (orderId) => {
         try {
             const { data } = await api.post('/payment/verify', { orderId });
+            // Capture the order type / exam link from EVERY response (the
+            // backend now returns them in all states), so the context is known
+            // even before — or without — a terminal PAID.
+            if (data.orderType) setOrderType(data.orderType);
+            if (data.examShareLink) setExamShareLink(data.examShareLink);
             if (data.status === 'NOT_FOUND') { setStatus('failed'); return; }
             if (['PAID', 'APPROVED', 'SUCCESS'].includes(data.status) || data.alreadyProcessed) {
-                if (data.examShareLink) setExamShareLink(data.examShareLink);
-                else await refreshSubscription();
+                const isExamOrder = data.orderType === 'EXAM' || !!data.examShareLink;
+                if (!isExamOrder) await refreshSubscription();
                 localStorage.setItem('paymentCompleted', Date.now().toString());
                 setStatus('success');
                 return;
@@ -140,6 +157,11 @@ const PaymentSuccess = () => {
             scheduleRetry(orderId);
         }
     };
+
+    // True for exam purchases — known from the verify response or the type
+    // stashed at initiate time. Drives exam-vs-subscription wording in every
+    // state so a slow bank confirmation never shows plan text on an exam buy.
+    const isExam = orderType === 'EXAM' || !!examShareLink;
 
     const scheduleRetry = (orderId) => {
         setWaitSeconds(prev => {
@@ -194,19 +216,21 @@ const PaymentSuccess = () => {
                     badge="Uğurlu"
                     title="Ödəniş uğurlu oldu!"
                     subtitle={
-                        examShareLink
+                        isExam
                             ? 'İmtahan alındı və hesabınızda hazırdır. İstədiyiniz vaxt başlaya bilərsiniz.'
                             : 'Abunəliyiniz aktivləşdirildi. Bütün imkanlardan istifadə edə bilərsiniz.'
                     }
                 >
-                    {examShareLink ? (
+                    {isExam ? (
                         <div className="flex flex-col gap-2.5">
-                            <button
-                                onClick={() => navigate(`/imtahan/${examShareLink}`)}
-                                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-full text-[14px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
-                            >
-                                İmtahana başla <HiOutlineArrowRight className="w-4 h-4" />
-                            </button>
+                            {examShareLink && (
+                                <button
+                                    onClick={() => navigate(`/imtahan/${examShareLink}`)}
+                                    className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-full text-[14px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                                >
+                                    İmtahana başla <HiOutlineArrowRight className="w-4 h-4" />
+                                </button>
+                            )}
                             <Link
                                 to="/imtahanlarim"
                                 className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-semibold text-[var(--ink-800)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
@@ -245,7 +269,11 @@ const PaymentSuccess = () => {
                     Icon={HiOutlineRefresh}
                     badge="Gözləyir"
                     title="Ödəniş gözlənilir"
-                    subtitle="Ödəniş sistemi tərəfindən hələ təsdiqlənməyib. Abunəliyiniz bir neçə dəqiqə içində avtomatik aktivləşəcək."
+                    subtitle={
+                        isExam
+                            ? 'Ödəniş sistemi tərəfindən hələ təsdiqlənməyib. İmtahanınız təsdiqdən sonra bir neçə dəqiqə içində hesabınızda görünəcək.'
+                            : 'Ödəniş sistemi tərəfindən hələ təsdiqlənməyib. Abunəliyiniz bir neçə dəqiqə içində avtomatik aktivləşəcək.'
+                    }
                 >
                     <div className="flex flex-col gap-2.5">
                         <button
@@ -256,10 +284,10 @@ const PaymentSuccess = () => {
                             Yenidən yoxla
                         </button>
                         <Link
-                            to="/planlar"
+                            to={isExam ? '/imtahanlarim' : '/planlar'}
                             className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-semibold text-[var(--ink-800)] bg-white border border-[var(--ink-200)] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
                         >
-                            Planlara qayıt
+                            {isExam ? 'İmtahanlarıma keç' : 'Planlara qayıt'}
                         </Link>
                     </div>
                 </ResultCard>
@@ -279,7 +307,7 @@ const PaymentSuccess = () => {
             >
                 <div className="flex flex-col gap-2.5">
                     <button
-                        onClick={() => navigate('/planlar')}
+                        onClick={() => navigate(isExam ? (examShareLink ? `/imtahan/${examShareLink}` : '/imtahanlar') : '/planlar')}
                         className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-full text-[14px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
                     >
                         Yenidən cəhd et <HiOutlineArrowRight className="w-4 h-4" />

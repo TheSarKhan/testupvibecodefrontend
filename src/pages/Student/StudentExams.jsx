@@ -6,6 +6,7 @@ import {
     HiOutlineArrowRight, HiOutlineChartBar, HiOutlineInbox,
     HiOutlineInformationCircle, HiOutlineDocumentText, HiOutlineUserGroup,
     HiOutlineRefresh, HiOutlineAcademicCap, HiOutlineExclamation,
+    HiOutlineBookmark,
 } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -378,18 +379,22 @@ const StudentExams = () => {
         return () => { cancelled = true; };
     }, []);
 
-    // Build "received" items list — purchased + depot, with status
-    const receivedItems = useMemo(() => {
-        const completedShareLinks = new Set(
+    // Shared lookups for ongoing / completed status.
+    const { completedShareLinks, ongoingByShareLink } = useMemo(() => {
+        const completed = new Set(
             results.filter(r => r.submittedAt).map(r => r.shareLink)
         );
-        const ongoingByShareLink = {};
+        const ongoing = {};
         results.forEach(r => {
-            if (!r.submittedAt && r.shareLink) ongoingByShareLink[r.shareLink] = r;
+            if (!r.submittedAt && r.shareLink) ongoing[r.shareLink] = r;
         });
+        return { completedShareLinks: completed, ongoingByShareLink: ongoing };
+    }, [results]);
 
+    // "Aldığım" — ONLY purchased (paid) exams. Saved/bookmarked exams must NOT
+    // appear here; they live in their own "Saxladığım" tab below.
+    const purchasedItems = useMemo(() => {
         const items = [];
-        // Purchased
         purchasedExams.forEach(e => {
             if (completedShareLinks.has(e.shareLink)) return; // already done
             const ongoing = ongoingByShareLink[e.shareLink];
@@ -410,10 +415,15 @@ const StudentExams = () => {
                 progressPct: ongoing ? Math.round(((ongoing.answeredCount || 0) / (ongoing.totalQuestions || 1)) * 100) : null,
             });
         });
-        // Depot (saved)
+        return items;
+    }, [purchasedExams, completedShareLinks, ongoingByShareLink]);
+
+    // "Saxladığım" — depot (bookmarked/saved) exams, excluding any that are
+    // already purchased (those show under "Aldığım") or already completed.
+    const savedItems = useMemo(() => {
+        const items = [];
         savedExams.forEach(e => {
             if (completedShareLinks.has(e.shareLink)) return;
-            // Skip if already in purchased
             if (purchasedExams.some(p => p.shareLink === e.shareLink)) return;
             const ongoing = ongoingByShareLink[e.shareLink];
             items.push({
@@ -433,14 +443,14 @@ const StudentExams = () => {
             });
         });
         return items;
-    }, [purchasedExams, savedExams, results]);
+    }, [purchasedExams, savedExams, completedShareLinks, ongoingByShareLink]);
 
     // Completed = submitted results
     const completedItems = useMemo(() => results.filter(r => r.submittedAt), [results]);
 
-    // Filter logic
-    const filteredReceived = useMemo(() => {
-        let out = receivedItems;
+    // Filter logic (subject + search), applied to the purchased and saved lists.
+    const filterExams = (list, subjectFilter, search) => {
+        let out = list;
         if (subjectFilter !== 'all') {
             out = out.filter(e => (e.subjects || []).includes(subjectFilter));
         }
@@ -453,7 +463,15 @@ const StudentExams = () => {
             );
         }
         return out;
-    }, [receivedItems, subjectFilter, search]);
+    };
+    const filteredReceived = useMemo(
+        () => filterExams(purchasedItems, subjectFilter, search),
+        [purchasedItems, subjectFilter, search]
+    );
+    const filteredSaved = useMemo(
+        () => filterExams(savedItems, subjectFilter, search),
+        [savedItems, subjectFilter, search]
+    );
 
     const filteredCompleted = useMemo(() => {
         let out = completedItems;
@@ -471,9 +489,10 @@ const StudentExams = () => {
         return out;
     }, [completedItems, subjectFilter, search]);
 
-    // Aggregate stats
-    const newCount = receivedItems.filter(r => r.status === 'NEW' || r.status === 'PURCHASED').length;
-    const ongoingCount = receivedItems.filter(r => r.status === 'ONGOING').length;
+    // Aggregate stats (across both purchased and saved).
+    const allReceived = useMemo(() => [...purchasedItems, ...savedItems], [purchasedItems, savedItems]);
+    const newCount = allReceived.filter(r => r.status === 'NEW' || r.status === 'PURCHASED').length;
+    const ongoingCount = allReceived.filter(r => r.status === 'ONGOING').length;
     const completedCount = completedItems.length;
     // Compute on the *scoreable* subset only — ungraded submissions and
     // exams with maxScore == 0 would otherwise inflate the denominator or
@@ -489,13 +508,15 @@ const StudentExams = () => {
     // Subjects for filter
     const subjectsInTab = useMemo(() => {
         const set = new Set();
-        const items = tab === 'received' ? receivedItems : completedItems;
+        const items = tab === 'received' ? purchasedItems
+            : tab === 'saved' ? savedItems
+            : completedItems;
         items.forEach(it => {
             const subs = it.subjects || (it.subject ? [it.subject] : []);
             subs.forEach(s => set.add(s));
         });
         return [...set].sort((a, b) => a.localeCompare(b, 'az'));
-    }, [tab, receivedItems, completedItems]);
+    }, [tab, purchasedItems, savedItems, completedItems]);
 
     return (
         <div className="min-h-screen pb-16" style={{ background: 'var(--paper-cream)' }}>
@@ -576,10 +597,18 @@ const StudentExams = () => {
                             active={tab === 'received'}
                             onClick={() => { setTab('received'); setSubjectFilter('all'); }}
                             Icon={HiOutlineInbox}
-                            count={receivedItems.length}
+                            count={purchasedItems.length}
                             highlight={newCount > 0}
                         >
                             Aldığım
+                        </TabBtn>
+                        <TabBtn
+                            active={tab === 'saved'}
+                            onClick={() => { setTab('saved'); setSubjectFilter('all'); }}
+                            Icon={HiOutlineBookmark}
+                            count={savedItems.length}
+                        >
+                            Saxladığım
                         </TabBtn>
                         <TabBtn
                             active={tab === 'completed'}
@@ -622,17 +651,34 @@ const StudentExams = () => {
                     filteredReceived.length === 0 ? (
                         <EmptyState
                             Icon={HiOutlineInbox}
-                            title={receivedItems.length === 0 ? 'Hələ heç bir imtahan yoxdur' : 'Axtarışa uyğun imtahan tapılmadı'}
+                            title={purchasedItems.length === 0 ? 'Hələ alınmış imtahan yoxdur' : 'Axtarışa uyğun imtahan tapılmadı'}
                             subtitle={
-                                receivedItems.length === 0
-                                    ? 'İmtahanlar səhifəsindən imtahanlara qoşula və ya satın ala bilərsiniz.'
+                                purchasedItems.length === 0
+                                    ? 'Ödənişli imtahanları satın aldıqdan sonra burada görünəcək.'
                                     : 'Filtrləri yumşaldın və ya başqa açar söz cəhd edin.'
                             }
-                            cta={receivedItems.length === 0 ? { label: 'İmtahanlara bax', onClick: () => navigate('/imtahanlar') } : null}
+                            cta={purchasedItems.length === 0 ? { label: 'İmtahanlara bax', onClick: () => navigate('/imtahanlar') } : null}
                         />
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                             {filteredReceived.map(e => <ReceivedCard key={e.id} exam={e} navigate={navigate} />)}
+                        </div>
+                    )
+                ) : tab === 'saved' ? (
+                    filteredSaved.length === 0 ? (
+                        <EmptyState
+                            Icon={HiOutlineBookmark}
+                            title={savedItems.length === 0 ? 'Hələ saxlanılmış imtahan yoxdur' : 'Axtarışa uyğun imtahan tapılmadı'}
+                            subtitle={
+                                savedItems.length === 0
+                                    ? 'İmtahanı depoya əlavə etdikdə burada saxlanılacaq.'
+                                    : 'Filtrləri yumşaldın və ya başqa açar söz cəhd edin.'
+                            }
+                            cta={savedItems.length === 0 ? { label: 'İmtahanlara bax', onClick: () => navigate('/imtahanlar') } : null}
+                        />
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {filteredSaved.map(e => <ReceivedCard key={e.id} exam={e} navigate={navigate} />)}
                         </div>
                     )
                 ) : (

@@ -463,20 +463,28 @@ const ExamEditor = () => {
         api.get('/subjects/meta').then(res => setSubjectsList(res.data)).catch(() => {});
     }, []);
 
-    // On new template exam: load section data from navigation state
+    // On new template exam: load section data and assign points from each
+    // section's pointGroups (e.g. Q11-20 = 1.5), so the editor shows — and
+    // saves — the template's per-position values instead of a flat 1.
     useEffect(() => {
         if (!isEditMode && initialLocationState.type === 'template') {
             const sds = initialLocationState.sectionsData;
             if (sds && sds.length >= 2) {
                 setTemplateSections(sds);
                 setSelectedSectionIds(sds.map(s => s.id));
-                let orderIdx = 0;
+                let globalOrderIdx = 0;
                 const allQuestions = [], allPassages = [];
                 sds.forEach(sd => {
-                    const built = buildFromTypeCounts(sd.typeCounts || [], sd.subjectName, orderIdx);
-                    allQuestions.push(...built.questions);
-                    allPassages.push(...built.passages);
-                    orderIdx += built.questions.length + built.passages.length;
+                    const standaloneTypes = (sd.typeCounts || []).filter(tc => !tc.passageType);
+                    const qs = buildQuestionsWithPointGroups(standaloneTypes, sd.pointGroups, globalOrderIdx)
+                        .map(q => ({ ...q, subjectGroup: sd.subjectName }));
+                    allQuestions.push(...qs);
+                    globalOrderIdx += qs.length;
+                    const { passages: ps } = buildFromTypeCounts(
+                        (sd.typeCounts || []).filter(tc => tc.passageType), sd.subjectName, globalOrderIdx
+                    );
+                    allPassages.push(...ps);
+                    globalOrderIdx += ps.length;
                 });
                 setQuestions(allQuestions);
                 setPassages(allPassages);
@@ -491,9 +499,11 @@ const ExamEditor = () => {
                 setTemplateInfo(sd);
                 setSelectedSectionId(sd.id);
                 setSelectedSectionIds([sd.id]);
-                const built = buildFromTypeCounts(sd.typeCounts || []);
-                setQuestions(built.questions);
-                setPassages(built.passages);
+                const standaloneTypes = (sd.typeCounts || []).filter(tc => !tc.passageType);
+                const qs = buildQuestionsWithPointGroups(standaloneTypes, sd.pointGroups);
+                const { passages: ps } = buildFromTypeCounts((sd.typeCounts || []).filter(tc => tc.passageType), null, qs.length);
+                setQuestions(qs);
+                setPassages(ps);
                 setExamConfig(prev => ({
                     ...prev,
                     title: prev.title || `${sd.subjectName || 'Şablon'} - ${sd.subtitleName || sd.name || 'İmtahan'}`,
@@ -503,9 +513,11 @@ const ExamEditor = () => {
                 setTemplateInfo(sd);
                 setSelectedSectionId(sd.id);
                 setSelectedSectionIds([sd.id]);
-                const built = buildFromTypeCounts(sd.typeCounts || []);
-                setQuestions(built.questions);
-                setPassages(built.passages);
+                const standaloneTypes = (sd.typeCounts || []).filter(tc => !tc.passageType);
+                const qs = buildQuestionsWithPointGroups(standaloneTypes, sd.pointGroups);
+                const { passages: ps } = buildFromTypeCounts((sd.typeCounts || []).filter(tc => tc.passageType), null, qs.length);
+                setQuestions(qs);
+                setPassages(ps);
                 setExamConfig(prev => ({
                     ...prev,
                     title: prev.title || `${sd.subjectName || 'Şablon'} - İmtahan`,

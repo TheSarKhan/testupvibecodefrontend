@@ -312,16 +312,22 @@ const ExamSession = () => {
     };
 
     const handleAnswerChange = (questionId, newAnswerData) => {
+        // Compute the updated answer, update state, then sync ONCE — outside the
+        // setState updater. Calling syncAnswer inside the updater fired it twice
+        // (React StrictMode double-invokes updaters), which raced two concurrent
+        // save-answer requests for the same question and tripped the
+        // uq_answers_submission_question unique constraint in the backend logs.
+        let updated = null;
         setAnswers(prev => prev.map(ans => {
             if (ans.questionId === questionId) {
-                const updated = { ...ans, ...newAnswerData };
-                if (!newAnswerData.hasOwnProperty('textAnswer')) {
-                    syncAnswer(questionId, updated);
-                }
+                updated = { ...ans, ...newAnswerData };
                 return updated;
             }
             return ans;
         }));
+        if (updated && !Object.prototype.hasOwnProperty.call(newAnswerData, 'textAnswer')) {
+            syncAnswer(questionId, updated);
+        }
     };
 
     useEffect(() => {

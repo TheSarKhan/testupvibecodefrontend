@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { HiOutlinePlus, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineCheckCircle, HiOutlineXCircle } from 'react-icons/hi';
+import { HiOutlinePlus, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import {
     useAdminSubscriptionPlans,
@@ -32,7 +32,10 @@ const INITIAL_FORM = {
     createQuestionBank: false,
     importQuestionsFromPdf: false,
     monthlyAiQuestionLimit: 'disabled',
-    useAiExamGeneration: false
+    useAiExamGeneration: false,
+    // New fields for the duration/visibility rollout.
+    durationMonths: 1,
+    visible: true,
 };
 
 const featureLabels = [
@@ -77,6 +80,8 @@ const AdminSubscriptionPlans = () => {
             setForm({
                 ...plan,
                 level: plan.level ?? 0,
+                durationMonths: plan.durationMonths ?? 1,
+                visible: plan.visible !== false,
                 monthlyAiQuestionLimit: aiLimit === -1 ? 'unlimited' : aiLimit > 0 ? String(aiLimit) : 'disabled',
             });
             setEditingId(plan.id);
@@ -159,13 +164,49 @@ const AdminSubscriptionPlans = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {plans.map(plan => (
-                        <div key={plan.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col">
+                        <div key={plan.id} className={`bg-white rounded-2xl border shadow-sm p-6 flex flex-col transition-opacity ${plan.visible === false ? 'border-amber-200 bg-amber-50/40 opacity-90' : 'border-gray-100'}`}>
                             <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-                                    <p className="text-2xl font-black text-blue-600 mt-1">{plan.price} ₼ <span className="text-sm text-gray-400 font-medium">/ay</span></p>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+                                        {plan.durationMonths > 1 && (
+                                            <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                                                {plan.durationMonths} ay
+                                            </span>
+                                        )}
+                                        {plan.visible === false && (
+                                            <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                                <HiOutlineEyeOff className="w-3 h-3" /> Saytda gizli
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-2xl font-black text-blue-600 mt-1">{plan.price} ₼ <span className="text-sm text-gray-400 font-medium">/{plan.durationMonths > 1 ? `${plan.durationMonths} ay` : 'ay'}</span></p>
                                 </div>
                                 <div className="flex items-center gap-1">
+                                    {/* Quick visibility toggle — flips the `visible` flag without
+                                        opening the full edit modal. Sends the existing plan back
+                                        verbatim with only that field changed. */}
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await updatePlan.mutateAsync({
+                                                    id: plan.id,
+                                                    plan: {
+                                                        ...plan,
+                                                        monthlyAiQuestionLimit: plan.monthlyAiQuestionLimit ?? 0,
+                                                        visible: !plan.visible,
+                                                    },
+                                                });
+                                                toast.success(plan.visible ? 'Plan saytdan gizləndi' : 'Plan saytda göstərilir');
+                                            } catch (err) {
+                                                if (!err._handled) toast.error('Görünürlük dəyişdirilə bilmədi');
+                                            }
+                                        }}
+                                        className={`p-2 rounded-lg transition-colors ${plan.visible === false ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                                        title={plan.visible === false ? 'Saytda göstər' : 'Saytdan gizlət'}
+                                    >
+                                        {plan.visible === false ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+                                    </button>
                                     <button
                                         onClick={() => handleOpenModal(plan)}
                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -267,6 +308,36 @@ const AdminSubscriptionPlans = () => {
                                             step="0.01"
                                             className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400"
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Müddət (ay)</label>
+                                        <select
+                                            name="durationMonths"
+                                            value={form.durationMonths ?? 1}
+                                            onChange={e => setForm(prev => ({ ...prev, durationMonths: Number(e.target.value) }))}
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 bg-white"
+                                        >
+                                            <option value={1}>1 ay (Aylıq)</option>
+                                            <option value={3}>3 ay</option>
+                                            <option value={6}>6 ay</option>
+                                            <option value={12}>12 ay (İllik)</option>
+                                        </select>
+                                        <p className="text-xs text-gray-400 mt-1">Qiymət bu müddətin tam dəyəridir (yox "ayda")</p>
+                                    </div>
+                                    <div>
+                                        <label className="flex items-center gap-2 cursor-pointer select-none p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                name="visible"
+                                                checked={form.visible !== false}
+                                                onChange={e => setForm(prev => ({ ...prev, visible: e.target.checked }))}
+                                                className="w-4 h-4 accent-blue-600"
+                                            />
+                                            <div className="flex-1">
+                                                <span className="text-sm font-semibold text-gray-700">Saytda göstər</span>
+                                                <p className="text-xs text-gray-400">Söndürüldükdə plan Pricing səhifəsində görünmür, amma admin onu istifadəçilərə təyin edə bilir</p>
+                                            </div>
+                                        </label>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1">Səviyyə (Level) *</label>

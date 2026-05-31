@@ -265,7 +265,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 </div>
                 <div className="flex-1">
                     <h2 className="text-lg font-bold text-gray-900">AI ilə Sual Yarat</h2>
-                    <p className="text-xs text-gray-400">GPT-4o · {subjectName}</p>
+                    <p className="text-xs text-gray-400">Gemini · {subjectName}</p>
                 </div>
                 {aiUsage && (
                     <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -305,7 +305,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                                 <datalist id="ai-topic-suggestions">
                                     {topics.map(t => {
                                         const value = typeof t === 'object' ? t.name : t;
-                                        return <option key={typeof t === 'object' ? t.id : t} value={value} />;
+                                        return <option key={value} value={value} />;
                                     })}
                                 </datalist>
                                 <HiOutlineChevronDown className="absolute right-2.5 top-3 w-4 h-4 text-gray-400 pointer-events-none" />

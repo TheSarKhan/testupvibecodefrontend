@@ -326,14 +326,28 @@ const TopicCombobox = ({ value, onChange, availableTopics }) => {
 
     const q = query.trim();
     const lower = q.toLowerCase();
-    const merged = useMemo(() => {
-        const set = new Map();
-        availableTopics.forEach(t => set.set(t.name, t.name));
-        if (value && !set.has(value)) set.set(value, value);
-        return [...set.keys()];
+
+    // Split into the teacher's recently-used topics (pinned on top) and the
+    // alphabetical rest. The current value stays selectable even if the server
+    // list hasn't caught up yet (e.g. a just-typed, not-yet-saved topic).
+    const { recent, rest, allNames } = useMemo(() => {
+        const recentArr = [];
+        const restArr = [];
+        const names = new Set();
+        availableTopics.forEach(t => {
+            if (!t?.name || names.has(t.name)) return;
+            names.add(t.name);
+            (t.recent ? recentArr : restArr).push(t.name);
+        });
+        if (value && !names.has(value)) { restArr.unshift(value); names.add(value); }
+        return { recent: recentArr, rest: restArr, allNames: names };
     }, [availableTopics, value]);
-    const filtered = merged.filter(n => !lower || n.toLowerCase().includes(lower));
-    const showCreate = q && !merged.some(n => n.toLowerCase() === lower);
+
+    const match = (n) => !lower || n.toLowerCase().includes(lower);
+    const recentFiltered = recent.filter(match);
+    const restFiltered = rest.filter(match);
+    const firstMatch = recentFiltered[0] || restFiltered[0];
+    const showCreate = q && ![...allNames].some(n => n.toLowerCase() === lower);
 
     const commit = (name) => {
         onChange(name || null);
@@ -383,7 +397,7 @@ const TopicCombobox = ({ value, onChange, availableTopics }) => {
                                 if (e.key === 'Enter') {
                                     e.preventDefault();
                                     if (showCreate) commit(q);
-                                    else if (filtered.length > 0) commit(filtered[0]);
+                                    else if (firstMatch) commit(firstMatch);
                                 } else if (e.key === 'Escape') setOpen(false);
                             }}
                             placeholder="Mövzu axtar və ya yeni ad yaz..."
@@ -391,12 +405,33 @@ const TopicCombobox = ({ value, onChange, availableTopics }) => {
                         />
                     </div>
                     <div className="flex-1 overflow-y-auto py-1">
-                        {filtered.length === 0 && !showCreate && (
+                        {recentFiltered.length === 0 && restFiltered.length === 0 && !showCreate && (
                             <p className="text-xs text-gray-400 px-3 py-2">Mövzu tapılmadı</p>
                         )}
-                        {filtered.map(name => (
+                        {recentFiltered.length > 0 && (
+                            <>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 px-3 pt-1 pb-0.5">
+                                    Son istifadə
+                                </p>
+                                {recentFiltered.map(name => (
+                                    <button
+                                        key={`r-${name}`}
+                                        type="button"
+                                        onClick={() => commit(name)}
+                                        className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-blue-50 ${
+                                            name === value ? 'bg-teal-50 text-teal-800 font-semibold' : 'text-gray-700'
+                                        }`}
+                                    >
+                                        <HiOutlineTag className="w-3.5 h-3.5 text-teal-500" />
+                                        {name}
+                                    </button>
+                                ))}
+                                {restFiltered.length > 0 && <div className="my-1 border-t border-gray-100" />}
+                            </>
+                        )}
+                        {restFiltered.map(name => (
                             <button
-                                key={name}
+                                key={`a-${name}`}
                                 type="button"
                                 onClick={() => commit(name)}
                                 className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-blue-50 ${
@@ -685,11 +720,7 @@ const QuestionBankSubject = () => {
             const sub = found || { name: 'Fənn', isGlobal: false };
             setSubject(sub);
             setCanEdit(!!found && (!found.isGlobal || isAdmin));
-            if (found?.name) {
-                api.get('/subjects/topics', { params: { name: found.name } })
-                    .then(r => setAvailableTopics(r.data || []))
-                    .catch(() => {});
-            }
+            fetchTopics();
             await refreshStats();
         } catch {
             toast.error('Məlumatlar yüklənmədi');
@@ -715,6 +746,16 @@ const QuestionBankSubject = () => {
             toast.error('Suallar yüklənmədi');
         }
     }, [subjectId, page, sort, searchDebounced, topicFilter, difficultyFilter, typeFilter, gradeFilter]);
+
+    // Teacher's reusable topics for this subject (recently-used first) merged
+    // with admin presets. Refreshed after every save so a newly-typed topic
+    // becomes selectable next time.
+    const fetchTopics = useCallback(async () => {
+        try {
+            const { data } = await api.get(`/bank/subjects/${subjectId}/topics`);
+            setAvailableTopics(data || []);
+        } catch { /* non-fatal: picker just falls back to the current value */ }
+    }, [subjectId]);
 
     const refreshStats = async () => {
         try {
@@ -804,7 +845,7 @@ const QuestionBankSubject = () => {
             else await api.post('/bank/questions', payload);
             setEditQuestion(null);
             toast.success('Sual yadda saxlanıldı');
-            await Promise.all([fetchPaged(), refreshStats()]);
+            await Promise.all([fetchPaged(), refreshStats(), fetchTopics()]);
         } catch {
             toast.error('Yadda saxlanılmadı');
         } finally {
@@ -1037,7 +1078,7 @@ const QuestionBankSubject = () => {
                         className="text-[12px] font-bold px-3.5 py-2 border border-[var(--ink-200)] rounded-full bg-white focus:outline-none focus:border-[var(--primary)] text-[var(--ink-700)] max-w-[200px]"
                     >
                         <option value="ALL">Bütün mövzular</option>
-                        {availableTopics.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                        {availableTopics.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                     </select>
 
                     <div className="flex-1" />

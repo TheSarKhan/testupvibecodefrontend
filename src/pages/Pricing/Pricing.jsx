@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -35,6 +35,8 @@ const FEATURE_LIST = [
 
 const MONTHS_OPTIONS = [
     { value: 1,  label: 'Aylıq' },
+    { value: 3,  label: '3 ay',  discount: 10 },
+    { value: 6,  label: '6 ay',  discount: 15 },
     { value: 12, label: 'İllik', discount: 20 },
 ];
 
@@ -758,15 +760,25 @@ const Pricing = ({ isEmbedded = false }) => {
         refreshSubscription();
     }, []);
 
-    const getDiscountedPrice = (price) => {
-        const opt = MONTHS_OPTIONS.find(o => o.value === selectedMonths);
-        if (!opt?.discount) return price;
-        return +(price * (1 - opt.discount / 100)).toFixed(2);
-    };
+    // Backend now stores one row per (plan family × duration). The toggle
+    // selects which duration's rows to show; Free is always present (it has no
+    // duration concept). Multi-month rows carry their FULL total in `price`,
+    // so no client-side multiplication is needed any more.
+    const visiblePlansForToggle = useMemo(() => plans.filter(p =>
+        p.price === 0 || (p.durationMonths ?? 1) === selectedMonths
+    ), [plans, selectedMonths]);
+
+    // Kept for now because legacy code paths (the proration table at the
+    // bottom of the page) still ask for a "monthly equivalent" of the price.
+    // It now divides the stored total back into a per-month figure.
+    const getDiscountedPrice = (price) => +(price / selectedMonths).toFixed(2);
 
     const getWalletInfo = (plan) => {
-        const baseCharge = plan.price * selectedMonths;
-        const baseDuration = selectedMonths * 30;
+        // Plan rows now carry the full duration's total in `price`, so no
+        // multiplication is needed here either.
+        const planMonths = plan.durationMonths ?? selectedMonths;
+        const baseCharge = plan.price;
+        const baseDuration = planMonths * 30;
         const empty = { creditAzn: 0, chargeAmount: baseCharge, durationDays: baseDuration, bonusDays: 0, remainingDays: 0, isFree: false };
         if (!subscription || !subscription.startDate || !subscription.endDate) return empty;
         if (subscription.plan?.id === plan.id || !plan.price) return empty;
@@ -852,7 +864,12 @@ const Pricing = ({ isEmbedded = false }) => {
         setConfirmModal(null);
         setPaying(planId);
         try {
-            const { data } = await api.post('/payment/initiate', { planId, months: selectedMonths });
+            // Each plan row carries its own durationMonths now, so we forward
+            // that instead of the toggle value — the backend then computes
+            // endDate = startDate + planMonths (and no longer multiplies).
+            const selectedPlan = plans.find(p => p.id === planId);
+            const planMonths = selectedPlan?.durationMonths ?? selectedMonths;
+            const { data } = await api.post('/payment/initiate', { planId, months: planMonths });
             if (data.directActivated) {
                 await refreshSubscription();
                 toast.success('Plan dəyişdirildi! Kredit ilə ödənişsiz keçid edildi.');
@@ -885,14 +902,16 @@ const Pricing = ({ isEmbedded = false }) => {
             <BillingToggle months={selectedMonths} setMonths={setSelectedMonths} />
             <div className="container-main">
                 <div className="grid md:grid-cols-3 gap-5 max-w-[1100px] mx-auto">
-                    {plans.map((plan, i) => {
+                    {visiblePlansForToggle.map((plan, i) => {
                         const featured = i === 1;
                         const isCurrent = subscription?.plan?.id === plan.id;
-                        const displayPrice = plan.price > 0 ? getDiscountedPrice(plan.price) : 0;
+                        // Multi-month plan rows store the FULL total in `price`; the
+                        // per-month equivalent is shown in the card body.
+                        const displayPrice = plan.price > 0 ? +(plan.price / (plan.durationMonths ?? 1)).toFixed(2) : 0;
                         const action = getPlanAction(plan);
                         const wallet = action === 'switch'
                             ? getWalletInfo(plan)
-                            : { creditAzn: 0, isFree: false, chargeAmount: plan.price * selectedMonths, durationDays: selectedMonths * 30 };
+                            : { creditAzn: 0, isFree: false, chargeAmount: plan.price, durationDays: (plan.durationMonths ?? selectedMonths) * 30 };
                         const isFreeSwitch = action === 'switch' && wallet.isFree;
                         const remainingDays = isCurrent && subscription?.endDate
                             ? Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000))

@@ -31,13 +31,33 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
 
     const updateActiveFormats = useCallback(() => {
         try {
+            // queryCommandState is reliable for bold/italic/underline/strike.
+            // But for superscript/subscript Chromium starts reporting `false`
+            // after 2-3 keystrokes inside <sup>/<sub> even though the caret
+            // hasn't actually left the tag — the user sees the button stop
+            // glowing and assumes they're back in normal mode (then types
+            // expecting normal, gets confused when it stays super). Walking
+            // up the DOM from the caret is the source of truth here.
+            let inSup = false, inSub = false;
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                let node = sel.getRangeAt(0).startContainer;
+                if (node && node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+                if (editorRef.current && node && editorRef.current.contains(node)) {
+                    while (node && node !== editorRef.current) {
+                        if (node.nodeName === 'SUP') inSup = true;
+                        else if (node.nodeName === 'SUB') inSub = true;
+                        node = node.parentNode;
+                    }
+                }
+            }
             setActiveFormats({
                 bold: document.queryCommandState('bold'),
                 italic: document.queryCommandState('italic'),
                 underline: document.queryCommandState('underline'),
                 strikeThrough: document.queryCommandState('strikeThrough'),
-                superscript: document.queryCommandState('superscript'),
-                subscript: document.queryCommandState('subscript'),
+                superscript: inSup || document.queryCommandState('superscript'),
+                subscript:  inSub || document.queryCommandState('subscript'),
             });
         } catch {}
     }, []);
@@ -160,6 +180,12 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
     const handleInput = () => {
         isEditing.current = true;
         handleChange();
+        // Refresh the toolbar's active state on every keystroke so the
+        // superscript/subscript pill stays lit while the caret is still
+        // inside <sup>/<sub>. `selectionchange` alone misses some typing
+        // events in Chromium, which made the button look like it had
+        // toggled off mid-typing.
+        updateActiveFormats();
     };
 
     const handleBlur = () => {
@@ -196,9 +222,51 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         } catch {}
     };
 
+    // Move the caret OUT of the nearest <sup>/<sub> ancestor by inserting a
+     // zero-width space after the element and parking the caret there. We need
+     // this because `document.execCommand('superscript')` reliably toggles only
+     // when a range is selected — with a bare caret inside an empty <sup> the
+     // browser leaves the caret WHERE it is, so the next keystroke still types
+     // in superscript. Symptom users hit: click x², type "²", click x² again,
+     // expect normal text — but typing continues in superscript.
+    const exitSuperOrSub = (tagName) => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return false;
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) return false; // real selection — let execCommand toggle it
+        let node = range.startContainer;
+        while (node && node !== editorRef.current && node.nodeName !== tagName) {
+            node = node.parentNode;
+        }
+        if (!node || node.nodeName !== tagName) return false;
+        const zws = document.createTextNode('​');
+        if (node.nextSibling) node.parentNode.insertBefore(zws, node.nextSibling);
+        else node.parentNode.appendChild(zws);
+        const newRange = document.createRange();
+        newRange.setStartAfter(zws);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+        return true;
+    };
+
     const execFormat = (command, val = null) => {
         editorRef.current?.focus();
         restoreSelection();
+        // Caret-only escape from superscript/subscript: if the user is parked
+        // inside a <sup>/<sub> with nothing selected and clicks the same
+        // button, jump the caret out instead of relying on execCommand's
+        // flaky toggle behaviour.
+        if (command === 'superscript' && exitSuperOrSub('SUP')) {
+            handleChange();
+            updateActiveFormats();
+            return;
+        }
+        if (command === 'subscript' && exitSuperOrSub('SUB')) {
+            handleChange();
+            updateActiveFormats();
+            return;
+        }
         document.execCommand(command, false, val);
         handleChange();
         updateActiveFormats();

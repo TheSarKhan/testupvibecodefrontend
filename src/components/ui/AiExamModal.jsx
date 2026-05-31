@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HiOutlineSparkles, HiOutlineX } from 'react-icons/hi';
+import SockJS from 'sockjs-client';
+import { Client } from '@stomp/stompjs';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import { QUESTION_TYPE_LABELS, DIFFICULTY_LABELS } from '../../utils/enumLabels';
 
 const QUESTION_TYPES = [
@@ -18,6 +22,8 @@ const DIFFICULTIES = [
 ];
 
 const AiExamModal = ({ onClose }) => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [subjects, setSubjects] = useState([]);
     const [topics, setTopics] = useState([]);
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -30,11 +36,11 @@ const AiExamModal = ({ onClose }) => {
     const [difficulty, setDifficulty] = useState('MEDIUM');
     const [counts, setCounts] = useState({ MCQ: 5, MULTI_SELECT: 0, OPEN_AUTO: 0, FILL_IN_THE_BLANK: 0 });
     const [examTitle, setExamTitle] = useState('');
+    // `loading` = a background generation is in flight. The modal stays open
+    // showing the spinner; when the server finishes it pushes a notification we
+    // listen for below (close + open the draft). The teacher may also close the
+    // modal early — generation keeps running and they're told so.
     const [loading, setLoading] = useState(false);
-    // After a successful submit the modal stays open on a "generating in the
-    // background" panel — the teacher can wait or close it; generation continues
-    // server-side regardless.
-    const [started, setStarted] = useState(false);
     const [loadingSubjects, setLoadingSubjects] = useState(true);
     const [aiUsage, setAiUsage] = useState(null); // { limit, used, remaining }
 
@@ -55,6 +61,38 @@ const AiExamModal = ({ onClose }) => {
         }).catch(() => toast.error('Fənlər yüklənərkən xəta baş verdi'))
           .finally(() => setLoadingSubjects(false));
     }, []);
+
+    // Keep the latest onClose without re-subscribing the socket every render.
+    const onCloseRef = useRef(onClose);
+    useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+    // While a background generation is running, listen on the same notification
+    // socket the navbar uses. EXAM_CREATED → the draft is ready: stop the
+    // spinner, close the modal and open the draft. WARNING → it failed: stop the
+    // spinner and surface the error so the teacher can retry.
+    useEffect(() => {
+        if (!loading || !user?.id) return;
+        const client = new Client({
+            webSocketFactory: () => new SockJS(`${window.location.origin}/ws`),
+            reconnectDelay: 5000,
+            onConnect: () => {
+                client.subscribe(`/topic/notifications/${user.id}`, (message) => {
+                    let n;
+                    try { n = JSON.parse(message.body); } catch { return; }
+                    if (n.type === 'EXAM_CREATED') {
+                        setLoading(false);
+                        onCloseRef.current?.();
+                        if (n.actionUrl) navigate(n.actionUrl);
+                    } else if (n.type === 'WARNING') {
+                        setLoading(false);
+                        toast.error(n.message || 'İmtahan yaradıla bilmədi');
+                    }
+                });
+            },
+        });
+        client.activate();
+        return () => { client.deactivate(); };
+    }, [loading, user?.id, navigate]);
 
     useEffect(() => {
         if (!selectedSubject) { setTopics([]); setSelectedTopics([]); setTopicInput(''); return; }
@@ -84,11 +122,19 @@ const AiExamModal = ({ onClose }) => {
         setSelectedTopics(prev => prev.filter(x => x !== t));
     };
 
-    // Esc closes the modal — but never while a generation is in flight,
-    // because the request can't be aborted and closing the modal would
-    // leave the user thinking nothing happened while it kept running.
+    // Esc closes the modal. While a generation is in flight, closing is still
+    // allowed — it keeps running server-side — so we just flash a reminder that
+    // it moved to the background.
     useEffect(() => {
-        const onKey = (e) => { if (e.key === 'Escape' && !loading) onClose(); };
+        const onKey = (e) => {
+            if (e.key !== 'Escape') return;
+            if (loading) {
+                toast('İmtahan arxa fonda yaradılır 🔔 Hazır olanda bildiriş alacaqsınız.', {
+                    icon: '⏳', duration: 5000,
+                });
+            }
+            onClose();
+        };
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
     }, [loading, onClose]);
@@ -127,9 +173,9 @@ const AiExamModal = ({ onClose }) => {
                 typeCounts,
                 title: examTitle.trim() || null,
             });
-            toast.success('Generasiya başladı 🔔', { duration: 4000 });
-            setLoading(false);
-            setStarted(true);
+            // Keep `loading` true — the modal stays on its spinner until the
+            // completion notification arrives (handled by the socket effect),
+            // which then closes the modal and opens the new draft.
         } catch (err) {
             const msg = err?.response?.data?.error || err.message || 'Bilinməyən xəta';
             toast.error('Xəta: ' + msg);
@@ -138,31 +184,20 @@ const AiExamModal = ({ onClose }) => {
         }
     };
 
+    // Closing while a generation is in flight is allowed — it keeps running on
+    // the server and the teacher gets a notification when the draft is ready.
+    const handleClose = () => {
+        if (loading) {
+            toast('İmtahan arxa fonda yaradılır 🔔 Hazır olanda bildiriş alacaqsınız.', {
+                icon: '⏳', duration: 5000,
+            });
+        }
+        onClose();
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden relative">
-                {/* Background-generation panel — shown after submit. The teacher can
-                    wait here or close; generation keeps running server-side. */}
-                {started && (
-                    <div className="absolute inset-0 z-10 bg-white flex flex-col items-center justify-center text-center px-8 py-10">
-                        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                            <HiOutlineSparkles className="w-8 h-8 text-blue-600 animate-pulse" />
-                        </div>
-                        <h3 className="text-lg font-extrabold text-gray-900 mb-2">İmtahan arxa fonda yaradılır</h3>
-                        <p className="text-sm text-gray-500 leading-relaxed max-w-sm mb-1">
-                            Suallar hazırlanır. Hazır olanda <span className="font-semibold text-gray-700">bildiriş alacaqsınız</span> və imtahan <span className="font-semibold text-gray-700">qaralamalarda</span> görünəcək.
-                        </p>
-                        <p className="text-xs text-gray-400 mb-6">
-                            Bu pəncərəni indi bağlaya, yaxud açıq saxlaya bilərsiniz — generasiya dayanmaz.
-                        </p>
-                        <button
-                            onClick={onClose}
-                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition-colors"
-                        >
-                            Bağla
-                        </button>
-                    </div>
-                )}
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-emerald-600 px-6 py-5 text-white">
                     <div className="flex items-start justify-between gap-3">
@@ -191,9 +226,8 @@ const AiExamModal = ({ onClose }) => {
                             )}
                         </div>
                         <button
-                            onClick={onClose}
-                            disabled={loading}
-                            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50"
+                            onClick={handleClose}
+                            className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
                         >
                             <HiOutlineX className="w-5 h-5" />
                         </button>
@@ -375,11 +409,17 @@ const AiExamModal = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Loading state */}
+                    {/* Loading state — the modal stays here on the spinner until the
+                        completion notification arrives; the teacher may also close. */}
                     {loading && (
-                        <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
-                            <p className="text-sm font-medium text-blue-700">Generasiya başladılır...</p>
+                        <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                            <div className="w-4 h-4 mt-0.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium text-blue-700">İmtahan yaradılır...</p>
+                                <p className="text-xs text-blue-500 mt-0.5">
+                                    Bu pəncərəni bağlasanız belə arxa fonda davam edəcək — hazır olanda bildiriş gələcək.
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -387,11 +427,10 @@ const AiExamModal = ({ onClose }) => {
                 {/* Footer */}
                 <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
                     <button
-                        onClick={onClose}
-                        disabled={loading}
-                        className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                        onClick={handleClose}
+                        className="px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
                     >
-                        Ləğv et
+                        {loading ? 'Bağla' : 'Ləğv et'}
                     </button>
                     <button
                         onClick={handleGenerate}

@@ -17,14 +17,7 @@ const DIFFICULTIES = [
     { key: 'HARD',   label: DIFFICULTY_LABELS.HARD },
 ];
 
-const LOADING_MESSAGES = {
-    MCQ:               `${QUESTION_TYPE_LABELS.MCQ} sualları yaradılır...`,
-    MULTI_SELECT:      `${QUESTION_TYPE_LABELS.MULTI_SELECT} suallar yaradılır...`,
-    OPEN_AUTO:         `${QUESTION_TYPE_LABELS.OPEN_AUTO} suallar yaradılır...`,
-    FILL_IN_THE_BLANK: `${QUESTION_TYPE_LABELS.FILL_IN_THE_BLANK} sualları yaradılır...`,
-};
-
-const AiExamModal = ({ onClose, onGenerate }) => {
+const AiExamModal = ({ onClose }) => {
     const [subjects, setSubjects] = useState([]);
     const [topics, setTopics] = useState([]);
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -36,8 +29,8 @@ const AiExamModal = ({ onClose, onGenerate }) => {
     const topicInputRef = useRef(null);
     const [difficulty, setDifficulty] = useState('MEDIUM');
     const [counts, setCounts] = useState({ MCQ: 5, MULTI_SELECT: 0, OPEN_AUTO: 0, FILL_IN_THE_BLANK: 0 });
+    const [examTitle, setExamTitle] = useState('');
     const [loading, setLoading] = useState(false);
-    const [loadingMsg, setLoadingMsg] = useState('');
     const [loadingSubjects, setLoadingSubjects] = useState(true);
     const [aiUsage, setAiUsage] = useState(null); // { limit, used, remaining }
 
@@ -109,17 +102,6 @@ const AiExamModal = ({ onClose, onGenerate }) => {
         const typeCounts = {};
         Object.entries(counts).forEach(([k, v]) => { if (v > 0) typeCounts[k] = v; });
 
-        // Show a rolling loading message cycling through active types
-        const activeTypes = Object.keys(typeCounts);
-        let msgIdx = 0;
-        setLoadingMsg(LOADING_MESSAGES[activeTypes[0]] || 'Suallar yaradılır...');
-        setLoading(true);
-
-        const interval = setInterval(() => {
-            msgIdx = (msgIdx + 1) % activeTypes.length;
-            setLoadingMsg(LOADING_MESSAGES[activeTypes[msgIdx]] || 'Suallar yaradılır...');
-        }, 2500);
-
         // Commit any unsubmitted text in the topic input so a teacher who typed
         // "Cəbr" then hit Yarat without pressing Enter doesn't lose the topic.
         const pendingTopic = topicInput.trim();
@@ -127,26 +109,29 @@ const AiExamModal = ({ onClose, onGenerate }) => {
             ? [...selectedTopics, pendingTopic]
             : selectedTopics;
 
+        setLoading(true);
         try {
-            const { data } = await api.post('/ai/generate-exam', {
+            // Background generation: the request returns immediately (202) and the
+            // exam is built off-thread, then saved as a DRAFT. This avoids the
+            // ~100s proxy timeout (504) on large 50-60+ question exams. The teacher
+            // gets a notification ("İmtahanınız hazırdır") when it's ready.
+            await api.post('/ai/generate-exam-async', {
                 subjectName: selectedSubject,
-                // Keep both fields: `topicNames` is the new multi-topic field,
-                // `topicName` is a legacy comma-joined fallback for older backends.
                 topicNames: finalTopics,
                 topicName: finalTopics.length > 0 ? finalTopics.join(', ') : null,
                 difficulty,
                 typeCounts,
+                title: examTitle.trim() || null,
             });
-            clearInterval(interval);
-            toast.success(`${data.length} sual uğurla yaradıldı`);
-            onGenerate(data, selectedSubject);
+            toast.success(
+                'İmtahan arxa fonda yaradılır 🔔 Hazır olanda bildiriş alacaqsınız və qaralamalarda görünəcək.',
+                { duration: 6000 }
+            );
+            onClose();
         } catch (err) {
-            clearInterval(interval);
             const msg = err?.response?.data?.error || err.message || 'Bilinməyən xəta';
             toast.error('Xəta: ' + msg);
-        } finally {
             setLoading(false);
-            setLoadingMsg('');
             api.get('/ai/usage').then(res => setAiUsage(res.data)).catch(() => {});
         }
     };
@@ -192,6 +177,22 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                 </div>
 
                 <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                    {/* Optional exam title — blank falls back to an auto-generated name */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                            İmtahan adı <span className="text-gray-400 normal-case font-medium">(istəyə bağlı)</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={examTitle}
+                            onChange={e => setExamTitle(e.target.value)}
+                            disabled={loading}
+                            placeholder="Boş qoysanız avtomatik ad veriləcək"
+                            maxLength={120}
+                            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors"
+                        />
+                    </div>
+
                     {/* Subject + Topic row */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -354,7 +355,7 @@ const AiExamModal = ({ onClose, onGenerate }) => {
                     {loading && (
                         <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
                             <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
-                            <p className="text-sm font-medium text-blue-700">{loadingMsg}</p>
+                            <p className="text-sm font-medium text-blue-700">Generasiya başladılır...</p>
                         </div>
                     )}
                 </div>

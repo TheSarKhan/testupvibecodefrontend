@@ -8,6 +8,16 @@ const api = axios.create({
     },
 });
 
+// Redirect to /login while preserving where the user was, so they return there
+// after authenticating. Never captures the login page itself (avoids a loop)
+// and only ever encodes the current internal path.
+const redirectToLogin = () => {
+    const path = window.location.pathname + window.location.search;
+    window.location.href = path.startsWith('/login')
+        ? '/login'
+        : '/login?returnUrl=' + encodeURIComponent(path);
+};
+
 // ─── Request interceptor — attach access token ──────────────────────────
 api.interceptors.request.use(
     (config) => {
@@ -100,7 +110,7 @@ api.interceptors.response.use(
             localStorage.removeItem('refreshToken');
             processQueue(new Error('No refresh token'), null);
             isRefreshing = false;
-            window.location.href = '/login';
+            redirectToLogin();
             return Promise.reject(error);
         }
 
@@ -120,7 +130,7 @@ api.interceptors.response.use(
             processQueue(refreshError, null);
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
-            window.location.href = '/login';
+            redirectToLogin();
             return Promise.reject(refreshError);
         } finally {
             isRefreshing = false;

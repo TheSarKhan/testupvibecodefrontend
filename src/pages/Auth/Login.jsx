@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     HiOutlineEye, HiOutlineEyeOff,
@@ -91,6 +91,41 @@ const Login = () => {
     const [showForgot, setShowForgot] = useState(false);
     const { login, loginWithTokens } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Where to send the user after a successful login. Prefer the page they
+    // were trying to reach — carried as router state (from ProtectedRoute) or a
+    // ?returnUrl= query (from the axios 401 hard-redirect). Only ever an
+    // internal, relative path so this can't be abused for an open redirect.
+    const sanitizeInternalPath = (path) => {
+        if (!path || typeof path !== 'string') return null;
+        // Must start with a single "/", i.e. not "//" (protocol-relative) and
+        // not an absolute "http(s)://" URL or a "/\" backslash trick.
+        if (!path.startsWith('/') || path.startsWith('//') || path.startsWith('/\\')) return null;
+        // Never bounce back to an auth page (would loop).
+        if (path.startsWith('/login') || path.startsWith('/register')) return null;
+        return path;
+    };
+    // Accept every shape used across the app:
+    //  - state.from (a location object)  — ProtectedRoute route guard
+    //  - state.returnUrl (a string)      — ExamEntry / Pricing redirects
+    //  - ?returnUrl= query               — axios 401 hard-redirect
+    const fromState = location.state?.from
+        ? (location.state.from.pathname || '') + (location.state.from.search || '')
+        : null;
+    const stateReturnUrl = location.state?.returnUrl || null;
+    const returnUrlParam = new URLSearchParams(location.search).get('returnUrl');
+    const from = sanitizeInternalPath(fromState)
+        || sanitizeInternalPath(stateReturnUrl)
+        || sanitizeInternalPath(returnUrlParam);
+
+    const redirectAfterLogin = (role) => {
+        if (from) {
+            navigate(from, { replace: true });
+        } else {
+            navigate(role === 'ADMIN' ? '/admin' : '/', { replace: true });
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -100,7 +135,7 @@ const Login = () => {
             const { jwtDecode } = await import('jwt-decode');
             const decoded = jwtDecode(data.accessToken);
             toast.success('Uğurla daxil oldunuz!');
-            navigate(decoded.role === 'ADMIN' ? '/admin' : '/');
+            redirectAfterLogin(decoded.role);
         } catch (error) {
             if (!error._handled) toast.error(error.response?.data?.message || 'Giriş uğursuz oldu');
         } finally {
@@ -114,7 +149,7 @@ const Login = () => {
             if (data.status === 'LOGIN') {
                 loginWithTokens(data);
                 toast.success('Uğurla daxil oldunuz!');
-                navigate(data.role === 'ADMIN' ? '/admin' : '/');
+                redirectAfterLogin(data.role);
             } else if (data.status === 'NEEDS_REGISTRATION') {
                 setGooglePending({ accessToken: tokenResponse.access_token, userInfo: data });
             }
@@ -139,7 +174,7 @@ const Login = () => {
                     onSuccess={(data) => {
                         loginWithTokens(data);
                         toast.success('Qeydiyyat tamamlandı!');
-                        navigate(data.role === 'ADMIN' ? '/admin' : '/');
+                        redirectAfterLogin(data.role);
                     }}
                     onClose={() => setGooglePending(null)}
                 />

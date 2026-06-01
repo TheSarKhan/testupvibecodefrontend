@@ -80,11 +80,17 @@ const ReceivedCard = ({ exam, navigate }) => {
     const palette = paletteFor(subj);
     const isOngoing = exam.status === 'ONGOING';
     const isExpired = exam.status === 'EXPIRED';
+    const isCompleted = exam.status === 'COMPLETED';
     const isPurchased = exam.kind === 'PURCHASED';
 
     const handleStart = () => {
         if (exam.ongoingSessionId) navigate(`/test/take/${exam.ongoingSessionId}`);
         else if (exam.shareLink) navigate(`/imtahan/${exam.shareLink}`);
+    };
+
+    const handleResult = () => {
+        if (exam.resultId) navigate(`/test/result/${exam.resultId}`);
+        else if (exam.shareLink) navigate(`/imtahanlar/melumat/${exam.shareLink}`);
     };
 
     const handleInfo = () => {
@@ -175,6 +181,22 @@ const ReceivedCard = ({ exam, navigate }) => {
                     >
                         Vaxt başa çatıb
                     </button>
+                ) : isCompleted ? (
+                    <>
+                        <button
+                            onClick={handleResult}
+                            className="flex-1 h-10 inline-flex items-center justify-center gap-1.5 rounded-full text-[13px] font-bold text-white bg-[var(--brand-green-600)] hover:opacity-90 shadow-[0_8px_24px_-10px_rgba(22,163,74,0.6)] transition-all"
+                        >
+                            Nəticəyə bax <HiOutlineArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={handleInfo}
+                            title="Ətraflı bax"
+                            className="w-10 h-10 inline-flex items-center justify-center rounded-full text-[var(--ink-500)] bg-white border border-[var(--ink-200)] hover:text-[var(--primary)] hover:border-[var(--primary)] transition-all"
+                        >
+                            <HiOutlineInformationCircle className="w-4 h-4" />
+                        </button>
+                    </>
                 ) : (
                     <>
                         <button
@@ -204,6 +226,7 @@ const StatusPill = ({ status, kind }) => {
         EXPIRED:   { label: 'Vaxt bitib',   cls: 'bg-[var(--ink-100)] text-[var(--ink-500)] border-[var(--ink-200)]', dot: 'bg-[var(--ink-400)]' },
         PURCHASED: { label: 'Alınıb',       cls: 'bg-[var(--accent-soft)] text-[var(--brand-green-600)] border-[var(--brand-green-100)]', dot: 'bg-[var(--brand-green-600)]' },
         SAVED:     { label: 'Saxlanılıb',   cls: 'bg-[var(--primary-soft)] text-[var(--primary-hover)] border-[var(--brand-blue-100)]', dot: 'bg-[var(--primary)]' },
+        COMPLETED: { label: 'Tamamlanıb',   cls: 'bg-[var(--accent-soft)] text-[var(--brand-green-600)] border-[var(--brand-green-100)]', dot: 'bg-[var(--brand-green-600)]' },
     };
     const meta = map[status] || map.NEW;
     return (
@@ -380,15 +403,24 @@ const StudentExams = () => {
     }, []);
 
     // Shared lookups for ongoing / completed status.
-    const { completedShareLinks, ongoingByShareLink } = useMemo(() => {
+    const { completedShareLinks, ongoingByShareLink, completedByShareLink } = useMemo(() => {
         const completed = new Set(
             results.filter(r => r.submittedAt).map(r => r.shareLink)
         );
+        // shareLink → latest submitted result (used to link a completed saved
+        // exam to its result page).
+        const completedMap = {};
+        results.filter(r => r.submittedAt && r.shareLink).forEach(r => {
+            const prev = completedMap[r.shareLink];
+            if (!prev || new Date(r.submittedAt) > new Date(prev.submittedAt)) {
+                completedMap[r.shareLink] = r;
+            }
+        });
         const ongoing = {};
         results.forEach(r => {
             if (!r.submittedAt && r.shareLink) ongoing[r.shareLink] = r;
         });
-        return { completedShareLinks: completed, ongoingByShareLink: ongoing };
+        return { completedShareLinks: completed, ongoingByShareLink: ongoing, completedByShareLink: completedMap };
     }, [results]);
 
     // "Aldığım" — ONLY purchased (paid) exams. Saved/bookmarked exams must NOT
@@ -418,14 +450,17 @@ const StudentExams = () => {
         return items;
     }, [purchasedExams, completedShareLinks, ongoingByShareLink]);
 
-    // "Saxladığım" — depot (bookmarked/saved) exams, excluding any that are
-    // already purchased (those show under "Aldığım") or already completed.
+    // "Saxladığım" — depot (bookmarked/saved) exams. Anything the student saved
+    // shows here, full stop: it stays after the exam is completed (a completed
+    // one just shows a "view result" action) AND it shows even when the exam is
+    // also purchased (a saved exam must be findable under "Saxladığım" — it can
+    // legitimately appear in both "Aldığım" and "Saxladığım"). Only the student
+    // removing it from the depot takes it off this list.
     const savedItems = useMemo(() => {
         const items = [];
         savedExams.forEach(e => {
-            if (completedShareLinks.has(e.shareLink)) return;
-            if (purchasedExams.some(p => p.shareLink === e.shareLink)) return;
             const ongoing = ongoingByShareLink[e.shareLink];
+            const completed = completedByShareLink[e.shareLink];
             items.push({
                 id: `s-${e.shareLink}`,
                 kind: 'SAVED',
@@ -437,13 +472,14 @@ const StudentExams = () => {
                 receivedAt: e.savedAt || e.createdAt,
                 durationMinutes: e.durationMinutes,
                 questionCount: e.questionCount || 0,
-                status: ongoing ? 'ONGOING' : 'NEW',
+                status: ongoing ? 'ONGOING' : (completed ? 'COMPLETED' : 'NEW'),
                 ongoingSessionId: ongoing?.id,
+                resultId: completed?.id || null,
                 progressPct: ongoing ? Math.round(((ongoing.answeredCount || 0) / (ongoing.totalQuestions || 1)) * 100) : null,
             });
         });
         return items;
-    }, [purchasedExams, savedExams, completedShareLinks, ongoingByShareLink]);
+    }, [savedExams, ongoingByShareLink, completedByShareLink]);
 
     // Completed = submitted results
     const completedItems = useMemo(() => results.filter(r => r.submittedAt), [results]);

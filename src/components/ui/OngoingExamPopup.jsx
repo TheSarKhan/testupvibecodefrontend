@@ -158,15 +158,22 @@ const OngoingExamPopup = () => {
     if (ongoingExams.length === 0 || isExamSession || isHidden) return null;
 
     const exam = ongoingExams[0];
+    // No duration assigned → no countdown. Hide the timer entirely instead of
+    // showing a meaningless "00:00".
+    const hasTimer = exam.durationMinutes != null && Number(exam.durationMinutes) > 0;
 
     return (
         <div className="fixed top-24 right-8 z-[100] animate-in fade-in slide-in-from-right-8 duration-500">
             <div className="w-[320px] bg-gradient-to-br from-blue-600 to-blue-700 rounded-[24px] p-6 shadow-2xl relative overflow-hidden border border-white/10 group">
                 <div className="flex items-center justify-between mb-8">
-                    {/* Timer */}
-                    <div className="text-white text-3xl font-bold font-mono">
-                        {formatTime(timeLeft)}
-                    </div>
+                    {/* Timer — only when the exam has a time limit */}
+                    {hasTimer ? (
+                        <div className="text-white text-3xl font-bold font-mono">
+                            {formatTime(timeLeft)}
+                        </div>
+                    ) : (
+                        <div />
+                    )}
 
                     <div className="flex items-center gap-3">
                         {/* Finish Button */}

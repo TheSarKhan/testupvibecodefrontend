@@ -294,6 +294,26 @@ const ExamSession = () => {
     // Only icon + question items shown in nav (no passage-sub rows)
     const navGroups = buildNavGroups(navItems.filter(i => i.type !== 'passage-sub'));
 
+    // BUG-14: a TEXT/LISTENING passage is ONE navigation screen but holds
+    // several sub-questions, so the section count (sections.length) under-reports
+    // the real question total (e.g. shows 29 for a 35-question exam). Every
+    // "Sual X / Y" display must use the individual-question count instead — this
+    // equals answers.length and matches the submit summary.
+    const totalQuestionCount = navItems.filter(
+        i => i.type === 'question' || i.type === 'passage-sub'
+    ).length;
+    // Individual question number(s) covered by the current screen: a single
+    // number for a standalone question, a range (e.g. "12-15") for a passage.
+    const currentNavNums = navItems
+        .filter(i => i.sectionIdx === currentSectionIndex
+            && (i.type === 'question' || i.type === 'passage-sub'))
+        .map(i => i.displayNum);
+    const currentFirstNum = currentNavNums[0] ?? (currentSectionIndex + 1);
+    const currentLastNum = currentNavNums[currentNavNums.length - 1] ?? currentFirstNum;
+    const currentRangeLabel = currentNavNums.length > 1
+        ? `${currentFirstNum}-${currentLastNum}`
+        : `${currentFirstNum}`;
+
     // syncFailureToastRef: dedupe sync-error toasts so a flaky network doesn't
     // spam the screen with one toast per keystroke. We only re-toast every 8s.
     const syncFailureToastRef = useRef(0);
@@ -447,7 +467,9 @@ const ExamSession = () => {
                             {resolveSubjectLabel(currentSection?.subjectGroup) && (
                                 <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">{resolveSubjectLabel(currentSection?.subjectGroup)}</span>
                             )}
-                            Sual {currentSectionIndex + 1} / {sections.length}
+                            {currentNavNums.length > 1
+                                ? `Suallar ${currentRangeLabel} / ${totalQuestionCount}`
+                                : `Sual ${currentRangeLabel} / ${totalQuestionCount}`}
                         </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -601,7 +623,7 @@ const ExamSession = () => {
                             Əvvəlki
                         </button>
                         <span className="text-xs text-gray-400 font-medium">
-                            {currentSectionIndex + 1} / {sections.length}
+                            {currentRangeLabel} / {totalQuestionCount}
                         </span>
 
                         <button

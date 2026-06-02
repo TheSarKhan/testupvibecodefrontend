@@ -28,6 +28,8 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         strikeThrough: false, superscript: false, subscript: false,
     });
     const [fontSize, setFontSize] = useState('3');
+    const [fontMenuOpen, setFontMenuOpen] = useState(false);
+    const fontMenuRef = useRef(null);
 
     const updateActiveFormats = useCallback(() => {
         try {
@@ -59,6 +61,12 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 superscript: inSup || document.queryCommandState('superscript'),
                 subscript:  inSub || document.queryCommandState('subscript'),
             });
+            // Keep the font-size control in sync with whatever the caret is
+            // actually sitting in. Without this the dropdown label drifts —
+            // it shows the last *picked* size even when the cursor moves into
+            // text of a different size, so it "looks selected" but isn't real.
+            const fs = document.queryCommandValue('fontSize');
+            if (fs) setFontSize(String(fs));
         } catch {}
     }, []);
 
@@ -76,6 +84,21 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         document.addEventListener('selectionchange', handleSelectionChange);
         return () => document.removeEventListener('selectionchange', handleSelectionChange);
     }, [updateActiveFormats]);
+
+    // Close the font-size dropdown when clicking anywhere outside it. We listen
+    // on `mousedown` (not `click`) so the close fires before the editor's own
+    // selection handling, and the option buttons live inside `fontMenuRef`, so
+    // picking one never triggers this.
+    useEffect(() => {
+        if (!fontMenuOpen) return;
+        const onDocMouseDown = (e) => {
+            if (fontMenuRef.current && !fontMenuRef.current.contains(e.target)) {
+                setFontMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDocMouseDown);
+        return () => document.removeEventListener('mousedown', onDocMouseDown);
+    }, [fontMenuOpen]);
 
     // Build a math-node span. Routes through safeRenderLatex so a malformed
     // expression downgrades to a clickable amber chip instead of red raw text.
@@ -222,6 +245,19 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         } catch {}
     };
 
+    // True when the live selection/caret is still inside this editor. Toolbar
+    // buttons use onMouseDown+preventDefault, so the caret never actually
+    // leaves — in that case we must NOT re-set the selection, because
+    // removeAllRanges()+addRange() resets Chrome's pending typing style and
+    // breaks the collapsed-caret toggle (clicking U/S to turn them OFF did
+    // nothing — the format wouldn't "close").
+    const selectionInEditor = () => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return false;
+        const node = sel.getRangeAt(0).commonAncestorContainer;
+        return !!(editorRef.current && editorRef.current.contains(node));
+    };
+
     // Move the caret OUT of the nearest <sup>/<sub> ancestor by inserting a
      // zero-width space after the element and parking the caret there. We need
      // this because `document.execCommand('superscript')` reliably toggles only
@@ -250,9 +286,54 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         return true;
     };
 
+    // Deterministic toggle for underline / strikethrough at a COLLAPSED caret.
+    // These are `text-decoration` based, and Chromium's execCommand pending-
+    // style toggle is unreliable for them with no selection — clicking the
+    // button changed nothing, so the user couldn't freely turn them on/off.
+    //
+    // The trap: at the boundary of underlined text the caret can sit either
+    // INSIDE or OUTSIDE the <u> while looking identical, so a blind
+    // execCommand sometimes ADDED the format when the user meant to remove it.
+    // Fix: read the *perceived* current state via queryCommandState (this is
+    // what makes the button glow), decide the target = opposite, then insert a
+    // zero-width space, select it, and force it to the target state — only
+    // running execCommand when the ZWS isn't already there. Because we drive
+    // toward an absolute target instead of toggling, the boundary ambiguity no
+    // longer matters: ON→OFF and OFF→ON both land correctly every time.
+    const toggleDecorationCollapsed = (command) => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return false;
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) return false; // real selection → execCommand is reliable
+        const target = !document.queryCommandState(command); // desired new state
+        const zws = document.createTextNode('​');
+        range.insertNode(zws);
+        const zwsRange = document.createRange();
+        zwsRange.selectNodeContents(zws);
+        sel.removeAllRanges();
+        sel.addRange(zwsRange);
+        // Force the ZWS (and therefore the caret context) to the desired state,
+        // no matter which side of the format boundary it landed on.
+        if (document.queryCommandState(command) !== target) {
+            document.execCommand(command, false, null);
+        }
+        // Collapse to the end of the ZWS — robust against execCommand
+        // reparenting the node into/out of a wrapper.
+        const after = window.getSelection();
+        if (after && after.rangeCount > 0) {
+            after.collapseToEnd();
+            savedSelection.current = after.getRangeAt(0).cloneRange();
+        }
+        return true;
+    };
+
     const execFormat = (command, val = null) => {
         editorRef.current?.focus();
-        restoreSelection();
+        // Only restore the saved range when the caret genuinely left the
+        // editor. If it's still inside (the normal toolbar-button case),
+        // re-setting the selection would reset Chrome's pending typing style
+        // and break the toggle for underline/strikethrough.
+        if (!selectionInEditor()) restoreSelection();
         // Caret-only escape from superscript/subscript: if the user is parked
         // inside a <sup>/<sub> with nothing selected and clicks the same
         // button, jump the caret out instead of relying on execCommand's
@@ -267,6 +348,13 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
             updateActiveFormats();
             return;
         }
+        // Deterministic collapsed-caret toggle for the text-decoration formats.
+        if ((command === 'underline' || command === 'strikeThrough') &&
+            toggleDecorationCollapsed(command)) {
+            handleChange();
+            updateActiveFormats();
+            return;
+        }
         document.execCommand(command, false, val);
         handleChange();
         updateActiveFormats();
@@ -274,6 +362,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
 
     const applyFontSize = (size) => {
         setFontSize(size);
+        setFontMenuOpen(false);
         execFormat('fontSize', size);
     };
 
@@ -411,17 +500,42 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
 
                     <div className="w-px h-5 bg-gray-200 mx-0.5" />
 
-                    <select
-                        value={fontSize}
-                        onChange={(e) => applyFontSize(e.target.value)}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="text-xs border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-700 focus:outline-none focus:border-blue-400 cursor-pointer"
-                        title="Hərf ölçüsü"
-                    >
-                        {FONT_SIZES.map(s => (
-                            <option key={s.value} value={s.value}>{s.label}</option>
-                        ))}
-                    </select>
+                    {/* Custom font-size dropdown. A native <select> can't keep
+                        the editor's text selection alive while it's open — the
+                        moment the OS dropdown takes focus, the contentEditable
+                        selection collapses, so execCommand('fontSize') had
+                        nothing to apply to (it "looked" picked but did nothing).
+                        These buttons use onMouseDown+preventDefault, exactly
+                        like B/I/U above, so the selection survives the click. */}
+                    <div className="relative" ref={fontMenuRef}>
+                        <button
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); setFontMenuOpen(o => !o); }}
+                            className="flex items-center gap-1 text-xs border border-gray-200 rounded px-2 py-1 bg-white text-gray-700 hover:bg-gray-100 focus:outline-none transition-colors"
+                            title="Hərf ölçüsü"
+                        >
+                            {FONT_SIZES.find(s => s.value === fontSize)?.label || 'Ölçü'}
+                            <span className="text-[8px] leading-none">▼</span>
+                        </button>
+                        {fontMenuOpen && (
+                            <div className="absolute left-0 top-full mt-1 z-30 min-w-[120px] bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                                {FONT_SIZES.map(s => (
+                                    <button
+                                        key={s.value}
+                                        type="button"
+                                        onMouseDown={(e) => { e.preventDefault(); applyFontSize(s.value); }}
+                                        className={`block w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                                            s.value === fontSize
+                                                ? 'bg-blue-50 text-blue-700 font-semibold'
+                                                : 'text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     <div className="w-px h-5 bg-gray-200 mx-0.5" />
 

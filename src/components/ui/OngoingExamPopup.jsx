@@ -88,6 +88,16 @@ const OngoingExamPopup = () => {
             return;
         }
 
+        // The ongoing-exam popup is a student-only feature. Teachers/admins
+        // can't take exams (the backend blocks them), so they never have an
+        // ongoing submission — polling /submissions/ongoing for them just
+        // produced a noisy 403 "İstifadəçi tapılmadı" on the exam-creation
+        // page. Skip entirely for non-student roles.
+        if (user && user.role !== 'STUDENT') {
+            setOngoingExams([]);
+            return;
+        }
+
         if (user) {
             fetchOngoing();
             const interval = setInterval(fetchOngoing, 30000);

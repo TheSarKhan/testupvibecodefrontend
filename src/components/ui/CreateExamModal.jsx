@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck } from 'react-icons/hi';
+import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck, HiOutlineSearch } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +23,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     const [examType, setExamType] = useState(null);
     const [selectedSubject, setSelectedSubject] = useState('');
     const [subjects, setSubjects] = useState([]); // [{id, name, color, iconEmoji}]
+    const [subjectSearch, setSubjectSearch] = useState('');
 
     // Template flow state
     const [templates, setTemplates] = useState([]);
@@ -45,6 +46,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         setStep(1);
         setExamType(null);
         setSelectedSubject('');
+        setSubjectSearch('');
         setSelectedTemplate(null);
         setSelectedSubtitle(null);
         setSubtitles([]);
@@ -170,67 +172,88 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     );
 
     // ── Step 2 (free): subject select ─────────────────────────────────────────
-    const renderStep2Free = () => (
-        <div className="space-y-5">
-            <div>
-                <button onClick={() => setStep(1)} className="text-sm font-medium text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center gap-1">
-                    <HiOutlineArrowLeft className="w-4 h-4" /> Geriyə qayıt
-                </button>
-                <p className="text-gray-600 text-sm">İmtahan üçün fənn seçin:</p>
-            </div>
+    const renderStep2Free = () => {
+        const q = subjectSearch.trim().toLowerCase();
+        const filtered = subjects.filter(s => (typeof s === 'string' ? s : s.name).toLowerCase().includes(q));
+        return (
+            <div className="space-y-4">
+                <div>
+                    <button onClick={() => setStep(1)} className="text-sm font-medium text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center gap-1">
+                        <HiOutlineArrowLeft className="w-4 h-4" /> Geriyə qayıt
+                    </button>
+                    <p className="text-gray-600 text-sm">İmtahan üçün fənn seçin:</p>
+                </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-0.5">
-                {subjects.map(s => {
-                    const name = typeof s === 'string' ? s : s.name;
-                    const color = typeof s === 'string' ? null : s.color;
-                    const isSelected = selectedSubject === name;
-                    return (
-                        <button
-                            key={name}
-                            onClick={() => setSelectedSubject(name)}
-                            className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                                isSelected
-                                    ? 'border-transparent shadow-md scale-[1.02]'
-                                    : 'border-gray-100 bg-white hover:border-gray-300 hover:shadow-sm'
-                            }`}
-                            style={isSelected ? {
-                                borderColor: color || '#3b82f6',
-                                backgroundColor: color ? `${color}12` : '#eff6ff',
-                            } : {}}
-                        >
-                            {/* Color circle */}
-                            <span
-                                className="w-10 h-10 rounded-xl shrink-0 shadow-sm"
-                                style={{ backgroundColor: color || '#e5e7eb' }}
-                            />
-                            <span
-                                className={`text-xs text-center leading-tight font-semibold ${isSelected ? '' : 'text-gray-700'}`}
-                                style={isSelected ? { color: color || '#3b82f6' } : {}}
+                {/* Live search */}
+                <div className="relative">
+                    <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <input
+                        type="text"
+                        value={subjectSearch}
+                        onChange={e => setSubjectSearch(e.target.value)}
+                        placeholder="Fənn axtar..."
+                        className="w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors"
+                    />
+                </div>
+
+                {/* Compact chip grid */}
+                <div
+                    className="max-h-72 overflow-y-auto p-0.5"
+                    style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}
+                >
+                    {filtered.map(s => {
+                        const name = typeof s === 'string' ? s : s.name;
+                        const color = typeof s === 'string' ? null : s.color;
+                        const iconEmoji = typeof s === 'string' ? null : s.iconEmoji;
+                        const isSelected = selectedSubject === name;
+                        return (
+                            <button
+                                key={name}
+                                onClick={() => setSelectedSubject(prev => prev === name ? '' : name)}
+                                title={name}
+                                className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-[1.5px] text-sm font-medium text-left transition-all ${
+                                    isSelected ? 'shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                                }`}
+                                style={isSelected ? {
+                                    borderColor: color || '#3b82f6',
+                                    backgroundColor: color ? `${color}12` : '#eff6ff',
+                                } : {}}
                             >
-                                {name}
-                            </span>
-                            {/* Check mark */}
-                            {isSelected && (
+                                {/* Emoji if present, otherwise a color dot */}
+                                {iconEmoji ? (
+                                    <span className="text-[18px] leading-none shrink-0">{iconEmoji}</span>
+                                ) : (
+                                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color || '#cbd5e1' }} />
+                                )}
                                 <span
-                                    className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center"
-                                    style={{ backgroundColor: color || '#3b82f6' }}
+                                    className="flex-1 min-w-0 truncate font-semibold"
+                                    style={{ color: isSelected ? (color || '#3b82f6') : '#374151' }}
                                 >
-                                    <HiOutlineCheck className="w-2.5 h-2.5 text-white" />
+                                    {name}
                                 </span>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
+                                {isSelected && (
+                                    <HiOutlineCheck className="w-4 h-4 shrink-0" style={{ color: color || '#3b82f6' }} />
+                                )}
+                            </button>
+                        );
+                    })}
+                    {filtered.length === 0 && (
+                        <p className="col-span-full text-sm text-gray-400 text-center py-6">Uyğun fənn tapılmadı</p>
+                    )}
+                </div>
 
-            <div className="pt-3 border-t border-gray-100 flex justify-end">
-                <button onClick={handleContinueFree} disabled={!selectedSubject}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-semibold transition-colors">
-                    Davam et <HiOutlineArrowRight className="w-5 h-5" />
-                </button>
+                <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                    <span className="text-xs text-gray-500 truncate">
+                        {selectedSubject ? <>Seçildi: <span className="font-semibold text-gray-700">{selectedSubject}</span></> : 'Fənn seçilməyib'}
+                    </span>
+                    <button onClick={handleContinueFree} disabled={!selectedSubject}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-semibold transition-colors shrink-0">
+                        Davam et <HiOutlineArrowRight className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // ── Step 2 (template): template select ────────────────────────────────────
     const renderStep2Template = () => (

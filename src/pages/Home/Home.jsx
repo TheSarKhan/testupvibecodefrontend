@@ -206,7 +206,7 @@ const Stats = () => {
 
 const HowItWorks = () => {
     const steps = [
-        { n: 1, t: 'Sualları daxil edin',    d: 'Hazır şablonlar, sual bankı və ya öz suallarınızla 5 dəqiqəyə imtahan yaradın. Şəkil, formula və video dəstəyi.' },
+        { n: 1, t: 'Sualları daxil edin',    d: 'Hazır şablonlar, sual bankı və ya öz suallarınızla 5 dəqiqəyə imtahan yaradın. Şəkil, riyazi simvol, mətn və dinləmə sualları dəstəyi.' },
         { n: 2, t: 'Şagirdlərə paylaşın',     d: 'Bir linklə imtahanı sinifə göndərin. Şagirdlər istənilən cihazdan iştirak edə bilərlər — qeydiyyatla və ya qeydiyyatsız.' },
         { n: 3, t: 'Nəticələri analiz edin',  d: 'Avtomatik qiymətləndirmə, ətraflı statistika və hər şagird üçün fərdi hesabat.' },
     ];
@@ -246,7 +246,7 @@ const FeaturesTeacher = () => (
                 sub="Kağız və Excel cədvəlləri unudun. testup.az ilə bütün proses avtomatlaşır."
             />
             <div className="grid md:grid-cols-3 gap-5 auto-rows-auto">
-                <FeatureCard Icon={HiOutlinePencilAlt}  title="Vizual sual redaktoru" desc="Çoxseçimli, açıq cavab, doğru/yalan və uyğunluq sualları. Şəkil, LaTeX formula və video əlavə edin." />
+                <FeatureCard Icon={HiOutlinePencilAlt}  title="Vizual sual redaktoru" desc="Çoxseçimli, açıq cavab, doğru/yalan, uyğunluq, həmçinin mətn və dinləmə sualları. Şəkil və riyazi simvol əlavə edin." />
 
                 {/* Big accent — grades table */}
                 <div className="md:row-span-2 bg-white border border-[var(--ink-200)] rounded-2xl p-6">
@@ -522,10 +522,9 @@ const FAQ = () => {
     const items = [
         { q: 'testup.az-dan istifadə tamamilə pulsuzdur?', a: 'Başlanğıc planı ömürlük pulsuzdur — 3 imtahan və 50 şagirdə qədər. Daha çox imkan üçün ödənişli planlardan birini seçə bilərsiniz.' },
         { q: 'Şagirdlərin qeydiyyatdan keçməsi vacibdirmi?', a: 'Xeyr. İmtahanı tək link vasitəsilə qeydiyyatsız da paylaşa bilərsiniz. Lakin uzunmüddətli izləmə üçün qeydiyyat tövsiyə olunur.' },
-        { q: 'Hansı sual növlərini dəstəkləyirsiniz?', a: 'Çoxseçimli, çoxlu doğru cavab, doğru/yalan, açıq cavab, uyğunluq, ardıcıllıq və ədəd cavablı suallar. Şəkil, LaTeX formula və video də əlavə oluna bilər.' },
+        { q: 'Hansı sual növlərini dəstəkləyirsiniz?', a: 'Çoxseçimli, çoxlu doğru cavab, doğru/yalan, açıq cavab, uyğunluq, ardıcıllıq və ədəd cavablı suallar, həmçinin mətn və dinləmə tapşırıqları. Şəkil və riyazi simvol da əlavə oluna bilər.' },
         { q: 'Sual bankı və AI ilə imtahan necə işləyir?', a: 'Suallarınızı fənn üzrə sual bankında saxlayıb təkrar-təkrar istifadə edə bilərsiniz. AI köməkçisi isə mövzu və çətinlik səviyyəsinə görə dəqiqələr içində yeni suallar və hazır imtahan variantları yaradır.' },
-        { q: 'Nəticələri Excel və ya PDF formatında ixrac edə bilərəmmi?', a: 'Bəli. Hər imtahanın nəticələrini Excel, CSV və PDF kimi yükləyə bilərsiniz.' },
-        { q: 'Texniki dəstək necədir?', a: 'Pulsuz plan üçün email, Peşəkar üçün prioritet email + WhatsApp, Mərkəz planı üçün isə şəxsi menecer ayrılır.' },
+        { q: 'Nəticələri Excel formatında ixrac edə bilərəmmi?', a: 'Bəli. Hər imtahanın nəticələrini Excel faylı kimi yükləyə bilərsiniz.' },
     ];
     const [open, setOpen] = useState(-1);
     return (

@@ -52,6 +52,10 @@ api.interceptors.response.use(
         const originalRequest = error.config;
         const status = error.response?.status;
 
+        // Callers that own their own error UI (e.g. background polling) can pass
+        // { skipErrorToast: true } to suppress the global toast.
+        const skipToast = originalRequest?.skipErrorToast === true;
+
         // Extract backend message so callers can use error.message directly
         if (error.response?.data?.message) {
             error.message = error.response.data.message;
@@ -60,21 +64,21 @@ api.interceptors.response.use(
         // Network error (no response at all)
         if (!error.response) {
             error._handled = true;
-            toast.error('Şəbəkə bağlantısı xətası. Zəhmət olmasa yenidən cəhd edin.');
+            if (!skipToast) toast.error('Şəbəkə bağlantısı xətası. Zəhmət olmasa yenidən cəhd edin.');
             return Promise.reject(error);
         }
 
         // 403 Forbidden — always show globally
         if (status === 403) {
             error._handled = true;
-            toast.error(error.response?.data?.message || 'Bu əməliyyat üçün icazəniz yoxdur');
+            if (!skipToast) toast.error(error.response?.data?.message || 'Bu əməliyyat üçün icazəniz yoxdur');
             return Promise.reject(error);
         }
 
-        // 5xx Server errors — always show globally
+        // 5xx Server errors — show globally unless the caller opted out
         if (status >= 500) {
             error._handled = true;
-            toast.error(error.response?.data?.message || 'Server xətası baş verdi. Zəhmət olmasa bir az sonra yenidən cəhd edin.');
+            if (!skipToast) toast.error(error.response?.data?.message || 'Server xətası baş verdi. Zəhmət olmasa bir az sonra yenidən cəhd edin.');
             return Promise.reject(error);
         }
 

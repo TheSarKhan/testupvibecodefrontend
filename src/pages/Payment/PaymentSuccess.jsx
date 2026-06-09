@@ -10,6 +10,21 @@ import { useAuth } from '../../context/AuthContext';
 import Logo from '../../components/ui/Logo';
 
 const MAX_WAIT_SECONDS = 120;
+const LAST_COMPLETED_KEY = 'lastCompletedPayment';
+const COMPLETED_TTL_MS = 60 * 60 * 1000; // remember a completed payment for 1h
+
+// Remember the just-completed payment so returning to this page (browser
+// back/forward) shows success instead of re-verifying a stale/absent order.
+const readLastCompleted = () => {
+    try {
+        const obj = JSON.parse(localStorage.getItem(LAST_COMPLETED_KEY) || 'null');
+        if (!obj?.at || Date.now() - obj.at > COMPLETED_TTL_MS) return null;
+        return obj;
+    } catch { return null; }
+};
+const writeLastCompleted = (obj) => {
+    try { localStorage.setItem(LAST_COMPLETED_KEY, JSON.stringify({ ...obj, at: Date.now() })); } catch { /* ignore */ }
+};
 
 // ───────────────────────────────────────────────────────────────────────────
 // Shared layout shell
@@ -125,6 +140,19 @@ const PaymentSuccess = () => {
             || searchParams.get('order_id')
             || searchParams.get('id')
             || localStorage.getItem('pendingPaymentOrderId');
+
+        // Returning to this page after a payment already completed (browser
+        // back/forward). Don't re-verify a stale/absent order — restore the
+        // success view from the remembered completion instead.
+        const last = readLastCompleted();
+        if (last && (!orderId || last.orderId === orderId)) {
+            if (last.type) setOrderType(last.type);
+            if (last.examShareLink) setExamShareLink(last.examShareLink);
+            localStorage.removeItem('pendingPaymentOrderId');
+            setStatus('success');
+            return;
+        }
+
         if (!orderId) {
             setStatus('pending');
             return;
@@ -138,7 +166,9 @@ const PaymentSuccess = () => {
 
     const verify = async (orderId) => {
         try {
-            const { data } = await api.post('/payment/verify', { orderId });
+            // Background poll with its own pending/failed UI — suppress the
+            // global server-error toast (it would fire on every retry).
+            const { data } = await api.post('/payment/verify', { orderId }, { skipErrorToast: true });
             // Capture the order type / exam link from EVERY response (the
             // backend now returns them in all states), so the context is known
             // even before — or without — a terminal PAID.
@@ -149,6 +179,12 @@ const PaymentSuccess = () => {
                 const isExamOrder = data.orderType === 'EXAM' || !!data.examShareLink;
                 if (!isExamOrder) await refreshSubscription();
                 localStorage.setItem('paymentCompleted', Date.now().toString());
+                // Remember so a back/forward revisit shows success without re-verifying.
+                writeLastCompleted({
+                    orderId,
+                    type: data.orderType || orderType,
+                    examShareLink: data.examShareLink || examShareLink,
+                });
                 setStatus('success');
                 return;
             }

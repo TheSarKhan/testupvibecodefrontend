@@ -56,6 +56,16 @@ const AdminCollaborativeExams = () => {
     if (error) toast.error('Yüklənmə xətası');
 
     const handlePublish = async (exam) => {
+        // COL-4: publishing is allowed with ASSIGNED (not-yet-submitted) collaborators,
+        // but warn the admin first so a teacher isn't silently left out.
+        const notSubmitted = (exam.collaborators || []).filter(c => c.status === 'ASSIGNED');
+        if (notSubmitted.length > 0) {
+            const names = notSubmitted.map(c => c.teacherName || c.teacherEmail || 'Müəllim').join(', ');
+            const ok = window.confirm(
+                `Bu müəllimlər hələ sual göndərməyib:\n${names}\n\nYenə də yayımlansın?`
+            );
+            if (!ok) return;
+        }
         try {
             await publishMut.mutateAsync(exam.id);
             toast.success('İmtahan yayımlandı və şagirdlər üçün görünür');
@@ -277,7 +287,7 @@ const AdminCollaborativeExams = () => {
                                                                 {/* Subject / section pills */}
                                                                 <div className="flex flex-wrap gap-1 mt-2">
                                                                     {hasTemplate && c.templateSections.map((sec, i) => (
-                                                                        <span key={`t-${i}`} className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1">
+                                                                        <span key={`sec-${sec.sectionId ?? sec.id ?? sec.subjectName ?? i}`} className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1">
                                                                             <HiOutlineTemplate className="w-2.5 h-2.5" />
                                                                             {sec.subtitleName || sec.subjectName || sec.sectionName || 'Bölmə'}
                                                                         </span>
@@ -285,8 +295,8 @@ const AdminCollaborativeExams = () => {
                                                                     {(c.subjects || []).filter(s => {
                                                                         if (!hasTemplate) return true;
                                                                         return !c.templateSections.some(sec => sec.subjectName === s || sec.subtitleName === s);
-                                                                    }).map((s, i) => (
-                                                                        <span key={`s-${i}`} className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-1">
+                                                                    }).map((s) => (
+                                                                        <span key={`subj-${s}`} className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-1">
                                                                             <HiOutlineSparkles className="w-2.5 h-2.5" />
                                                                             {s}
                                                                         </span>

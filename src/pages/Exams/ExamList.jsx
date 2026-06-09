@@ -962,7 +962,6 @@ const ExamList = () => {
                                         <HiOutlineX className="w-3.5 h-3.5" />
                                     </button>
                                 )}
-                                <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-white border border-[var(--ink-200)] text-[var(--ink-500)]">⌘K</kbd>
                             </div>
 
                             <div className="relative">

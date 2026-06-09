@@ -88,7 +88,6 @@ const AdminLayout = () => {
             >
                 <HiOutlineSearch className="w-4 h-4" />
                 <span className="flex-1 text-left">Tez axtar...</span>
-                <kbd className="text-[10px] font-bold bg-white border border-gray-200 text-gray-400 px-1.5 py-0.5 rounded">⌘K</kbd>
             </button>
             <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
                 {navGroups.map(group => (

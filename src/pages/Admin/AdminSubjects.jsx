@@ -11,6 +11,10 @@ import {
     useAddTopic,
     useDeleteTopic,
     useUpdateSubjectMetadata,
+    useSubjectCategories,
+    useCreateCategory,
+    useUpdateCategory,
+    useDeleteCategory,
 } from '../../hooks/admin/useAdminSubjects';
 import Pagination from '../../components/admin/Pagination';
 import TagsTab from './subjects/TagsTab';
@@ -21,10 +25,6 @@ const PRESET_COLORS = [
     '#ec4899', '#06b6d4', '#14b8a6', '#a855f7', '#f43f5e',
     '#64748b', '#78716c', '#7c3aed', '#0891b2', '#059669',
 ];
-
-// Standard categories; merged with whatever already exists on subjects so
-// custom values stay selectable. Task BUG-17c replaces the old static map.
-const STANDARD_CATEGORIES = ['Dəqiq elmlər', 'Təbiət', 'Humanitar', 'Dillər'];
 
 const GRADE_LEVELS = [
     { value: '', label: 'Bütün siniflər' },
@@ -42,16 +42,216 @@ const GRADE_SECTION_LABELS = {
     null: 'Bütün siniflər',
 };
 
+/**
+ * Admin-managed picker categories: add, rename, recolor, reorder, delete.
+ * Default (seeded) categories are deletion-protected; deleting a custom one
+ * leaves its subjects uncategorised (FK SET NULL on the backend).
+ */
+const CategoriesTab = ({ categories }) => {
+    const [newCatName, setNewCatName] = useState('');
+    const [newCatOrder, setNewCatOrder] = useState('');
+    const [newCatColor, setNewCatColor] = useState('');
+    const [editingId, setEditingId] = useState(null);
+    const [editName, setEditName] = useState('');
+    const [editOrder, setEditOrder] = useState('');
+    const [editColor, setEditColor] = useState('');
+
+    const createCat = useCreateCategory();
+    const updateCat = useUpdateCategory();
+    const deleteCat = useDeleteCategory();
+
+    const handleCreate = async (e) => {
+        e.preventDefault();
+        const name = newCatName.trim();
+        if (!name) return;
+        try {
+            await createCat.mutateAsync({
+                name,
+                orderIndex: newCatOrder === '' ? null : Number(newCatOrder),
+                color: newCatColor || null,
+            });
+            setNewCatName(''); setNewCatOrder(''); setNewCatColor('');
+            toast.success(`"${name}" kateqoriyası yaradıldı`);
+        } catch (err) {
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
+        }
+    };
+
+    const startEdit = (cat) => {
+        setEditingId(cat.id);
+        setEditName(cat.name);
+        setEditOrder(cat.orderIndex != null ? String(cat.orderIndex) : '');
+        setEditColor(cat.color || '');
+    };
+
+    const handleSaveEdit = async (cat) => {
+        try {
+            await updateCat.mutateAsync({
+                id: cat.id,
+                name: editName.trim() || null,
+                orderIndex: editOrder === '' ? null : Number(editOrder),
+                color: editColor,
+            });
+            setEditingId(null);
+            toast.success('Kateqoriya yeniləndi');
+        } catch (err) {
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
+        }
+    };
+
+    const handleDelete = async (cat) => {
+        if (cat.default) {
+            toast.error('Default kateqoriyalar silinə bilməz');
+            return;
+        }
+        if (!window.confirm(`"${cat.name}" kateqoriyasını silmək istədiyinizdən əminsiniz? Bağlı fənlər silinmir, sadəcə kateqoriyasız qalır.`)) return;
+        try {
+            await deleteCat.mutateAsync(cat.id);
+            toast.success(`"${cat.name}" silindi`);
+        } catch (err) {
+            if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
+        }
+    };
+
+    return (
+        <div className="max-w-3xl">
+            {/* Add category */}
+            <form onSubmit={handleCreate} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Yeni kateqoriya</p>
+                <div className="flex flex-wrap gap-2">
+                    <input
+                        type="text"
+                        value={newCatName}
+                        onChange={e => setNewCatName(e.target.value)}
+                        placeholder="Kateqoriya adı..."
+                        className="flex-1 min-w-[160px] text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        maxLength={80}
+                    />
+                    <input
+                        type="number"
+                        value={newCatOrder}
+                        onChange={e => setNewCatOrder(e.target.value)}
+                        placeholder="Sıra"
+                        className="w-20 text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <input
+                        type="text"
+                        value={newCatColor}
+                        onChange={e => setNewCatColor(e.target.value)}
+                        placeholder="#3b82f6"
+                        className="w-28 text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    />
+                    <button
+                        type="submit"
+                        disabled={!newCatName.trim() || createCat.isPending}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
+                    >
+                        <HiOutlinePlus className="w-4 h-4" /> Əlavə et
+                    </button>
+                </div>
+            </form>
+
+            {/* Category list */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Kateqoriyalar</span>
+                    <span className="text-xs text-gray-400">{categories.length}</span>
+                </div>
+                {categories.length === 0 ? (
+                    <p className="text-center text-gray-400 py-10 text-sm">Hələ kateqoriya yoxdur</p>
+                ) : (
+                    <ul className="divide-y divide-gray-50">
+                        {categories.map(cat => (
+                            <li key={cat.id} className="flex items-center gap-3 px-4 py-3">
+                                {editingId === cat.id ? (
+                                    <>
+                                        <input
+                                            type="text"
+                                            value={editName}
+                                            onChange={e => setEditName(e.target.value)}
+                                            className="flex-1 min-w-0 text-sm px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                                            maxLength={80}
+                                        />
+                                        <input
+                                            type="number"
+                                            value={editOrder}
+                                            onChange={e => setEditOrder(e.target.value)}
+                                            placeholder="Sıra"
+                                            className="w-16 text-sm px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={editColor}
+                                            onChange={e => setEditColor(e.target.value)}
+                                            placeholder="#3b82f6"
+                                            className="w-24 text-sm px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 font-mono"
+                                        />
+                                        <button
+                                            onClick={() => handleSaveEdit(cat)}
+                                            disabled={updateCat.isPending}
+                                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                                        >
+                                            Saxla
+                                        </button>
+                                        <button
+                                            onClick={() => setEditingId(null)}
+                                            className="px-3 py-1.5 text-gray-500 hover:text-gray-700 text-xs font-semibold rounded-lg transition-colors"
+                                        >
+                                            Ləğv et
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span
+                                            className="w-3 h-3 rounded-full shrink-0"
+                                            style={{ backgroundColor: cat.color || '#e5e7eb' }}
+                                        />
+                                        <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 truncate">{cat.name}</span>
+                                        {cat.orderIndex != null && (
+                                            <span className="text-xs text-gray-400">sıra: {cat.orderIndex}</span>
+                                        )}
+                                        {cat.default && (
+                                            <span className="text-[10px] font-bold bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                                Default
+                                            </span>
+                                        )}
+                                        <button
+                                            onClick={() => startEdit(cat)}
+                                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            title="Redaktə et"
+                                        >
+                                            <HiOutlinePencil className="w-4 h-4" />
+                                        </button>
+                                        {!cat.default && (
+                                            <button
+                                                onClick={() => handleDelete(cat)}
+                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Sil"
+                                            >
+                                                <HiOutlineTrash className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const AdminSubjects = () => {
     const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' | 'tags'
     const [selectedId, setSelectedId] = useState(null);
     const [newName, setNewName] = useState('');
-    const [newCategory, setNewCategory] = useState('');
+    const [newCategoryId, setNewCategoryId] = useState('');
     const [newTopicName, setNewTopicName] = useState('');
     const [newTopicGrade, setNewTopicGrade] = useState('');
     const [metaColor, setMetaColor] = useState('');
     const [metaDesc, setMetaDesc] = useState('');
-    const [metaCategory, setMetaCategory] = useState('');
+    const [metaCategoryId, setMetaCategoryId] = useState('');
 
     const [subjPage, setSubjPage] = useState(0);
     const { data: subjData, isLoading: loading, error } = useAdminSubjects({ page: subjPage, size: 15 });
@@ -86,24 +286,21 @@ const AdminSubjects = () => {
         if (selectedSubject) {
             setMetaColor(selectedSubject.color || '');
             setMetaDesc(selectedSubject.description || '');
-            setMetaCategory(selectedSubject.category || '');
+            setMetaCategoryId(selectedSubject.categoryId != null ? String(selectedSubject.categoryId) : '');
         }
     }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Dropdown options: standard set + any custom categories already in use
-    const categoryOptions = useMemo(() => {
-        const inUse = subjects.map(s => s.category).filter(Boolean);
-        return [...new Set([...STANDARD_CATEGORIES, ...inUse])];
-    }, [subjects]);
+    // Admin-managed categories (dropdown options + management tab)
+    const { data: categories = [] } = useSubjectCategories();
 
     const handleAddSubject = async (e) => {
         e.preventDefault();
         const trimmed = newName.trim();
         if (!trimmed) return;
         try {
-            const data = await addSubject.mutateAsync({ name: trimmed, category: newCategory || null });
+            const data = await addSubject.mutateAsync({ name: trimmed, categoryId: newCategoryId || null });
             setNewName('');
-            setNewCategory('');
+            setNewCategoryId('');
             setSelectedId(data.id);
             toast.success(`"${data.name}" əlavə edildi`);
         } catch (err) {
@@ -164,7 +361,7 @@ const AdminSubjects = () => {
                 color: metaColor || null,
                 description: metaDesc || null,
                 // '' clears the category server-side; null would leave it untouched
-                category: metaCategory,
+                categoryId: metaCategoryId,
             });
             toast.success('Metadata yadda saxlanıldı');
         } catch {
@@ -210,6 +407,12 @@ const AdminSubjects = () => {
                     Fənnlər
                 </button>
                 <button
+                    onClick={() => setActiveTab('categories')}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'categories' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                    Kateqoriyalar
+                </button>
+                <button
                     onClick={() => setActiveTab('tags')}
                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'tags' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                 >
@@ -217,7 +420,8 @@ const AdminSubjects = () => {
                 </button>
             </div>
 
-            {activeTab === 'tags' ? <TagsTab /> : (
+            {activeTab === 'tags' ? <TagsTab /> :
+             activeTab === 'categories' ? <CategoriesTab categories={categories} /> : (
             <div className="flex gap-6 min-h-[600px]">
                 {/* ── Left panel: subject list ── */}
                 <div className="w-72 shrink-0 flex flex-col gap-3">
@@ -241,13 +445,13 @@ const AdminSubjects = () => {
                             </button>
                         </div>
                         <select
-                            value={newCategory}
-                            onChange={e => setNewCategory(e.target.value)}
+                            value={newCategoryId}
+                            onChange={e => setNewCategoryId(e.target.value)}
                             className="text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
                         >
                             <option value="">Kateqoriyasız</option>
-                            {categoryOptions.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
+                            {categories.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
                         </select>
                     </form>
@@ -366,13 +570,13 @@ const AdminSubjects = () => {
                                     <div>
                                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Kateqoriya</label>
                                         <select
-                                            value={metaCategory}
-                                            onChange={e => setMetaCategory(e.target.value)}
+                                            value={metaCategoryId}
+                                            onChange={e => setMetaCategoryId(e.target.value)}
                                             className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
                                         >
                                             <option value="">Kateqoriyasız</option>
-                                            {categoryOptions.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
                                             ))}
                                         </select>
                                     </div>

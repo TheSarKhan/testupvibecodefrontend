@@ -9,9 +9,13 @@ import {
 } from '../../hooks/admin/useAdminSubscriptionPlans';
 import Pagination from '../../components/admin/Pagination';
 
+// Standard billing durations for the price ladder.
+const STANDARD_DURATIONS = [1, 3, 6, 12];
+const durationLabel = (m) => m === 1 ? '1 ay (Aylıq)' : m === 12 ? '12 ay (İllik)' : `${m} ay`;
+const emptyPriceLadder = () => STANDARD_DURATIONS.map(m => ({ durationMonths: m, price: 0, visible: true }));
+
 const INITIAL_FORM = {
     name: '',
-    price: 0,
     level: 0,
     description: '',
     monthlyExamLimit: 0,
@@ -33,9 +37,9 @@ const INITIAL_FORM = {
     importQuestionsFromPdf: false,
     monthlyAiQuestionLimit: 'disabled',
     useAiExamGeneration: false,
-    // New fields for the duration/visibility rollout.
-    durationMonths: 1,
     visible: true,
+    // Stripe-style price ladder: one {durationMonths, price, visible} per duration.
+    prices: emptyPriceLadder(),
 };
 
 const featureLabels = [
@@ -65,7 +69,7 @@ const AdminSubscriptionPlans = () => {
     const rawPlans = data?.content ?? [];
     const totalPages = data?.totalPages ?? 0;
     const totalElements = data?.totalElements ?? 0;
-    const plans = useMemo(() => [...rawPlans].sort((a, b) => a.price - b.price), [rawPlans]);
+    const plans = useMemo(() => [...rawPlans].sort((a, b) => (a.level ?? 0) - (b.level ?? 0)), [rawPlans]);
     const createPlan = useCreateSubscriptionPlan();
     const updatePlan = useUpdateSubscriptionPlan();
     const deletePlan = useDeleteSubscriptionPlan();
@@ -80,9 +84,11 @@ const AdminSubscriptionPlans = () => {
             setForm({
                 ...plan,
                 level: plan.level ?? 0,
-                durationMonths: plan.durationMonths ?? 1,
                 visible: plan.visible !== false,
                 monthlyAiQuestionLimit: aiLimit === -1 ? 'unlimited' : aiLimit > 0 ? String(aiLimit) : 'disabled',
+                prices: plan.prices?.length
+                    ? plan.prices.map(p => ({ durationMonths: p.durationMonths, price: p.price, visible: p.visible !== false }))
+                    : emptyPriceLadder(),
             });
             setEditingId(plan.id);
         } else {
@@ -106,6 +112,21 @@ const AdminSubscriptionPlans = () => {
         }));
     };
 
+    // ── Price-ladder editors ──
+    const updatePriceRow = (idx, patch) => setForm(prev => ({
+        ...prev,
+        prices: prev.prices.map((p, i) => i === idx ? { ...p, ...patch } : p),
+    }));
+    const removePriceRow = (idx) => setForm(prev => ({
+        ...prev,
+        prices: prev.prices.filter((_, i) => i !== idx),
+    }));
+    const addPriceRow = () => setForm(prev => {
+        const used = new Set(prev.prices.map(p => p.durationMonths));
+        const next = STANDARD_DURATIONS.find(m => !used.has(m)) ?? (Math.max(0, ...prev.prices.map(p => p.durationMonths)) + 1);
+        return { ...prev, prices: [...prev.prices, { durationMonths: next, price: 0, visible: true }] };
+    });
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const aiLimit = form.monthlyAiQuestionLimit;
@@ -113,6 +134,11 @@ const AdminSubscriptionPlans = () => {
             ...form,
             level: form.level ?? 0,
             monthlyAiQuestionLimit: aiLimit === 'unlimited' ? -1 : aiLimit === 'disabled' ? 0 : (parseInt(aiLimit, 10) || 0),
+            prices: (form.prices || []).map(p => ({
+                durationMonths: Number(p.durationMonths),
+                price: Number(p.price) || 0,
+                visible: p.visible !== false,
+            })),
         };
         try {
             if (editingId) {
@@ -169,18 +195,35 @@ const AdminSubscriptionPlans = () => {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-                                        {plan.durationMonths > 1 && (
-                                            <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
-                                                {plan.durationMonths} ay
-                                            </span>
-                                        )}
+                                        <span className="inline-flex items-center text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                                            Level {plan.level ?? 0}
+                                        </span>
                                         {plan.visible === false && (
                                             <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                                                 <HiOutlineEyeOff className="w-3 h-3" /> Saytda gizli
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-2xl font-black text-blue-600 mt-1">{plan.price} ₼ <span className="text-sm text-gray-400 font-medium">/{plan.durationMonths > 1 ? `${plan.durationMonths} ay` : 'ay'}</span></p>
+                                    {/* Price ladder: one chip per (visible) duration. */}
+                                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                        {(plan.prices?.length ? [...plan.prices].sort((a, b) => a.durationMonths - b.durationMonths) : []).map(pr => (
+                                            <span
+                                                key={pr.durationMonths}
+                                                className={`inline-flex items-baseline gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-lg border ${
+                                                    pr.visible === false
+                                                        ? 'border-gray-200 bg-gray-50 text-gray-400'
+                                                        : 'border-blue-100 bg-blue-50 text-blue-700'
+                                                }`}
+                                                title={pr.visible === false ? 'Saytda gizli' : 'Saytda görünür'}
+                                            >
+                                                <span className="text-[10.5px] text-gray-500">{pr.durationMonths === 1 ? 'ay' : `${pr.durationMonths}ay`}</span>
+                                                {pr.price} ₼
+                                            </span>
+                                        ))}
+                                        {!plan.prices?.length && (
+                                            <span className="text-sm text-gray-400">Qiymət təyin edilməyib</span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     {/* Quick visibility toggle — flips the `visible` flag without
@@ -297,32 +340,57 @@ const AdminSubscriptionPlans = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Qiymət (AZN) *</label>
-                                        <input
-                                            type="number"
-                                            name="price"
-                                            value={form.price}
-                                            onChange={handleChange}
-                                            required
-                                            min="0"
-                                            step="0.01"
-                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Müddət (ay)</label>
-                                        <select
-                                            name="durationMonths"
-                                            value={form.durationMonths ?? 1}
-                                            onChange={e => setForm(prev => ({ ...prev, durationMonths: Number(e.target.value) }))}
-                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 bg-white"
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1">Qiymət variantları (AZN)</label>
+                                        <p className="text-xs text-gray-400 mb-2">Hər müddət üçün dövrün <strong>tam</strong> dəyəri (aylıq deyil). Görünməz variant Pricing səhifəsində gizlənir.</p>
+                                        <div className="space-y-2">
+                                            {form.prices.map((p, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2">
+                                                    <select
+                                                        value={p.durationMonths}
+                                                        onChange={e => updatePriceRow(idx, { durationMonths: Number(e.target.value) })}
+                                                        className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg bg-white"
+                                                    >
+                                                        {STANDARD_DURATIONS.map(m => <option key={m} value={m}>{durationLabel(m)}</option>)}
+                                                        {!STANDARD_DURATIONS.includes(p.durationMonths) && (
+                                                            <option value={p.durationMonths}>{p.durationMonths} ay</option>
+                                                        )}
+                                                    </select>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={p.price}
+                                                        onChange={e => updatePriceRow(idx, { price: e.target.value })}
+                                                        placeholder="Qiymət"
+                                                        className="flex-1 min-w-0 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+                                                    />
+                                                    <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer select-none whitespace-nowrap">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={p.visible !== false}
+                                                            onChange={e => updatePriceRow(idx, { visible: e.target.checked })}
+                                                            className="w-3.5 h-3.5 accent-blue-600"
+                                                        />
+                                                        Görünür
+                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removePriceRow(idx)}
+                                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Sil"
+                                                    >
+                                                        <HiOutlineTrash className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={addPriceRow}
+                                            className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700"
                                         >
-                                            <option value={1}>1 ay (Aylıq)</option>
-                                            <option value={3}>3 ay</option>
-                                            <option value={6}>6 ay</option>
-                                            <option value={12}>12 ay (İllik)</option>
-                                        </select>
-                                        <p className="text-xs text-gray-400 mt-1">Qiymət bu müddətin tam dəyəridir (yox "ayda")</p>
+                                            <HiOutlinePlus className="w-4 h-4" /> Müddət əlavə et
+                                        </button>
                                     </div>
                                     <div>
                                         <label className="flex items-center gap-2 cursor-pointer select-none p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">

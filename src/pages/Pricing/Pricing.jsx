@@ -42,6 +42,17 @@ const MONTHS_OPTIONS = [
 
 const fmtNum = (v) => (v === -1 ? 'Limitsiz' : v == null ? '—' : v);
 
+// ── Stripe-style price model helpers ────────────────────────────────────────
+// Each plan is a TIER carrying a `prices` array (one {durationMonths, price,
+// visible} per supported duration). These resolve the right price for the
+// selected billing duration. Mirrors backend PricingService.
+const priceRowFor = (plan, months) =>
+    (plan?.prices || []).find(pr => pr.durationMonths === months && pr.visible) || null;
+// Total price for the whole period. Free (level 0) is always 0. Returns null
+// when a paid tier has no (visible) price for the chosen duration.
+const periodPriceFor = (plan, months) =>
+    (plan?.level === 0 ? 0 : (priceRowFor(plan, months)?.price ?? null));
+
 // ───────────────────────────────────────────────────────────────────────────
 // Hero
 // ───────────────────────────────────────────────────────────────────────────
@@ -82,29 +93,34 @@ const PlansHero = () => (
 // Billing toggle
 // ───────────────────────────────────────────────────────────────────────────
 
-const BillingToggle = ({ months, setMonths }) => (
+const BillingToggle = ({ months, setMonths, discountFor }) => (
     <div className="flex justify-center mb-10">
         <div className="inline-flex bg-[var(--ink-100)] border border-[var(--ink-200)] rounded-full p-1 gap-1">
-            {MONTHS_OPTIONS.map(opt => (
-                <button
-                    key={opt.value}
-                    onClick={() => setMonths(opt.value)}
-                    className={`relative inline-flex items-center gap-2 px-5 py-2 rounded-full text-[14px] font-semibold transition-all ${
-                        months === opt.value
-                            ? 'bg-white text-[var(--ink-900)] shadow-[var(--sh-sm)]'
-                            : 'text-[var(--ink-500)] hover:text-[var(--ink-700)]'
-                    }`}
-                >
-                    {opt.label}
-                    {opt.discount && (
-                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-                            months === opt.value ? 'bg-[var(--brand-green-100)] text-[var(--brand-green-600)]' : 'bg-[var(--brand-green-50)] text-[var(--brand-green-600)]'
-                        }`}>
-                            −{opt.discount}%
-                        </span>
-                    )}
-                </button>
-            ))}
+            {MONTHS_OPTIONS.map(opt => {
+                // Prefer the live discount derived from real prices; fall back to
+                // the static hint so badges still render before plans load.
+                const discount = discountFor ? (discountFor(opt.value) ?? null) : opt.discount;
+                return (
+                    <button
+                        key={opt.value}
+                        onClick={() => setMonths(opt.value)}
+                        className={`relative inline-flex items-center gap-2 px-5 py-2 rounded-full text-[14px] font-semibold transition-all ${
+                            months === opt.value
+                                ? 'bg-white text-[var(--ink-900)] shadow-[var(--sh-sm)]'
+                                : 'text-[var(--ink-500)] hover:text-[var(--ink-700)]'
+                        }`}
+                    >
+                        {opt.label}
+                        {discount > 0 && (
+                            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+                                months === opt.value ? 'bg-[var(--brand-green-100)] text-[var(--brand-green-600)]' : 'bg-[var(--brand-green-50)] text-[var(--brand-green-600)]'
+                            }`}>
+                                −{discount}%
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
         </div>
     </div>
 );
@@ -115,9 +131,12 @@ const BillingToggle = ({ months, setMonths }) => (
 
 const PlanCard = ({
     plan, featured, months, isCurrent, action, wallet, isFreeSwitch,
-    displayPrice, onSubscribe, paying, remainingDays,
+    periodPrice, basePrice, discountPct, savings, isFree, disabledReason, unavailable,
+    onSubscribe, paying, remainingDays,
 }) => {
     const ringSelected = featured;
+    const hasPrice = !isFree && periodPrice > 0;
+    const showDiscount = hasPrice && !isFreeSwitch && discountPct > 0;
     return (
         <div
             className={`relative rounded-3xl p-7 transition-all ${
@@ -151,23 +170,40 @@ const PlanCard = ({
                 {plan.description || 'Yeni imtahanlar yaradın və şagirdləri qiymətləndirin.'}
             </p>
 
-            {/* Price */}
+            {/* Price — the statically-set total for the selected period */}
             <div className="mt-5 flex items-baseline gap-1.5">
                 <span className={`text-[52px] font-bold leading-none tracking-tight ${featured ? 'text-white' : 'text-[var(--ink-900)]'}`}>
-                    {plan.price > 0 ? (isFreeSwitch ? '0' : displayPrice) : '0'}
+                    {hasPrice ? (isFreeSwitch ? '0' : periodPrice) : (unavailable ? '—' : '0')}
                 </span>
-                {plan.price > 0 && !isFreeSwitch && (
+                {hasPrice && !isFreeSwitch && (
                     <span className={`text-[14px] font-semibold ${featured ? 'text-white/70' : 'text-[var(--ink-500)]'}`}>AZN</span>
                 )}
             </div>
-            <div className={`text-[13px] mt-1 ${featured ? 'text-white/60' : 'text-[var(--ink-500)]'}`}>
-                {plan.price === 0
+
+            {/* Original price + discount badge */}
+            {showDiscount && (
+                <div className="mt-1.5 flex items-center gap-2">
+                    <span className={`text-[15px] line-through ${featured ? 'text-white/45' : 'text-[var(--ink-400)]'}`}>
+                        {basePrice} AZN
+                    </span>
+                    <span className={`text-[11.5px] font-bold px-1.5 py-0.5 rounded-full ${
+                        featured ? 'bg-[var(--accent)] text-[#06351A]' : 'bg-[var(--brand-green-100)] text-[var(--brand-green-600)]'
+                    }`}>
+                        −{discountPct}%
+                    </span>
+                </div>
+            )}
+
+            <div className={`text-[13px] mt-1.5 ${featured ? 'text-white/60' : 'text-[var(--ink-500)]'}`}>
+                {isFree
                     ? 'ömürlük pulsuz'
-                    : months === 12 ? 'aylıq, illik ödəniş' : 'aylıq, AZN'}
+                    : unavailable ? 'bu müddət üçün mövcud deyil'
+                    : months === 1 ? 'aylıq ödəniş'
+                    : `${months} ay üçün ümumi${showDiscount ? ` · ${savings} AZN qənaət` : ''}`}
             </div>
 
-            {/* Credit breakdown */}
-            {action === 'switch' && wallet?.creditAzn > 0 && (
+            {/* Credit breakdown — hidden for blocked downgrades / unavailable durations */}
+            {action === 'switch' && wallet?.creditAzn > 0 && !disabledReason && !unavailable && (
                 <div className={`mt-4 p-3 rounded-xl border text-[12px] ${
                     featured
                         ? (isFreeSwitch ? 'bg-emerald-500/15 border-emerald-400/30 text-white' : 'bg-amber-500/15 border-amber-400/30 text-white')
@@ -175,7 +211,7 @@ const PlanCard = ({
                 }`}>
                     <div className="flex justify-between">
                         <span className={featured ? 'opacity-80' : 'text-gray-600'}>Plan qiyməti</span>
-                        <span>{(displayPrice * months).toFixed(2)} AZN</span>
+                        <span>{(periodPrice || 0).toFixed(2)} AZN</span>
                     </div>
                     <div className={`flex justify-between font-semibold mt-1 ${
                         isFreeSwitch ? 'text-[var(--brand-green-600)]' : 'text-amber-700'
@@ -192,11 +228,26 @@ const PlanCard = ({
 
             {/* CTA */}
             <div className="mt-5">
-                {plan.price === 0 ? (
+                {isFree ? (
                     <div className={`w-full text-center text-[13px] font-medium py-3 rounded-full ${
                         featured ? 'bg-white/10 text-white/70' : 'bg-[var(--ink-100)] text-[var(--ink-500)] border border-[var(--ink-200)]'
                     }`}>
                         Baza plan — hər zaman mövcuddur
+                    </div>
+                ) : unavailable ? (
+                    <div className={`w-full text-center text-[13px] font-medium py-3 rounded-full ${
+                        featured ? 'bg-white/10 text-white/60' : 'bg-[var(--ink-100)] text-[var(--ink-400)] border border-[var(--ink-200)]'
+                    }`}>
+                        Bu müddət üçün mövcud deyil
+                    </div>
+                ) : disabledReason ? (
+                    <div
+                        title={disabledReason}
+                        className={`w-full text-center text-[13px] font-medium py-3 rounded-full cursor-not-allowed ${
+                            featured ? 'bg-white/10 text-white/60' : 'bg-[var(--ink-100)] text-[var(--ink-400)] border border-[var(--ink-200)]'
+                        }`}
+                    >
+                        {disabledReason}
                     </div>
                 ) : (
                     <button
@@ -467,7 +518,7 @@ const computePlanDiffs = (currentPlan, targetPlan) => {
 // "you will be charged X AZN" flow so it doesn't read like a payment confirm.
 const FreeSwitchModal = ({ confirmModal, setConfirmModal, selectedMonths, currentPlan, onConfirm }) => {
     if (!confirmModal) return null;
-    const { plan, wallet } = confirmModal;
+    const { plan, wallet, periodPrice = 0 } = confirmModal;
     const diffs = currentPlan && currentPlan.id !== plan.id ? computePlanDiffs(currentPlan, plan) : null;
     const hasAnyDiff = diffs && (diffs.gained.length > 0 || diffs.lost.length > 0 || diffs.numericChanges.length > 0);
     return (
@@ -490,7 +541,7 @@ const FreeSwitchModal = ({ confirmModal, setConfirmModal, selectedMonths, curren
                     <div className="rounded-xl p-4 mb-4 text-sm space-y-2 bg-emerald-50">
                         <div className="flex justify-between text-gray-600">
                             <span>Yeni planın qiyməti ({selectedMonths} ay)</span>
-                            <span>{(plan.price * selectedMonths).toFixed(2)} AZN</span>
+                            <span>{periodPrice.toFixed(2)} AZN</span>
                         </div>
                         <div className="flex justify-between font-semibold text-emerald-700">
                             <span>Cari planın qalan dəyəri{wallet.remainingDays != null ? ` (${wallet.remainingDays} gün)` : ''}</span>
@@ -584,7 +635,7 @@ const FreeSwitchModal = ({ confirmModal, setConfirmModal, selectedMonths, curren
 
 const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, currentPlan, onConfirm }) => {
     if (!confirmModal) return null;
-    const { plan, action, wallet, isFreeSwitch } = confirmModal;
+    const { plan, action, wallet, isFreeSwitch, periodPrice = 0 } = confirmModal;
     // Only show diffs when actually switching to a DIFFERENT plan; renewals
     // and same-plan top-ups would just show an empty diff section.
     const showDiffs = action === 'switch' && currentPlan && currentPlan.id !== plan.id;
@@ -618,7 +669,7 @@ const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, currentPl
                         }`}>
                             <div className="flex justify-between text-gray-600">
                                 <span>Yeni planın qiyməti ({selectedMonths} ay)</span>
-                                <span>{(plan.price * selectedMonths).toFixed(2)} AZN</span>
+                                <span>{periodPrice.toFixed(2)} AZN</span>
                             </div>
                             {wallet.creditAzn > 0 ? (
                                 <div className={`flex justify-between font-semibold ${isFreeSwitch ? 'text-emerald-700' : 'text-amber-700'}`}>
@@ -648,7 +699,7 @@ const ConfirmModal = ({ confirmModal, setConfirmModal, selectedMonths, currentPl
                         <div className="bg-gray-50 rounded-xl p-4 mb-4 text-sm">
                             <div className="flex justify-between font-semibold text-gray-800">
                                 <span>Ödəniləcək məbləğ</span>
-                                <span>{(plan.price * selectedMonths).toFixed(2)} AZN</span>
+                                <span>{periodPrice.toFixed(2)} AZN</span>
                             </div>
                             <div className="flex justify-between text-gray-500 mt-1">
                                 <span>Müddət</span>
@@ -749,7 +800,7 @@ const Pricing = ({ isEmbedded = false }) => {
         const fetchPlans = async () => {
             try {
                 const response = await api.get('/subscription-plans');
-                setPlans(response.data.sort((a, b) => a.price - b.price));
+                setPlans(response.data.sort((a, b) => (a.level ?? 0) - (b.level ?? 0)));
             } catch {
                 toast.error('Planları yükləyərkən xəta baş verdi');
             } finally {
@@ -760,28 +811,33 @@ const Pricing = ({ isEmbedded = false }) => {
         refreshSubscription();
     }, []);
 
-    // Backend now stores one row per (plan family × duration). The toggle
-    // selects which duration's rows to show; Free is always present (it has no
-    // duration concept). Multi-month rows carry their FULL total in `price`,
-    // so no client-side multiplication is needed any more.
-    const visiblePlansForToggle = useMemo(() => plans.filter(p =>
-        p.price === 0 || (p.durationMonths ?? 1) === selectedMonths
-    ), [plans, selectedMonths]);
+    // Each plan is a TIER carrying a `prices[]` ladder. Show every visible tier
+    // sorted by level; the toggle picks which duration's price each card shows.
+    const sortedPlans = useMemo(
+        () => [...plans].sort((a, b) => (a.level ?? 0) - (b.level ?? 0)),
+        [plans]
+    );
 
-    // Kept for now because legacy code paths (the proration table at the
-    // bottom of the page) still ask for a "monthly equivalent" of the price.
-    // It now divides the stored total back into a per-month figure.
-    const getDiscountedPrice = (price) => +(price / selectedMonths).toFixed(2);
+    // Live discount for a duration, derived from a paid tier's price ladder so
+    // the toggle badges follow admin price edits instead of a hardcoded number.
+    const discountFor = (months) => {
+        if (months === 1) return null;
+        const paid = plans.find(p => (p.level ?? 0) > 0 && p.prices?.length);
+        const m1 = paid?.prices?.find(pr => pr.durationMonths === 1)?.price;
+        const mN = paid?.prices?.find(pr => pr.durationMonths === months)?.price;
+        if (!m1 || !mN) return null;
+        const pct = Math.round((1 - (mN / months) / m1) * 100);
+        return pct > 0 ? pct : null;
+    };
 
     const getWalletInfo = (plan) => {
-        // Plan rows now carry the full duration's total in `price`, so no
-        // multiplication is needed here either.
-        const planMonths = plan.durationMonths ?? selectedMonths;
-        const baseCharge = plan.price;
-        const baseDuration = planMonths * 30;
+        // Total price of the selected duration on this tier.
+        const periodPrice = periodPriceFor(plan, selectedMonths);
+        const baseCharge = periodPrice || 0;
+        const baseDuration = selectedMonths * 30;
         const empty = { creditAzn: 0, chargeAmount: baseCharge, durationDays: baseDuration, bonusDays: 0, remainingDays: 0, isFree: false };
         if (!subscription || !subscription.startDate || !subscription.endDate) return empty;
-        if (subscription.plan?.id === plan.id || !plan.price) return empty;
+        if (subscription.plan?.id === plan.id || !periodPrice) return empty;
         const totalDays = Math.max(1, Math.floor(
             (new Date(subscription.endDate) - new Date(subscription.startDate)) / 86400000
         ));
@@ -799,15 +855,19 @@ const Pricing = ({ isEmbedded = false }) => {
         //     gift → ~20 free Pro days); downgrades and lateral moves don't
         //     have that risk because the user is reducing what they already
         //     hold rather than extracting more value.
+        // subscription.plan.price is the backend's monthly list-price shim, so
+        // currentPlanPrice/30 = current daily rate — matches PaymentController.
         const currentPlanPrice = subscription.plan?.price || 0;
         const remainingListedValue = (currentPlanPrice / 30) * remainingDays;
         const paidDailyRate = subscription.amountPaid > 0
             ? subscription.amountPaid / totalDays
             : 0;
+        // Monthly-equivalent of the target price, for the gift-credit comparison.
+        const newMonthlyPrice = periodPrice / selectedMonths;
         let rawCredit;
         if (paidDailyRate > 0) {
             rawCredit = Math.min(paidDailyRate * remainingDays, remainingListedValue);
-        } else if (plan.price <= currentPlanPrice) {
+        } else if (newMonthlyPrice <= currentPlanPrice) {
             rawCredit = remainingListedValue;
         } else {
             rawCredit = 0;
@@ -820,7 +880,7 @@ const Pricing = ({ isEmbedded = false }) => {
         const creditAzn = Math.round(rawCredit * 100) / 100;
         const chargeAmount = Math.round(rawCharge * 100) / 100;
         const totalValue = creditAzn + chargeAmount;
-        const durationDays = Math.floor(totalValue / (plan.price / 30));
+        const durationDays = Math.floor(totalValue / (periodPrice / baseDuration));
         const bonusDays = Math.max(0, durationDays - baseDuration);
         return { creditAzn, chargeAmount, durationDays, bonusDays, remainingDays, isFree: chargeAmount === 0 };
     };
@@ -831,13 +891,13 @@ const Pricing = ({ isEmbedded = false }) => {
         return 'switch';
     };
 
-    const openConfirm = (plan, action, wallet, isFreeSwitch) => {
+    const openConfirm = (plan, action, wallet, isFreeSwitch, periodPrice) => {
         if (!user) {
             toast('Davam etmək üçün sistemə daxil olun', { icon: '🔒' });
             navigate('/login', { state: { returnUrl: '/planlar' } });
             return;
         }
-        setConfirmModal({ plan, action, wallet, isFreeSwitch });
+        setConfirmModal({ plan, action, wallet, isFreeSwitch, periodPrice });
     };
 
     // Verify payment on window focus
@@ -864,12 +924,9 @@ const Pricing = ({ isEmbedded = false }) => {
         setConfirmModal(null);
         setPaying(planId);
         try {
-            // Each plan row carries its own durationMonths now, so we forward
-            // that instead of the toggle value — the backend then computes
-            // endDate = startDate + planMonths (and no longer multiplies).
-            const selectedPlan = plans.find(p => p.id === planId);
-            const planMonths = selectedPlan?.durationMonths ?? selectedMonths;
-            const { data } = await api.post('/payment/initiate', { planId, months: planMonths });
+            // Tier + duration model: send the tier id and the toggle's selected
+            // duration; the backend resolves the price from the tier's ladder.
+            const { data } = await api.post('/payment/initiate', { planId, months: selectedMonths });
             if (data.directActivated) {
                 await refreshSubscription();
                 toast.success('Plan dəyişdirildi! Kredit ilə ödənişsiz keçid edildi.');
@@ -899,23 +956,41 @@ const Pricing = ({ isEmbedded = false }) => {
 
     const content = (
         <>
-            <BillingToggle months={selectedMonths} setMonths={setSelectedMonths} />
+            <BillingToggle months={selectedMonths} setMonths={setSelectedMonths} discountFor={discountFor} />
             <div className="container-main">
                 <div className="grid md:grid-cols-3 gap-5 max-w-[1100px] mx-auto">
-                    {visiblePlansForToggle.map((plan, i) => {
+                    {sortedPlans.map((plan, i) => {
                         const featured = i === 1;
                         const isCurrent = subscription?.plan?.id === plan.id;
-                        // Multi-month plan rows store the FULL total in `price`; the
-                        // per-month equivalent is shown in the card body.
-                        const displayPrice = plan.price > 0 ? +(plan.price / (plan.durationMonths ?? 1)).toFixed(2) : 0;
+                        const isFree = (plan.level ?? 0) === 0;
+                        const periodPrice = periodPriceFor(plan, selectedMonths);
+                        // Paid tier with no (visible) price for this duration.
+                        const unavailable = !isFree && (periodPrice == null);
+                        // Headline = the statically-set period total. Discount is shown
+                        // against the undiscounted baseline (1-month price × months).
+                        const monthly1 = priceRowFor(plan, 1)?.price ?? null;
+                        const basePrice = (monthly1 != null && selectedMonths > 1)
+                            ? +(monthly1 * selectedMonths).toFixed(2) : null;
+                        const hasDiscount = basePrice != null && periodPrice != null && basePrice > periodPrice;
+                        const discountPct = hasDiscount ? Math.round((1 - periodPrice / basePrice) * 100) : 0;
+                        const savings = hasDiscount ? +(basePrice - periodPrice).toFixed(2) : 0;
                         const action = getPlanAction(plan);
                         const wallet = action === 'switch'
                             ? getWalletInfo(plan)
-                            : { creditAzn: 0, isFree: false, chargeAmount: plan.price, durationDays: (plan.durationMonths ?? selectedMonths) * 30 };
+                            : { creditAzn: 0, isFree: false, chargeAmount: periodPrice || 0, durationDays: selectedMonths * 30 };
                         const isFreeSwitch = action === 'switch' && wallet.isFree;
                         const remainingDays = isCurrent && subscription?.endDate
                             ? Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000))
                             : null;
+                        // Downgrade is blocked while a higher-tier paid sub is active
+                        // (backend enforces with a 400; this just reflects it in the UI).
+                        const activeLevel = subscription?.plan?.level;
+                        const isActivePaid = subscription?.endDate
+                            && new Date(subscription.endDate) > Date.now()
+                            && (activeLevel ?? 0) > 0;
+                        const isDowngradeBlocked = !isFree && !isCurrent && isActivePaid
+                            && (plan.level ?? 0) < activeLevel;
+                        const disabledReason = isDowngradeBlocked ? 'Cari plan bitəndən sonra mümkündür' : null;
                         return (
                             <PlanCard
                                 key={plan.id}
@@ -926,10 +1001,16 @@ const Pricing = ({ isEmbedded = false }) => {
                                 action={action}
                                 wallet={wallet}
                                 isFreeSwitch={isFreeSwitch}
-                                displayPrice={displayPrice}
+                                periodPrice={periodPrice}
+                                basePrice={basePrice}
+                                discountPct={discountPct}
+                                savings={savings}
+                                isFree={isFree}
+                                unavailable={unavailable}
+                                disabledReason={disabledReason}
                                 remainingDays={remainingDays}
                                 paying={paying === plan.id}
-                                onSubscribe={() => openConfirm(plan, action, wallet, isFreeSwitch)}
+                                onSubscribe={() => openConfirm(plan, action, wallet, isFreeSwitch, periodPrice)}
                             />
                         );
                     })}

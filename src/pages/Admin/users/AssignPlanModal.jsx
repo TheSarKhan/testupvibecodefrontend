@@ -12,7 +12,7 @@ const AssignPlanModal = ({ user, onClose }) => {
 
     const { data: plans = [] } = useQuery({
         queryKey: ['public', 'subscription-plans'],
-        queryFn: () => api.get('/subscription-plans').then(r => r.data.sort((a, b) => a.price - b.price)),
+        queryFn: () => api.get('/subscription-plans').then(r => r.data.sort((a, b) => (a.level ?? 0) - (b.level ?? 0))),
     });
 
     const handleSubmit = async (e) => {
@@ -58,7 +58,7 @@ const AssignPlanModal = ({ user, onClose }) => {
                         >
                             <option value="">Plan seçin...</option>
                             {plans.map(p => (
-                                <option key={p.id} value={p.id}>{p.name} ({p.price} ₼)</option>
+                                <option key={p.id} value={p.id}>{p.name}{p.price > 0 ? ` (${p.price} ₼/ay)` : ' (Pulsuz)'}</option>
                             ))}
                         </select>
                     </div>

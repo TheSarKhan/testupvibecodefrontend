@@ -21,8 +21,11 @@ export function useAdminSubjectStats(subjectId) {
 export function useAddSubject() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (name) =>
-            api.post('/admin/subjects', { name }).then(r => r.data),
+        // Accepts either a plain name string or { name, category }
+        mutationFn: (input) => {
+            const body = typeof input === 'string' ? { name: input } : input;
+            return api.post('/admin/subjects', body).then(r => r.data);
+        },
         onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.subjects }),
     });
 }
@@ -56,8 +59,8 @@ export function useDeleteTopic() {
 export function useUpdateSubjectMetadata() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: ({ subjectId, color, iconEmoji, description }) =>
-            api.put(`/admin/subjects/${subjectId}/metadata`, { color, iconEmoji, description }).then(r => r.data),
+        mutationFn: ({ subjectId, color, iconEmoji, description, category }) =>
+            api.put(`/admin/subjects/${subjectId}/metadata`, { color, iconEmoji, description, category }).then(r => r.data),
         onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.subjects }),
     });
 }

@@ -11,8 +11,9 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     const [step, setStep] = useState(1);
     const [examType, setExamType] = useState(null);
     const [selectedSubject, setSelectedSubject] = useState('');
-    const [subjects, setSubjects] = useState([]); // [{id, name, color, iconEmoji}]
+    const [subjects, setSubjects] = useState([]); // [{id, name, color, iconEmoji, category}]
     const [subjectSearch, setSubjectSearch] = useState('');
+    const [subjectCat, setSubjectCat] = useState('Hamısı');
 
     // Template flow state
     const [templates, setTemplates] = useState([]);
@@ -36,6 +37,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
         setExamType(null);
         setSelectedSubject('');
         setSubjectSearch('');
+        setSubjectCat('Hamısı');
         setSelectedTemplate(null);
         setSelectedSubtitle(null);
         setSubtitles([]);
@@ -163,7 +165,17 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     // ── Step 2 (free): subject select ─────────────────────────────────────────
     const renderStep2Free = () => {
         const q = subjectSearch.trim().toLowerCase();
-        const filtered = subjects.filter(s => (typeof s === 'string' ? s : s.name).toLowerCase().includes(q));
+        // Filter pills come from the backend data (distinct subject.category
+        // values), so new categories appear here without a frontend change.
+        const categories = ['Hamısı', ...new Set(
+            subjects.map(s => (typeof s === 'string' ? null : s.category)).filter(Boolean)
+        )];
+        const filtered = subjects.filter(s => {
+            const name = typeof s === 'string' ? s : s.name;
+            const cat = typeof s === 'string' ? null : s.category;
+            const matchesCat = subjectCat === 'Hamısı' || cat === subjectCat;
+            return matchesCat && name.toLowerCase().includes(q);
+        });
         return (
             <div className="space-y-4">
                 <div>
@@ -184,6 +196,25 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                         className="w-full h-10 pl-9 pr-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors"
                     />
                 </div>
+
+                {/* Category filter pills (only when subjects actually carry categories) */}
+                {categories.length > 1 && (
+                    <div className="flex flex-wrap gap-1.5">
+                        {categories.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setSubjectCat(cat)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                                    subjectCat === cat
+                                        ? 'bg-blue-600 border-blue-600 text-white'
+                                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Compact chip grid */}
                 <div

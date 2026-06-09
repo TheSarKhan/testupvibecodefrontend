@@ -22,6 +22,10 @@ const PRESET_COLORS = [
     '#64748b', '#78716c', '#7c3aed', '#0891b2', '#059669',
 ];
 
+// Standard categories; merged with whatever already exists on subjects so
+// custom values stay selectable. Task BUG-17c replaces the old static map.
+const STANDARD_CATEGORIES = ['Dəqiq elmlər', 'Təbiət', 'Humanitar', 'Dillər'];
+
 const GRADE_LEVELS = [
     { value: '', label: 'Bütün siniflər' },
     { value: '1-4', label: '1-4 sinif' },
@@ -42,10 +46,12 @@ const AdminSubjects = () => {
     const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' | 'tags'
     const [selectedId, setSelectedId] = useState(null);
     const [newName, setNewName] = useState('');
+    const [newCategory, setNewCategory] = useState('');
     const [newTopicName, setNewTopicName] = useState('');
     const [newTopicGrade, setNewTopicGrade] = useState('');
     const [metaColor, setMetaColor] = useState('');
     const [metaDesc, setMetaDesc] = useState('');
+    const [metaCategory, setMetaCategory] = useState('');
 
     const [subjPage, setSubjPage] = useState(0);
     const { data: subjData, isLoading: loading, error } = useAdminSubjects({ page: subjPage, size: 15 });
@@ -80,16 +86,24 @@ const AdminSubjects = () => {
         if (selectedSubject) {
             setMetaColor(selectedSubject.color || '');
             setMetaDesc(selectedSubject.description || '');
+            setMetaCategory(selectedSubject.category || '');
         }
     }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Dropdown options: standard set + any custom categories already in use
+    const categoryOptions = useMemo(() => {
+        const inUse = subjects.map(s => s.category).filter(Boolean);
+        return [...new Set([...STANDARD_CATEGORIES, ...inUse])];
+    }, [subjects]);
 
     const handleAddSubject = async (e) => {
         e.preventDefault();
         const trimmed = newName.trim();
         if (!trimmed) return;
         try {
-            const data = await addSubject.mutateAsync(trimmed);
+            const data = await addSubject.mutateAsync({ name: trimmed, category: newCategory || null });
             setNewName('');
+            setNewCategory('');
             setSelectedId(data.id);
             toast.success(`"${data.name}" əlavə edildi`);
         } catch (err) {
@@ -149,6 +163,8 @@ const AdminSubjects = () => {
                 subjectId: selectedId,
                 color: metaColor || null,
                 description: metaDesc || null,
+                // '' clears the category server-side; null would leave it untouched
+                category: metaCategory,
             });
             toast.success('Metadata yadda saxlanıldı');
         } catch {
@@ -206,22 +222,34 @@ const AdminSubjects = () => {
                 {/* ── Left panel: subject list ── */}
                 <div className="w-72 shrink-0 flex flex-col gap-3">
                     {/* Add subject form */}
-                    <form onSubmit={handleAddSubject} className="flex gap-2">
-                        <input
-                            type="text"
-                            value={newName}
-                            onChange={e => setNewName(e.target.value)}
-                            placeholder="Yeni fənn adı..."
-                            className="flex-1 min-w-0 text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            maxLength={80}
-                        />
-                        <button
-                            type="submit"
-                            disabled={!newName.trim() || adding}
-                            className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
+                    <form onSubmit={handleAddSubject} className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                                placeholder="Yeni fənn adı..."
+                                className="flex-1 min-w-0 text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                maxLength={80}
+                            />
+                            <button
+                                type="submit"
+                                disabled={!newName.trim() || adding}
+                                className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
+                            >
+                                <HiOutlinePlus className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <select
+                            value={newCategory}
+                            onChange={e => setNewCategory(e.target.value)}
+                            className="text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
                         >
-                            <HiOutlinePlus className="w-4 h-4" />
-                        </button>
+                            <option value="">Kateqoriyasız</option>
+                            {categoryOptions.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
                     </form>
 
                     {/* Subject list */}
@@ -334,6 +362,20 @@ const AdminSubjects = () => {
                                 </div>
 
                                 <div className="flex flex-col gap-3">
+                                    {/* Category */}
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Kateqoriya</label>
+                                        <select
+                                            value={metaCategory}
+                                            onChange={e => setMetaCategory(e.target.value)}
+                                            className="w-full text-sm px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                                        >
+                                            <option value="">Kateqoriyasız</option>
+                                            {categoryOptions.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     {/* Description */}
                                     <div>
                                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Təsvir</label>

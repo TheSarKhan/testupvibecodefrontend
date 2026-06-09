@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiOutlineVolumeUp, HiLockClosed, HiOutlineCheck, HiOutlineSearch } from 'react-icons/hi';
+import { HiOutlineDocumentText, HiOutlineTemplate, HiOutlineArrowRight, HiOutlineArrowLeft, HiLockClosed, HiOutlineCheck, HiOutlineSearch } from 'react-icons/hi';
 import Modal from './Modal';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
-
-const QUESTION_TYPE_LABELS = {
-    MCQ: 'Birseçimli / T-F',
-    MULTI_SELECT: 'Çoxseçimli',
-    OPEN_AUTO: 'Açıq (avtomatik)',
-    FILL_IN_THE_BLANK: 'Boşluq doldurma',
-    MATCHING: 'Uyğunlaşdırma',
-    OPEN_MANUAL: 'Açıq (müəllim)',
-};
-
-const PASSAGE_LABELS = { LISTENING: 'Dinləmə', TEXT: 'Mətn' };
 
 const CreateExamModal = ({ isOpen, onClose }) => {
     const { hasPermission } = useAuth();
@@ -351,49 +340,44 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                             {allSections.map(section => {
                                 const meta = subjectMeta[section.subjectName];
                                 const isSelected = selectedSectionIds.has(section.id);
+                                const accent = meta?.color || '#3b82f6';
                                 return (
                                     <button key={section.id} onClick={() => toggleSectionId(section.id)}
                                         className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                                             isSelected
-                                                ? 'border-blue-500 bg-blue-50/60 shadow-sm'
-                                                : 'border-gray-100 hover:border-blue-300 hover:bg-blue-50/20'
-                                        }`}>
+                                                ? 'shadow-sm'
+                                                : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                        style={isSelected ? {
+                                            borderColor: accent,
+                                            backgroundColor: `${accent}12`,
+                                        } : {}}>
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2.5">
                                                 <span
-                                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300 bg-white'
-                                                    }`}
+                                                    className="w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors"
+                                                    style={isSelected
+                                                        ? { borderColor: accent, backgroundColor: accent }
+                                                        : { borderColor: '#d1d5db', backgroundColor: '#ffffff' }}
                                                 >
                                                     {isSelected && <HiOutlineCheck className="w-3 h-3 text-white" />}
                                                 </span>
-                                                <span
-                                                    className="w-7 h-7 rounded-lg shrink-0"
-                                                    style={{ backgroundColor: meta?.color || '#e5e7eb' }}
-                                                />
+                                                {/* Same visual language as the free-exam subject picker:
+                                                    emoji if the subject has one, otherwise its color dot */}
+                                                {meta?.iconEmoji ? (
+                                                    <span className="text-[18px] leading-none shrink-0">{meta.iconEmoji}</span>
+                                                ) : (
+                                                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: meta?.color || '#cbd5e1' }} />
+                                                )}
                                                 <span className="font-bold text-gray-900">{section.subjectName}</span>
                                             </div>
                                             <span
                                                 className="text-sm font-bold px-2.5 py-0.5 rounded-full"
-                                                style={{ backgroundColor: meta?.color ? `${meta.color}18` : '#eff6ff', color: meta?.color || '#3b82f6' }}
+                                                style={{ backgroundColor: meta?.color ? `${meta.color}18` : '#f3f4f6', color: '#111827' }}
                                             >
                                                 {section.questionCount} sual
                                             </span>
                                         </div>
-                                        {(section.typeCounts || []).length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-2.5 pl-8">
-                                                {section.typeCounts.map((tc, j) => (
-                                                    <span key={j} className={`text-[11px] px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
-                                                        tc.passageType === 'LISTENING' ? 'bg-emerald-100 text-emerald-700' :
-                                                        tc.passageType === 'TEXT'      ? 'bg-teal-100 text-teal-700' :
-                                                        'bg-gray-100 text-gray-600'}`}>
-                                                        {tc.passageType && <HiOutlineVolumeUp className="w-3 h-3" />}
-                                                        {tc.passageType ? `${PASSAGE_LABELS[tc.passageType]} ` : ''}{QUESTION_TYPE_LABELS[tc.questionType] || tc.questionType}: {tc.count}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <code className="mt-1.5 pl-8 block text-xs font-mono text-blue-400">{section.formula}</code>
                                     </button>
                                 );
                             })}

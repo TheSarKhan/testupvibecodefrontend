@@ -34,7 +34,9 @@ const Navbar = () => {
     useEffect(() => {
         if (isTeacher && !isAdmin) {
             api.get('/collaborative-exams/my-assignments')
-                .then(r => setHasCollaborative(r.data.some(a => a.status !== 'APPROVED')))
+                // Keep the link as long as the teacher has ANY assignment — approved ones
+                // still need access to their collaborative work/stats (COL-8).
+                .then(r => setHasCollaborative(Array.isArray(r.data) && r.data.length > 0))
                 .catch(() => {});
         }
     }, [isTeacher, isAdmin]);

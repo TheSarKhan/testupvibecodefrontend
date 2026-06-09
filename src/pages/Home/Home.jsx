@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
     HiOutlineArrowRight, HiOutlinePlay, HiOutlineCheck, HiOutlinePlus,
-    HiOutlinePencilAlt, HiOutlineLibrary,
+    HiOutlinePencilAlt, HiOutlineChartBar, HiOutlineLibrary,
     HiOutlineShieldCheck, HiOutlineAcademicCap, HiOutlineLightningBolt,
     HiOutlineLightBulb, HiOutlineDeviceMobile, HiOutlineBell, HiOutlineSparkles,
     HiOutlineClipboardList, HiOutlineBookmark, HiOutlineCollection, HiOutlineFlag,
@@ -248,39 +248,8 @@ const FeaturesTeacher = () => (
             <div className="grid md:grid-cols-3 gap-5 auto-rows-auto">
                 <FeatureCard Icon={HiOutlinePencilAlt}  title="Vizual sual redaktoru" desc="Çoxseçimli, açıq cavab, doğru/yalan, uyğunluq, həmçinin mətn və dinləmə sualları. Şəkil və riyazi simvol əlavə edin." />
 
-                {/* Big accent — exam templates */}
-                <div className="md:row-span-2 bg-white border border-[var(--ink-200)] rounded-2xl p-6">
-                    <div className="w-11 h-11 rounded-xl bg-[var(--accent-soft)] text-[var(--brand-green-600)] flex items-center justify-center mb-4">
-                        <HiOutlineCollection className="w-5 h-5" />
-                    </div>
-                    <h3 className="text-[17px] font-bold text-[var(--ink-900)] mb-2">Hazır imtahan şablonları</h3>
-                    <p className="text-[14px] text-[var(--ink-500)] mb-5">DİM, RFM, Olimpiada və digər rəsmi formatlar hazır şablon kimi — bir kliklə seçin, öz suallarınızı əlavə edin.</p>
-
-                    {/* template list */}
-                    <div className="border border-[var(--ink-150)] rounded-xl overflow-hidden">
-                        {[
-                            { name: 'DİM Buraxılış', desc: 'Dövlət İmtahan Mərkəzi formatı', tag: 'Rəsmi' },
-                            { name: 'RFM', desc: 'Respublika Fənn Müsabiqəsi', tag: 'Rəsmi' },
-                            { name: 'Olimpiada', desc: 'Respublika Fənn Olimpiadası', tag: 'Rəsmi' },
-                            { name: 'Fərdi şablon', desc: 'Öz struktur və qiymətləndirmən', tag: 'Sərbəst' },
-                        ].map((t, i) => (
-                            <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-t first:border-t-0 border-[var(--ink-150)]">
-                                <span className="w-8 h-8 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
-                                    <HiOutlineDocumentText className="w-4 h-4" />
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                    <div className="text-[13px] font-bold text-[var(--ink-800)] truncate">{t.name}</div>
-                                    <div className="text-[11.5px] text-[var(--ink-500)] truncate">{t.desc}</div>
-                                </div>
-                                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                                    t.tag === 'Sərbəst'
-                                        ? 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]'
-                                        : 'bg-[var(--ink-100)] text-[var(--ink-500)]'
-                                }`}>{t.tag}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <FeatureCard Icon={HiOutlineChartBar}      title="Ətraflı analitika"   desc="Hər şagird, hər sual və hər mövzu üzrə nəticələr. Zəif tərəfləri dərhal görün." iconClass="bg-[var(--accent-soft)] text-[var(--brand-green-600)]" />
+                <FeatureCard Icon={HiOutlineCollection}    title="Hazır imtahan şablonları" desc="DİM, RFM, Olimpiada və digər rəsmi formatlar hazır şablon kimi — bir kliklə seçin, öz suallarınızı əlavə edin." />
 
                 <FeatureCard Icon={HiOutlineLibrary}      title="Sual bankı"           desc="Şəxsi və ümumi sual bazalarınız. Fənn, mövzu və çətinlik üzrə filtrlə, bir kliklə imtahana əlavə et." />
                 <FeatureCard Icon={HiOutlineSparkles}     title="AI ilə sual yaratma"  desc="Mövzu, çətinlik və sual tipini seçin — AI dərhal sual, variantlar və düz cavabı hazırlayır." />

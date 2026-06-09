@@ -975,13 +975,6 @@ const Pricing = ({ isEmbedded = false }) => {
                         const discountPct = hasDiscount ? Math.round((1 - periodPrice / basePrice) * 100) : 0;
                         const savings = hasDiscount ? +(basePrice - periodPrice).toFixed(2) : 0;
                         const action = getPlanAction(plan);
-                        const wallet = action === 'switch'
-                            ? getWalletInfo(plan)
-                            : { creditAzn: 0, isFree: false, chargeAmount: periodPrice || 0, durationDays: selectedMonths * 30 };
-                        const isFreeSwitch = action === 'switch' && wallet.isFree;
-                        const remainingDays = isCurrent && subscription?.endDate
-                            ? Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000))
-                            : null;
                         // Downgrade is blocked while a higher-tier paid sub is active
                         // (backend enforces with a 400; this just reflects it in the UI).
                         const activeLevel = subscription?.plan?.level;
@@ -991,6 +984,15 @@ const Pricing = ({ isEmbedded = false }) => {
                         const isDowngradeBlocked = !isFree && !isCurrent && isActivePaid
                             && (plan.level ?? 0) < activeLevel;
                         const disabledReason = isDowngradeBlocked ? 'Cari plan bitəndən sonra mümkündür' : null;
+                        // For a blocked downgrade we don't run the credit/free-switch
+                        // logic — the card just shows the plan's own price.
+                        const wallet = (action === 'switch' && !isDowngradeBlocked)
+                            ? getWalletInfo(plan)
+                            : { creditAzn: 0, isFree: false, chargeAmount: periodPrice || 0, durationDays: selectedMonths * 30 };
+                        const isFreeSwitch = action === 'switch' && wallet.isFree && !isDowngradeBlocked;
+                        const remainingDays = isCurrent && subscription?.endDate
+                            ? Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000))
+                            : null;
                         return (
                             <PlanCard
                                 key={plan.id}

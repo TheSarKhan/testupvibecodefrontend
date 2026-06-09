@@ -133,10 +133,37 @@ const RegisterBrand = ({ role }) => {
 };
 
 // ───────────────────────────────────────────────────────────────────────────
+// Input validation helpers
+// ───────────────────────────────────────────────────────────────────────────
+
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((v || '').trim());
+
+// Ad, Soyad — hərflər (Azərbaycan əlifbası daxil), boşluq, defis; ən azı 3 simvol.
+const isValidName = (v) => {
+    const t = (v || '').trim();
+    return t.length >= 3 && /^[\p{L}\s'.-]+$/u.test(t);
+};
+
+// Yalnız rəqəm, +, boşluq və -()  saxla; 20 simvolla məhdudlaşdır.
+const sanitizePhone = (v) => (v || '').replace(/[^\d+\s()-]/g, '').slice(0, 20);
+
+// Azərbaycan mobil nömrəsi: +994 / 0 / kodsuz — operator kodu + 7 rəqəm (9 rəqəm).
+const AZ_MOBILE_OPS = ['10', '50', '51', '55', '60', '70', '77', '99'];
+const isValidAzPhone = (v) => {
+    const d = (v || '').replace(/\D/g, '');
+    let local;
+    if (d.length === 12 && d.startsWith('994')) local = d.slice(3);
+    else if (d.length === 10 && d.startsWith('0')) local = d.slice(1);
+    else if (d.length === 9) local = d;
+    else return false;
+    return local.length === 9 && AZ_MOBILE_OPS.includes(local.slice(0, 2));
+};
+
+// ───────────────────────────────────────────────────────────────────────────
 // Field input (reusable)
 // ───────────────────────────────────────────────────────────────────────────
 
-const Field = ({ label, Icon, type = 'text', value, onChange, placeholder, required, autoComplete, trailing, maxLength }) => (
+const Field = ({ label, Icon, type = 'text', value, onChange, placeholder, required, autoComplete, trailing, maxLength, error }) => (
     <div className="mt-4">
         <label className="block text-[12.5px] font-bold uppercase tracking-[0.08em] text-[var(--ink-600)] mb-1.5">{label}</label>
         <div className="relative">
@@ -149,10 +176,15 @@ const Field = ({ label, Icon, type = 'text', value, onChange, placeholder, requi
                 autoComplete={autoComplete}
                 placeholder={placeholder}
                 maxLength={maxLength}
-                className={`w-full h-12 ${Icon ? 'pl-11' : 'pl-4'} ${trailing ? 'pr-11' : 'pr-4'} rounded-xl bg-[var(--ink-50)] border border-[var(--ink-200)] text-[14px] text-[var(--ink-900)] placeholder-[var(--ink-400)] outline-none focus:bg-white focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary-soft)] transition-colors`}
+                className={`w-full h-12 ${Icon ? 'pl-11' : 'pl-4'} ${trailing ? 'pr-11' : 'pr-4'} rounded-xl bg-[var(--ink-50)] border text-[14px] text-[var(--ink-900)] placeholder-[var(--ink-400)] outline-none focus:bg-white focus:ring-4 transition-colors ${
+                    error
+                        ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                        : 'border-[var(--ink-200)] focus:border-[var(--primary)] focus:ring-[var(--primary-soft)]'
+                }`}
             />
             {trailing}
         </div>
+        {error && <p className="mt-1.5 text-[12px] font-medium text-red-500">{error}</p>}
     </div>
 );
 
@@ -248,7 +280,16 @@ const StepRole = ({ role, setRole, googleLogin, onNext }) => (
 );
 
 const StepDetails = ({ role, formData, set, onBack, onNext }) => {
-    const ready = formData.fullName.trim() && formData.email.trim();
+    // Per-field errors only surface once the user has typed something, so the
+    // form doesn't shout at an empty field on first render.
+    const nameErr  = formData.fullName && !isValidName(formData.fullName) ? 'Ad və soyadınızı tam yazın' : '';
+    const emailErr = formData.email && !isValidEmail(formData.email) ? 'Düzgün e-poçt ünvanı daxil edin' : '';
+    const phoneErr = formData.phoneNumber && !isValidAzPhone(formData.phoneNumber)
+        ? 'Düzgün nömrə daxil edin (məs. +994 50 123 45 67)' : '';
+    // Name + email required & valid; phone optional but must be valid if filled.
+    const ready = isValidName(formData.fullName)
+        && isValidEmail(formData.email)
+        && (!formData.phoneNumber || isValidAzPhone(formData.phoneNumber));
     return (
         <>
             <StepDots step={1} />
@@ -274,6 +315,7 @@ const StepDetails = ({ role, formData, set, onBack, onNext }) => {
                 onChange={e => set('fullName', e.target.value)}
                 placeholder="Ad Soyad"
                 required
+                error={nameErr}
             />
             <Field
                 label="E-poçt"
@@ -284,15 +326,17 @@ const StepDetails = ({ role, formData, set, onBack, onNext }) => {
                 placeholder="email@nümunə.az"
                 autoComplete="email"
                 required
+                error={emailErr}
             />
             <Field
                 label="Telefon nömrəsi"
                 Icon={HiOutlinePhone}
                 type="tel"
                 value={formData.phoneNumber}
-                onChange={e => set('phoneNumber', e.target.value.slice(0, 20))}
+                onChange={e => set('phoneNumber', sanitizePhone(e.target.value))}
                 placeholder="+994 50 000 00 00"
                 maxLength={20}
+                error={phoneErr}
             />
 
             <button
@@ -537,6 +581,11 @@ const Register = () => {
     });
 
     const handleSubmit = async () => {
+        // Backstop validation (the step buttons already gate this, but guard
+        // against any path that reaches submit with bad data).
+        if (!isValidName(formData.fullName)) { toast.error('Ad və soyadınızı tam yazın'); return; }
+        if (!isValidEmail(formData.email)) { toast.error('Düzgün e-poçt ünvanı daxil edin'); return; }
+        if (formData.phoneNumber && !isValidAzPhone(formData.phoneNumber)) { toast.error('Düzgün telefon nömrəsi daxil edin'); return; }
         if (!formData.termsAccepted) { toast.error('İstifadə şərtlərini qəbul etməlisiniz'); return; }
         if (formData.password !== formData.confirmPassword) { toast.error('Şifrələr uyğun gəlmir'); return; }
         setLoading(true);

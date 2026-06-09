@@ -371,7 +371,7 @@ const ContactFAQ = () => {
     const items = [
         { q: 'Cavabı nə qədər müddətə alaram?',                   a: 'İş günləri ərzində ortalama 2 saat. Həftəsonu və bayramlarda növbəti iş günündə cavab veririk. Texniki problemlər üçün Peşəkar plan istifadəçiləri prioritet sırada yer alır.' },
         { q: 'Demo görüş təyin edə bilərəmmi?',                   a: 'Bəli. Mərkəz planı və 50+ müəllimi olan təşkilatlar üçün şəxsi demo görüş təyin edirik. Forma vasitəsilə müraciət edin, biz vaxt təklif edək.' },
-        { q: 'Texniki problem ilə üzləşmişəm — nə etməliyəm?',    a: 'destek@testup.az ünvanına yazın və ya istifadəçi panelinizdən "Dəstək" düyməsini sıxın. Mümkünsə ekran şəkili əlavə edin — bu prosesi xeyli sürətləndirir.' },
+        { q: 'Texniki problem ilə üzləşmişəm — nə etməliyəm?',    a: 'support@testup.az ünvanına yazın və ya istifadəçi panelinizdən "Dəstək" düyməsini sıxın. Mümkünsə ekran şəkili əlavə edin — bu prosesi xeyli sürətləndirir.' },
         { q: 'Mətbuatla əlaqə saxlamaq istəyirəm.',                a: 'Mətbuat materialları və müsahibə müraciətləri üçün press@testup.az ünvanına yazın. Loqo və əsas məlumat paketini istənildikdə göndəririk.' },
     ];
     const [open, setOpen] = useState(-1);

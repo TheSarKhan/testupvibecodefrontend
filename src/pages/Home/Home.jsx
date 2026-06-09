@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
     HiOutlineArrowRight, HiOutlinePlay, HiOutlineCheck, HiOutlinePlus,
-    HiOutlinePencilAlt, HiOutlineChartBar, HiOutlineLibrary,
+    HiOutlinePencilAlt, HiOutlineLibrary,
     HiOutlineShieldCheck, HiOutlineAcademicCap, HiOutlineLightningBolt,
     HiOutlineLightBulb, HiOutlineDeviceMobile, HiOutlineBell, HiOutlineSparkles,
     HiOutlineClipboardList, HiOutlineBookmark, HiOutlineCollection, HiOutlineFlag,
@@ -248,31 +248,35 @@ const FeaturesTeacher = () => (
             <div className="grid md:grid-cols-3 gap-5 auto-rows-auto">
                 <FeatureCard Icon={HiOutlinePencilAlt}  title="Vizual sual redaktoru" desc="Çoxseçimli, açıq cavab, doğru/yalan, uyğunluq, həmçinin mətn və dinləmə sualları. Şəkil və riyazi simvol əlavə edin." />
 
-                {/* Big accent — grades table */}
+                {/* Big accent — exam templates */}
                 <div className="md:row-span-2 bg-white border border-[var(--ink-200)] rounded-2xl p-6">
                     <div className="w-11 h-11 rounded-xl bg-[var(--accent-soft)] text-[var(--brand-green-600)] flex items-center justify-center mb-4">
-                        <HiOutlineChartBar className="w-5 h-5" />
+                        <HiOutlineCollection className="w-5 h-5" />
                     </div>
-                    <h3 className="text-[17px] font-bold text-[var(--ink-900)] mb-2">Ətraflı analitika</h3>
-                    <p className="text-[14px] text-[var(--ink-500)] mb-5">Hər şagird, hər sual və hər mövzu üzrə nəticələr. Zəif tərəfləri dərhal görün.</p>
+                    <h3 className="text-[17px] font-bold text-[var(--ink-900)] mb-2">Hazır imtahan şablonları</h3>
+                    <p className="text-[14px] text-[var(--ink-500)] mb-5">DİM, RFM, Olimpiada və digər rəsmi formatlar hazır şablon kimi — bir kliklə seçin, öz suallarınızı əlavə edin.</p>
 
-                    {/* mini grades table */}
-                    <div className="border border-[var(--ink-150)] rounded-xl overflow-hidden text-[12.5px]">
-                        <div className="grid grid-cols-6 bg-[var(--ink-50)] px-3 py-2 font-bold text-[var(--ink-500)] text-[10.5px] uppercase tracking-wider">
-                            <span>Şagird</span><span>Riyaz.</span><span>Fizika</span><span>Kimya</span><span>Biolog.</span><span className="text-right">Orta</span>
-                        </div>
+                    {/* template list */}
+                    <div className="border border-[var(--ink-150)] rounded-xl overflow-hidden">
                         {[
-                            { n: 'Aysel S.', g: [94, 88, 91, 86], avg: 90, tone: 'bg-[var(--brand-green-100)] text-[var(--brand-green-600)]' },
-                            { n: 'Rəşad M.', g: [76, 82, 71, 79], avg: 77, tone: 'bg-amber-100 text-amber-700' },
-                            { n: 'Nigar Q.', g: [62, 58, 65, 60], avg: 61, tone: 'bg-red-100 text-red-700' },
-                            { n: 'Elvin Ə.', g: [88, 92, 85, 90], avg: 89, tone: 'bg-[var(--brand-green-100)] text-[var(--brand-green-600)]' },
-                        ].map((r, i) => (
-                            <div key={i} className="grid grid-cols-6 px-3 py-2 border-t border-[var(--ink-150)] items-center">
-                                <span className="font-semibold text-[var(--ink-800)]">{r.n}</span>
-                                {r.g.map((v, j) => <span key={j} className="text-[var(--ink-600)]">{v}</span>)}
-                                <span className="text-right">
-                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold ${r.tone}`}>{r.avg}%</span>
+                            { name: 'DİM Buraxılış', desc: 'Dövlət İmtahan Mərkəzi formatı', tag: 'Rəsmi' },
+                            { name: 'RFM', desc: 'Respublika Fənn Müsabiqəsi', tag: 'Rəsmi' },
+                            { name: 'Olimpiada', desc: 'Respublika Fənn Olimpiadası', tag: 'Rəsmi' },
+                            { name: 'Fərdi şablon', desc: 'Öz struktur və qiymətləndirmən', tag: 'Sərbəst' },
+                        ].map((t, i) => (
+                            <div key={i} className="flex items-center gap-3 px-3 py-2.5 border-t first:border-t-0 border-[var(--ink-150)]">
+                                <span className="w-8 h-8 rounded-lg bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
+                                    <HiOutlineDocumentText className="w-4 h-4" />
                                 </span>
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-[13px] font-bold text-[var(--ink-800)] truncate">{t.name}</div>
+                                    <div className="text-[11.5px] text-[var(--ink-500)] truncate">{t.desc}</div>
+                                </div>
+                                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                    t.tag === 'Sərbəst'
+                                        ? 'bg-[var(--accent-soft)] text-[var(--brand-green-600)]'
+                                        : 'bg-[var(--ink-100)] text-[var(--ink-500)]'
+                                }`}>{t.tag}</span>
                             </div>
                         ))}
                     </div>
@@ -381,7 +385,7 @@ const PricingPreview = () => {
             <div className="container-main">
                 <SectionHead
                     eyebrow="Qiymət planları"
-                    title="Şəffaf qiymət, gizli ödənişsiz"
+                    title="Münasib qiymət, maksimum keyfiyyət"
                     sub="Pulsuz başlayın və ehtiyacınız böyüdükcə miqyaslandırın. İstənilən vaxt ləğv edə bilərsiniz."
                 />
                 {loading ? (

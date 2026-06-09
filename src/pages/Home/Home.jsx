@@ -492,7 +492,7 @@ const Testimonials = () => {
     const items = [
         { q: 'Bir semestrdə 14 imtahan yaratdım. Əvvəllər kağızda yoxlamağa bir həftə gedirdi — indi 30 dəqiqəyə bütün analizi alıram.', n: 'Aysel Səfərova', r: 'Riyaziyyat müəllimi, 23 №-li məktəb', i: 'AS' },
         { q: 'Sual bankı və ətraflı analitika kursumuzun keyfiyyətini çox artırdı. Şagirdlər nəticələrini həm görür, həm də motivasiya alır.', n: 'Rəşad Məmmədov', r: 'Hazırlıq mərkəzinin direktoru', i: 'RM' },
-        { q: 'Anti-köçürmə alətləri sayəsində qiymətləndirmənin ədalətli olduğuna əminəm. Üstəlik telefonumdan da hər şeyi idarə edə bilirəm.', n: 'Nigar Quliyeva', r: 'Fizika müəllimi, özəl lisey', i: 'NQ' },
+        { q: 'Suala formula və şəkil əlavə etmək fizika üçün əla işləyir. AI köməyi ilə imtahan variantlarını dəqiqələrə hazırlayıram, nəticələri də telefonumdan real vaxtda izləyirəm.', n: 'Nigar Quliyeva', r: 'Fizika müəllimi, özəl lisey', i: 'NQ' },
     ];
     return (
         <section className="py-20 md:py-24">
@@ -523,7 +523,7 @@ const FAQ = () => {
         { q: 'testup.az-dan istifadə tamamilə pulsuzdur?', a: 'Başlanğıc planı ömürlük pulsuzdur — 3 imtahan və 50 şagirdə qədər. Daha çox imkan üçün ödənişli planlardan birini seçə bilərsiniz.' },
         { q: 'Şagirdlərin qeydiyyatdan keçməsi vacibdirmi?', a: 'Xeyr. İmtahanı tək link vasitəsilə qeydiyyatsız da paylaşa bilərsiniz. Lakin uzunmüddətli izləmə üçün qeydiyyat tövsiyə olunur.' },
         { q: 'Hansı sual növlərini dəstəkləyirsiniz?', a: 'Çoxseçimli, çoxlu doğru cavab, doğru/yalan, açıq cavab, uyğunluq, ardıcıllıq və ədəd cavablı suallar. Şəkil, LaTeX formula və video də əlavə oluna bilər.' },
-        { q: 'Köçürmənin qarşısını necə alırsınız?', a: 'Səhifədən çıxış izləməsi, sual və cavabların qarışdırılması, vaxt limiti, tək giriş icazəsi və IP məhdudlaşdırma — hamısı bir yerdə.' },
+        { q: 'Sual bankı və AI ilə imtahan necə işləyir?', a: 'Suallarınızı fənn üzrə sual bankında saxlayıb təkrar-təkrar istifadə edə bilərsiniz. AI köməkçisi isə mövzu və çətinlik səviyyəsinə görə dəqiqələr içində yeni suallar və hazır imtahan variantları yaradır.' },
         { q: 'Nəticələri Excel və ya PDF formatında ixrac edə bilərəmmi?', a: 'Bəli. Hər imtahanın nəticələrini Excel, CSV və PDF kimi yükləyə bilərsiniz.' },
         { q: 'Texniki dəstək necədir?', a: 'Pulsuz plan üçün email, Peşəkar üçün prioritet email + WhatsApp, Mərkəz planı üçün isə şəxsi menecer ayrılır.' },
     ];

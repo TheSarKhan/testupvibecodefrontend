@@ -5,6 +5,18 @@ import Modal from './Modal';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 
+// Readable text color for a solid colored background: dark text on light
+// colors, white on dark ones (perceived-luminance threshold). Without this,
+// light subject colors (e.g. pale cyan) rendered white-on-light — unreadable.
+const contrastText = (hex) => {
+    const h = (hex || '').trim().replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) return '#ffffff';
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#111827' : '#ffffff';
+};
+
 const CreateExamModal = ({ isOpen, onClose }) => {
     const { hasPermission } = useAuth();
     const navigate = useNavigate();
@@ -238,6 +250,8 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                         const color = typeof s === 'string' ? null : s.color;
                         const iconEmoji = typeof s === 'string' ? null : s.iconEmoji;
                         const isSelected = selectedSubject === name;
+                        const fill = color || '#2563eb';
+                        const onFill = contrastText(fill); // black on light fills, white on dark
                         return (
                             <button
                                 key={name}
@@ -246,11 +260,11 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                 className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-[1.5px] text-sm font-medium text-left transition-all ${
                                     isSelected ? 'shadow-md' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                                 }`}
-                                // Solid fill + white text when selected — the old
-                                // pale tint (~7% alpha) was barely visible.
+                                // Solid fill when selected; text/check switch between
+                                // black and white based on the fill's luminance.
                                 style={isSelected ? {
-                                    borderColor: color || '#2563eb',
-                                    backgroundColor: color || '#2563eb',
+                                    borderColor: fill,
+                                    backgroundColor: fill,
                                 } : {}}
                             >
                                 {/* Emoji if present, otherwise a color dot */}
@@ -259,17 +273,17 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                 ) : (
                                     <span
                                         className="w-3 h-3 rounded-full shrink-0"
-                                        style={{ backgroundColor: isSelected ? '#ffffff' : (color || '#cbd5e1') }}
+                                        style={{ backgroundColor: isSelected ? onFill : (color || '#cbd5e1') }}
                                     />
                                 )}
                                 <span
                                     className="flex-1 min-w-0 truncate font-semibold"
-                                    style={{ color: isSelected ? '#ffffff' : '#374151' }}
+                                    style={{ color: isSelected ? onFill : '#374151' }}
                                 >
                                     {name}
                                 </span>
                                 {isSelected && (
-                                    <HiOutlineCheck className="w-4 h-4 shrink-0 text-white" />
+                                    <HiOutlineCheck className="w-4 h-4 shrink-0" style={{ color: onFill }} />
                                 )}
                             </button>
                         );
@@ -408,7 +422,7 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                                         ? { borderColor: accent, backgroundColor: accent }
                                                         : { borderColor: '#d1d5db', backgroundColor: '#ffffff' }}
                                                 >
-                                                    {isSelected && <HiOutlineCheck className="w-3 h-3 text-white" />}
+                                                    {isSelected && <HiOutlineCheck className="w-3 h-3" style={{ color: contrastText(accent) }} />}
                                                 </span>
                                                 {/* Same visual language as the free-exam subject picker:
                                                     emoji if the subject has one, otherwise its color dot */}

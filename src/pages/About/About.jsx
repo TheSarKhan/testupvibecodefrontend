@@ -197,9 +197,10 @@ const Story = () => {
                     sub="testup.az-ın inkişaf mərhələləri."
                 />
                 <div className="relative max-w-[760px] mx-auto pl-8">
-                    {/* Vertical gradient line */}
+                    {/* Vertical gradient line — left-8 (32px) so it runs through
+                        the bullet centres (item pl-8 + bullet -left-8px + 9px half). */}
                     <div
-                        className="absolute top-2 bottom-2 left-2 w-0.5 rounded-sm"
+                        className="absolute top-2 bottom-2 left-8 w-0.5 rounded-sm"
                         style={{ background: 'linear-gradient(180deg, var(--primary) 0%, var(--accent) 100%)' }}
                     />
                     {items.map((it, i) => {

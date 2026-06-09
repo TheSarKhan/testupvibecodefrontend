@@ -125,7 +125,7 @@ const RegisterBrand = ({ role }) => {
                 </div>
                 <div>
                     <div className="font-bold text-[14px]">{isTeacher ? 'Müəllim hədiyyəsi aktivdir' : 'Müəllim hədiyyəsi'}</div>
-                    <div className="text-[12.5px] text-white/65 mt-0.5">Müəllim hesabına xüsusi hədiyyə — 3 ay Peşəkar plan, büsbütün pulsuz</div>
+                    <div className="text-[12.5px] text-white/65 mt-0.5">Müəllim hesabına xüsusi hədiyyə — 2 ay Standart plan, büsbütün pulsuz</div>
                 </div>
             </div>
         </aside>
@@ -173,7 +173,7 @@ const StepRole = ({ role, setRole, googleLogin, onNext }) => (
         <div className="mt-6 flex flex-col gap-3">
             {[
                 { value: 'STUDENT', name: 'Şagird', desc: 'İmtahanlara qoşul, nəticəni anında gör', Icon: HiOutlineAcademicCap, bonus: null },
-                { value: 'TEACHER', name: 'Müəllim', desc: 'İmtahan hazırla, nəticəni real vaxtda izlə', Icon: HiOutlineUserGroup, bonus: '✦ 3 ay hədiyyə' },
+                { value: 'TEACHER', name: 'Müəllim', desc: 'İmtahan hazırla, nəticəni real vaxtda izlə', Icon: HiOutlineUserGroup, bonus: '✦ 2 ay hədiyyə' },
             ].map((r) => {
                 const active = role === r.value;
                 return (

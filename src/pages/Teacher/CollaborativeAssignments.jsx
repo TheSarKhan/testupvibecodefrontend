@@ -39,13 +39,15 @@ const CollaborativeAssignments = () => {
     useEffect(() => { fetchAssignments(); }, []);
 
     const handleOpenDraft = async (collaboratorId) => {
+        if (openingDraft) return; // ignore rapid double-clicks (COL-5)
         setOpeningDraft(collaboratorId);
         try {
             const { data } = await api.post(`/collaborative-exams/${collaboratorId}/open-draft`);
+            // On success we navigate away (unmount) — don't clear state afterwards,
+            // it would warn about setState on an unmounted component.
             navigate(`/imtahanlar/edit/${data.draftExamId}`);
         } catch (err) {
             if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz oldu');
-        } finally {
             setOpeningDraft(null);
         }
     };

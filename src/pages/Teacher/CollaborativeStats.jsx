@@ -13,8 +13,10 @@ import { useSmartBack } from '../../hooks/useSmartBack';
 
 import { fmtDateTime } from '../../utils/date';
 import { QUESTION_TYPE_LABELS, labelOr } from '../../utils/enumLabels';
-const fmtPct  = (v) => (v == null ? '—' : `${v.toFixed(1)}%`);
-const fmtNum  = (v) => (v == null ? '—' : Number.isInteger(v) ? v : v.toFixed(2));
+// Guard NaN/Infinity (e.g. backend avgPercent when totalPoints == 0) so tiles
+// never show "NaN%"/"Infinity%" (COL-2).
+const fmtPct  = (v) => (v == null || !Number.isFinite(v) ? '—' : `${v.toFixed(1)}%`);
+const fmtNum  = (v) => (v == null || !Number.isFinite(v) ? '—' : Number.isInteger(v) ? v : v.toFixed(2));
 const fmtDate = (iso) => iso ? fmtDateTime(iso) : '—';
 
 // Big aggregate tile. Tailwind purges dynamic classes — keep the colour map static.
@@ -62,7 +64,8 @@ const CollaborativeStats = () => {
     useEffect(() => {
         setLoading(true);
         api.get(`/collaborative-exams/collaborator/${collaboratorId}/stats`)
-            .then(r => setData(r.data))
+            // Normalise the arrays so .length/.map never crash on a sparse response (COL-2).
+            .then(r => setData({ ...r.data, questions: r.data?.questions || [], students: r.data?.students || [] }))
             .catch(err => {
                 toast.error(err.response?.data?.message || 'Statistika yüklənmədi');
             })

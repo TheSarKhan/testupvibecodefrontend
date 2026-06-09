@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import getErrorMessage from '../utils/getErrorMessage';
 
 const api = axios.create({
     baseURL: '/api',
@@ -56,8 +57,21 @@ api.interceptors.response.use(
         // { skipErrorToast: true } to suppress the global toast.
         const skipToast = originalRequest?.skipErrorToast === true;
 
+        // Download endpoints use responseType:'blob', so an error body arrives
+        // as a Blob and data.message would be undefined — the readable backend
+        // message got replaced by the generic fallback. Decode it back to JSON.
+        if (error.response?.data instanceof Blob
+            && error.response.data.type?.includes('json')) {
+            try {
+                error.response.data = JSON.parse(await error.response.data.text());
+            } catch {
+                // not JSON after all — leave the blob as is
+            }
+        }
+
         // Extract backend message so callers can use error.message directly
-        if (error.response?.data?.message) {
+        // (string only — never propagate objects into toasts)
+        if (typeof error.response?.data?.message === 'string') {
             error.message = error.response.data.message;
         }
 
@@ -71,14 +85,14 @@ api.interceptors.response.use(
         // 403 Forbidden — always show globally
         if (status === 403) {
             error._handled = true;
-            if (!skipToast) toast.error(error.response?.data?.message || 'Bu əməliyyat üçün icazəniz yoxdur');
+            if (!skipToast) toast.error(getErrorMessage(error, 'Bu əməliyyat üçün icazəniz yoxdur'));
             return Promise.reject(error);
         }
 
         // 5xx Server errors — show globally unless the caller opted out
         if (status >= 500) {
             error._handled = true;
-            if (!skipToast) toast.error(error.response?.data?.message || 'Server xətası baş verdi. Zəhmət olmasa bir az sonra yenidən cəhd edin.');
+            if (!skipToast) toast.error(getErrorMessage(error));
             return Promise.reject(error);
         }
 

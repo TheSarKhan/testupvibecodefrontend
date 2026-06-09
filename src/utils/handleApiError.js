@@ -1,4 +1,5 @@
 import toast from 'react-hot-toast';
+import getErrorMessage from './getErrorMessage';
 
 /**
  * Shows a toast for API errors from catch blocks.
@@ -22,21 +23,7 @@ const handleApiError = (error, fallback = 'Əməliyyat uğursuz oldu') => {
     // 403 and 5xx are already toasted by the axios interceptor — skip
     if (status === 403 || status >= 500 || !error.response) return;
 
-    // Prefer backend message, then status-based default, then fallback
-    const backendMsg = error.response?.data?.message;
-    let message;
-    if (backendMsg) {
-        message = backendMsg;
-    } else if (status === 404) {
-        message = fallback !== 'Əməliyyat uğursuz oldu' ? fallback : 'Belə bir məlumat tapılmadı';
-    } else if (status === 400) {
-        message = fallback !== 'Əməliyyat uğursuz oldu' ? fallback : 'Məlumatlar yanlışdır';
-    } else if (status === 401) {
-        message = 'Giriş tələb olunur';
-    } else {
-        message = fallback;
-    }
-    toast.error(message);
+    toast.error(getErrorMessage(error, fallback));
 };
 
 export default handleApiError;

@@ -9,6 +9,7 @@ import {
 } from 'react-icons/hi';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import getErrorMessage from '../../utils/getErrorMessage';
 import { fmtDate } from '../../utils/date';
 import {
     useAdminUsers,
@@ -152,7 +153,7 @@ const AdminUsers = () => {
             const data = await toggleStatus.mutateAsync(userId);
             toast.success(data.enabled ? 'Hesab aktivləşdirildi' : 'Hesab deaktiv edildi');
         } catch (err) {
-            if (!err._handled) toast.error(err.message || 'Əməliyyat uğursuz oldu');
+            if (!err._handled) toast.error(getErrorMessage(err));
         }
     };
 
@@ -161,7 +162,7 @@ const AdminUsers = () => {
             await changeRole.mutateAsync({ userId, role: newRole });
             toast.success('Rol dəyişdirildi');
         } catch (err) {
-            if (!err._handled) toast.error(err.message || 'Əməliyyat uğursuz oldu');
+            if (!err._handled) toast.error(getErrorMessage(err));
         }
     };
 

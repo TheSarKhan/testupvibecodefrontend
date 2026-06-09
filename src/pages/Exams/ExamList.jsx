@@ -15,6 +15,7 @@ import AiExamModal from '../../components/ui/AiExamModal';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import getErrorMessage from '../../utils/getErrorMessage';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Subject palette (deterministic by name hash so the same subject keeps its colour)
@@ -589,7 +590,7 @@ const ExamList = () => {
             setExams(prev => prev.map(e => e.id === id ? { ...e, status: data.status } : e));
             toast.success(data.status === 'PUBLISHED' ? 'İmtahan açıldı' : 'İmtahan bağlandı');
         } catch (err) {
-            if (!err._handled) toast.error(err.message || 'Əməliyyat uğursuz oldu');
+            if (!err._handled) toast.error(getErrorMessage(err));
         }
     };
 

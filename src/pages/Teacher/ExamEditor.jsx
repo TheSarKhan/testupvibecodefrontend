@@ -8,6 +8,7 @@ import MathFormulaModal from '../../components/ui/MathFormulaModal';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
+import getErrorMessage from '../../utils/getErrorMessage';
 import { readFileAsDataUrl, MAX_AUDIO_BYTES, MAX_IMAGE_BYTES } from '../../utils/fileUpload';
 import { useSmartBack } from '../../hooks/useSmartBack';
 
@@ -1150,7 +1151,7 @@ const ExamEditor = () => {
                 toast.success('Qaralama saxlanıldı', { id: loadId });
             }
         } catch (error) {
-            if (!error._handled) toast.error(error.message || 'Əməliyyat uğursuz oldu', { id: loadId });
+            if (!error._handled) toast.error(getErrorMessage(error), { id: loadId });
         } finally {
             submittingRef.current = false;
         }
@@ -1254,7 +1255,7 @@ const ExamEditor = () => {
             }
             navigate(backPath);
         } catch (error) {
-            if (!error._handled) toast.error(error.response?.data?.message || error.message || 'Əməliyyat uğursuz oldu', { id: loadId });
+            if (!error._handled) toast.error(getErrorMessage(error), { id: loadId });
         } finally {
             submittingRef.current = false;
         }

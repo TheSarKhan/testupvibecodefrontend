@@ -5,6 +5,7 @@ import {
     HiOutlineFire, HiOutlineExclamationCircle, HiOutlineCollection,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import getErrorMessage from '../../../utils/getErrorMessage';
 import {
     useAdminTags, useCreateTag, useUpdateTag, useDeleteTag,
     useTagStats, useMergeTags, useBulkDeleteTags,
@@ -148,7 +149,7 @@ const TagsTab = () => {
             inputRef.current?.focus();
             toast.success(`"${data.name}" əlavə edildi`);
         } catch (err) {
-            if (!err._handled) toast.error(err.response?.data?.error || err.message || 'Əməliyyat uğursuz oldu');
+            if (!err._handled) toast.error(err.response?.data?.error || getErrorMessage(err));
         }
     };
 
@@ -165,7 +166,7 @@ const TagsTab = () => {
             setEditingId(null);
             toast.success('Yeniləndi');
         } catch (err) {
-            if (!err._handled) toast.error(err.response?.data?.error || err.message || 'Əməliyyat uğursuz oldu');
+            if (!err._handled) toast.error(err.response?.data?.error || getErrorMessage(err));
         }
     };
 
@@ -184,7 +185,7 @@ const TagsTab = () => {
             toast.success(`${result.merged} imtahan "${result.target}" teqinə keçdi`);
             setMergingTag(null);
         } catch (err) {
-            toast.error(err.message || 'Birləşdirmə uğursuz');
+            toast.error(getErrorMessage(err, 'Birləşdirmə uğursuz'));
         }
     };
 

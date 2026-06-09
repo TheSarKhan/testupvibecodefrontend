@@ -25,11 +25,18 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     const [selectedSubtitle, setSelectedSubtitle] = useState(null);
     const [selectedSectionIds, setSelectedSectionIds] = useState(new Set()); // for multi-select in step 4
 
+    const [categoryList, setCategoryList] = useState([]); // [{id, name, orderIndex, color}]
+
     useEffect(() => {
         api.get('/subjects/meta').then(res => setSubjects(res.data)).catch(() => {
             // fallback: plain names
             api.get('/subjects').then(r => setSubjects(r.data.map(name => ({ name, color: null, iconEmoji: null }))));
         });
+        // Admin-managed picker categories (already in pill order). Failure is
+        // non-fatal — pills fall back to the distinct categories in meta.
+        api.get('/subjects/categories')
+            .then(res => setCategoryList(Array.isArray(res.data) ? res.data : []))
+            .catch(() => setCategoryList([]));
     }, []);
 
     const reset = () => {
@@ -165,11 +172,16 @@ const CreateExamModal = ({ isOpen, onClose }) => {
     // ── Step 2 (free): subject select ─────────────────────────────────────────
     const renderStep2Free = () => {
         const q = subjectSearch.trim().toLowerCase();
-        // Filter pills come from the backend data (distinct subject.category
-        // values), so new categories appear here without a frontend change.
-        const categories = ['Hamısı', ...new Set(
+        // Filter pills: admin-managed categories in their defined order,
+        // narrowed to ones actually used by a subject (an empty pill helps
+        // no one). Falls back to distinct meta values if the endpoint failed.
+        const usedCats = new Set(
             subjects.map(s => (typeof s === 'string' ? null : s.category)).filter(Boolean)
-        )];
+        );
+        const orderedNames = categoryList.length > 0
+            ? categoryList.map(c => c.name).filter(n => usedCats.has(n))
+            : [...usedCats];
+        const categories = ['Hamısı', ...orderedNames];
         const filtered = subjects.filter(s => {
             const name = typeof s === 'string' ? s : s.name;
             const cat = typeof s === 'string' ? null : s.category;
@@ -232,27 +244,32 @@ const CreateExamModal = ({ isOpen, onClose }) => {
                                 onClick={() => setSelectedSubject(prev => prev === name ? '' : name)}
                                 title={name}
                                 className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-[1.5px] text-sm font-medium text-left transition-all ${
-                                    isSelected ? 'shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                                    isSelected ? 'shadow-md' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
                                 }`}
+                                // Solid fill + white text when selected — the old
+                                // pale tint (~7% alpha) was barely visible.
                                 style={isSelected ? {
-                                    borderColor: color || '#3b82f6',
-                                    backgroundColor: color ? `${color}12` : '#eff6ff',
+                                    borderColor: color || '#2563eb',
+                                    backgroundColor: color || '#2563eb',
                                 } : {}}
                             >
                                 {/* Emoji if present, otherwise a color dot */}
                                 {iconEmoji ? (
                                     <span className="text-[18px] leading-none shrink-0">{iconEmoji}</span>
                                 ) : (
-                                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color || '#cbd5e1' }} />
+                                    <span
+                                        className="w-3 h-3 rounded-full shrink-0"
+                                        style={{ backgroundColor: isSelected ? '#ffffff' : (color || '#cbd5e1') }}
+                                    />
                                 )}
                                 <span
                                     className="flex-1 min-w-0 truncate font-semibold"
-                                    style={{ color: isSelected ? (color || '#3b82f6') : '#374151' }}
+                                    style={{ color: isSelected ? '#ffffff' : '#374151' }}
                                 >
                                     {name}
                                 </span>
                                 {isSelected && (
-                                    <HiOutlineCheck className="w-4 h-4 shrink-0" style={{ color: color || '#3b82f6' }} />
+                                    <HiOutlineCheck className="w-4 h-4 shrink-0 text-white" />
                                 )}
                             </button>
                         );

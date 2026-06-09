@@ -10,7 +10,9 @@ import { QUESTION_TYPE_LABELS, DIFFICULTY_LABELS } from '../../utils/enumLabels'
 
 const QUESTION_TYPES = [
     { key: 'MCQ',               label: QUESTION_TYPE_LABELS.MCQ,              sublabel: 'Bir düzgün cavab' },
+    { key: 'TRUE_FALSE',        label: QUESTION_TYPE_LABELS.TRUE_FALSE,       sublabel: 'Doğru və ya yanlış hökm' },
     { key: 'MULTI_SELECT',      label: QUESTION_TYPE_LABELS.MULTI_SELECT,     sublabel: 'Bir neçə düzgün cavab' },
+    { key: 'MATCHING',          label: QUESTION_TYPE_LABELS.MATCHING,         sublabel: 'Cütləri uyğunlaşdır' },
     { key: 'OPEN_AUTO',         label: QUESTION_TYPE_LABELS.OPEN_AUTO,        sublabel: 'Qısa açıq cavab' },
     { key: 'FILL_IN_THE_BLANK', label: QUESTION_TYPE_LABELS.FILL_IN_THE_BLANK, sublabel: 'Boşluğa söz yaz' },
 ];
@@ -19,6 +21,20 @@ const DIFFICULTIES = [
     { key: 'EASY',   label: DIFFICULTY_LABELS.EASY },
     { key: 'MEDIUM', label: DIFFICULTY_LABELS.MEDIUM },
     { key: 'HARD',   label: DIFFICULTY_LABELS.HARD },
+];
+
+const GRADE_LEVELS = [
+    { value: '', label: 'Seçilməyib' },
+    ...[5, 6, 7, 8, 9, 10, 11].map(n => ({ value: `${n}-ci sinif`, label: `${n}-ci sinif` })),
+    { value: 'Abituriyent', label: 'Abituriyent' },
+    { value: 'Universitet', label: 'Universitet' },
+];
+
+const LANGUAGES = [
+    { value: '',   label: 'Avtomatik (fənnə görə)' },
+    { value: 'AZ', label: 'Azərbaycan' },
+    { value: 'EN', label: 'İngilis' },
+    { value: 'RU', label: 'Rus' },
 ];
 
 const AiExamModal = ({ onClose }) => {
@@ -34,8 +50,15 @@ const AiExamModal = ({ onClose }) => {
     const [topicInput, setTopicInput] = useState('');
     const topicInputRef = useRef(null);
     const [difficulty, setDifficulty] = useState('MEDIUM');
-    const [counts, setCounts] = useState({ MCQ: 5, MULTI_SELECT: 0, OPEN_AUTO: 0, FILL_IN_THE_BLANK: 0 });
+    // Difficulty mix (BUG-21): optional per-difficulty breakdown that must sum
+    // to the total question count. Off = legacy single-difficulty behaviour.
+    const [mixMode, setMixMode] = useState(false);
+    const [mixCounts, setMixCounts] = useState({ EASY: 0, MEDIUM: 0, HARD: 0 });
+    const [counts, setCounts] = useState({ MCQ: 5, TRUE_FALSE: 0, MULTI_SELECT: 0, MATCHING: 0, OPEN_AUTO: 0, FILL_IN_THE_BLANK: 0 });
     const [examTitle, setExamTitle] = useState('');
+    const [instructions, setInstructions] = useState('');
+    const [gradeLevel, setGradeLevel] = useState('');
+    const [language, setLanguage] = useState('');
     // `loading` = a background generation is in flight. The modal stays open
     // showing the spinner; when the server finishes it pushes a notification we
     // listen for below (close + open the draft). The teacher may also close the
@@ -140,14 +163,23 @@ const AiExamModal = ({ onClose }) => {
     }, [loading, onClose]);
 
     const totalCount = Object.values(counts).reduce((s, v) => s + v, 0);
+    const mixTotal = Object.values(mixCounts).reduce((s, v) => s + v, 0);
 
     const changeCount = (key, delta) => {
         setCounts(prev => ({ ...prev, [key]: Math.max(0, Math.min(15, (prev[key] || 0) + delta)) }));
     };
 
+    const changeMixCount = (key, delta) => {
+        setMixCounts(prev => ({ ...prev, [key]: Math.max(0, Math.min(60, (prev[key] || 0) + delta)) }));
+    };
+
     const handleGenerate = async () => {
         if (totalCount === 0) { toast.error('Ən azı 1 sual seçin'); return; }
         if (!selectedSubject) { toast.error('Fənn seçin'); return; }
+        if (mixMode && mixTotal !== totalCount) {
+            toast.error(`Çətinlik bölgüsünün cəmi (${mixTotal}) sual sayına (${totalCount}) bərabər olmalıdır`);
+            return;
+        }
 
         const typeCounts = {};
         Object.entries(counts).forEach(([k, v]) => { if (v > 0) typeCounts[k] = v; });
@@ -165,13 +197,21 @@ const AiExamModal = ({ onClose }) => {
             // exam is built off-thread, then saved as a DRAFT. This avoids the
             // ~100s proxy timeout (504) on large 50-60+ question exams. The teacher
             // gets a notification ("İmtahanınız hazırdır") when it's ready.
+            const difficultyMix = {};
+            if (mixMode) {
+                Object.entries(mixCounts).forEach(([k, v]) => { if (v > 0) difficultyMix[k] = v; });
+            }
             await api.post('/ai/generate-exam-async', {
                 subjectName: selectedSubject,
                 topicNames: finalTopics,
                 topicName: finalTopics.length > 0 ? finalTopics.join(', ') : null,
-                difficulty,
+                difficulty, // kept for backwards compatibility; difficultyMix wins when set
+                difficultyMix: mixMode && Object.keys(difficultyMix).length > 0 ? difficultyMix : null,
                 typeCounts,
                 title: examTitle.trim() || null,
+                instructions: instructions.trim() || null,
+                gradeLevel: gradeLevel || null,
+                language: language || null,
             });
             // Keep `loading` true — the modal stays on its spinner until the
             // completion notification arrives (handled by the socket effect),
@@ -343,29 +383,111 @@ const AiExamModal = ({ onClose }) => {
                         </div>
                     </div>
 
-                    {/* Difficulty */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Çətinlik</label>
-                        <div className="flex gap-2">
-                            {DIFFICULTIES.map(d => (
-                                <button
-                                    key={d.key}
-                                    onClick={() => setDifficulty(d.key)}
-                                    disabled={loading}
-                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all border disabled:opacity-60 ${
-                                        difficulty === d.key
-                                            ? d.key === 'EASY'
-                                                ? 'bg-green-500 border-green-500 text-white shadow-sm'
-                                                : d.key === 'HARD'
-                                                    ? 'bg-red-500 border-red-500 text-white shadow-sm'
-                                                    : 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                                            : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
-                                    }`}
-                                >
-                                    {d.label}
-                                </button>
-                            ))}
+                    {/* Grade level + language */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                                Sinif <span className="text-gray-400 normal-case font-medium">(istəyə bağlı)</span>
+                            </label>
+                            <select
+                                value={gradeLevel}
+                                onChange={e => setGradeLevel(e.target.value)}
+                                disabled={loading}
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors"
+                            >
+                                {GRADE_LEVELS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                            </select>
                         </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Sualların dili</label>
+                            <select
+                                value={language}
+                                onChange={e => setLanguage(e.target.value)}
+                                disabled={loading}
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors"
+                            >
+                                {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Difficulty — single level or a per-level mix */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Çətinlik</label>
+                            <button
+                                type="button"
+                                onClick={() => setMixMode(m => !m)}
+                                disabled={loading}
+                                className={`text-xs font-bold px-2.5 py-1 rounded-full border transition-colors disabled:opacity-60 ${
+                                    mixMode
+                                        ? 'bg-blue-600 border-blue-600 text-white'
+                                        : 'bg-white border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600'
+                                }`}
+                            >
+                                Qarışıq bölgü
+                            </button>
+                        </div>
+                        {!mixMode ? (
+                            <div className="flex gap-2">
+                                {DIFFICULTIES.map(d => (
+                                    <button
+                                        key={d.key}
+                                        onClick={() => setDifficulty(d.key)}
+                                        disabled={loading}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all border disabled:opacity-60 ${
+                                            difficulty === d.key
+                                                ? d.key === 'EASY'
+                                                    ? 'bg-green-500 border-green-500 text-white shadow-sm'
+                                                    : d.key === 'HARD'
+                                                        ? 'bg-red-500 border-red-500 text-white shadow-sm'
+                                                        : 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                                        }`}
+                                    >
+                                        {d.label}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {DIFFICULTIES.map(d => (
+                                        <div key={d.key} className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border border-gray-100 bg-gray-50">
+                                            <span className={`text-xs font-bold ${
+                                                d.key === 'EASY' ? 'text-green-600' : d.key === 'HARD' ? 'text-red-600' : 'text-blue-600'
+                                            }`}>{d.label}</span>
+                                            <div className="flex items-center gap-1.5">
+                                                <button
+                                                    onClick={() => changeMixCount(d.key, -1)}
+                                                    disabled={loading || mixCounts[d.key] === 0}
+                                                    className="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold flex items-center justify-center hover:border-blue-300 disabled:opacity-30 transition-all"
+                                                >
+                                                    −
+                                                </button>
+                                                <span className={`w-7 text-center text-sm font-extrabold ${mixCounts[d.key] > 0 ? 'text-gray-800' : 'text-gray-400'}`}>
+                                                    {mixCounts[d.key]}
+                                                </span>
+                                                <button
+                                                    onClick={() => changeMixCount(d.key, 1)}
+                                                    disabled={loading}
+                                                    className="w-7 h-7 rounded-lg border border-gray-200 bg-white text-gray-600 font-bold flex items-center justify-center hover:border-blue-300 disabled:opacity-30 transition-all"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className={`text-[11px] font-semibold mt-1.5 ${
+                                    mixTotal === totalCount ? 'text-green-600' : 'text-amber-600'
+                                }`}>
+                                    {mixTotal === totalCount
+                                        ? `Bölgü düzgündür: ${mixTotal} / ${totalCount} sual`
+                                        : `Bölgünün cəmi (${mixTotal}) sual sayına (${totalCount}) bərabər olmalıdır`}
+                                </p>
+                            </>
+                        )}
                     </div>
 
                     {/* Question type counters */}
@@ -407,6 +529,22 @@ const AiExamModal = ({ onClose }) => {
                                 </div>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Free-form teacher guidance woven into the AI prompt */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                            Əlavə təlimat <span className="text-gray-400 normal-case font-medium">(istəyə bağlı)</span>
+                        </label>
+                        <textarea
+                            value={instructions}
+                            onChange={e => setInstructions(e.target.value)}
+                            disabled={loading}
+                            rows={2}
+                            maxLength={500}
+                            placeholder="Məs: real həyat nümunələri ver, törəmələrə toxunma, DİM üslubunda"
+                            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-800 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 disabled:opacity-60 transition-colors resize-none"
+                        />
                     </div>
 
                     {/* Loading state — the modal stays here on the spinner until the

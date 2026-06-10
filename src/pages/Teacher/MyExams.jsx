@@ -563,6 +563,23 @@ const MyExams = () => {
                                     limit={subscription.plan?.maxSavedExamsLimit}
                                     color="var(--primary)"
                                 />
+                                {subscription.usageResetsAt && (() => {
+                                    const resetDays = Math.max(0, Math.ceil((new Date(subscription.usageResetsAt) - Date.now()) / 86400000));
+                                    return (
+                                        <>
+                                            <div className="w-px h-10 bg-[var(--ink-200)] hidden md:block" />
+                                            <div>
+                                                <div className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--ink-500)]">Limit yenilənməsi</div>
+                                                <div className="text-[15px] font-extrabold text-[var(--ink-900)] mt-1">
+                                                    {resetDays === 0 ? 'Bu gün' : `${resetDays} gün`}
+                                                </div>
+                                                <div className="text-[11.5px] mt-1.5 font-semibold text-[var(--ink-500)]">
+                                                    {resetDays === 0 ? 'limitlər bu gün yenilənir' : 'sonra yenilənir'}
+                                                </div>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                                 {subscription.endDate && (() => {
                                     const days = Math.max(0, Math.ceil((new Date(subscription.endDate) - Date.now()) / 86400000));
                                     return (

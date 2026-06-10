@@ -20,14 +20,18 @@ const DIFFICULTY_OPTIONS = [
 
 const TYPE_OPTIONS = [
     { value: 'MCQ',               label: QUESTION_TYPE_LABELS.MCQ               },
+    { value: 'TRUE_FALSE',        label: QUESTION_TYPE_LABELS.TRUE_FALSE        },
     { value: 'MULTI_SELECT',      label: QUESTION_TYPE_LABELS.MULTI_SELECT      },
+    { value: 'MATCHING',          label: QUESTION_TYPE_LABELS.MATCHING          },
     { value: 'OPEN_AUTO',         label: QUESTION_TYPE_LABELS.OPEN_AUTO         },
     { value: 'FILL_IN_THE_BLANK', label: QUESTION_TYPE_LABELS.FILL_IN_THE_BLANK },
 ];
 
 const TYPE_COLORS = {
     MCQ:               'bg-blue-50 text-blue-700',
+    TRUE_FALSE:        'bg-indigo-50 text-indigo-700',
     MULTI_SELECT:      'bg-emerald-50 text-emerald-700',
+    MATCHING:          'bg-purple-50 text-purple-700',
     OPEN_AUTO:         'bg-green-50 text-green-700',
     FILL_IN_THE_BLANK: 'bg-yellow-50 text-yellow-700',
 };
@@ -53,19 +57,31 @@ const InlineEditForm = ({ q, onSaveEdit, onCancel }) => {
         content: o.content ?? o.text ?? '',
         isCorrect: !!o.isCorrect,
     })));
+    const [pairs, setPairs] = useState((q.matchingPairs || []).map(p => ({
+        leftItem: p.leftItem || '',
+        rightItem: p.rightItem || '',
+    })));
     const [correctAnswer, setCorrectAnswer] = useState(q.correctAnswer || '');
-    const isMcq = q.questionType === 'MCQ';
+    // MCQ and TRUE_FALSE both keep exactly one correct option.
+    const isSingleCorrect = q.questionType === 'MCQ' || q.questionType === 'TRUE_FALSE';
+    const isMatching = q.questionType === 'MATCHING';
 
     const toggleCorrect = (idx) => {
         setOptions(prev => prev.map((o, i) => {
-            // MCQ keeps exactly one correct option; other types toggle freely.
-            if (isMcq) return { ...o, isCorrect: i === idx };
+            if (isSingleCorrect) return { ...o, isCorrect: i === idx };
             return i === idx ? { ...o, isCorrect: !o.isCorrect } : o;
         }));
     };
 
     const handleSave = () => {
         if (!content.trim()) { toast.error('Sual mətni boş ola bilməz'); return; }
+        const cleanPairs = pairs
+            .filter(p => p.leftItem.trim() && p.rightItem.trim())
+            .map((p, i) => ({ leftItem: p.leftItem.trim(), rightItem: p.rightItem.trim(), orderIndex: i }));
+        if (isMatching && cleanPairs.length < 2) {
+            toast.error('Uyğunlaşdırma üçün ən azı 2 tam cüt lazımdır');
+            return;
+        }
         onSaveEdit({
             ...q,
             content: content.trim(),
@@ -73,6 +89,7 @@ const InlineEditForm = ({ q, onSaveEdit, onCancel }) => {
             options: options
                 .filter(o => o.content.trim())
                 .map((o, i) => ({ content: o.content.trim(), isCorrect: o.isCorrect, orderIndex: i })),
+            matchingPairs: cleanPairs,
         });
     };
 
@@ -111,7 +128,45 @@ const InlineEditForm = ({ q, onSaveEdit, onCancel }) => {
                     ))}
                 </div>
             )}
-            {(q.questionType === 'OPEN_AUTO' || q.questionType === 'FILL_IN_THE_BLANK' || !options.length) && (
+            {isMatching && (
+                <div className="space-y-1.5">
+                    {pairs.map((p, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={p.leftItem}
+                                onChange={e => setPairs(prev => prev.map((x, j) => j === i ? { ...x, leftItem: e.target.value } : x))}
+                                placeholder="Sol element"
+                                className="flex-1 text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300"
+                            />
+                            <span className="text-gray-400 text-xs shrink-0">→</span>
+                            <input
+                                type="text"
+                                value={p.rightItem}
+                                onChange={e => setPairs(prev => prev.map((x, j) => j === i ? { ...x, rightItem: e.target.value } : x))}
+                                placeholder="Sağ element"
+                                className="flex-1 text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setPairs(prev => prev.filter((_, j) => j !== i))}
+                                className="p-1 text-gray-300 hover:text-red-500 rounded transition-colors"
+                                title="Cütü sil"
+                            >
+                                <HiOutlineX className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    ))}
+                    <button
+                        type="button"
+                        onClick={() => setPairs(prev => [...prev, { leftItem: '', rightItem: '' }])}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                    >
+                        + Cüt əlavə et
+                    </button>
+                </div>
+            )}
+            {!isMatching && (q.questionType === 'OPEN_AUTO' || q.questionType === 'FILL_IN_THE_BLANK' || !options.length) && (
                 <input
                     type="text"
                     value={correctAnswer}
@@ -146,6 +201,12 @@ const PreviewQuestion = ({ q, index, onRemove, onRefine, onEdit, isEditing, onSa
     (q.options || []).forEach((opt) => {
         const v = validateLatexSyntax(opt.content || opt.text);
         if (!v.valid) errors.push(...v.errors);
+    });
+    (q.matchingPairs || []).forEach((p) => {
+        const vl = validateLatexSyntax(p.leftItem);
+        if (!vl.valid) errors.push(...vl.errors);
+        const vr = validateLatexSyntax(p.rightItem);
+        if (!vr.valid) errors.push(...vr.errors);
     });
     if (q.correctAnswer) {
         const v = validateLatexSyntax(q.correctAnswer);
@@ -194,6 +255,22 @@ const PreviewQuestion = ({ q, index, onRemove, onRefine, onEdit, isEditing, onSa
                                     {opt.isCorrect ? '✓' : String.fromCharCode(65 + i)}
                                 </span>
                                 <LatexPreview content={opt.content || opt.text} />
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                {/* MATCHING pairs: left → right rows */}
+                {q.matchingPairs && q.matchingPairs.length > 0 && (
+                    <ul className="mt-3 space-y-1">
+                        {q.matchingPairs.map((p, i) => (
+                            <li key={i} className="flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg bg-purple-50/60 text-gray-700">
+                                <span className="w-4 h-4 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center shrink-0 text-[10px] font-bold">
+                                    {i + 1}
+                                </span>
+                                <span className="font-semibold"><LatexPreview content={p.leftItem} /></span>
+                                <span className="text-purple-400 shrink-0">→</span>
+                                <span><LatexPreview content={p.rightItem} /></span>
                             </li>
                         ))}
                     </ul>
@@ -292,6 +369,13 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
         if (c.correctAnswer) c.correctAnswer = autoWrapBareLatex(c.correctAnswer);
         if (Array.isArray(c.options)) {
             c.options = c.options.map(o => ({ ...o, content: o.content ? autoWrapBareLatex(o.content) : o.content }));
+        }
+        if (Array.isArray(c.matchingPairs)) {
+            c.matchingPairs = c.matchingPairs.map(p => ({
+                ...p,
+                leftItem: p.leftItem ? autoWrapBareLatex(p.leftItem) : p.leftItem,
+                rightItem: p.rightItem ? autoWrapBareLatex(p.rightItem) : p.rightItem,
+            }));
         }
         return c;
     };
@@ -400,6 +484,20 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                     return;
                 }
             }
+            if (Array.isArray(q.matchingPairs)) {
+                q.matchingPairs.forEach(p => {
+                    if (p.leftItem) p.leftItem = autoWrapBareLatex(p.leftItem);
+                    if (p.rightItem) p.rightItem = autoWrapBareLatex(p.rightItem);
+                });
+                for (const p of q.matchingPairs) {
+                    const vl = validateLatexSyntax(p.leftItem);
+                    const vr = validateLatexSyntax(p.rightItem);
+                    if (!vl.valid || !vr.valid) {
+                        toast.error(`Sual ${i + 1} uyğunlaşdırma cütündə LaTeX xətası:\n${getLatexErrorMessage([...(vl.errors || []), ...(vr.errors || [])])}`);
+                        return;
+                    }
+                }
+            }
         }
 
         // FILL_IN_THE_BLANK: editor and grader expect correctAnswer as a
@@ -490,6 +588,16 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                     </div>
                 )}
             </div>
+
+            {/* Seed indicator: variations of an existing question are being generated */}
+            {seedQuestion && (
+                <div className="flex items-start gap-2 p-3 mb-4 bg-purple-50 border border-purple-100 rounded-xl text-xs text-purple-700">
+                    <HiOutlineSparkles className="w-4 h-4 shrink-0 mt-0.5" />
+                    <p className="min-w-0">
+                        <span className="font-bold">Toxum sual:</span> seçilmiş suala bənzər (eyni konsept, kopya yox) variasiyalar yaradılacaq.
+                    </p>
+                </div>
+            )}
 
             {/* Config row */}
             <div className="grid grid-cols-2 gap-3 mb-4">

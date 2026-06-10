@@ -390,14 +390,24 @@ const ExamEditor = () => {
     };
 
     // Opens the shared AI modal for a section (optionally locking onto an
-    // existing template slot) and loads the section subject's topics for the
-    // modal's topic combobox.
-    const openAiModal = (sectionSubject, { replaceId = null, lockedQuestionType = null } = {}) => {
+    // existing template slot, or seeding from an existing question) and loads
+    // the section subject's topics for the modal's topic combobox.
+    const openAiModal = (sectionSubject, { replaceId = null, lockedQuestionType = null, seed = null } = {}) => {
         setAiTopics([]);
-        setAiModal({ section: sectionSubject, replaceId, lockedQuestionType });
+        setAiModal({ section: sectionSubject, replaceId, lockedQuestionType, seed });
         api.get(`/subjects/topics?name=${encodeURIComponent(sectionSubject || '')}`)
             .then(r => setAiTopics(r.data || []))
             .catch(() => setAiTopics([]));
+    };
+
+    // BUG-22 seed: "generate questions similar to this one" from a question card.
+    // Locks the type to the seed's type so variations stay structurally alike.
+    const handleGenerateSimilar = (sectionSubject) => (q) => {
+        const qType = q.type === 'MULTI_SELECT' ? 'MULTI_SELECT' :
+            q.type === 'OPEN_AUTO' || q.type === 'OPEN_MANUAL' ? 'OPEN_AUTO' :
+            q.type === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' :
+            q.type === 'MATCHING' ? 'MATCHING' : 'MCQ';
+        openAiModal(sectionSubject, { seed: q.text, lockedQuestionType: qType });
     };
 
     // Tracks the backend ID of the draft (for new exams created silently via auto-save)
@@ -1545,6 +1555,12 @@ const ExamEditor = () => {
                                                             question={item.data}
                                                             onChange={handleUpdateQuestion}
                                                             onDelete={handleDeleteQuestion}
+                                                            onGenerateSimilar={
+                                                                !isSectionLocked(sectionSubject)
+                                                                && (hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0) || isAdmin)
+                                                                    ? handleGenerateSimilar(sectionSubject)
+                                                                    : null
+                                                            }
                                                             hidePoints={sectionHidesPoints(sectionSubject)}
                                                             hideDelete={isSectionLocked(sectionSubject)}
                                                             // Şablon-bağlı section: bal və sual tipi şablonla təyin olunur,
@@ -1760,6 +1776,7 @@ const ExamEditor = () => {
                 topics={aiTopics}
                 saveToBank={false}
                 lockedType={aiModal?.lockedQuestionType || null}
+                seedQuestion={aiModal?.seed || null}
                 onSave={handleAiInsert}
             />
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { HiOutlineTrash, HiOutlinePlus, HiOutlineX, HiLockClosed } from 'react-icons/hi';
+import { HiOutlineTrash, HiOutlinePlus, HiOutlineX, HiLockClosed, HiOutlineSparkles } from 'react-icons/hi';
 import PdfCropperModal from './PdfCropperModal';
 import MathFormulaModal from './MathFormulaModal';
 import MathTextEditor from './MathTextEditor';
@@ -19,7 +19,7 @@ const QUESTION_TYPES = {
     FILL_IN_THE_BLANK: 'Boşluq Doldurma'
 };
 
-const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false, pointsReadOnly = false, typeReadOnly = false }) => {
+const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = false, hideDelete = false, pointsReadOnly = false, typeReadOnly = false, onGenerateSimilar = null }) => {
     const { hasPermission } = useAuth();
     // mathModalField shape: { type, id?, editingLatex? }
     // editingLatex set when the modal was opened by clicking an existing
@@ -984,6 +984,17 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                 />
                             )}
                         </div>
+                    )}
+                    {/* BUG-22 seed: generate similar questions from this one (only
+                        when the question actually has text to seed from) */}
+                    {onGenerateSimilar && question.text?.trim() && (
+                        <button
+                            onClick={() => onGenerateSimilar(question)}
+                            className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                            title="Bu suala bənzər suallar yarat (AI)"
+                        >
+                            <HiOutlineSparkles className="w-5 h-5" />
+                        </button>
                     )}
                     {!hideDelete && question.reviewStatus !== 'APPROVED' && (
                         <button

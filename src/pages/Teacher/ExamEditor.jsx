@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlineCog, HiOutlinePlus, HiOutlineX, HiOutlineVolumeUp, HiOutlineDocumentText, HiOutlineBookOpen, HiOutlineInformationCircle, HiLockClosed, HiOutlineUserGroup, HiOutlinePaperAirplane, HiOutlineCheckCircle, HiOutlineSparkles } from 'react-icons/hi';
-import { ExamSettingsModal, QuestionEditor, PdfCropperModal } from '../../components/ui';
+import { ExamSettingsModal, QuestionEditor, PdfCropperModal, AiGenerateModal } from '../../components/ui';
 import BankPickerModal from '../../components/ui/BankPickerModal';
 import MathTextEditor from '../../components/ui/MathTextEditor';
 import MathFormulaModal from '../../components/ui/MathFormulaModal';
@@ -269,13 +269,9 @@ const ExamEditor = () => {
     // Bank picker state
     const [bankPicker, setBankPicker] = useState(null); // null | { section, replaceId, filterType }
 
-    // AI question generation state
+    // AI question generation (BUG-23: shared AiGenerateModal, insert-to-exam mode)
     const [aiModal, setAiModal] = useState(null); // null | { section, replaceId?, lockedQuestionType? }
-    const [aiLoading, setAiLoading] = useState(false);
-    const [aiForm, setAiForm] = useState({ topic: '', difficulty: 'MEDIUM', questionType: 'MCQ' });
     const [aiTopics, setAiTopics] = useState([]);
-    const [aiTopicsLoading, setAiTopicsLoading] = useState(false);
-    const [aiUsage, setAiUsage] = useState(null); // { limit, used, remaining }
 
     // Template section adder (for adding more sections to an existing template exam)
     const [addSectionModal, setAddSectionModal] = useState(null);
@@ -351,97 +347,57 @@ const ExamEditor = () => {
         toast.success(`${newQs.length} sual bazadan əlavə edildi`);
     };
 
-    const handleAiGenerate = async () => {
-        if (!aiModal) return;
-        // Top-level guard against a fast double-click before the disabled
-        // state propagates to the modal button.
-        if (aiLoading) return;
-        if (!aiForm.topic.trim()) { toast.error('Mövzu daxil edin'); return; }
-        setAiLoading(true);
-        try {
-            const { data } = await api.post('/ai/generate-questions', {
-                subjectName: aiModal.section,
-                topicName: aiForm.topic.trim(),
-                difficulty: aiForm.difficulty,
-                questionType: aiForm.questionType,
-                count: 1,
-            });
-            const q = data[0];
-            if (!q) { toast.error('Sual yaradılmadı'); return; }
-            const frontendType =
-                q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
-                q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
-                q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
-                q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'MULTIPLE_CHOICE';
+    // BUG-23: the shared AiGenerateModal (saveToBank=false) hands back the
+    // prepared bank-shaped questions; convert them through the same mapper the
+    // bank picker uses and insert into the exam. FILL_IN_THE_BLANK arrives
+    // already normalised (JSON-array correctAnswer + mirrored correct options)
+    // by the modal's toPayload step.
+    const handleAiInsert = (payloads) => {
+        if (!aiModal || !Array.isArray(payloads) || payloads.length === 0) return;
+        const { section, replaceId } = aiModal;
+        setAiModal(null);
 
-            // FILL_IN_THE_BLANK: editor expects sampleAnswer as JSON array
-            // and the correct answers mirrored into options with isCorrect=true
-            // (otherwise the answer chips and grading both break).
-            let aiSampleAnswer = q.correctAnswer || '';
-            let aiOptions = (q.options || []).map((o, oi) => ({
-                id: Date.now() + oi + 1,
-                text: o.content || '',
-                isCorrect: !!o.isCorrect,
-            }));
-            if (frontendType === 'FILL_IN_THE_BLANK' && q.correctAnswer) {
-                let answers;
-                try {
-                    const parsed = JSON.parse(q.correctAnswer);
-                    answers = Array.isArray(parsed) ? parsed : [q.correctAnswer];
-                } catch {
-                    answers = [q.correctAnswer];
-                }
-                aiSampleAnswer = JSON.stringify(answers);
-                const correctOpts = answers.map((a, ai) => ({
-                    id: Date.now() + 900 + ai,
-                    text: a,
-                    isCorrect: true,
-                }));
-                aiOptions = [...correctOpts, ...aiOptions];
-            }
-
-            if (aiModal.replaceId) {
-                // Template mode: fill into existing question slot, keep id/orderIndex/subjectGroup/points
-                setQuestions(prev => prev.map(existing => {
-                    if (existing.id !== aiModal.replaceId) return existing;
-                    const sameType = frontendType === existing.type;
-                    return {
-                        ...existing,
-                        text: q.content || '',
-                        sampleAnswer: aiSampleAnswer,
-                        options: sameType ? aiOptions : existing.options,
-                    };
-                }));
-                toast.success('Sual AI ilə dolduruldu');
-            } else {
-                // Free mode: add as new question
-                const isMain = !aiModal.section || aiModal.section === examConfig.subject;
-                const newQ = {
-                    id: Date.now().toString(),
-                    type: frontendType,
-                    text: q.content || '',
-                    points: q.points ?? 1,
-                    orderIndex: nextOrderIndex(),
-                    subjectGroup: isMain ? null : aiModal.section,
-                    options: aiOptions,
-                    matchingPairs: [],
-                    sampleAnswer: aiSampleAnswer,
+        if (replaceId) {
+            // Template mode: fill into existing question slot, keep id/orderIndex/subjectGroup/points
+            const converted = bankQuestionToEditorFormat(payloads[0]);
+            setQuestions(prev => prev.map(existing => {
+                if (existing.id !== replaceId) return existing;
+                const sameType = converted.type === existing.type;
+                return {
+                    ...existing,
+                    text: converted.text,
+                    sampleAnswer: converted.sampleAnswer,
+                    options: sameType ? converted.options : existing.options,
+                    matchingPairs: sameType ? converted.matchingPairs : existing.matchingPairs,
                 };
-                setQuestions(prev => [...prev, newQ]);
-                toast.success('AI sual əlavə edildi');
+            }));
+            toast.success('Sual AI ilə dolduruldu');
+            if (payloads.length > 1) {
+                toast('Slot rejimində yalnız ilk sual istifadə olundu', { icon: 'ℹ️' });
             }
-            // Update usage after successful generation
-            try {
-                const { data: usageData } = await api.get('/ai/usage');
-                setAiUsage(usageData);
-            } catch {}
-            setAiModal(null);
-        } catch (err) {
-            const errMsg = err.response?.data?.error || 'AI sual yaradılmadı. Yenidən cəhd edin.';
-            toast.error(errMsg);
-        } finally {
-            setAiLoading(false);
+        } else {
+            const isMain = !section || section === examConfig.subject;
+            const baseOrder = nextOrderIndex();
+            const newQs = payloads.map((p, i) => ({
+                ...bankQuestionToEditorFormat(p),
+                id: `ai-${Date.now()}-${i}`,
+                orderIndex: baseOrder + i,
+                subjectGroup: isMain ? null : section,
+            }));
+            setQuestions(prev => [...prev, ...newQs]);
+            toast.success(`${newQs.length} AI sual əlavə edildi`);
         }
+    };
+
+    // Opens the shared AI modal for a section (optionally locking onto an
+    // existing template slot) and loads the section subject's topics for the
+    // modal's topic combobox.
+    const openAiModal = (sectionSubject, { replaceId = null, lockedQuestionType = null } = {}) => {
+        setAiTopics([]);
+        setAiModal({ section: sectionSubject, replaceId, lockedQuestionType });
+        api.get(`/subjects/topics?name=${encodeURIComponent(sectionSubject || '')}`)
+            .then(r => setAiTopics(r.data || []))
+            .catch(() => setAiTopics([]));
     };
 
     // Tracks the backend ID of the draft (for new exams created silently via auto-save)
@@ -1611,24 +1567,12 @@ const ExamEditor = () => {
                                                                 </button>
                                                                 {(hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0) || isAdmin) && (
                                                                     <button
-                                                                        onClick={async () => {
+                                                                        onClick={() => {
                                                                             const qType = item.data.type === 'MULTIPLE_CHOICE' ? 'MCQ' :
                                                                                 item.data.type === 'MULTI_SELECT' ? 'MULTI_SELECT' :
                                                                                 item.data.type === 'OPEN_AUTO' ? 'OPEN_AUTO' :
                                                                                 item.data.type === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'MCQ';
-                                                                            setAiForm({ topic: '', difficulty: 'MEDIUM', questionType: qType });
-                                                                            setAiTopics([]);
-                                                                            setAiUsage(null);
-                                                                            setAiModal({ section: sectionSubject, replaceId: item.data.id, lockedQuestionType: qType });
-                                                                            setAiTopicsLoading(true);
-                                                                            try {
-                                                                                const [topicsRes, usageRes] = await Promise.all([
-                                                                                    api.get('/subjects/topics', { params: { name: sectionSubject } }),
-                                                                                    api.get('/ai/usage'),
-                                                                                ]);
-                                                                                setAiTopics(topicsRes.data);
-                                                                                setAiUsage(usageRes.data);
-                                                                            } catch { setAiTopics([]); } finally { setAiTopicsLoading(false); }
+                                                                            openAiModal(sectionSubject, { replaceId: item.data.id, lockedQuestionType: qType });
                                                                         }}
                                                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[var(--brand-green-200)] hover:border-[var(--brand-green-600)] hover:bg-[var(--brand-green-50)] text-[var(--brand-green-700)] font-semibold rounded-full transition-colors text-[11.5px]"
                                                                     >
@@ -1724,22 +1668,10 @@ const ExamEditor = () => {
                                         Bazadan əlavə et
                                     </button>
                                     <button
-                                        onClick={async () => {
+                                        onClick={() => {
                                             const aiAllowed = hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0);
                                             if (!aiAllowed && !isAdmin) return;
-                                            setAiForm({ topic: '', difficulty: 'MEDIUM', questionType: 'MCQ' });
-                                            setAiTopics([]);
-                                            setAiUsage(null);
-                                            setAiModal({ section: sectionSubject });
-                                            setAiTopicsLoading(true);
-                                            try {
-                                                const [topicsRes, usageRes] = await Promise.all([
-                                                    api.get('/subjects/topics', { params: { name: sectionSubject } }),
-                                                    api.get('/ai/usage'),
-                                                ]);
-                                                setAiTopics(topicsRes.data);
-                                                setAiUsage(usageRes.data);
-                                            } catch { setAiTopics([]); } finally { setAiTopicsLoading(false); }
+                                            openAiModal(sectionSubject);
                                         }}
                                         className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed font-semibold rounded-2xl transition-colors text-[13px] ${
                                             (hasPermission('useAiExamGeneration') || (subscription?.plan?.monthlyAiQuestionLimit && subscription.plan.monthlyAiQuestionLimit !== 0) || isAdmin)
@@ -1818,139 +1750,18 @@ const ExamEditor = () => {
                 )}
             </div>
 
-            {/* AI Question Generation Modal */}
-            {aiModal && (
-                <div className="fixed inset-0 bg-[var(--ink-900)]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-3xl shadow-[var(--sh-lg)] border border-[var(--ink-200)] p-7 max-w-sm w-full">
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className="w-11 h-11 bg-[var(--brand-green-50)] rounded-2xl flex items-center justify-center shrink-0">
-                                <HiOutlineSparkles className="w-5 h-5 text-[var(--brand-green-700)]" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-[17px] font-extrabold text-[var(--ink-900)] leading-tight tracking-tight">{aiModal.replaceId ? 'AI ilə doldur' : 'AI ilə sual yarat'}</h3>
-                                <p className="text-[11.5px] text-[var(--ink-500)]">Fənn: <span className="font-bold text-[var(--ink-700)]">{aiModal.section}</span></p>
-                            </div>
-                            {aiUsage && (
-                                <div className={`text-[10.5px] font-bold px-2.5 py-1 rounded-full ${
-                                    aiUsage.remaining === -1
-                                        ? 'bg-[var(--brand-green-50)] text-[var(--brand-green-700)]'
-                                        : aiUsage.remaining > 5
-                                            ? 'bg-[var(--brand-green-50)] text-[var(--brand-green-700)]'
-                                            : aiUsage.remaining > 0
-                                                ? 'bg-amber-50 text-amber-700'
-                                                : 'bg-red-50 text-red-700'
-                                }`}>
-                                    {aiUsage.remaining === -1 ? '∞' : `${aiUsage.remaining} qaldı`}
-                                </div>
-                            )}
-                        </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">Mövzu *</label>
-                                {aiTopicsLoading ? (
-                                    <div className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] text-[13px] text-[var(--ink-400)] flex items-center gap-2">
-                                        <div className="w-3.5 h-3.5 border-2 border-[var(--ink-200)] border-t-[var(--brand-green-600)] rounded-full animate-spin" />
-                                        Mövzular yüklənir...
-                                    </div>
-                                ) : (
-                                    // Combobox: native <datalist> lets the teacher pick a
-                                    // curriculum topic from the backend list OR type any
-                                    // custom topic (useful for subjects without a fixed
-                                    // taxonomy and for ad-hoc sub-topics). The backend
-                                    // accepts free-text topicName, so no extra mapping is
-                                    // needed — whatever the teacher types is forwarded.
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            list="ai-exam-topic-suggestions"
-                                            value={aiForm.topic}
-                                            onChange={e => setAiForm(f => ({ ...f, topic: e.target.value }))}
-                                            placeholder={aiTopics.length > 0
-                                                ? 'Siyahıdan seç və ya öz mövzunu yaz...'
-                                                : 'məs. Kvadrat tənliklər, Past Simple...'}
-                                            className="w-full px-3.5 py-2.5 pr-9 rounded-2xl border border-[var(--ink-200)] focus:ring-2 focus:ring-[var(--brand-green-600)]/30 focus:border-[var(--brand-green-600)] outline-none text-[13px] bg-white"
-                                            autoFocus
-                                        />
-                                        {aiTopics.length > 0 && (
-                                            <>
-                                                <datalist id="ai-exam-topic-suggestions">
-                                                    {aiTopics.map(t => (
-                                                        <option
-                                                            key={t.id}
-                                                            value={t.name}
-                                                        >{t.gradeLevel ? `${t.gradeLevel}` : ''}</option>
-                                                    ))}
-                                                </datalist>
-                                                <svg
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--ink-400)] pointer-events-none"
-                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                                >
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">Çətinlik</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {[['EASY', 'Asan'], ['MEDIUM', 'Orta'], ['HARD', 'Çətin']].map(([val, label]) => (
-                                        <button
-                                            key={val}
-                                            onClick={() => setAiForm(f => ({ ...f, difficulty: val }))}
-                                            className={`py-2 rounded-full text-[12px] font-bold border-2 transition-colors ${
-                                                aiForm.difficulty === val
-                                                    ? 'border-[var(--brand-green-600)] bg-[var(--brand-green-50)] text-[var(--brand-green-700)]'
-                                                    : 'border-[var(--ink-200)] text-[var(--ink-500)] hover:border-[var(--brand-green-200)]'
-                                            }`}
-                                        >{label}</button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">Sual tipi</label>
-                                {aiModal.lockedQuestionType ? (
-                                    <div className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] bg-[var(--ink-50)] text-[13px] text-[var(--ink-700)] font-semibold">
-                                        {{ MCQ: 'Çoxvariantlı (tək cavab)', MULTI_SELECT: 'Çoxvariantlı (çox cavab)', OPEN_AUTO: 'Açıq sual (avtomatik yoxlama)', FILL_IN_THE_BLANK: 'Boşluq doldurma' }[aiModal.lockedQuestionType] || aiModal.lockedQuestionType}
-                                        <span className="ml-2 text-[11px] text-[var(--ink-400)]">(şablon tərəfindən müəyyən edilib)</span>
-                                    </div>
-                                ) : (
-                                    <select
-                                        value={aiForm.questionType}
-                                        onChange={e => setAiForm(f => ({ ...f, questionType: e.target.value }))}
-                                        className="w-full px-3.5 py-2.5 rounded-2xl border border-[var(--ink-200)] focus:ring-2 focus:ring-[var(--brand-green-600)]/30 focus:border-[var(--brand-green-600)] outline-none text-[13px] bg-white"
-                                    >
-                                        <option value="MCQ">Çoxvariantlı (tək cavab)</option>
-                                        <option value="MULTI_SELECT">Çoxvariantlı (çox cavab)</option>
-                                        <option value="OPEN_AUTO">Açıq sual (avtomatik yoxlama)</option>
-                                        <option value="FILL_IN_THE_BLANK">Boşluq doldurma</option>
-                                    </select>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => setAiModal(null)}
-                                className="flex-1 h-11 rounded-full border border-[var(--ink-200)] text-[var(--ink-700)] font-semibold text-[13px] hover:bg-[var(--ink-100)] transition-colors"
-                            >Ləğv et</button>
-                            <button
-                                onClick={handleAiGenerate}
-                                disabled={aiLoading || !aiForm.topic.trim() || (aiUsage && aiUsage.remaining === 0)}
-                                className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-full bg-[var(--brand-green-600)] hover:bg-[var(--brand-green-700)] disabled:bg-[var(--brand-green-300)] disabled:hover:bg-[var(--brand-green-300)] disabled:cursor-not-allowed disabled:shadow-none text-white font-bold text-[13px] transition-colors shadow-[0_8px_24px_-10px_rgba(34,197,94,0.6)]"
-                            >
-                                {aiUsage && aiUsage.remaining === 0 ? (
-                                    <>Aylıq limit bitdi</>
-                                ) : aiLoading ? (
-                                    <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Yaradılır...</>
-                                ) : (
-                                    <><HiOutlineSparkles className="w-4 h-4" /> Yarat</>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* AI Question Generation — shared modal (BUG-23), insert-to-exam mode.
+                saveToBank=false: questions go straight into the exam via
+                handleAiInsert instead of the question bank. */}
+            <AiGenerateModal
+                isOpen={!!aiModal}
+                onClose={() => setAiModal(null)}
+                subjectName={aiModal?.section || ''}
+                topics={aiTopics}
+                saveToBank={false}
+                lockedType={aiModal?.lockedQuestionType || null}
+                onSave={handleAiInsert}
+            />
 
             {/* Passage Type Selection Modal */}
             {showPassageTypeModal && (

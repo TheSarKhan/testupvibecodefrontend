@@ -332,20 +332,31 @@ const ExamSession = () => {
     };
 
     const handleAnswerChange = (questionId, newAnswerData) => {
-        // Compute the updated answer, update state, then sync ONCE — outside the
-        // setState updater. Calling syncAnswer inside the updater fired it twice
-        // (React StrictMode double-invokes updaters), which raced two concurrent
-        // save-answer requests for the same question and tripped the
-        // uq_answers_submission_question unique constraint in the backend logs.
-        let updated = null;
-        setAnswers(prev => prev.map(ans => {
-            if (ans.questionId === questionId) {
-                updated = { ...ans, ...newAnswerData };
-                return updated;
-            }
-            return ans;
-        }));
-        if (updated && !Object.prototype.hasOwnProperty.call(newAnswerData, 'textAnswer')) {
+        // CRITICAL: compute the merged answer synchronously from the current
+        // `answers` snapshot, NOT from inside the setAnswers updater.
+        //
+        // The previous version assigned `updated` inside the updater function
+        // and read it on the next line. React runs functional state updaters
+        // LAZILY during the render phase — they do NOT execute synchronously
+        // when setState is called — so `updated` was still null when the
+        // `if (updated ...)` check ran. The net effect: option-based answers
+        // (MCQ / MULTI_SELECT / TRUE_FALSE / MATCHING) were NEVER synced to the
+        // server mid-exam. They only reached the backend at final submit, so a
+        // page refresh, browser crash, or accidental tab close before submit
+        // silently lost every selected answer. Computing `updated` from the
+        // closure snapshot guarantees the immediate sync below always has data.
+        const current = answers.find(a => a.questionId === questionId);
+        const updated = current
+            ? { ...current, ...newAnswerData }
+            : { questionId, ...newAnswerData };
+
+        setAnswers(prev => prev.map(ans =>
+            ans.questionId === questionId ? { ...ans, ...newAnswerData } : ans
+        ));
+
+        // Text answers are debounced by the effect below (1s after typing
+        // stops); option/matching answers sync immediately on every change.
+        if (!Object.prototype.hasOwnProperty.call(newAnswerData, 'textAnswer')) {
             syncAnswer(questionId, updated);
         }
     };

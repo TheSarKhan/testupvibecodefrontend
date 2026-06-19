@@ -19,7 +19,14 @@ jobs:
           script: |
             set -e
             cd /var/www/testupFront
-            git pull origin main 2>&1
+            # Force the server working tree to match main. `git pull` aborts when
+            # the server has local changes (e.g. a package-lock.json rewritten by
+            # a previous npm install), which kept breaking the deploy. fetch +
+            # hard reset always lands on the latest commit, discarding any
+            # server-side cruft — the deploy target is never hand-edited.
+            git fetch origin main 2>&1
+            git reset --hard origin/main 2>&1
+            npm install 2>&1
             npm run build 2>&1
 
       - name: Notify Telegram (Success)

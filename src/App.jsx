@@ -5,10 +5,12 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { queryClient } from './lib/queryClient';
+import ErrorBoundary from './components/ErrorBoundary';
 import router from './routes';
 
 function App() {
   return (
+    <ErrorBoundary>
     <GoogleOAuthProvider clientId="149927371809-rad3p8b4in4vjp42rkf09h0dj6l5ojmn.apps.googleusercontent.com">
     <HelmetProvider>
     <QueryClientProvider client={queryClient}>
@@ -29,6 +31,7 @@ function App() {
     </QueryClientProvider>
     </HelmetProvider>
     </GoogleOAuthProvider>
+    </ErrorBoundary>
   );
 }
 

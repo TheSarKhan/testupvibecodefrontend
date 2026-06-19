@@ -60,7 +60,7 @@ const ContactHero = () => (
 // Info card (mailto / tel / etc)
 // ───────────────────────────────────────────────────────────────────────────
 
-const InfoCard = ({ href, Icon, green, label, value, sub }) => {
+const InfoCard = ({ href, external, Icon, green, label, value, sub }) => {
     const className = 'flex items-start gap-4 bg-white rounded-2xl border border-[var(--ink-200)] p-5 hover:border-[var(--primary)] hover:shadow-[var(--sh-sm)] transition-all';
     const inner = (
         <>
@@ -76,7 +76,9 @@ const InfoCard = ({ href, Icon, green, label, value, sub }) => {
             </div>
         </>
     );
-    return href ? <a href={href} className={className}>{inner}</a> : <div className={className}>{inner}</div>;
+    return href
+        ? <a href={href} className={className} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{inner}</a>
+        : <div className={className}>{inner}</div>;
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -157,6 +159,8 @@ const ContactBody = () => {
                                 sub="Tez cavab üçün"
                             />
                             <InfoCard
+                                href="https://www.google.com/maps/search/?api=1&query=Nərimanov+metrosu+Bakı+Azərbaycan"
+                                external
                                 Icon={HiOutlineLocationMarker}
                                 label="Ofis"
                                 value="Bakı, Azərbaycan"

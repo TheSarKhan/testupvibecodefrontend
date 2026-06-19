@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     HiOutlineEye, HiOutlineEyeOff,
-    HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlinePhone,
+    HiOutlineMail, HiOutlineLockClosed, HiOutlineUser,
     HiOutlineAcademicCap, HiOutlineUserGroup, HiOutlineChartBar,
     HiOutlineLightningBolt, HiOutlineSparkles, HiOutlineX, HiOutlineCheck,
     HiOutlineChevronLeft, HiOutlineArrowLeft, HiOutlineArrowRight,
@@ -12,7 +12,9 @@ import {
 import { useGoogleLogin } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 import GoogleRoleModal from '../../components/ui/GoogleRoleModal';
+import PhoneInput from '../../components/ui/PhoneInput';
 import Logo from '../../components/ui/Logo';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -144,20 +146,8 @@ const isValidName = (v) => {
     return t.length >= 3 && /^[\p{L}\s'.-]+$/u.test(t);
 };
 
-// Yalnız rəqəm, +, boşluq və -()  saxla; 20 simvolla məhdudlaşdır.
-const sanitizePhone = (v) => (v || '').replace(/[^\d+\s()-]/g, '').slice(0, 20);
-
-// Azərbaycan mobil nömrəsi: +994 / 0 / kodsuz — operator kodu + 7 rəqəm (9 rəqəm).
-const AZ_MOBILE_OPS = ['10', '50', '51', '55', '60', '70', '77', '99'];
-const isValidAzPhone = (v) => {
-    const d = (v || '').replace(/\D/g, '');
-    let local;
-    if (d.length === 12 && d.startsWith('994')) local = d.slice(3);
-    else if (d.length === 10 && d.startsWith('0')) local = d.slice(1);
-    else if (d.length === 9) local = d;
-    else return false;
-    return local.length === 9 && AZ_MOBILE_OPS.includes(local.slice(0, 2));
-};
+// Telefon validasiyası ortaq <PhoneInput> komponentindən gəlir (libphonenumber)
+// — həm Azərbaycan, həm də istənilən beynəlxalq nömrəni düzgün yoxlayır.
 
 // ───────────────────────────────────────────────────────────────────────────
 // Field input (reusable)
@@ -284,12 +274,14 @@ const StepDetails = ({ role, formData, set, onBack, onNext }) => {
     // form doesn't shout at an empty field on first render.
     const nameErr  = formData.fullName && !isValidName(formData.fullName) ? 'Ad və soyadınızı tam yazın' : '';
     const emailErr = formData.email && !isValidEmail(formData.email) ? 'Düzgün e-poçt ünvanı daxil edin' : '';
-    const phoneErr = formData.phoneNumber && !isValidAzPhone(formData.phoneNumber)
-        ? 'Düzgün nömrə daxil edin (məs. +994 50 123 45 67)' : '';
-    // Name + email required & valid; phone optional but must be valid if filled.
+    const phoneErr = formData.phoneNumber && !isValidPhoneNumber(formData.phoneNumber)
+        ? 'Düzgün telefon nömrəsi daxil edin' : '';
+    // All three fields are required & must be valid before advancing — this
+    // matches the backend (@NotBlank phoneNumber) so the user is blocked here
+    // rather than only failing at the final "Hesab yarat" step.
     const ready = isValidName(formData.fullName)
         && isValidEmail(formData.email)
-        && (!formData.phoneNumber || isValidAzPhone(formData.phoneNumber));
+        && isValidPhoneNumber(formData.phoneNumber || '');
     return (
         <>
             <StepDots step={1} />
@@ -328,14 +320,11 @@ const StepDetails = ({ role, formData, set, onBack, onNext }) => {
                 required
                 error={emailErr}
             />
-            <Field
+            <PhoneInput
                 label="Telefon nömrəsi"
-                Icon={HiOutlinePhone}
-                type="tel"
                 value={formData.phoneNumber}
-                onChange={e => set('phoneNumber', sanitizePhone(e.target.value))}
-                placeholder="+994 50 000 00 00"
-                maxLength={20}
+                onChange={v => set('phoneNumber', v)}
+                required
                 error={phoneErr}
             />
 
@@ -585,7 +574,7 @@ const Register = () => {
         // against any path that reaches submit with bad data).
         if (!isValidName(formData.fullName)) { toast.error('Ad və soyadınızı tam yazın'); return; }
         if (!isValidEmail(formData.email)) { toast.error('Düzgün e-poçt ünvanı daxil edin'); return; }
-        if (formData.phoneNumber && !isValidAzPhone(formData.phoneNumber)) { toast.error('Düzgün telefon nömrəsi daxil edin'); return; }
+        if (!isValidPhoneNumber(formData.phoneNumber || '')) { toast.error('Düzgün telefon nömrəsi daxil edin'); return; }
         if (!formData.termsAccepted) { toast.error('İstifadə şərtlərini qəbul etməlisiniz'); return; }
         if (formData.password !== formData.confirmPassword) { toast.error('Şifrələr uyğun gəlmir'); return; }
         setLoading(true);

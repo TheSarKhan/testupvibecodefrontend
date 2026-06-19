@@ -5,7 +5,7 @@ import {
     HiOutlineClock, HiOutlineRefresh, HiOutlinePencilAlt,
     HiOutlineGlobeAlt, HiOutlineEyeOff,
     HiOutlineCalendar, HiOutlineCheckCircle, HiOutlineXCircle,
-    HiOutlineMail, HiOutlineTemplate, HiOutlineSparkles,
+    HiOutlineMail, HiOutlineTemplate, HiOutlineSparkles, HiOutlineTrash,
 } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ import {
     useAdminCollaborativeExams,
     usePublishCollaborative,
     useUnpublishCollaborative,
+    useDeleteCollaborative,
 } from '../../hooks/admin/useAdminCollaborativeExams';
 import CreateModal from './collaborative-exams/CreateModal';
 import ReviewModal from './collaborative-exams/ReviewModal';
@@ -50,6 +51,7 @@ const AdminCollaborativeExams = () => {
     const { data, isLoading: loading, error, refetch: fetchExams } = useAdminCollaborativeExams({ page, size: 15 });
     const publishMut = usePublishCollaborative();
     const unpublishMut = useUnpublishCollaborative();
+    const deleteMut = useDeleteCollaborative();
     const exams = data?.content ?? [];
     const totalPages = data?.totalPages ?? 0;
     const totalElements = data?.totalElements ?? 0;
@@ -79,6 +81,20 @@ const AdminCollaborativeExams = () => {
             toast.success('İmtahan gizlədildi');
         } catch (err) {
             if (!err._handled) toast.error(err.response?.data?.message || 'Əməliyyat uğursuz');
+        }
+    };
+
+    const handleDelete = async (exam) => {
+        const ok = window.confirm(
+            `"${exam.title}" birgə imtahanını silmək istəyirsiniz?\n\n` +
+            `Bu imtahan və müəllim təyinatları silinəcək. Bu əməliyyat geri qaytarıla bilməz.`
+        );
+        if (!ok) return;
+        try {
+            await deleteMut.mutateAsync(exam.id);
+            toast.success('Birgə imtahan silindi');
+        } catch (err) {
+            if (!err._handled) toast.error(err.response?.data?.message || 'Silinmə uğursuz');
         }
     };
 
@@ -188,6 +204,15 @@ const AdminCollaborativeExams = () => {
                                                     Yayımla
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={() => handleDelete(exam)}
+                                                disabled={deleteMut.isPending}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-lg transition-colors disabled:opacity-60"
+                                                title="Birgə imtahanı sil"
+                                            >
+                                                <HiOutlineTrash className="w-3.5 h-3.5" />
+                                                Sil
+                                            </button>
                                         </div>
                                     </div>
 

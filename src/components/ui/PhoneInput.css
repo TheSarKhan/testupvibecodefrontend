@@ -1,0 +1,32 @@
+/* Make react-phone-number-input look like the app's standard text inputs.
+   The bordered/rounded "box" is the .PhoneInput root (styled via Tailwind on
+   the component); here we only strip the library's own input chrome and size
+   the flag/country picker. */
+.tu-phone .PhoneInputInput {
+    background: transparent;
+    border: none;
+    outline: none;
+    height: 100%;
+    width: 100%;
+    font-size: 14px;
+    color: var(--ink-900);
+}
+.tu-phone .PhoneInputInput::placeholder {
+    color: var(--ink-400);
+}
+
+/* Country select + flag */
+.tu-phone .PhoneInputCountry {
+    margin-right: 10px;
+}
+.tu-phone .PhoneInputCountryIcon {
+    box-shadow: none;
+    width: 22px;
+    height: 16px;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.tu-phone .PhoneInputCountrySelectArrow {
+    color: var(--ink-400);
+    opacity: 0.8;
+}

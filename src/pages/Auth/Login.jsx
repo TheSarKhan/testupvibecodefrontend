@@ -131,7 +131,7 @@ const Login = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            const data = await login(email, password);
+            const data = await login(email, password, remember);
             const { jwtDecode } = await import('jwt-decode');
             const decoded = jwtDecode(data.accessToken);
             toast.success('Uğurla daxil oldunuz!');
@@ -147,7 +147,7 @@ const Login = () => {
         try {
             const { data } = await api.post('/auth/google', { accessToken: tokenResponse.access_token });
             if (data.status === 'LOGIN') {
-                loginWithTokens(data);
+                loginWithTokens(data, remember);
                 toast.success('Uğurla daxil oldunuz!');
                 redirectAfterLogin(data.role);
             } else if (data.status === 'NEEDS_REGISTRATION') {
@@ -172,7 +172,7 @@ const Login = () => {
                     accessToken={googlePending.accessToken}
                     userInfo={googlePending.userInfo}
                     onSuccess={(data) => {
-                        loginWithTokens(data);
+                        loginWithTokens(data, remember);
                         toast.success('Qeydiyyat tamamlandı!');
                         redirectAfterLogin(data.role);
                     }}

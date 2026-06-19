@@ -215,7 +215,7 @@ const statusOf = (q) => {
 const QuestionReview = ({ questions, sessionId, navigate }) => {
     const [filter, setFilter] = useState('all');
 
-    const items = useMemo(() => (questions || []).map(q => ({ ...q, _status: statusOf(q) })), [questions]);
+    const items = useMemo(() => (questions || []).map((q, i) => ({ ...q, _status: statusOf(q), _num: i + 1 })), [questions]);
     const counts = useMemo(() => ({
         all:     items.length,
         correct: items.filter(q => q._status === 'correct').length,
@@ -278,8 +278,8 @@ const QuestionReview = ({ questions, sessionId, navigate }) => {
                     <div className="text-center py-10 text-[var(--ink-400)] text-[14px]">
                         Bu kateqoriyada sual yoxdur.
                     </div>
-                ) : filtered.slice(0, 10).map((q, idx) => (
-                    <ReviewItem key={q.id} q={q} index={idx + 1} />
+                ) : filtered.slice(0, 10).map((q) => (
+                    <ReviewItem key={q.id} q={q} index={q._num} />
                 ))}
             </div>
 

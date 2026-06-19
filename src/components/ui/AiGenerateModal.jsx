@@ -423,7 +423,10 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 topicName: topicName || null,
                 instructions: instructions.trim() || null,
             });
-            setGenerated(prev => prev.map((x, i) => (i === index ? cleanupQuestion(data) : x)));
+            // Guard against a stale response: if the modal was closed/reset
+            // (generated → null) while this refine was in flight, do nothing
+            // instead of calling .map() on null and crashing the whole app.
+            setGenerated(prev => (prev ? prev.map((x, i) => (i === index ? cleanupQuestion(data) : x)) : prev));
             toast.success('Sual yeniləndi');
         } catch (e) {
             if (!e._handled) {
@@ -436,16 +439,23 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
     };
 
     const handleSaveEdit = (index, updated) => {
-        setGenerated(prev => prev.map((x, i) => (i === index ? cleanupQuestion(updated) : x)));
+        setGenerated(prev => (prev ? prev.map((x, i) => (i === index ? cleanupQuestion(updated) : x)) : prev));
         setEditingIndex(null);
     };
 
     const handleRemoveQuestion = (index) => {
-        setGenerated(prev => prev.filter((_, i) => i !== index));
+        setGenerated(prev => (prev ? prev.filter((_, i) => i !== index) : prev));
         setEditingIndex(prev => (prev === index ? null : prev));
     };
 
     const handleSave = async () => {
+        // Don't let the user commit while a per-question refine is still
+        // running — the unfinished card would be saved and the in-flight
+        // response would land on already-reset state.
+        if (refining) {
+            toast.error('Sual hələ də yenilənir, bir az gözləyin');
+            return;
+        }
         if (!generated || generated.length === 0) return;
 
         // Validate LaTeX syntax in all generated questions.
@@ -791,8 +801,9 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 {generated && generated.length > 0 && (
                     <button
                         onClick={handleSave}
-                        disabled={saving}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all disabled:opacity-60"
+                        disabled={saving || !!refining}
+                        title={refining ? 'Sual yenilənir, gözləyin' : undefined}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {saving ? (
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -801,9 +812,11 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                         )}
                         {saving
                             ? 'Saxlanılır...'
-                            : saveToBank
-                                ? `${generated.length} sualı saxla`
-                                : `${generated.length} sualı imtahana əlavə et`}
+                            : refining
+                                ? 'Sual yenilənir...'
+                                : saveToBank
+                                    ? `${generated.length} sualı saxla`
+                                    : `${generated.length} sualı imtahana əlavə et`}
                     </button>
                 )}
             </div>

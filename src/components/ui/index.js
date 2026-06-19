@@ -12,6 +12,8 @@ export { default as AiGenerateModal } from './AiGenerateModal';
 export { default as AiExamModal } from './AiExamModal';
 export { default as TeacherPicker } from './TeacherPicker';
 export { default as Combobox } from './Combobox';
+export { default as PhoneInput } from './PhoneInput';
+export { isValidPhoneNumber } from 'react-phone-number-input';
 
 
 

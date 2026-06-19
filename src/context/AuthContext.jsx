@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import api from '../api/axios';
+import { getAccessToken, getRefreshToken, setTokens, updateTokens, clearTokens } from '../utils/tokenStorage';
 
 const AuthContext = createContext(null);
 
@@ -20,8 +21,8 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const initializeAuth = async () => {
-            const accessToken = localStorage.getItem('accessToken');
-            const refreshToken = localStorage.getItem('refreshToken');
+            const accessToken = getAccessToken();
+            const refreshToken = getRefreshToken();
 
             if (accessToken) {
                 try {
@@ -40,8 +41,7 @@ export const AuthProvider = ({ children }) => {
                             // Use plain axios to avoid interceptor loops
                             const { default: axios } = await import('axios');
                             const { data } = await axios.post('/api/auth/refresh', { refreshToken });
-                            localStorage.setItem('accessToken', data.accessToken);
-                            localStorage.setItem('refreshToken', data.refreshToken);
+                            updateTokens(data);
                             const newDecoded = jwtDecode(data.accessToken);
                             setUser({
                                 id: newDecoded.sub,
@@ -51,23 +51,20 @@ export const AuthProvider = ({ children }) => {
                             });
                         } catch {
                             // Refresh also failed — clear storage
-                            localStorage.removeItem('accessToken');
-                            localStorage.removeItem('refreshToken');
+                            clearTokens();
                         }
                     } else {
-                        localStorage.removeItem('accessToken');
+                        clearTokens();
                     }
                 } catch {
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
+                    clearTokens();
                 }
             } else if (refreshToken) {
                 // No access token but refresh token exists — attempt refresh
                 try {
                     const { default: axios } = await import('axios');
                     const { data } = await axios.post('/api/auth/refresh', { refreshToken });
-                    localStorage.setItem('accessToken', data.accessToken);
-                    localStorage.setItem('refreshToken', data.refreshToken);
+                    updateTokens(data);
                     const decoded = jwtDecode(data.accessToken);
                     setUser({
                         id: decoded.sub,
@@ -76,7 +73,7 @@ export const AuthProvider = ({ children }) => {
                         fullName: decoded.fullName,
                     });
                 } catch {
-                    localStorage.removeItem('refreshToken');
+                    clearTokens();
                 }
             }
             setLoading(false);
@@ -129,10 +126,9 @@ export const AuthProvider = ({ children }) => {
         return () => window.removeEventListener('storage', onStorage);
     }, []);
 
-    const login = async (email, password) => {
+    const login = async (email, password, remember = true) => {
         const { data } = await api.post('/auth/login', { email, password });
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        setTokens(data, remember);
         const decoded = jwtDecode(data.accessToken);
         setUser({
             id: decoded.sub,
@@ -144,9 +140,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     // Called after Google OAuth login or complete-registration succeeds
-    const loginWithTokens = (data) => {
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
+    const loginWithTokens = (data, remember = true) => {
+        setTokens(data, remember);
         const decoded = jwtDecode(data.accessToken);
         setUser({
             id: decoded.sub,
@@ -163,8 +158,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        clearTokens();
         setUser(null);
         setSubscription(null);
     };

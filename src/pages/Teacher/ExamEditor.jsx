@@ -1155,8 +1155,22 @@ const ExamEditor = () => {
         for (let i = 0; i < orderedQs.length; i++) {
             const q = orderedQs[i];
             const label = `Sual ${i + 1}`;
+            // Every question must carry a prompt — text or an image. Selecting a
+            // correct answer alone is not enough to publish (BUG: olimpiada).
+            if (!q.text?.trim() && !q.attachedImage) {
+                toast.error(`${label}: sual mətni və ya şəkli daxil edilməyib`);
+                return;
+            }
             if (q.type === 'MULTIPLE_CHOICE' || q.type === 'MULTI_SELECT') {
-                if (!q.options || !q.options.some(o => o.isCorrect)) {
+                if (!q.options || q.options.length < 2) {
+                    toast.error(`${label}: ən azı iki cavab variantı olmalıdır`);
+                    return;
+                }
+                if (q.options.some(o => !o.text?.trim() && !o.attachedImage)) {
+                    toast.error(`${label}: bütün cavab variantları doldurulmalıdır`);
+                    return;
+                }
+                if (!q.options.some(o => o.isCorrect)) {
                     toast.error(`${label}: düzgün cavab variantı seçilməyib`);
                     return;
                 }

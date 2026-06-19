@@ -546,7 +546,7 @@ const CTABanner = ({ isAuthenticated, isTeacher, onCreateExam }) => (
                             <button
                                 type="button"
                                 onClick={onCreateExam}
-                                className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--primary)] bg-white hover:bg-white/95 transition-all shadow-xl"
+                                className="h-14 px-7 inline-flex items-center justify-center gap-2 rounded-full font-semibold text-[var(--primary)] bg-white hover:bg-white/95 transition-all shadow-xl cursor-pointer"
                             >
                                 Yeni imtahan yarat <HiOutlineArrowRight className="w-4 h-4" />
                             </button>

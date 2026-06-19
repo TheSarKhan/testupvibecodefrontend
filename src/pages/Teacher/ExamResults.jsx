@@ -147,7 +147,7 @@ const ScoreDistribution = ({ submissions, maxScore }) => {
         <div className="bg-white border border-[var(--ink-200)] rounded-2xl p-6">
             <h4 className="text-[15px] font-bold text-[var(--ink-900)]">Bal paylanması</h4>
             <p className="text-[13px] text-[var(--ink-500)] mt-1 mb-5">İştirakçıların hansı bal aralığında olduğunu göstərir</p>
-            <div className="flex items-end justify-between gap-2 h-[180px] pt-4">
+            <div className="flex items-stretch justify-between gap-2 h-[180px] pt-4">
                 {buckets.map((b, i) => {
                     const heightPct = (b.count / max) * 100;
                     const isHi = b.min >= 75;

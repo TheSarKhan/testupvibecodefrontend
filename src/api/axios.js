@@ -1,6 +1,7 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import getErrorMessage from '../utils/getErrorMessage';
+import { getAccessToken, getRefreshToken, updateTokens, clearTokens } from '../utils/tokenStorage';
 
 const api = axios.create({
     baseURL: '/api',
@@ -22,7 +23,7 @@ const redirectToLogin = () => {
 // ─── Request interceptor — attach access token ──────────────────────────
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('accessToken');
+        const token = getAccessToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -120,12 +121,11 @@ api.interceptors.response.use(
         originalRequest._retry = true;
         isRefreshing = true;
 
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = getRefreshToken();
 
         if (!refreshToken) {
             // No refresh token → clear everything and redirect to login
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            clearTokens();
             processQueue(new Error('No refresh token'), null);
             isRefreshing = false;
             redirectToLogin();
@@ -136,8 +136,7 @@ api.interceptors.response.use(
             // Use plain axios (NOT api) to avoid interceptor loops
             const { data } = await axios.post('/api/auth/refresh', { refreshToken });
 
-            localStorage.setItem('accessToken', data.accessToken);
-            localStorage.setItem('refreshToken', data.refreshToken);
+            updateTokens(data);
 
             api.defaults.headers.common.Authorization = `Bearer ${data.accessToken}`;
             originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
@@ -146,8 +145,7 @@ api.interceptors.response.use(
             return api(originalRequest);
         } catch (refreshError) {
             processQueue(refreshError, null);
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            clearTokens();
             redirectToLogin();
             return Promise.reject(refreshError);
         } finally {

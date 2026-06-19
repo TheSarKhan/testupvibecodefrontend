@@ -96,3 +96,15 @@ export function useUnpublishCollaborative() {
         onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.collaborativeExams }),
     });
 }
+
+export function useDeleteCollaborative() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (examId) =>
+            api.delete(`/admin/collaborative-exams/${examId}`).then(r => r.data),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: adminKeys.collaborativeExams });
+            qc.invalidateQueries({ queryKey: adminKeys.collaborativeExamsPendingCount });
+        },
+    });
+}

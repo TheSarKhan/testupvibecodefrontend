@@ -13,6 +13,7 @@ import {
     useFinalizeReview,
 } from '../../../hooks/admin/useAdminCollaborativeExams';
 import { QUESTION_TYPE_LABELS, labelOr } from '../../../utils/enumLabels';
+import LatexPreview from '../../../components/ui/LatexPreview';
 
 // Per-question status badge.
 const StatusBadge = ({ status }) => {
@@ -343,9 +344,26 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                     )}
                                                     <span className="text-[11px] font-semibold text-gray-500">{q.points} xal</span>
                                                 </div>
-                                                <p className="text-sm text-gray-800 leading-snug whitespace-pre-wrap">
-                                                    {q.content || <span className="italic text-gray-400">(mətn yoxdur)</span>}
-                                                </p>
+                                                <div className="text-sm text-gray-800 leading-snug">
+                                                    {q.content?.trim()
+                                                        ? <LatexPreview content={q.content} placeholder={null} className="text-sm leading-snug" />
+                                                        : <span className="italic text-gray-400">(mətn yoxdur)</span>}
+                                                </div>
+
+                                                {/* Question image — teachers can attach a figure (e.g.
+                                                    "Şəklə əsasən cavabı qeyd edin"); the admin needs to
+                                                    see it to review the question properly. */}
+                                                {q.attachedImage && (
+                                                    <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 inline-block">
+                                                        <img
+                                                            src={q.attachedImage}
+                                                            alt="Sual şəkli"
+                                                            className="max-h-64 max-w-full object-contain cursor-zoom-in"
+                                                            onClick={() => window.open(q.attachedImage, '_blank')}
+                                                            title="Şəkli tam ölçüdə açmaq üçün klikləyin"
+                                                        />
+                                                    </div>
+                                                )}
 
                                                 {/* Options (MCQ / multi-select / true-false) */}
                                                 {(q.options?.length > 0) && (
@@ -358,7 +376,20 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                                         : 'bg-white border-gray-100 text-gray-600'
                                                                 }`}>
                                                                 <span className="font-mono text-[10px] text-gray-400">{String.fromCharCode(65 + oi)}.</span>
-                                                                <span className="flex-1 truncate">{opt.content}</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    {opt.content?.trim()
+                                                                        ? <LatexPreview content={opt.content} placeholder={null} className="!text-inherit text-xs" />
+                                                                        : null}
+                                                                </div>
+                                                                {opt.attachedImage && (
+                                                                    <img
+                                                                        src={opt.attachedImage}
+                                                                        alt="Variant şəkli"
+                                                                        className="max-h-12 object-contain rounded border border-gray-100 cursor-zoom-in shrink-0"
+                                                                        onClick={() => window.open(opt.attachedImage, '_blank')}
+                                                                        title="Şəkli tam ölçüdə açmaq üçün klikləyin"
+                                                                    />
+                                                                )}
                                                                 {opt.isCorrect && <HiOutlineCheck className="w-3.5 h-3.5 text-green-600 shrink-0" />}
                                                             </li>
                                                         ))}

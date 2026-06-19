@@ -18,7 +18,7 @@ import {
 } from '../../hooks/admin/useAdminCollaborativeExams';
 import CreateModal from './collaborative-exams/CreateModal';
 import ReviewModal from './collaborative-exams/ReviewModal';
-import { STATUS_CONFIG } from './collaborative-exams/constants';
+import { STATUS_CONFIG, examStatusChip } from './collaborative-exams/constants';
 import Pagination from '../../components/admin/Pagination';
 import { formatRelativeTime } from '../../utils/date';
 
@@ -61,11 +61,17 @@ const AdminCollaborativeExams = () => {
         // COL-4: publishing is allowed with ASSIGNED (not-yet-submitted) collaborators,
         // but warn the admin first so a teacher isn't silently left out.
         const notSubmitted = (exam.collaborators || []).filter(c => c.status === 'ASSIGNED');
-        if (notSubmitted.length > 0) {
-            const names = notSubmitted.map(c => c.teacherName || c.teacherEmail || 'Müəllim').join(', ');
-            const ok = window.confirm(
-                `Bu müəllimlər hələ sual göndərməyib:\n${names}\n\nYenə də yayımlansın?`
-            );
+        // Publishing accepts the approved subset only — a REJECTED collaborator's still-broken
+        // questions stay out until they fix and resubmit, so flag them in the same warning.
+        const rejected = (exam.collaborators || []).filter(c => c.status === 'REJECTED');
+        if (notSubmitted.length > 0 || rejected.length > 0) {
+            const nameOf = c => c.teacherName || c.teacherEmail || 'Müəllim';
+            const lines = [];
+            if (notSubmitted.length > 0)
+                lines.push(`Hələ sual göndərməyib:\n${notSubmitted.map(nameOf).join(', ')}`);
+            if (rejected.length > 0)
+                lines.push(`Rədd edilmiş sualları var (yalnız təsdiqlənmiş suallar daxil olunacaq):\n${rejected.map(nameOf).join(', ')}`);
+            const ok = window.confirm(`${lines.join('\n\n')}\n\nYenə də yayımlansın?`);
             if (!ok) return;
         }
         try {
@@ -153,7 +159,7 @@ const AdminCollaborativeExams = () => {
                         const sumApproved = collabs.reduce((s, c) => s + (c.approvedCount || 0), 0);
                         const sumRejected = collabs.reduce((s, c) => s + (c.rejectedCount || 0), 0);
                         const totalDraft = sumPending + sumApproved + sumRejected;
-                        const examStatus = STATUS_CONFIG[exam.status] || { label: exam.status, color: 'text-gray-600 bg-gray-50 border-gray-200' };
+                        const examStatus = examStatusChip(exam.status);
 
                         return (
                             <div key={exam.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">

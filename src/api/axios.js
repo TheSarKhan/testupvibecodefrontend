@@ -76,6 +76,16 @@ api.interceptors.response.use(
             error.message = error.response.data.message;
         }
 
+        // Canceled/aborted requests (React Query cancellation on unmount or
+        // query-key change, AbortController) also arrive with no response, but
+        // they are NOT failures — the user never sees a broken action. Surfacing
+        // a "network error" toast here is a false positive (e.g. navigating
+        // between collaborative-exam creation steps cancels in-flight queries).
+        if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
+            error._handled = true;
+            return Promise.reject(error);
+        }
+
         // Network error (no response at all)
         if (!error.response) {
             error._handled = true;

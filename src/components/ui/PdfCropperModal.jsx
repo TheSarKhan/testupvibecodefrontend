@@ -37,6 +37,12 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
     // Which slot the next "Kəs" goes into: 'question' | 'A'...'E'
     const [cropTarget, setCropTarget] = useState('question');
 
+    // In advanced mode, WHICH already-cropped question an option crop attaches
+    // to (by id). Without this the option always went to the last question, so
+    // selecting an option slot under an earlier question (e.g. after 3 questions
+    // were cropped) silently wrote the variant to the wrong one.
+    const [optionTargetId, setOptionTargetId] = useState(null);
+
     // Single mode
     const [pendingSingleCrop, setPendingSingleCrop] = useState(null);
 
@@ -84,19 +90,28 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
         if (isBatchMode) {
             if (cropTarget === 'question') {
                 if (maxCrops !== null && crops.length >= maxCrops) return; // limit reached
-                setCrops(prev => [...prev, { id: Date.now().toString(), questionImage: base64Image, options: [] }]);
+                const newId = Date.now().toString();
+                setCrops(prev => [...prev, { id: newId, questionImage: base64Image, options: [] }]);
+                // Subsequent option crops in the sequential flow attach to this
+                // freshly-cropped question.
+                setOptionTargetId(newId);
                 // In advanced mode auto-advance to A; in simple mode stay on 'question'
                 if (cropMode === 'advanced') setCropTarget('A');
             } else {
-                // Advanced mode: attach option to last question
+                // Advanced mode: attach option to the targeted question (falling
+                // back to the last one), NOT blindly to the last question.
                 setCrops(prev => {
                     if (prev.length === 0) return prev;
-                    const last = prev[prev.length - 1];
-                    const existingIdx = last.options.findIndex(o => o.label === cropTarget);
+                    const targetIdx = optionTargetId
+                        ? prev.findIndex(c => c.id === optionTargetId)
+                        : -1;
+                    const idx = targetIdx >= 0 ? targetIdx : prev.length - 1;
+                    const target = prev[idx];
+                    const existingIdx = target.options.findIndex(o => o.label === cropTarget);
                     const newOptions = existingIdx >= 0
-                        ? last.options.map((o, i) => i === existingIdx ? { ...o, image: base64Image } : o)
-                        : [...last.options, { label: cropTarget, image: base64Image }];
-                    return [...prev.slice(0, -1), { ...last, options: newOptions }];
+                        ? target.options.map((o, i) => i === existingIdx ? { ...o, image: base64Image } : o)
+                        : [...target.options, { label: cropTarget, image: base64Image }];
+                    return prev.map((c, i) => i === idx ? { ...target, options: newOptions } : c);
                 });
                 // Auto-advance: next active label or back to 'question'
                 const idx = activeLabels.indexOf(cropTarget);
@@ -122,6 +137,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
         onClose();
         setCrops([]);
         setCropTarget('question');
+        setOptionTargetId(null);
     };
 
     const handleDeleteCrop = (id) => {
@@ -336,7 +352,11 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                     {activeLabels.map(label => (
                                         <button
                                             key={label}
-                                            onClick={() => setCropTarget(label)}
+                                            onClick={() => {
+                                                setCropTarget(label);
+                                                // Toolbar selector = "current question" → the last crop.
+                                                setOptionTargetId(crops[crops.length - 1]?.id ?? null);
+                                            }}
                                             disabled={!lastCropHasQuestion}
                                             className={`w-9 h-7 rounded-lg text-xs font-bold transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                                                 cropTarget === label
@@ -471,7 +491,7 @@ const PdfCropperModal = ({ isOpen, onClose, file, onCropComplete, isBatchMode = 
                                                                     }`}
                                                                     onClick={() => {
                                                                         if (opt) setPreviewImage(opt.image);
-                                                                        else setCropTarget(label);
+                                                                        else { setCropTarget(label); setOptionTargetId(q.id); }
                                                                     }}
                                                                     title={opt ? `${label} variantı` : `${label} kəs`}
                                                                 >

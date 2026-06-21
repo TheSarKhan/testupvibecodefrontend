@@ -422,6 +422,16 @@ const ExamEditor = () => {
     // would otherwise fire ANOTHER POST and create a duplicate draft.
     const autoSavingRef = useRef(false);
 
+    // Block until any in-flight autosave PUT/POST has finished, so explicit
+    // actions (submit/publish) never race a concurrent write on the same exam.
+    // Polls the autosaving guard; bails out after ~5s so a stuck request can't
+    // hang the submit forever.
+    const waitForAutosaveToSettle = async () => {
+        for (let i = 0; i < 50 && autoSavingRef.current; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    };
+
     useEffect(() => {
         if (isEditMode) fetchExamData();
     }, [id]);
@@ -632,17 +642,30 @@ const ExamEditor = () => {
             const payload = buildPayload(examStatus);
             setAutoSaveStatus('saving');
             try {
+                // Autosave owns its own error UX (the status pill + the throttled
+                // toast below), so opt out of the global interceptor toast —
+                // otherwise one failed autosave fired BOTH a "Şəbəkə bağlantısı
+                // xətası" from the interceptor AND the message here, spamming the
+                // teacher with duplicate alarms during a normal save.
                 if (createdIdRef.current) {
-                    await api.put(`/exams/${createdIdRef.current}`, payload);
+                    await api.put(`/exams/${createdIdRef.current}`, payload, { skipErrorToast: true });
                 } else {
-                    const { data } = await api.post('/exams', payload);
+                    const { data } = await api.post('/exams', payload, { skipErrorToast: true });
                     createdIdRef.current = data.id;
                     window.history.replaceState(null, '', `/imtahanlar/duzenle/${data.id}`);
                 }
                 setAutoSaveStatus('saved');
                 setTimeout(() => setAutoSaveStatus(null), 3000);
-            } catch {
-                // Surface the failure — the previous silent reset left
+            } catch (err) {
+                // A canceled/aborted request is NOT a real failure — it happens
+                // when a newer autosave supersedes this one or the user navigates
+                // while a save is mid-flight, and the data is fine. Treating it as
+                // an error was the source of the bogus "Auto save failed" alerts
+                // teachers saw while everything actually saved correctly.
+                if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
+                    return;
+                }
+                // Surface a genuine failure — the previous silent reset left
                 // teachers thinking their changes were saved when they
                 // weren't, and they only noticed on refresh.
                 setAutoSaveStatus('error');
@@ -1255,6 +1278,12 @@ const ExamEditor = () => {
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         const loadId = toast.loading('Göndərilir...');
         try {
+            // Wait out any autosave PUT that's still in flight. Submitting while
+            // one races on the same exam meant two concurrent writes — the submit
+            // could fail outright or a stale autosave could land afterwards and
+            // revert the freshly-saved questions, so "Admin-ə göndər" appeared not
+            // to work. submittingRef is already set, so no NEW autosave can start.
+            await waitForAutosaveToSettle();
             await api.put(`/exams/${currentId}`, buildPayload(examStatus));
             await api.post(`/collaborative-exams/submit/${currentId}`);
             toast.success('Suallarınız admin-ə göndərildi!', { id: loadId });
@@ -1791,6 +1820,10 @@ const ExamEditor = () => {
                 saveToBank={false}
                 lockedType={aiModal?.lockedQuestionType || null}
                 seedQuestion={aiModal?.seed || null}
+                // Template slot-fill (replaceId set): only one question can fill the
+                // slot, so pin generation to 1 and hide the count selector — stops the
+                // AI quota being spent on 9 questions handleAiInsert would discard.
+                singleQuestion={!!aiModal?.replaceId}
                 onSave={handleAiInsert}
             />
 

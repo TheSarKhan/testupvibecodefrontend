@@ -23,6 +23,16 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
     const isEditing = useRef(false);
     const savedSelection = useRef(null);
     const lastReportedValue = useRef(null);
+    // Value-based undo/redo. execCommand's native undo is unreliable for
+    // superscript/subscript in Chromium (the format survives Ctrl+Z while bold/
+    // italic revert fine), so we drive undo off the editor's own value history
+    // instead: every change snapshots the prior value, and Ctrl+Z restores it by
+    // re-rendering — which reverts EVERY format uniformly, sup/sub included.
+    const undoStack = useRef([]);
+    const redoStack = useRef([]);
+    const isRestoring = useRef(false);
+    const lastSnapAt = useRef(0);
+    const lastSnapTyping = useRef(false);
     const [activeFormats, setActiveFormats] = useState({
         bold: false, italic: false, underline: false,
         strikeThrough: false, superscript: false, subscript: false,
@@ -173,6 +183,13 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         if (normalizedExternal !== normalizedInternal) {
             editorRef.current.innerHTML = parseToHtml(normalizedExternal);
             lastReportedValue.current = value;
+            // A genuine external value change (e.g. a different question loaded into
+            // this editor instance) starts a new document — drop the old undo/redo
+            // history so Ctrl+Z can't jump back into the previous content. Restores
+            // we drive ourselves keep external==internal, so they skip this branch.
+            undoStack.current = [];
+            redoStack.current = [];
+            lastSnapTyping.current = false;
         }
     }, [value]);
 
@@ -193,16 +210,96 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         return clone.innerHTML;
     };
 
-    const handleChange = () => {
+    // Snapshot the value that existed BEFORE the change about to be reported, so
+    // Ctrl+Z can return to it. Consecutive typing within a short window collapses
+    // into one undo step (so undo isn't per-keystroke); format/structural edits
+    // always start a fresh step. New edits invalidate the redo stack.
+    const recordHistory = (prevValue, isTyping) => {
+        if (prevValue === null || prevValue === undefined) return;
+        const now = Date.now();
+        if (isTyping && lastSnapTyping.current && now - lastSnapAt.current < 600) {
+            lastSnapAt.current = now;
+            return; // coalesce a typing burst
+        }
+        const top = undoStack.current[undoStack.current.length - 1];
+        if (top !== prevValue) {
+            undoStack.current.push(prevValue);
+            if (undoStack.current.length > 200) undoStack.current.shift();
+        }
+        redoStack.current = [];
+        lastSnapAt.current = now;
+        lastSnapTyping.current = !!isTyping;
+    };
+
+    const handleChange = (isTyping = false) => {
         if (!editorRef.current) return;
         const newValue = extractValue(editorRef.current);
+        if (newValue === lastReportedValue.current) return;
+        if (!isRestoring.current) recordHistory(lastReportedValue.current, isTyping);
         lastReportedValue.current = newValue;
         onChange(newValue);
     };
 
+    const placeCaretAtEnd = () => {
+        const el = editorRef.current;
+        if (!el) return;
+        el.focus();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        savedSelection.current = range.cloneRange();
+    };
+
+    // Re-render the editor to a historical value. Setting innerHTML does NOT fire
+    // an input event, so this won't re-enter handleChange; we sync our own refs
+    // and notify the parent explicitly.
+    const applyHistoryValue = (v) => {
+        if (!editorRef.current) return;
+        isRestoring.current = true;
+        editorRef.current.innerHTML = parseToHtml(v || '');
+        lastReportedValue.current = v;
+        onChange(v);
+        placeCaretAtEnd();
+        updateActiveFormats();
+        isRestoring.current = false;
+    };
+
+    const doUndo = () => {
+        if (undoStack.current.length === 0) return;
+        const current = lastReportedValue.current ?? extractValue(editorRef.current);
+        const prev = undoStack.current.pop();
+        redoStack.current.push(current);
+        lastSnapTyping.current = false; // next edit starts a fresh undo step
+        applyHistoryValue(prev);
+    };
+
+    const doRedo = () => {
+        if (redoStack.current.length === 0) return;
+        const current = lastReportedValue.current ?? extractValue(editorRef.current);
+        const next = redoStack.current.pop();
+        undoStack.current.push(current);
+        lastSnapTyping.current = false;
+        applyHistoryValue(next);
+    };
+
+    const handleKeyDown = (e) => {
+        const key = e.key.toLowerCase();
+        const mod = e.ctrlKey || e.metaKey;
+        if (mod && key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            doUndo();
+        } else if (mod && (key === 'y' || (key === 'z' && e.shiftKey))) {
+            e.preventDefault();
+            doRedo();
+        }
+    };
+
     const handleInput = () => {
         isEditing.current = true;
-        handleChange();
+        handleChange(true);
         // Refresh the toolbar's active state on every keystroke so the
         // superscript/subscript pill stays lit while the caret is still
         // inside <sup>/<sub>. `selectionchange` alone misses some typing
@@ -456,6 +553,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 ref={editorRef}
                 contentEditable
                 onInput={handleInput}
+                onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 onPaste={handlePaste}
                 onClick={handleClick}
@@ -551,6 +649,7 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
                 ref={editorRef}
                 contentEditable
                 onInput={handleInput}
+                onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 onPaste={handlePaste}
                 onClick={handleClick}

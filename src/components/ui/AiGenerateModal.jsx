@@ -329,7 +329,10 @@ const PreviewQuestion = ({ q, index, onRemove, onRefine, onEdit, isEditing, onSa
 // the questions go straight into the exam. seedQuestion (optional) asks the AI
 // for variations similar to an existing question. lockedType (optional) pins
 // the question type (template slots dictate it) and disables the selector.
-const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [], onSave, saveToBank = true, seedQuestion = null, lockedType = null }) => {
+// singleQuestion (optional) pins generation to exactly one question and hides the
+// count selector — used by the template "AI ilə doldur" slot-fill, where only one
+// question can land in the slot and generating more silently wastes the AI quota.
+const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [], onSave, saveToBank = true, seedQuestion = null, lockedType = null, singleQuestion = false }) => {
     const [difficulty, setDifficulty] = useState('MEDIUM');
     const [questionType, setQuestionType] = useState('MCQ');
     const [topicName, setTopicName] = useState('');
@@ -355,8 +358,14 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
         } else {
             api.get('/ai/usage').then(res => setAiUsage(res.data)).catch(() => {});
             if (lockedType) setQuestionType(lockedType);
+            // Slot-fill mode (template "AI ilə doldur"): exactly one question can
+            // land in the slot, so force count to 1 and make a re-generate replace
+            // rather than append. Otherwise the AI quota gets spent on questions the
+            // slot silently throws away.
+            setReplaceMode(!!singleQuestion);
+            if (singleQuestion) setCount(1);
         }
-    }, [isOpen, lockedType]);
+    }, [isOpen, lockedType, singleQuestion]);
 
     const refreshAiUsage = () => {
         api.get('/ai/usage').then(res => setAiUsage(res.data)).catch(() => {});
@@ -390,7 +399,7 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 topicName: topicName || null,
                 difficulty,
                 questionType,
-                count,
+                count: singleQuestion ? 1 : count,
                 instructions: instructions.trim() || null,
                 seedQuestion: seedQuestion || null,
             });
@@ -572,6 +581,8 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
     };
 
     const diffObj = DIFFICULTY_OPTIONS.find(d => d.value === difficulty);
+    // In slot-fill mode the count is pinned to 1 regardless of the (hidden) slider.
+    const effectiveCount = singleQuestion ? 1 : count;
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="" maxWidth="max-w-2xl">
@@ -680,16 +691,19 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                     ))}
                 </div>
 
-                {/* Count slider */}
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Say:</span>
-                    <input
-                        type="range" min="1" max="10" value={count}
-                        onChange={e => setCount(Number(e.target.value))}
-                        className="w-24 accent-blue-600"
-                    />
-                    <span className="text-sm font-bold text-blue-600 w-5 text-center">{count}</span>
-                </div>
+                {/* Count slider — hidden in slot-fill mode, where exactly 1 question
+                    is generated and any extra would be discarded. */}
+                {!singleQuestion && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Say:</span>
+                        <input
+                            type="range" min="1" max="10" value={count}
+                            onChange={e => setCount(Number(e.target.value))}
+                            className="w-24 accent-blue-600"
+                        />
+                        <span className="text-sm font-bold text-blue-600 w-5 text-center">{count}</span>
+                    </div>
+                )}
             </div>
 
             {/* Free-form teacher guidance woven into the AI prompt (BUG-22) */}
@@ -762,12 +776,12 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                 <div className="flex items-center gap-2.5 min-w-0">
                     <button
                         onClick={handleGenerate}
-                        disabled={generating || (aiUsage && aiUsage.remaining === 0) || (aiUsage && aiUsage.remaining !== -1 && count > aiUsage.remaining)}
+                        disabled={generating || (aiUsage && aiUsage.remaining === 0) || (aiUsage && aiUsage.remaining !== -1 && effectiveCount > aiUsage.remaining)}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
                     >
                         {aiUsage && aiUsage.remaining === 0 ? (
                             <>Aylıq limit bitdi</>
-                        ) : aiUsage && aiUsage.remaining !== -1 && count > aiUsage.remaining ? (
+                        ) : aiUsage && aiUsage.remaining !== -1 && effectiveCount > aiUsage.remaining ? (
                             <>{aiUsage.remaining} sual qaldı</>
                         ) : generating ? (
                             <>
@@ -779,13 +793,13 @@ const AiGenerateModal = ({ isOpen, onClose, subjectId, subjectName, topics = [],
                                 {generated !== null ? <HiOutlineRefresh className="w-4 h-4" /> : <HiOutlineLightningBolt className="w-4 h-4" />}
                                 {generated === null
                                     ? 'Sual Yarat'
-                                    : replaceMode ? 'Tam yenidən yarat' : `Daha ${count} əlavə et`}
+                                    : replaceMode ? 'Tam yenidən yarat' : `Daha ${effectiveCount} əlavə et`}
                             </>
                         )}
                     </button>
                     {/* Append (default) vs full replace — regenerating used to
                         always wipe the existing set (BUG-22). */}
-                    {generated !== null && generated.length > 0 && (
+                    {generated !== null && generated.length > 0 && !singleQuestion && (
                         <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 cursor-pointer select-none">
                             <input
                                 type="checkbox"

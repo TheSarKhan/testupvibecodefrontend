@@ -18,7 +18,7 @@ import {
 } from '../../hooks/admin/useAdminCollaborativeExams';
 import CreateModal from './collaborative-exams/CreateModal';
 import ReviewModal from './collaborative-exams/ReviewModal';
-import { STATUS_CONFIG, examStatusChip } from './collaborative-exams/constants';
+import { STATUS_CONFIG } from './collaborative-exams/constants';
 import Pagination from '../../components/admin/Pagination';
 import { formatRelativeTime } from '../../utils/date';
 
@@ -159,7 +159,15 @@ const AdminCollaborativeExams = () => {
                         const sumApproved = collabs.reduce((s, c) => s + (c.approvedCount || 0), 0);
                         const sumRejected = collabs.reduce((s, c) => s + (c.rejectedCount || 0), 0);
                         const totalDraft = sumPending + sumApproved + sumRejected;
-                        const examStatus = examStatusChip(exam.status);
+                        // Show "Dərc edilib" only when the exam is actually live for students
+                        // (sitePublished). exam.status can stay PUBLISHED internally — e.g. after a
+                        // publish → "Gizlət" cycle, which intentionally leaves status untouched — even
+                        // though students can't see it, so keying the chip off status read "published"
+                        // for an exam that isn't. sitePublished is the true student-facing state; until
+                        // then the exam is just "Hazırdır" (ready to publish).
+                        const examStatus = exam.sitePublished
+                            ? { label: 'Dərc edilib', color: 'text-green-700 bg-green-50 border-green-200' }
+                            : { label: 'Hazırdır', color: 'text-amber-600 bg-amber-50 border-amber-200' };
 
                         return (
                             <div key={exam.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">

@@ -54,7 +54,32 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
         if (!collaborator.draftExamId) return;
         setLoadingQ(true);
         api.get(`/exams/${collaborator.draftExamId}/details`)
-            .then(r => setQuestions(r.data.questions || []))
+            .then(r => {
+                // Passage (LISTENING / TEXT) questions arrive nested under
+                // `passages[].questions`, NOT in the flat `questions` array. They were
+                // never merged in here, so the whole passage section was invisible in the
+                // review screen while the card's count still included them. Flatten them
+                // in — each carries its own reviewStatus/content/options — and attach the
+                // passage context so the admin can read the text / play the audio. Inherit
+                // the passage's subjectGroup when the question itself has none, so they
+                // land under the right subject tab. (BUG: dinləmə/mətn suallar görünmür.)
+                const standalone = r.data.questions || [];
+                const passageQs = (r.data.passages || []).flatMap(p =>
+                    (p.questions || []).map(q => ({
+                        ...q,
+                        subjectGroup: q.subjectGroup ?? p.subjectGroup ?? null,
+                        _passage: {
+                            id: p.id,
+                            passageType: p.passageType,
+                            title: p.title,
+                            textContent: p.textContent,
+                            audioContent: p.audioContent,
+                            attachedImage: p.attachedImage,
+                        },
+                    }))
+                );
+                setQuestions([...standalone, ...passageQs]);
+            })
             .catch(() => toast.error('Suallar yüklənmədi'))
             .finally(() => setLoadingQ(false));
     }, [collaborator.draftExamId]);
@@ -91,10 +116,20 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
     // Questions visible in the current tab. Global numbering preserved (Q4 stays Q4 even
     // when the Az. dili tab is on) so admins can refer to questions by their absolute index.
     const visibleQuestions = useMemo(() => {
-        if (activeSubject === '__ALL__') return questions.map((q, i) => ({ q, globalIdx: i }));
-        return questions
-            .map((q, i) => ({ q, globalIdx: i }))
-            .filter(({ q }) => (q.subjectGroup || '__OTHER__') === activeSubject);
+        const base = activeSubject === '__ALL__'
+            ? questions.map((q, i) => ({ q, globalIdx: i }))
+            : questions
+                .map((q, i) => ({ q, globalIdx: i }))
+                .filter(({ q }) => (q.subjectGroup || '__OTHER__') === activeSubject);
+        // Mark the first question of each passage in the visible list so the full
+        // passage context (text/audio/image) is shown once, not under every sibling.
+        const seenPassages = new Set();
+        return base.map(item => {
+            const pid = item.q._passage?.id;
+            let firstOfPassage = false;
+            if (pid != null && !seenPassages.has(pid)) { seenPassages.add(pid); firstOfPassage = true; }
+            return { ...item, firstOfPassage };
+        });
     }, [questions, activeSubject]);
 
     // Optimistic local updates so admin doesn't wait for a refetch after each click.
@@ -295,7 +330,7 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                         <p className="text-sm text-gray-400 text-center py-10">Bu fənndə sual yoxdur</p>
                     ) : (
                         <div className="space-y-3">
-                            {visibleQuestions.map(({ q, globalIdx }, vi) => {
+                            {visibleQuestions.map(({ q, globalIdx, firstOfPassage }, vi) => {
                                 const i = globalIdx;
                                 // Subject header before the first question of each group when
                                 // we're in the "Hamısı" tab. Within a single-subject tab the
@@ -339,11 +374,39 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                                                     <StatusBadge status={q.reviewStatus} />
                                                     <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">{labelOr(QUESTION_TYPE_LABELS, q.questionType)}</span>
+                                                    {q._passage && (
+                                                        <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
+                                                            {q._passage.passageType === 'LISTENING' ? '🎧 Dinləmə mətni' : '📄 Oxu mətni'}
+                                                            {q._passage.title ? ` · ${q._passage.title}` : ''}
+                                                        </span>
+                                                    )}
                                                     {q.subjectGroup && (
                                                         <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">{q.subjectGroup}</span>
                                                     )}
                                                     <span className="text-[11px] font-semibold text-gray-500">{q.points} xal</span>
                                                 </div>
+
+                                                {/* Passage context — reading text / listening audio / image.
+                                                    Rendered once per passage (firstOfPassage) so siblings
+                                                    don't repeat a long text or a duplicate audio player. */}
+                                                {q._passage && firstOfPassage && (
+                                                    <div className="mb-2 rounded-lg border border-purple-100 bg-purple-50/60 px-3 py-2">
+                                                        {q._passage.textContent && (
+                                                            <div className="text-[12px] text-gray-700 leading-snug max-h-40 overflow-auto">
+                                                                <LatexPreview content={q._passage.textContent} placeholder={null} className="!text-[12px]" />
+                                                            </div>
+                                                        )}
+                                                        {q._passage.attachedImage && (
+                                                            <img src={q._passage.attachedImage} alt="" className="mt-1.5 max-h-40 rounded border border-purple-100 object-contain" />
+                                                        )}
+                                                        {q._passage.audioContent && (
+                                                            <audio controls src={q._passage.audioContent} className="mt-1.5 w-full h-9" />
+                                                        )}
+                                                        {!q._passage.textContent && !q._passage.attachedImage && !q._passage.audioContent && (
+                                                            <span className="text-[11px] italic text-gray-400">(mətn/audio əlavə edilməyib)</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <div className="text-sm text-gray-800 leading-snug">
                                                     {q.content?.trim()
                                                         ? <LatexPreview content={q.content} placeholder={null} className="text-sm leading-snug" />

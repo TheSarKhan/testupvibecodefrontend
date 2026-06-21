@@ -159,7 +159,7 @@ const ContactBody = () => {
                                 sub="Tez cavab üçün"
                             />
                             <InfoCard
-                                href="https://www.google.com/maps/search/?api=1&query=Nərimanov+metrosu+Bakı+Azərbaycan"
+                                href="https://www.google.com/maps/search/?api=1&query=40.402766,49.875893"
                                 external
                                 Icon={HiOutlineLocationMarker}
                                 label="Ofis"

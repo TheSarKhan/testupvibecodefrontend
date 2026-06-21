@@ -751,11 +751,12 @@ const ExamEditor = () => {
             const mappedQuestions = (data.questions || []).map(q => ({
                 id: q.id.toString(),
                 orderIndex: q.orderIndex ?? 0,
-                type: q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
-                    q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
-                    q.questionType === 'MATCHING' ? 'MATCHING' :
-                    q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
-                    q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'OPEN_MANUAL',
+                // Use the canonical TYPE_TO_FRONTEND map, not a hand-written
+                // ternary. The old chain omitted TRUE_FALSE (it fell through to
+                // OPEN_MANUAL) and any unmapped/future type silently collapsed —
+                // exactly how collaborative-template slots (uyğunlaşdırma, açıq,
+                // və s.) ended up showing as "Qapalı"/wrong on load.
+                type: TYPE_TO_FRONTEND[q.questionType] || 'MULTIPLE_CHOICE',
                 text: q.content, points: q.points, attachedImage: q.attachedImage,
                 sampleAnswer: q.correctAnswer,
                 subjectGroup: q.subjectGroup || null,

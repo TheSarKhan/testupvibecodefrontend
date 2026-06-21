@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
+﻿import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
 import 'katex/dist/katex.min.css';
 import { safeRenderLatex, escapeHtmlAttr } from '../../utils/latexRender';
 
@@ -198,6 +198,23 @@ const MathTextEditor = forwardRef(({ value, onChange, placeholder, className, sh
         const clone = rootNode.cloneNode(true);
         clone.querySelectorAll('.math-node').forEach(node => {
             node.replaceWith(`$$${node.getAttribute('data-latex')}$$`);
+        });
+        // Drop EMPTY inline-format elements before serializing. Chromium's
+        // execCommand('superscript'/'subscript') at a collapsed caret inserts a
+        // bare `<sup></sup>` (bold/italic only set a pending style — no node), and
+        // toggling formats off can leave stray empty `<b>`/`<i>` wrappers. If those
+        // empties reach the value, each becomes its own undo state: Ctrl+Z then
+        // removes the typed character but leaves the empty `<sup>` behind, so the
+        // caret stays in superscript and the format looks like it never reverted.
+        // This was the root of "üst/alt indeks geri qaytarılmır" — bold/italic
+        // undo worked only because they never produced such an empty node.
+        // Removing empties keeps the undo history clean so a single Ctrl+Z reverts
+        // the whole sup/sub edit. An element holding only a zero-width space (the
+        // caret-parking ZWS we insert) or whitespace counts as empty.
+        clone.querySelectorAll('sup, sub, b, strong, i, em, u, s, strike').forEach(el => {
+            if (el.children.length === 0 && (el.textContent || '').replace(/[\u200B\s]/g, '') === '') {
+                el.remove();
+            }
         });
         // Normalize block-level div/p elements to <br> so line breaks render consistently everywhere
         clone.querySelectorAll('div, p').forEach(block => {

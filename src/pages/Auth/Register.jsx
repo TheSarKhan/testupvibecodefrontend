@@ -16,6 +16,7 @@ import { isValidPhoneNumber } from 'react-phone-number-input';
 import GoogleRoleModal from '../../components/ui/GoogleRoleModal';
 import PhoneInput from '../../components/ui/PhoneInput';
 import Logo from '../../components/ui/Logo';
+import EmailVerification from '../../components/ui/EmailVerification';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -47,7 +48,7 @@ const STRENGTH_COLOR = ['bg-red-400', 'bg-red-400', 'bg-amber-400', 'bg-[var(--p
 // Step indicator
 // ───────────────────────────────────────────────────────────────────────────
 
-const StepDots = ({ step, total = 3 }) => (
+const StepDots = ({ step, total = 4 }) => (
     <div className="flex items-center gap-2 justify-center mb-7">
         {Array.from({ length: total }).map((_, i) => (
             <div
@@ -544,6 +545,10 @@ const Register = () => {
     const [loading, setLoading] = useState(false);
     const [showGiftModal, setShowGiftModal] = useState(false);
     const [googlePending, setGooglePending] = useState(null);
+    // After register() the account is created but unverified — we hold the
+    // pending info (email + whether a gift plan was granted) until the OTP
+    // is confirmed on step 3, which is when verifyEmail() actually logs in.
+    const [pendingVerification, setPendingVerification] = useState(null);
     const { register, loginWithTokens } = useAuth();
     const navigate = useNavigate();
 
@@ -587,10 +592,18 @@ const Register = () => {
                 role: formData.role,
                 termsAccepted: formData.termsAccepted,
             });
-            loginWithTokens(data);
-            toast.success('Qeydiyyat uğurla tamamlandı!');
-            if (data?.giftPlanAssigned) setShowGiftModal(true);
-            else navigate('/');
+            // register() no longer logs the user in — it creates an unverified
+            // account and emails an OTP. Move to the verification step; the
+            // login happens inside verifyEmail() once the code is confirmed.
+            if (data?.emailVerificationRequired) {
+                setPendingVerification({
+                    email: data.email || formData.email,
+                    role: data.role || formData.role,
+                    giftPlanAssigned: !!data.giftPlanAssigned,
+                });
+                toast.success('Təsdiq kodu e-poçtunuza göndərildi');
+                setStep(3);
+            }
         } catch (error) {
             if (!error._handled) toast.error(error.response?.data?.message || 'Qeydiyyat uğursuz oldu');
         } finally {
@@ -598,9 +611,21 @@ const Register = () => {
         }
     };
 
+    // OTP confirmed → verifyEmail() already set the tokens/user; route on.
+    // Preserve the first-sign-in gift modal for teachers who were granted a plan.
+    const handleVerified = () => {
+        const role = pendingVerification?.role;
+        const dest = role === 'ADMIN' ? '/admin' : '/';
+        toast.success('Qeydiyyat uğurla tamamlandı!');
+        if (pendingVerification?.giftPlanAssigned) setShowGiftModal(true);
+        else navigate(dest);
+    };
+
+    const giftModalDest = pendingVerification?.role === 'ADMIN' ? '/admin' : '/';
+
     return (
         <>
-            {showGiftModal && <WelcomeGiftModal onClose={() => navigate('/')} />}
+            {showGiftModal && <WelcomeGiftModal onClose={() => navigate(giftModalDest)} />}
 
             {googlePending && (
                 <GoogleRoleModal
@@ -662,6 +687,15 @@ const Register = () => {
                                 onSubmit={handleSubmit}
                                 loading={loading}
                             />
+                        )}
+                        {step === 3 && pendingVerification && (
+                            <>
+                                <StepDots step={3} />
+                                <EmailVerification
+                                    email={pendingVerification.email}
+                                    onVerified={handleVerified}
+                                />
+                            </>
                         )}
                     </div>
                 </section>

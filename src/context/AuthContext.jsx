@@ -126,8 +126,9 @@ export const AuthProvider = ({ children }) => {
         return () => window.removeEventListener('storage', onStorage);
     }, []);
 
-    const login = async (email, password, remember = true) => {
-        const { data } = await api.post('/auth/login', { email, password });
+    // Apply an AuthResponse that carries tokens: persist them and hydrate `user`
+    // from the JWT claims. Shared by login, email verification and email change.
+    const applyAuthTokens = (data, remember = true) => {
         setTokens(data, remember);
         const decoded = jwtDecode(data.accessToken);
         setUser({
@@ -139,18 +140,41 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
-    // Called after Google OAuth login or complete-registration succeeds
-    const loginWithTokens = (data, remember = true) => {
-        setTokens(data, remember);
-        const decoded = jwtDecode(data.accessToken);
-        setUser({
-            id: decoded.sub,
-            email: decoded.email,
-            role: decoded.role,
-            fullName: decoded.fullName,
-        });
+    const login = async (email, password, remember = true) => {
+        const { data } = await api.post('/auth/login', { email, password });
+        // Unverified accounts come back with no tokens and a flag; a fresh code
+        // was emailed. The caller routes to the verification screen instead of
+        // treating this as a successful login.
+        if (data.emailVerificationRequired) return data;
+        return applyAuthTokens(data, remember);
+    };
+
+    // Confirm the registration/login OTP → tokens → signed in.
+    const verifyEmail = async (email, otp, remember = true) => {
+        const { data } = await api.post('/auth/verify-email', { email, otp });
+        return applyAuthTokens(data, remember);
+    };
+
+    const resendVerification = async (email) => {
+        const { data } = await api.post('/auth/resend-verification', { email });
         return data;
     };
+
+    // Email change (signed-in): step 1 sends an OTP to the new address.
+    const requestEmailChange = async (newEmail) => {
+        const { data } = await api.post('/auth/change-email/request', { newEmail });
+        return data;
+    };
+
+    // Step 2 confirms the OTP; the response carries fresh tokens (the email lives
+    // in the JWT), so re-apply them to keep the session and displayed email current.
+    const confirmEmailChange = async (otp, remember = true) => {
+        const { data } = await api.post('/auth/change-email/confirm', { otp });
+        return applyAuthTokens(data, remember);
+    };
+
+    // Called after Google OAuth login or complete-registration succeeds
+    const loginWithTokens = (data, remember = true) => applyAuthTokens(data, remember);
 
     const register = async (userData) => {
         const { data } = await api.post('/auth/register', userData);
@@ -180,6 +204,10 @@ export const AuthProvider = ({ children }) => {
                 login,
                 loginWithTokens,
                 register,
+                verifyEmail,
+                resendVerification,
+                requestEmailChange,
+                confirmEmailChange,
                 logout,
                 isAuthenticated,
                 isAdmin,

@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import GoogleRoleModal from '../../components/ui/GoogleRoleModal';
 import ForgotPasswordModal from '../../components/ui/ForgotPasswordModal';
+import EmailVerification from '../../components/ui/EmailVerification';
 import Logo, { LogoMark } from '../../components/ui/Logo';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -89,6 +90,9 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [googlePending, setGooglePending] = useState(null);
     const [showForgot, setShowForgot] = useState(false);
+    // Set when login() reports the account is unverified — a fresh OTP was
+    // emailed automatically and we swap the form for the verification screen.
+    const [pendingVerification, setPendingVerification] = useState(null);
     const { login, loginWithTokens } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -132,6 +136,14 @@ const Login = () => {
         setLoading(true);
         try {
             const data = await login(email, password, remember);
+            // Unverified accounts come back with no tokens; login() already
+            // re-sent a fresh OTP. Route to the verification screen instead of
+            // into the app.
+            if (data?.emailVerificationRequired) {
+                setPendingVerification({ email: data.email || email });
+                toast.success('Təsdiq kodu e-poçtunuza göndərildi');
+                return;
+            }
             const { jwtDecode } = await import('jwt-decode');
             const decoded = jwtDecode(data.accessToken);
             toast.success('Uğurla daxil oldunuz!');
@@ -141,6 +153,15 @@ const Login = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // OTP confirmed → verifyEmail() set the tokens/user; route to the same
+    // post-login destination the password flow would have used.
+    const handleVerified = async (data) => {
+        const { jwtDecode } = await import('jwt-decode');
+        const decoded = jwtDecode(data.accessToken);
+        toast.success('Uğurla daxil oldunuz!');
+        redirectAfterLogin(decoded.role);
     };
 
     const handleGoogleSuccess = async (tokenResponse) => {
@@ -200,7 +221,17 @@ const Login = () => {
                         <Logo size={36} />
                     </Link>
 
-                    {/* Form card */}
+                    {/* Verification card — shown when an unverified account tries to log in */}
+                    {pendingVerification ? (
+                        <div className="w-full max-w-[440px] bg-white border border-[var(--ink-200)] rounded-3xl p-7 sm:p-9 shadow-[var(--sh-sm)]">
+                            <EmailVerification
+                                email={pendingVerification.email}
+                                onVerified={handleVerified}
+                                onBack={() => setPendingVerification(null)}
+                            />
+                        </div>
+                    ) : (
+                    /* Form card */
                     <form
                         onSubmit={handleSubmit}
                         className="w-full max-w-[440px] bg-white border border-[var(--ink-200)] rounded-3xl p-7 sm:p-9 shadow-[var(--sh-sm)]"
@@ -319,6 +350,7 @@ const Login = () => {
                             </Link>
                         </p>
                     </form>
+                    )}
                 </section>
             </div>
         </>

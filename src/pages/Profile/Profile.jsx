@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import avatarTeacher from '../../assets/avatar-teacher.svg';
 import avatarStudent from '../../assets/avatar-student.svg';
 import { fmtDate, fmtDateShort } from '../../utils/date';
+import getErrorMessage from '../../utils/getErrorMessage';
 import {
     HiOutlineAcademicCap, HiOutlineChartBar, HiOutlineClock,
     HiOutlineCheckCircle, HiOutlinePencilAlt, HiOutlineEye,
@@ -263,8 +264,193 @@ const ChangePasswordModal = ({ onClose }) => {
 };
 
 // ───────────────────────────────────────────────────────────────────────────
-// Edit-profile modal — lets the user update their display name.
-// Email is intentionally read-only here (changing it is an auth flow).
+// Inline email-change flow (used inside EditProfileModal).
+// Step 1 emails an OTP to the new address; step 2 confirms it.
+// confirmEmailChange() refreshes the tokens + user via AuthContext, so the
+// displayed email updates automatically.
+// ───────────────────────────────────────────────────────────────────────────
+
+const RESEND_COOLDOWN = 60;
+
+const EmailChangeSection = ({ currentEmail }) => {
+    const { requestEmailChange, confirmEmailChange } = useAuth();
+    const [open, setOpen] = useState(false);
+    const [stage, setStage] = useState('email'); // 'email' | 'otp'
+    const [newEmail, setNewEmail] = useState('');
+    const [otp, setOtp] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
+
+    useEffect(() => {
+        if (cooldown <= 0) return;
+        const id = setInterval(() => setCooldown(c => (c <= 1 ? 0 : c - 1)), 1000);
+        return () => clearInterval(id);
+    }, [cooldown]);
+
+    const reset = () => {
+        setOpen(false);
+        setStage('email');
+        setNewEmail('');
+        setOtp('');
+        setCooldown(0);
+    };
+
+    const sendCode = async () => {
+        if (busy) return;
+        setBusy(true);
+        try {
+            await requestEmailChange(newEmail.trim());
+            toast.success('Təsdiq kodu yeni e-poçta göndərildi');
+            setStage('otp');
+            setCooldown(RESEND_COOLDOWN);
+        } catch (err) {
+            if (!err._handled) toast.error(getErrorMessage(err, 'Kod göndərilmədi'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const confirm = async () => {
+        if (busy || otp.length < 6) return;
+        setBusy(true);
+        try {
+            await confirmEmailChange(otp);
+            toast.success('E-poçt yeniləndi');
+            reset();
+        } catch (err) {
+            if (!err._handled) toast.error(getErrorMessage(err, 'Kod yanlış və ya vaxtı keçib'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const resend = async () => {
+        if (cooldown > 0 || busy) return;
+        setBusy(true);
+        try {
+            await requestEmailChange(newEmail.trim());
+            toast.success('Kod yenidən göndərildi');
+            setCooldown(RESEND_COOLDOWN);
+        } catch (err) {
+            if (!err._handled) toast.error(getErrorMessage(err, 'Kod göndərilmədi'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">E-poçt</label>
+            <div className="flex items-center gap-2">
+                <input
+                    type="text"
+                    value={currentEmail || ''}
+                    disabled
+                    className="flex-1 min-w-0 h-11 px-3.5 rounded-2xl border border-[var(--ink-150)] bg-[var(--ink-50)] text-[14px] text-[var(--ink-500)] outline-none cursor-not-allowed"
+                />
+                {!open && (
+                    <button
+                        type="button"
+                        onClick={() => setOpen(true)}
+                        className="shrink-0 h-11 px-4 rounded-2xl border border-[var(--ink-200)] text-[var(--ink-700)] font-semibold text-[13px] hover:bg-[var(--ink-100)] hover:border-[var(--ink-300)] transition-all"
+                    >
+                        Dəyiş
+                    </button>
+                )}
+            </div>
+
+            {open && (
+                <div className="mt-3 p-4 rounded-2xl border border-[var(--ink-200)] bg-[var(--ink-50)] space-y-3">
+                    {stage === 'email' ? (
+                        <>
+                            <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">Yeni e-poçt</label>
+                                <input
+                                    type="email"
+                                    value={newEmail}
+                                    onChange={e => setNewEmail(e.target.value)}
+                                    autoFocus
+                                    placeholder="yeni@nümunə.az"
+                                    className="w-full h-11 px-3.5 rounded-2xl border border-[var(--ink-200)] bg-white text-[14px] text-[var(--ink-900)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-colors"
+                                />
+                            </div>
+                            <div className="flex gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={reset}
+                                    className="flex-1 h-10 rounded-full border border-[var(--ink-200)] text-[var(--ink-700)] font-semibold text-[13px] hover:bg-[var(--ink-100)] transition-colors"
+                                >
+                                    Ləğv et
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={sendCode}
+                                    disabled={busy || !newEmail.trim()}
+                                    className="flex-1 h-10 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-[13px] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                                >
+                                    {busy ? 'Göndərilir...' : 'Kod göndər'}
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-[12.5px] text-[var(--ink-500)]">
+                                <strong className="text-[var(--ink-700)] font-semibold break-all">{newEmail.trim()}</strong> ünvanına göndərilən 6 rəqəmli kodu daxil edin
+                            </p>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                maxLength={6}
+                                value={otp}
+                                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                autoFocus
+                                autoComplete="one-time-code"
+                                placeholder="000000"
+                                className="w-full text-center text-xl font-bold tracking-[0.5em] h-12 rounded-2xl bg-white border-2 border-[var(--ink-200)] text-[var(--ink-900)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-colors placeholder-[var(--ink-300)] placeholder:tracking-[0.5em]"
+                            />
+                            <div className="text-center text-[12px] text-[var(--ink-500)]">
+                                Kod gəlmədi?{' '}
+                                {cooldown > 0 ? (
+                                    <span className="text-[var(--ink-400)] font-semibold">Yenidən göndər ({cooldown})</span>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={resend}
+                                        disabled={busy}
+                                        className="text-[var(--primary)] font-semibold hover:text-[var(--primary-hover)] transition-colors disabled:opacity-50"
+                                    >
+                                        Kodu yenidən göndər
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={reset}
+                                    className="flex-1 h-10 rounded-full border border-[var(--ink-200)] text-[var(--ink-700)] font-semibold text-[13px] hover:bg-[var(--ink-100)] transition-colors"
+                                >
+                                    Ləğv et
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={confirm}
+                                    disabled={busy || otp.length < 6}
+                                    className="flex-1 h-10 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-[13px] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
+                                >
+                                    {busy ? 'Təsdiqlənir...' : 'Təsdiqlə'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// Edit-profile modal — lets the user update their display name and e-mail.
 // ───────────────────────────────────────────────────────────────────────────
 
 const EditProfileModal = ({ initial, onClose }) => {
@@ -318,16 +504,7 @@ const EditProfileModal = ({ initial, onClose }) => {
                             placeholder="Ad Soyad"
                         />
                     </div>
-                    <div>
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] mb-1.5">E-poçt</label>
-                        <input
-                            type="text"
-                            value={user?.email || ''}
-                            disabled
-                            className="w-full h-11 px-3.5 rounded-2xl border border-[var(--ink-150)] bg-[var(--ink-50)] text-[14px] text-[var(--ink-500)] outline-none cursor-not-allowed"
-                        />
-                        <p className="mt-1 text-[11px] text-[var(--ink-400)]">E-poçtu dəyişmək üçün dəstəklə əlaqə saxlayın.</p>
-                    </div>
+                    <EmailChangeSection currentEmail={user?.email} />
                 </div>
 
                 <div className="flex gap-2.5 px-6 pb-6 pt-1">

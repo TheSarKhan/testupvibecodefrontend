@@ -119,6 +119,8 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
     const filteredQuestions = useMemo(() => {
         const term = search.trim().toLowerCase();
         return questions.filter(q => {
+            // Bölmə/şablon müəyyən tip tələb edirsə (filterType) — yalnız həmin tipə uyğun suallar
+            if (filterType && BACKEND_FRONTEND_MAP[q.questionType] !== filterType) return false;
             if (typeFilter !== 'ALL' && q.questionType !== typeFilter) return false;
             if (difficultyFilter !== 'ALL' && q.difficulty !== difficultyFilter) return false;
             if (gradeFilter !== 'ALL' && q.gradeLevel !== gradeFilter) return false;
@@ -128,7 +130,7 @@ const BankPickerModal = ({ onSelect, onSelectMany, onClose, filterType = null, a
             if (q.correctAnswer?.toLowerCase().includes(term)) return true;
             return (q.options || []).some(o => (o.content || '').toLowerCase().includes(term));
         });
-    }, [questions, search, typeFilter, difficultyFilter, gradeFilter, topicFilter]);
+    }, [questions, search, typeFilter, difficultyFilter, gradeFilter, topicFilter, filterType]);
 
     const topics = useMemo(() => {
         const s = new Set(questions.map(q => q.topic).filter(Boolean));

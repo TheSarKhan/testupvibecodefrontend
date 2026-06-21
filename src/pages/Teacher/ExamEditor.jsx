@@ -568,11 +568,8 @@ const ExamEditor = () => {
     useEffect(() => {
         if (!isEditMode && initialLocationState.aiQuestions?.length > 0) {
             const mapped = initialLocationState.aiQuestions.map((q, idx) => {
-                const type = q.questionType === 'MCQ' ? 'MULTIPLE_CHOICE' :
-                      q.questionType === 'MULTI_SELECT' ? 'MULTI_SELECT' :
-                      q.questionType === 'OPEN_AUTO' ? 'OPEN_AUTO' :
-                      q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' :
-                      q.questionType === 'OPEN_MANUAL' ? 'OPEN_MANUAL' : 'MULTIPLE_CHOICE';
+                // Bütün tiplər tam map ilə (MATCHING/TRUE_FALSE düşüb "Qapalı"ya çevrilməsin)
+                const type = TYPE_TO_FRONTEND[q.questionType] || 'MULTIPLE_CHOICE';
 
                 // FILL_IN_THE_BLANK editor expects sampleAnswer as a
                 // JSON-stringified array (one entry per blank) and the
@@ -672,7 +669,15 @@ const ExamEditor = () => {
                 const now = Date.now();
                 if (now - autoSaveFailToastRef.current > 8000) {
                     autoSaveFailToastRef.current = now;
-                    toast.error('Avtomatik saxlama uğursuz oldu — internet bağlantınızı yoxlayın');
+                    // Only a request that never reached the server is a real
+                    // connectivity problem. A 4xx/5xx means the save was rejected
+                    // for a concrete reason (validation, section cap, server error)
+                    // — surface that backend message instead of blaming the
+                    // teacher's internet and hiding the real cause.
+                    const msg = err?.response
+                        ? getErrorMessage(err, 'Avtomatik saxlama uğursuz oldu')
+                        : 'Avtomatik saxlama uğursuz oldu — internet bağlantınızı yoxlayın';
+                    toast.error(msg);
                 }
             } finally {
                 autoSavingRef.current = false;
@@ -1273,6 +1278,27 @@ const ExamEditor = () => {
         if (questions.length === 0 && passages.length === 0) {
             toast.error('Göndərməzdən əvvəl ən azı bir sual əlavə edin');
             return;
+        }
+        // Şablon tam doldurulmalıdır — tələb olunan sual sayı tamamlanmadan göndərməyə icazə verilmir
+        if (collaborativeTemplateSections.length > 0) {
+            const incomplete = collaborativeTemplateSections
+                .map(sec => ({
+                    name: sec.subjectName,
+                    filled: questions.filter(q => q.subjectGroup === sec.subjectName && q.text?.trim()).length,
+                    required: sec.questionCount || 0,
+                }))
+                .filter(s => s.filled < s.required);
+            if (incomplete.length > 0) {
+                const detail = incomplete.map(s => `${s.name}: ${s.filled}/${s.required}`).join(', ');
+                toast.error(`Şablon tam doldurulmayıb — bütün suallar daxil edilməlidir (${detail})`);
+                return;
+            }
+        } else if (templateInfo && templateInfo.questionCount > 0) {
+            const filled = questions.filter(q => q.text?.trim()).length;
+            if (filled < templateInfo.questionCount) {
+                toast.error(`Şablon tam doldurulmayıb — ${filled}/${templateInfo.questionCount} sual daxil edilib`);
+                return;
+            }
         }
         submittingRef.current = true;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);

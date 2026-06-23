@@ -14,6 +14,7 @@ import {
 } from '../../../hooks/admin/useAdminCollaborativeExams';
 import { QUESTION_TYPE_LABELS, labelOr } from '../../../utils/enumLabels';
 import LatexPreview from '../../../components/ui/LatexPreview';
+import ChipContent from '../../../utils/chipContent';
 
 // Per-question status badge.
 const StatusBadge = ({ status }) => {
@@ -468,17 +469,21 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                     <ul className="mt-2 space-y-1">
                                                         {q.matchingPairs.map((pair, pi) => (
                                                             <li key={pair.id ?? pi}
-                                                                className="text-xs px-2.5 py-1 rounded border bg-green-50 border-green-200 text-green-800 flex items-center gap-2">
+                                                                className="text-xs px-2.5 py-1.5 rounded border bg-green-50 border-green-200 text-green-800 flex items-center gap-2">
                                                                 <div className="flex-1 min-w-0">
-                                                                    {pair.leftItem?.trim()
-                                                                        ? <LatexPreview content={pair.leftItem} placeholder={null} className="!text-inherit text-xs" />
-                                                                        : <span className="italic text-gray-400">—</span>}
+                                                                    {pair.leftItem?.trim() && <ChipContent text={pair.leftItem} />}
+                                                                    {pair.attachedImageLeft && (
+                                                                        <img src={pair.attachedImageLeft} alt="" className="max-h-16 rounded border border-green-200 mt-0.5" />
+                                                                    )}
+                                                                    {!pair.leftItem?.trim() && !pair.attachedImageLeft && <span className="italic text-gray-400">—</span>}
                                                                 </div>
                                                                 <span className="text-green-600 font-bold shrink-0">→</span>
                                                                 <div className="flex-1 min-w-0">
-                                                                    {pair.rightItem?.trim()
-                                                                        ? <LatexPreview content={pair.rightItem} placeholder={null} className="!text-inherit text-xs" />
-                                                                        : <span className="italic text-gray-400">—</span>}
+                                                                    {pair.rightItem?.trim() && <ChipContent text={pair.rightItem} />}
+                                                                    {pair.attachedImageRight && (
+                                                                        <img src={pair.attachedImageRight} alt="" className="max-h-16 rounded border border-green-200 mt-0.5" />
+                                                                    )}
+                                                                    {!pair.rightItem?.trim() && !pair.attachedImageRight && <span className="italic text-gray-400">—</span>}
                                                                 </div>
                                                             </li>
                                                         ))}
@@ -492,6 +497,7 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                     with no answer to review. */}
                                                 {(q.questionType === 'OPEN_AUTO' || q.questionType === 'FILL_IN_THE_BLANK' || q.questionType === 'OPEN_MANUAL') && (() => {
                                                     const isManual = q.questionType === 'OPEN_MANUAL';
+                                                    const isFill = q.questionType === 'FILL_IN_THE_BLANK';
                                                     let answers = [];
                                                     if (q.questionType === 'FILL_IN_THE_BLANK') {
                                                         try {
@@ -517,7 +523,9 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                                 <div key={ai} className="text-xs px-2.5 py-1 rounded border bg-green-50 border-green-200 text-green-800 flex items-center gap-2">
                                                                     <HiOutlineCheck className="w-3.5 h-3.5 text-green-600 shrink-0" />
                                                                     <div className="flex-1 min-w-0">
-                                                                        <LatexPreview content={String(a)} placeholder={null} className="!text-inherit text-xs" />
+                                                                        {isFill
+                                                                            ? <ChipContent text={String(a)} />
+                                                                            : <LatexPreview content={String(a)} placeholder={null} className="!text-inherit text-xs" />}
                                                                     </div>
                                                                 </div>
                                                             ))}

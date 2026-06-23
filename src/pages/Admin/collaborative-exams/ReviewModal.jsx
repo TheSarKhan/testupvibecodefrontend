@@ -485,6 +485,47 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                     </ul>
                                                 )}
 
+                                                {/* Açıq / boşluq cavabı. Open & fill-in questions carry no
+                                                    options — their answer key lives in correctAnswer
+                                                    (FILL = JSON array of blanks); OPEN_MANUAL has only a
+                                                    sample answer. Without this the admin saw the question
+                                                    with no answer to review. */}
+                                                {(q.questionType === 'OPEN_AUTO' || q.questionType === 'FILL_IN_THE_BLANK' || q.questionType === 'OPEN_MANUAL') && (() => {
+                                                    const isManual = q.questionType === 'OPEN_MANUAL';
+                                                    let answers = [];
+                                                    if (q.questionType === 'FILL_IN_THE_BLANK') {
+                                                        try {
+                                                            const arr = JSON.parse(q.correctAnswer || '[]');
+                                                            answers = Array.isArray(arr) ? arr.filter(a => a != null && String(a).trim() !== '') : [];
+                                                        } catch {
+                                                            if (q.correctAnswer?.trim()) answers = [q.correctAnswer];
+                                                        }
+                                                    } else {
+                                                        const a = q.correctAnswer || q.sampleAnswer;
+                                                        if (a && String(a).trim()) answers = [a];
+                                                    }
+                                                    if (answers.length === 0) {
+                                                        return (
+                                                            <div className="mt-2 text-xs italic text-gray-400">
+                                                                {isManual ? 'Əl ilə yoxlanılır (cavab açarı yoxdur)' : '(cavab daxil edilməyib)'}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <div className="mt-2 space-y-1">
+                                                            {answers.map((a, ai) => (
+                                                                <div key={ai} className="text-xs px-2.5 py-1 rounded border bg-green-50 border-green-200 text-green-800 flex items-center gap-2">
+                                                                    <HiOutlineCheck className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <LatexPreview content={String(a)} placeholder={null} className="!text-inherit text-xs" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            {isManual && <span className="text-[10px] text-gray-400">nümunə cavab</span>}
+                                                        </div>
+                                                    );
+                                                })()}
+
                                                 {/* Existing per-question admin comment when rejected */}
                                                 {isRejected && q.reviewComment && (
                                                     <div className="mt-2 text-xs bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-red-700">

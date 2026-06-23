@@ -459,6 +459,32 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                     </ul>
                                                 )}
 
+                                                {/* Matching pairs (uyğunlaşdırma). MATCHING questions carry
+                                                    no options — their answer key lives in matchingPairs as
+                                                    left↔right links — so without this block the admin saw a
+                                                    bare question with no answer to review. Each stored pair is
+                                                    a correct link; a side may be empty for a distractor. */}
+                                                {(q.matchingPairs?.length > 0) && (
+                                                    <ul className="mt-2 space-y-1">
+                                                        {q.matchingPairs.map((pair, pi) => (
+                                                            <li key={pair.id ?? pi}
+                                                                className="text-xs px-2.5 py-1 rounded border bg-green-50 border-green-200 text-green-800 flex items-center gap-2">
+                                                                <div className="flex-1 min-w-0">
+                                                                    {pair.leftItem?.trim()
+                                                                        ? <LatexPreview content={pair.leftItem} placeholder={null} className="!text-inherit text-xs" />
+                                                                        : <span className="italic text-gray-400">—</span>}
+                                                                </div>
+                                                                <span className="text-green-600 font-bold shrink-0">→</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    {pair.rightItem?.trim()
+                                                                        ? <LatexPreview content={pair.rightItem} placeholder={null} className="!text-inherit text-xs" />
+                                                                        : <span className="italic text-gray-400">—</span>}
+                                                                </div>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+
                                                 {/* Existing per-question admin comment when rejected */}
                                                 {isRejected && q.reviewComment && (
                                                     <div className="mt-2 text-xs bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-red-700">

@@ -151,7 +151,11 @@ const AdminCollaborativeExams = () => {
                     {exams.map(exam => {
                         const collabs = exam.collaborators || [];
                         const totalCollab = collabs.length;
-                        const approvedCollab = collabs.filter(c => c.status === 'APPROVED').length;
+                        // "Təsdiqlənmiş" müəllim sayı: ən azı bir sualı təsdiqlənmiş hər müəllim.
+        // Əvvəl yalnız status === 'APPROVED' (bütün sualları təsdiqlənmiş) sayılırdı,
+        // ona görə qismən təsdiqlənmiş müəllim (status REJECTED, amma approvedCount>0)
+        // bu sayğacda görünmürdü.
+        const approvedCollab = collabs.filter(c => (c.approvedCount || 0) > 0).length;
                         const submittedCollab = collabs.filter(c => c.status === 'SUBMITTED').length;
                         const rejectedCollab = collabs.filter(c => c.status === 'REJECTED').length;
                         const pendingCollab = totalCollab - approvedCollab - submittedCollab - rejectedCollab;

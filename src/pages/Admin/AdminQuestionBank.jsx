@@ -6,7 +6,7 @@ import {
     HiOutlineX, HiOutlineCheck, HiOutlineSearch,
     HiOutlineCollection, HiOutlineDocumentText,
     HiOutlineLightningBolt, HiOutlineFire, HiOutlineClock,
-    HiOutlineTag, HiOutlineAcademicCap,
+    HiOutlineTag, HiOutlineAcademicCap, HiOutlineDownload,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import {
@@ -16,6 +16,7 @@ import {
     useDeleteBankSubject,
 } from '../../hooks/admin/useAdminQuestionBank';
 import { useAdminSubjects } from '../../hooks/admin/useAdminSubjects';
+import TeacherBankImportModal from './TeacherBankImportModal';
 import Pagination from '../../components/admin/Pagination';
 import { Combobox } from '../../components/ui';
 import { formatRelativeTime } from '../../utils/date';
@@ -56,6 +57,7 @@ const AdminQuestionBank = () => {
     const navigate = useNavigate();
 
     const [adding, setAdding] = useState(false);
+    const [importOpen, setImportOpen] = useState(false);
     const [newName, setNewName] = useState('');
     const [editId, setEditId] = useState(null);
     const [editName, setEditName] = useState('');
@@ -255,13 +257,23 @@ const AdminQuestionBank = () => {
                         Bütün ümumi bazalar — admin yaratdığı bazalar avtomatik bütün müəllimlərə açıqdır
                     </p>
                 </div>
-                <button
-                    onClick={() => setAdding(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-200 transition-all"
-                >
-                    <HiOutlinePlus className="w-4 h-4" /> Yeni baza
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setImportOpen(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-xl border border-gray-200 shadow-sm transition-all"
+                    >
+                        <HiOutlineDownload className="w-4 h-4" /> Müəllimdən idxal
+                    </button>
+                    <button
+                        onClick={() => setAdding(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-200 transition-all"
+                    >
+                        <HiOutlinePlus className="w-4 h-4" /> Yeni baza
+                    </button>
+                </div>
             </div>
+
+            {importOpen && <TeacherBankImportModal onClose={() => setImportOpen(false)} />}
 
             {/* Aggregate stats */}
             {subjects.length > 0 && (

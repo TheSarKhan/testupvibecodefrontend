@@ -429,8 +429,13 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                     </div>
                                                 )}
 
-                                                {/* Options (MCQ / multi-select / true-false) */}
-                                                {(q.options?.length > 0) && (
+                                                {/* Options — only for choice questions. Template skeleton
+                                                    slots (esp. inside reading/listening passages) can carry
+                                                    stray empty options even on MATCHING/OPEN questions; without
+                                                    the type gate those rendered as blank "A. B. C. D." and made
+                                                    an open/matching question look like a closed one. */}
+                                                {['MCQ', 'MULTIPLE_CHOICE', 'MULTI_SELECT', 'TRUE_FALSE'].includes(q.questionType)
+                                                    && q.options?.length > 0 && (
                                                     <ul className="mt-2 space-y-1">
                                                         {q.options.map((opt, oi) => (
                                                             <li key={opt.id ?? oi}

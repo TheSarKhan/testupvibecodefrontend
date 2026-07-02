@@ -269,13 +269,34 @@ const ExamView = () => {
 
                                     {/* Matching */}
                                     {q.questionType === 'MATCHING' && (() => {
-                                        const leftItems = [...new Set(q.matchingPairs?.map(p => p.leftItem) || [])];
-                                        const rightItems = [...new Set(q.matchingPairs?.map(p => p.rightItem) || [])].sort();
-                                        const correctPairs = {};
-                                        q.matchingPairs?.forEach(p => {
-                                            if (!correctPairs[p.leftItem]) correctPairs[p.leftItem] = [];
-                                            correctPairs[p.leftItem].push(p.rightItem);
+                                        // Redaktorun semantikası: saxlanmış cüt = hər iki tərəfi dolu
+                                        // olduqda düzgün əlaqə; tək tərəfli cüt = distraktor. Tərəf mətn
+                                        // və/və ya şəkildən ibarət ola bilər — tam boş tərəflər sütuna düşmür.
+                                        const pairs = [...(q.matchingPairs || [])]
+                                            .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+                                        const hasSide = (text, img) => !!(text?.trim() || img);
+                                        const seenL = new Set(), seenR = new Set();
+                                        const leftItems = [], rightItems = [];
+                                        pairs.forEach(p => {
+                                            if (hasSide(p.leftItem, p.attachedImageLeft)) {
+                                                const k = `${p.leftItem || ''}|${p.attachedImageLeft || ''}`;
+                                                if (!seenL.has(k)) { seenL.add(k); leftItems.push({ text: p.leftItem, image: p.attachedImageLeft }); }
+                                            }
+                                            if (hasSide(p.rightItem, p.attachedImageRight)) {
+                                                const k = `${p.rightItem || ''}|${p.attachedImageRight || ''}`;
+                                                if (!seenR.has(k)) { seenR.add(k); rightItems.push({ text: p.rightItem, image: p.attachedImageRight }); }
+                                            }
                                         });
+                                        const linkedPairs = pairs.filter(p =>
+                                            hasSide(p.leftItem, p.attachedImageLeft) && hasSide(p.rightItem, p.attachedImageRight));
+                                        const renderSide = (text, image) => (
+                                            <div className="flex flex-col items-center gap-1.5 min-w-0">
+                                                {text?.trim() && <ChipContent text={text} />}
+                                                {image && (
+                                                    <img src={image} alt="" className="max-h-24 rounded-lg border border-gray-200 object-contain" />
+                                                )}
+                                            </div>
+                                        );
 
                                         return (
                                             <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl border border-emerald-200">
@@ -289,7 +310,7 @@ const ExamView = () => {
                                                                 key={`left-${idx}`}
                                                                 className="p-4 bg-white rounded-lg border-2 border-emerald-200 text-gray-800 font-medium text-center"
                                                             >
-                                                                {item ? <ChipContent text={item} /> : ''}
+                                                                {renderSide(item.text, item.image)}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -302,32 +323,34 @@ const ExamView = () => {
                                                                 key={`right-${idx}`}
                                                                 className="p-4 bg-white rounded-lg border-2 border-emerald-200 text-gray-800 font-medium text-center"
                                                             >
-                                                                {item ? <ChipContent text={item} /> : ''}
+                                                                {renderSide(item.text, item.image)}
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
 
                                                 {/* Show Correct Pairs */}
-                                                <div className="mt-6 pt-6 border-t border-emerald-200">
-                                                    <p className="text-sm font-semibold text-green-700 mb-3">✓ Düzgün Uyğunluqlar:</p>
-                                                    <div className="space-y-2">
-                                                        {Object.entries(correctPairs).map(([left, rights], idx) => (
-                                                            <div
-                                                                key={idx}
-                                                                className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200"
-                                                            >
-                                                                <span className="font-medium text-gray-800">
-                                                                    <ChipContent text={left} />
-                                                                </span>
-                                                                <span className="text-green-600 font-bold">↔</span>
-                                                                <span className="font-medium text-green-700">
-                                                                    <ChipContent text={rights[0]} />
-                                                                </span>
-                                                            </div>
-                                                        ))}
+                                                {linkedPairs.length > 0 && (
+                                                    <div className="mt-6 pt-6 border-t border-emerald-200">
+                                                        <p className="text-sm font-semibold text-green-700 mb-3">✓ Düzgün Uyğunluqlar:</p>
+                                                        <div className="space-y-2">
+                                                            {linkedPairs.map((p, idx) => (
+                                                                <div
+                                                                    key={p.id ?? idx}
+                                                                    className="flex items-center justify-between gap-3 p-3 bg-white rounded-lg border border-green-200"
+                                                                >
+                                                                    <div className="flex-1 font-medium text-gray-800">
+                                                                        {renderSide(p.leftItem, p.attachedImageLeft)}
+                                                                    </div>
+                                                                    <span className="text-green-600 font-bold shrink-0">↔</span>
+                                                                    <div className="flex-1 font-medium text-green-700">
+                                                                        {renderSide(p.rightItem, p.attachedImageRight)}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )}
                                             </div>
                                         );
                                     })()}

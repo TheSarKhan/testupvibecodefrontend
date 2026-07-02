@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineArrowLeft, HiOutlinePencilAlt, HiOutlineClock, HiOutlineDocumentText, HiOutlineCheckCircle, HiOutlineKey } from 'react-icons/hi';
 import { useState } from 'react';
@@ -13,6 +13,139 @@ const STATUS_LABELS = {
     PUBLISHED: 'Aktiv',
     CANCELLED: 'Bağlı',
     DRAFT: 'Qaralama',
+};
+
+// ---- MatchingPreview: sual redaktorda qurulduğu formada göstərilir ----
+// Sütunlar + düzgün əlaqələri göstərən oxlar (ExamReview-dakı MatchingReview-un
+// müəllif-cavabı variantı). Saxlanmış cüt = hər iki tərəfi dolu olduqda əlaqə;
+// tək tərəfli cüt = distraktor (sütunda görünür, oxu olmur).
+const MatchingPreview = ({ q }) => {
+    const containerRef = useRef(null);
+    const [arrows, setArrows] = useState([]);
+    const [imgTick, setImgTick] = useState(0);
+
+    const pairs = [...(q.matchingPairs || [])].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    const keyOf = (text, img) => `${text || ''}|${img || ''}`;
+
+    // Content-deduped columns in author order; a side may hold text, image or
+    // both — fully-empty sides are skipped.
+    const leftMap = {}, rightMap = {};
+    pairs.forEach(p => {
+        const lk = keyOf(p.leftItem, p.attachedImageLeft);
+        if (lk !== '|' && !leftMap[lk]) leftMap[lk] = p;
+        const rk = keyOf(p.rightItem, p.attachedImageRight);
+        if (rk !== '|' && !rightMap[rk]) rightMap[rk] = p;
+    });
+    const leftNodes = Object.values(leftMap);
+    const rightNodes = Object.values(rightMap);
+
+    // Correct links between canonical (deduped) nodes
+    const links = [];
+    const seenLinks = new Set();
+    pairs.forEach(p => {
+        const lk = keyOf(p.leftItem, p.attachedImageLeft);
+        const rk = keyOf(p.rightItem, p.attachedImageRight);
+        if (lk === '|' || rk === '|') return;
+        const key = `${lk}>>${rk}`;
+        if (seenLinks.has(key)) return;
+        seenLinks.add(key);
+        links.push({ leftId: leftMap[lk].id, rightId: rightMap[rk].id });
+    });
+
+    useLayoutEffect(() => {
+        const compute = () => {
+            if (!containerRef.current) return;
+            const rect = containerRef.current.getBoundingClientRect();
+            const computed = [];
+            links.forEach((ln, idx) => {
+                const leftEl = containerRef.current.querySelector(`[data-ml-id="${ln.leftId}"]`);
+                const rightEl = containerRef.current.querySelector(`[data-mr-id="${ln.rightId}"]`);
+                if (!leftEl || !rightEl) return;
+                const lRect = leftEl.getBoundingClientRect();
+                const rRect = rightEl.getBoundingClientRect();
+                computed.push({
+                    idx,
+                    x1: lRect.right - rect.left,
+                    y1: lRect.top + lRect.height / 2 - rect.top,
+                    x2: rRect.left - rect.left,
+                    y2: rRect.top + rRect.height / 2 - rect.top,
+                });
+            });
+            setArrows(computed);
+        };
+        compute();
+        window.addEventListener('resize', compute);
+        return () => window.removeEventListener('resize', compute);
+        // imgTick: şəkil yüklənəndə hündürlüklər dəyişir — oxlar yenidən hesablanır
+    }, [q.id, imgTick]);
+
+    const renderSide = (text, image) => (
+        <>
+            {text?.trim() && <div className="break-words"><ChipContent text={text} /></div>}
+            {image && (
+                <img
+                    src={image}
+                    alt=""
+                    onLoad={() => setImgTick(t => t + 1)}
+                    className="max-h-28 rounded-lg mx-auto mt-1 object-contain"
+                />
+            )}
+        </>
+    );
+
+    return (
+        <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl border border-emerald-200">
+            <p className="text-sm font-semibold text-emerald-700 mb-4">Uyğunluq Cütləri:</p>
+            <div ref={containerRef} className="relative flex justify-between py-2">
+                {/* Left column */}
+                <div className="w-[42%] space-y-5" style={{ position: 'relative', zIndex: 10 }}>
+                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Sol tərəf</p>
+                    {leftNodes.map(p => (
+                        <div
+                            key={`l-${p.id}`}
+                            data-ml-id={p.id}
+                            className="p-4 bg-white rounded-2xl border-2 border-emerald-200 text-gray-800 font-medium text-center min-h-[52px] flex flex-col justify-center"
+                        >
+                            {renderSide(p.leftItem, p.attachedImageLeft)}
+                        </div>
+                    ))}
+                </div>
+                {/* Right column */}
+                <div className="w-[42%] space-y-5" style={{ position: 'relative', zIndex: 10 }}>
+                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Sağ tərəf</p>
+                    {rightNodes.map(p => (
+                        <div
+                            key={`r-${p.id}`}
+                            data-mr-id={p.id}
+                            className="p-4 bg-white rounded-2xl border-2 border-emerald-200 text-gray-800 font-medium text-center min-h-[52px] flex flex-col justify-center"
+                        >
+                            {renderSide(p.rightItem, p.attachedImageRight)}
+                        </div>
+                    ))}
+                </div>
+                {/* Connection arrows */}
+                <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: '100%', height: '100%', zIndex: 5 }}>
+                    <defs>
+                        <marker id={`mp-arr-${q.id}`} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
+                        </marker>
+                    </defs>
+                    {arrows.map(({ idx, x1, y1, x2, y2 }) => {
+                        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+                        const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+                        return (
+                            <g key={idx}>
+                                <path d={d} stroke="#10b981" strokeWidth="2.5" fill="none"
+                                    markerEnd={`url(#mp-arr-${q.id})`} opacity={0.9} />
+                                <circle cx={mx} cy={my} r="10" fill="white" stroke="#10b981" strokeWidth="1.5" />
+                                <text x={mx} y={my + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#10b981">✓</text>
+                            </g>
+                        );
+                    })}
+                </svg>
+            </div>
+        </div>
+    );
 };
 
 const ExamView = () => {
@@ -268,92 +401,7 @@ const ExamView = () => {
                                     })()}
 
                                     {/* Matching */}
-                                    {q.questionType === 'MATCHING' && (() => {
-                                        // Redaktorun semantikası: saxlanmış cüt = hər iki tərəfi dolu
-                                        // olduqda düzgün əlaqə; tək tərəfli cüt = distraktor. Tərəf mətn
-                                        // və/və ya şəkildən ibarət ola bilər — tam boş tərəflər sütuna düşmür.
-                                        const pairs = [...(q.matchingPairs || [])]
-                                            .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
-                                        const hasSide = (text, img) => !!(text?.trim() || img);
-                                        const seenL = new Set(), seenR = new Set();
-                                        const leftItems = [], rightItems = [];
-                                        pairs.forEach(p => {
-                                            if (hasSide(p.leftItem, p.attachedImageLeft)) {
-                                                const k = `${p.leftItem || ''}|${p.attachedImageLeft || ''}`;
-                                                if (!seenL.has(k)) { seenL.add(k); leftItems.push({ text: p.leftItem, image: p.attachedImageLeft }); }
-                                            }
-                                            if (hasSide(p.rightItem, p.attachedImageRight)) {
-                                                const k = `${p.rightItem || ''}|${p.attachedImageRight || ''}`;
-                                                if (!seenR.has(k)) { seenR.add(k); rightItems.push({ text: p.rightItem, image: p.attachedImageRight }); }
-                                            }
-                                        });
-                                        const linkedPairs = pairs.filter(p =>
-                                            hasSide(p.leftItem, p.attachedImageLeft) && hasSide(p.rightItem, p.attachedImageRight));
-                                        const renderSide = (text, image) => (
-                                            <div className="flex flex-col items-center gap-1.5 min-w-0">
-                                                {text?.trim() && <ChipContent text={text} />}
-                                                {image && (
-                                                    <img src={image} alt="" className="max-h-24 rounded-lg border border-gray-200 object-contain" />
-                                                )}
-                                            </div>
-                                        );
-
-                                        return (
-                                            <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl border border-emerald-200">
-                                                <p className="text-sm font-semibold text-emerald-700 mb-4">Uyğunluq Cütləri:</p>
-                                                <div className="grid grid-cols-2 gap-6">
-                                                    {/* Left Column */}
-                                                    <div className="space-y-3">
-                                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-3">Sol tərəf</p>
-                                                        {leftItems.map((item, idx) => (
-                                                            <div
-                                                                key={`left-${idx}`}
-                                                                className="p-4 bg-white rounded-lg border-2 border-emerald-200 text-gray-800 font-medium text-center"
-                                                            >
-                                                                {renderSide(item.text, item.image)}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-
-                                                    {/* Right Column */}
-                                                    <div className="space-y-3">
-                                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-3">Sağ tərəf</p>
-                                                        {rightItems.map((item, idx) => (
-                                                            <div
-                                                                key={`right-${idx}`}
-                                                                className="p-4 bg-white rounded-lg border-2 border-emerald-200 text-gray-800 font-medium text-center"
-                                                            >
-                                                                {renderSide(item.text, item.image)}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Show Correct Pairs */}
-                                                {linkedPairs.length > 0 && (
-                                                    <div className="mt-6 pt-6 border-t border-emerald-200">
-                                                        <p className="text-sm font-semibold text-green-700 mb-3">✓ Düzgün Uyğunluqlar:</p>
-                                                        <div className="space-y-2">
-                                                            {linkedPairs.map((p, idx) => (
-                                                                <div
-                                                                    key={p.id ?? idx}
-                                                                    className="flex items-center justify-between gap-3 p-3 bg-white rounded-lg border border-green-200"
-                                                                >
-                                                                    <div className="flex-1 font-medium text-gray-800">
-                                                                        {renderSide(p.leftItem, p.attachedImageLeft)}
-                                                                    </div>
-                                                                    <span className="text-green-600 font-bold shrink-0">↔</span>
-                                                                    <div className="flex-1 font-medium text-green-700">
-                                                                        {renderSide(p.rightItem, p.attachedImageRight)}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })()}
+                                    {q.questionType === 'MATCHING' && <MatchingPreview q={q} />}
 
                                     {/* Open Ended */}
                                     {q.questionType === 'OPEN_AUTO' && (

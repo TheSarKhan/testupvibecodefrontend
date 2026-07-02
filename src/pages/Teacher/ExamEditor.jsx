@@ -762,7 +762,7 @@ const ExamEditor = () => {
                 subjectGroup: q.subjectGroup || null,
                 reviewStatus: q.reviewStatus || null,
                 reviewComment: q.reviewComment || null,
-                options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
+                options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect, attachedImage: opt.attachedImage || null })),
                 matchingPairs: toFrontendMatchingPairs(q.matchingPairs)
             }));
             setQuestions(mappedQuestions);
@@ -786,7 +786,7 @@ const ExamEditor = () => {
                         q.questionType === 'FILL_IN_THE_BLANK' ? 'FILL_IN_THE_BLANK' : 'OPEN_MANUAL',
                     text: q.content, points: q.points, attachedImage: q.attachedImage,
                     sampleAnswer: q.correctAnswer,
-                    options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect })),
+                    options: q.options?.map(opt => ({ id: opt.id, text: opt.content, isCorrect: opt.isCorrect, attachedImage: opt.attachedImage || null })),
                     matchingPairs: toFrontendMatchingPairs(q.matchingPairs)
                 }))
             }));
@@ -1081,7 +1081,10 @@ const ExamEditor = () => {
         subjectGroup: q.subjectGroup || null,
         options: q.options ? q.options.map((opt, oIdx) => ({
             id: isNewId(opt.id) ? null : opt.id,
-            content: opt.text, isCorrect: opt.isCorrect, orderIndex: oIdx
+            content: opt.text, isCorrect: opt.isCorrect, orderIndex: oIdx,
+            // Şəkilli variantlar: attachedImage göndərilməsə, backend image-only
+            // variantı "boş" sayır və hər save mövcud şəkilləri DB-dən silir.
+            attachedImage: opt.attachedImage || null,
         })) : [],
         matchingPairs: q.matchingPairs
             ? q.matchingPairs

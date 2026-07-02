@@ -80,3 +80,37 @@ export function useDeleteBankQuestion() {
         },
     });
 }
+
+// ─── Admin: import a teacher's bank into the site (global) bank ──────────────
+
+/** All bank subjects owned by a given teacher (import source side). */
+export function useTeacherBankSubjects(teacherId) {
+    return useQuery({
+        queryKey: ['admin', 'bank', 'teacher', teacherId, 'subjects'],
+        queryFn: () => api.get(`/admin/bank/teacher/${teacherId}/subjects`).then(r => r.data),
+        enabled: !!teacherId,
+    });
+}
+
+/** Questions of any subject for admin preview (no owner guard). */
+export function useAdminSubjectQuestions(subjectId) {
+    return useQuery({
+        queryKey: ['admin', 'bank', 'subject', subjectId, 'questions'],
+        queryFn: () => api.get(`/admin/bank/subject/${subjectId}/questions`).then(r => r.data),
+        enabled: !!subjectId,
+    });
+}
+
+/** Deep-copy a teacher's questions into the site bank. */
+export function useImportFromTeacher() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (payload) => api.post('/admin/bank/import', payload).then(r => r.data),
+        onSuccess: (data) => {
+            qc.invalidateQueries({ queryKey: SUBJECTS_KEY });
+            if (data?.targetSubjectId) {
+                qc.invalidateQueries({ queryKey: questionsKey(data.targetSubjectId) });
+            }
+        },
+    });
+}

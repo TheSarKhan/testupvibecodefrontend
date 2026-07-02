@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
-import { HiOutlineTrash, HiOutlinePlus, HiOutlineX, HiLockClosed, HiOutlineSparkles } from 'react-icons/hi';
+import { HiOutlineTrash, HiOutlinePlus, HiOutlineX, HiLockClosed, HiOutlineSparkles, HiOutlinePencilAlt } from 'react-icons/hi';
 import PdfCropperModal from './PdfCropperModal';
+import ImageAnnotatorModal from './ImageAnnotatorModal';
 import MathFormulaModal from './MathFormulaModal';
 import MathTextEditor from './MathTextEditor';
 import LatexPreview from './LatexPreview';
@@ -29,6 +30,10 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
     const [pdfFile, setPdfFile] = useState(null);
     const [pdfTarget, setPdfTarget] = useState(null); // { type: 'main' } or { type: 'option', id: optId }
+    // Image being re-edited in the annotator. Same shape as pdfTarget, plus the
+    // current image `src`. Lets the user annotate an already-attached image
+    // (e.g. one just cropped from a PDF) instead of only at crop time.
+    const [annotateTarget, setAnnotateTarget] = useState(null);
     const [zoomedImage, setZoomedImage] = useState(null);
     const [activeTeacherLeftId, setActiveTeacherLeftId] = useState(null);
     const [hoveredArrowId, setHoveredArrowId] = useState(null);
@@ -106,6 +111,30 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
 
     const handleChange = (field, value) => {
         onChange(question.id, { ...question, [field]: value });
+    };
+
+    // Route an image (freshly cropped from a PDF, or re-edited in the annotator)
+    // back to the right field. Shared by the PDF cropper and the annotator so
+    // both land the image identically. The per-type mutator helpers live inside
+    // render closures and aren't reachable here, so this inlines the same
+    // visualId/id-based mutations those closures use.
+    const applyImageToTarget = (target, base64Img) => {
+        if (target?.type === 'option') {
+            const options = question.options || [];
+            handleChange('options', options.map(opt =>
+                opt.id === target.id ? { ...opt, attachedImage: base64Img } : opt
+            ));
+        } else if (target?.type === 'matching') {
+            const pairs = question.matchingPairs || [];
+            const field = target.side === 'left' ? 'attachedImageLeft' : 'attachedImageRight';
+            handleChange('matchingPairs', pairs.map(p => {
+                if (target.side === 'left' && p.leftVisualId === target.visualId) return { ...p, [field]: base64Img };
+                if (target.side === 'right' && p.rightVisualId === target.visualId) return { ...p, [field]: base64Img };
+                return p;
+            }));
+        } else {
+            handleChange('attachedImage', base64Img);
+        }
     };
 
     // --- Type Specific Rendering ---
@@ -214,8 +243,17 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                     />
                                     <button
                                         type="button"
+                                        onClick={() => setAnnotateTarget({ type: 'option', id: opt.id, src: opt.attachedImage })}
+                                        className="absolute -top-2 -right-9 bg-blue-500 text-white rounded-full p-0.5 shadow-sm hover:bg-blue-600"
+                                        title="Şəkli redaktə et"
+                                    >
+                                        <HiOutlinePencilAlt className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => updateOption(opt.id, 'attachedImage', null)}
                                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm hover:bg-red-600"
+                                        title="Şəkli sil"
                                     >
                                         <HiOutlineTrash className="w-3 h-3" />
                                     </button>
@@ -714,7 +752,8 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                 {node.image && (
                                     <div className="mt-2 relative inline-block">
                                         <img src={node.image} className="max-h-24 rounded border border-gray-100 cursor-zoom-in" onClick={() => setZoomedImage(node.image)} alt="" />
-                                        <button onClick={() => updateItemContents(node.visualId, 'left', 'attachedImageLeft', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm"><HiOutlineTrash className="w-3 h-3" /></button>
+                                        <button onClick={() => setAnnotateTarget({ type: 'matching', side: 'left', visualId: node.visualId, src: node.image })} className="absolute -top-2 -right-9 bg-blue-500 text-white rounded-full p-0.5 shadow-sm" title="Şəkli redaktə et"><HiOutlinePencilAlt className="w-3 h-3" /></button>
+                                        <button onClick={() => updateItemContents(node.visualId, 'left', 'attachedImageLeft', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm" title="Şəkli sil"><HiOutlineTrash className="w-3 h-3" /></button>
                                     </div>
                                 )}
 
@@ -774,7 +813,8 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                                 {node.image && (
                                     <div className="mt-2 relative inline-block">
                                         <img src={node.image} className="max-h-24 rounded border border-gray-100 cursor-zoom-in" onClick={() => setZoomedImage(node.image)} alt="" />
-                                        <button onClick={() => updateItemContents(node.visualId, 'right', 'attachedImageRight', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm"><HiOutlineTrash className="w-3 h-3" /></button>
+                                        <button onClick={() => setAnnotateTarget({ type: 'matching', side: 'right', visualId: node.visualId, src: node.image })} className="absolute -top-2 -right-9 bg-blue-500 text-white rounded-full p-0.5 shadow-sm" title="Şəkli redaktə et"><HiOutlinePencilAlt className="w-3 h-3" /></button>
+                                        <button onClick={() => updateItemContents(node.visualId, 'right', 'attachedImageRight', null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm" title="Şəkli sil"><HiOutlineTrash className="w-3 h-3" /></button>
                                     </div>
                                 )}
 
@@ -1107,6 +1147,13 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             onClick={() => setZoomedImage(question.attachedImage)}
                         />
                         <button
+                            onClick={() => setAnnotateTarget({ type: 'main', src: question.attachedImage })}
+                            className="absolute -top-2 -right-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-1 shadow-md transition-transform hover:scale-105"
+                            title="Şəkli redaktə et"
+                        >
+                            <HiOutlinePencilAlt className="w-4 h-4" />
+                        </button>
+                        <button
                             onClick={() => handleChange('attachedImage', null)}
                             className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-transform hover:scale-105"
                             title="Şəkli sil"
@@ -1133,36 +1180,23 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     setPdfFile(null);
                 }}
                 file={pdfFile}
-                onCropComplete={(base64Img) => {
-                    if (pdfTarget?.type === 'option') {
-                        // We need a way to call updateOption from here. 
-                        // Since renderMultipleChoice is a closure, we can't call it directly if it's not in scope?
-                        // Actually, QuestionEditor has handleChange. 
-                        const options = question.options || [];
-                        const newOptions = options.map(opt =>
-                            opt.id === pdfTarget.id ? { ...opt, attachedImage: base64Img } : opt
-                        );
-                        handleChange('options', newOptions);
-                    } else if (pdfTarget?.type === 'matching') {
-                        // The original `updateItem(...)` here referenced a function
-                        // that only existed inside renderMatching's closure — calling
-                        // it from this handler threw "updateItem is not defined" and
-                        // crashed the editor whenever a teacher cropped a PDF for a
-                        // matching pair image. Inline the equivalent visualId-based
-                        // mutation so the handler is self-contained.
-                        const pairs = question.matchingPairs || [];
-                        const field = pdfTarget.side === 'left' ? 'attachedImageLeft' : 'attachedImageRight';
-                        const newPairs = pairs.map(p => {
-                            if (pdfTarget.side === 'left' && p.leftVisualId === pdfTarget.visualId) return { ...p, [field]: base64Img };
-                            if (pdfTarget.side === 'right' && p.rightVisualId === pdfTarget.visualId) return { ...p, [field]: base64Img };
-                            return p;
-                        });
-                        handleChange('matchingPairs', newPairs);
-                    } else {
-                        handleChange('attachedImage', base64Img);
-                    }
-                }}
+                onCropComplete={(base64Img) => applyImageToTarget(pdfTarget, base64Img)}
             />
+
+            {/* Image Annotator — re-edit an already-attached image (draw, crop,
+                rotate). Mounted only when a target is set; reuses the same
+                routing as the PDF cropper so the edited image lands on the
+                right question / option / matching field. */}
+            {annotateTarget && (
+                <ImageAnnotatorModal
+                    src={annotateTarget.src}
+                    onConfirm={(newSrc) => {
+                        applyImageToTarget(annotateTarget, newSrc);
+                        setAnnotateTarget(null);
+                    }}
+                    onClose={() => setAnnotateTarget(null)}
+                />
+            )}
 
             {/* Math Formula Modal */}
             <MathFormulaModal

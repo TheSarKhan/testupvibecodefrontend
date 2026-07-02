@@ -285,12 +285,17 @@ const ExamEditor = () => {
         points: type === 'template' ? 1 : (bq.points ?? 1),
         orderIndex: nextOrderIndex(),
         subjectGroup: null,
+        // A bank question is COPIED into the exam, so its options/pairs are brand
+        // new — give them fresh non-numeric ids that isNewId() recognises as new.
+        // Reusing the source bank id (a small number) made isNewId() treat them as
+        // existing exam options; in template REPLACE mode the backend then NPE'd
+        // matching that id and the autosave 500'd ("bazadan sual seçimi" crash).
         options: (bq.options || [])
             .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-            .map(o => ({ id: String(o.id || Date.now() + Math.random()), text: o.content || '', isCorrect: !!o.isCorrect, attachedImage: o.attachedImage || null })),
+            .map((o, i) => ({ id: `bopt-${i}-${Date.now()}-${Math.random()}`, text: o.content || '', isCorrect: !!o.isCorrect, attachedImage: o.attachedImage || null })),
         matchingPairs: toFrontendMatchingPairs(
             (bq.matchingPairs || []).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-        ).map(p => ({ ...p, id: String(p.id || Date.now() + Math.random()) })),
+        ).map((p, i) => ({ ...p, id: `bpair-${i}-${Date.now()}-${Math.random()}` })),
         sampleAnswer: bq.correctAnswer || '',
     });
 

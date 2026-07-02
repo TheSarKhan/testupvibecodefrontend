@@ -14,6 +14,7 @@ import {
 } from '../../../hooks/admin/useAdminCollaborativeExams';
 import { QUESTION_TYPE_LABELS, labelOr } from '../../../utils/enumLabels';
 import LatexPreview from '../../../components/ui/LatexPreview';
+import ChipContent from '../../../utils/chipContent';
 
 // Per-question status badge.
 const StatusBadge = ({ status }) => {
@@ -428,8 +429,13 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                     </div>
                                                 )}
 
-                                                {/* Options (MCQ / multi-select / true-false) */}
-                                                {(q.options?.length > 0) && (
+                                                {/* Options — only for choice questions. Template skeleton
+                                                    slots (esp. inside reading/listening passages) can carry
+                                                    stray empty options even on MATCHING/OPEN questions; without
+                                                    the type gate those rendered as blank "A. B. C. D." and made
+                                                    an open/matching question look like a closed one. */}
+                                                {['MCQ', 'MULTIPLE_CHOICE', 'MULTI_SELECT', 'TRUE_FALSE'].includes(q.questionType)
+                                                    && q.options?.length > 0 && (
                                                     <ul className="mt-2 space-y-1">
                                                         {q.options.map((opt, oi) => (
                                                             <li key={opt.id ?? oi}
@@ -458,6 +464,80 @@ const ReviewModal = ({ collaborator, onClose, onAction }) => {
                                                         ))}
                                                     </ul>
                                                 )}
+
+                                                {/* Matching pairs (uyğunlaşdırma). MATCHING questions carry
+                                                    no options — their answer key lives in matchingPairs as
+                                                    left↔right links — so without this block the admin saw a
+                                                    bare question with no answer to review. Each stored pair is
+                                                    a correct link; a side may be empty for a distractor. */}
+                                                {(q.matchingPairs?.length > 0) && (
+                                                    <ul className="mt-2 space-y-1">
+                                                        {q.matchingPairs.map((pair, pi) => (
+                                                            <li key={pair.id ?? pi}
+                                                                className="text-xs px-2.5 py-1.5 rounded border bg-green-50 border-green-200 text-green-800 flex items-center gap-2">
+                                                                <div className="flex-1 min-w-0">
+                                                                    {pair.leftItem?.trim() && <ChipContent text={pair.leftItem} />}
+                                                                    {pair.attachedImageLeft && (
+                                                                        <img src={pair.attachedImageLeft} alt="" className="max-h-16 rounded border border-green-200 mt-0.5" />
+                                                                    )}
+                                                                    {!pair.leftItem?.trim() && !pair.attachedImageLeft && <span className="italic text-gray-400">—</span>}
+                                                                </div>
+                                                                <span className="text-green-600 font-bold shrink-0">→</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    {pair.rightItem?.trim() && <ChipContent text={pair.rightItem} />}
+                                                                    {pair.attachedImageRight && (
+                                                                        <img src={pair.attachedImageRight} alt="" className="max-h-16 rounded border border-green-200 mt-0.5" />
+                                                                    )}
+                                                                    {!pair.rightItem?.trim() && !pair.attachedImageRight && <span className="italic text-gray-400">—</span>}
+                                                                </div>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+
+                                                {/* Açıq / boşluq cavabı. Open & fill-in questions carry no
+                                                    options — their answer key lives in correctAnswer
+                                                    (FILL = JSON array of blanks); OPEN_MANUAL has only a
+                                                    sample answer. Without this the admin saw the question
+                                                    with no answer to review. */}
+                                                {(q.questionType === 'OPEN_AUTO' || q.questionType === 'FILL_IN_THE_BLANK' || q.questionType === 'OPEN_MANUAL') && (() => {
+                                                    const isManual = q.questionType === 'OPEN_MANUAL';
+                                                    const isFill = q.questionType === 'FILL_IN_THE_BLANK';
+                                                    let answers = [];
+                                                    if (q.questionType === 'FILL_IN_THE_BLANK') {
+                                                        try {
+                                                            const arr = JSON.parse(q.correctAnswer || '[]');
+                                                            answers = Array.isArray(arr) ? arr.filter(a => a != null && String(a).trim() !== '') : [];
+                                                        } catch {
+                                                            if (q.correctAnswer?.trim()) answers = [q.correctAnswer];
+                                                        }
+                                                    } else {
+                                                        const a = q.correctAnswer || q.sampleAnswer;
+                                                        if (a && String(a).trim()) answers = [a];
+                                                    }
+                                                    if (answers.length === 0) {
+                                                        return (
+                                                            <div className="mt-2 text-xs italic text-gray-400">
+                                                                {isManual ? 'Əl ilə yoxlanılır (cavab açarı yoxdur)' : '(cavab daxil edilməyib)'}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <div className="mt-2 space-y-1">
+                                                            {answers.map((a, ai) => (
+                                                                <div key={ai} className="text-xs px-2.5 py-1 rounded border bg-green-50 border-green-200 text-green-800 flex items-center gap-2">
+                                                                    <HiOutlineCheck className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        {isFill
+                                                                            ? <ChipContent text={String(a)} />
+                                                                            : <LatexPreview content={String(a)} placeholder={null} className="!text-inherit text-xs" />}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            {isManual && <span className="text-[10px] text-gray-400">nümunə cavab</span>}
+                                                        </div>
+                                                    );
+                                                })()}
 
                                                 {/* Existing per-question admin comment when rejected */}
                                                 {isRejected && q.reviewComment && (

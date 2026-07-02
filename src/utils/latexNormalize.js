@@ -26,6 +26,16 @@ export const normalizeLatex = (raw) => {
     // These otherwise become "unknown command" parse errors in KaTeX.
     out = out.replace(/[​-‏‪-‮⁠﻿­]/g, '');
 
+    // Relational operators ( <, > ) typed in the math keyboard survive the
+    // editor's HTML round-trip as entities — and the editor's LaTeX escaping of
+    // the entity's `&` turns them into `\&lt;` / `\&gt;`. KaTeX can't parse
+    // either form, so a whole inequality (e.g. 4(x-4)-3(x+2) < -2x-28) fell back
+    // to "Düstur xətalı". Decode them back to plain < / > (which KaTeX renders
+    // natively). The optional leading backslash covers the `\&lt;` form.
+    out = out
+        .replace(/\\?&lt;/g, '<')
+        .replace(/\\?&gt;/g, '>');
+
     // MathLive → KaTeX macro translation table. Order matters for the
     // longer-token-first rule, so list specific differentials before the
     // generic \differentialD prefix.

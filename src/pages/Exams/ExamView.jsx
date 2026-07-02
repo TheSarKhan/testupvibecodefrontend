@@ -15,6 +15,9 @@ const STATUS_LABELS = {
     DRAFT: 'Qaralama',
 };
 
+// Bağlantı oxlarının növbələnən rəngləri (mavi, bənövşəyi, yaşıl, narıncı, çəhrayı, firuzəyi)
+const ARROW_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
+
 // ---- MatchingPreview: sual redaktorda qurulduğu formada göstərilir ----
 // Sütunlar + düzgün əlaqələri göstərən oxlar (ExamReview-dakı MatchingReview-un
 // müəllif-cavabı variantı). Saxlanmış cüt = hər iki tərəfi dolu olduqda əlaqə;
@@ -123,22 +126,25 @@ const MatchingPreview = ({ q }) => {
                         </div>
                     ))}
                 </div>
-                {/* Connection arrows */}
+                {/* Connection arrows — hər bağlantı fərqli rəngdə (redaktordakı kimi) */}
                 <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: '100%', height: '100%', zIndex: 5 }}>
                     <defs>
-                        <marker id={`mp-arr-${q.id}`} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                            <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
-                        </marker>
+                        {arrows.map(({ idx }) => (
+                            <marker key={idx} id={`mp-arr-${q.id}-${idx}`} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill={ARROW_COLORS[idx % ARROW_COLORS.length]} />
+                            </marker>
+                        ))}
                     </defs>
                     {arrows.map(({ idx, x1, y1, x2, y2 }) => {
+                        const color = ARROW_COLORS[idx % ARROW_COLORS.length];
                         const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
                         const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
                         return (
                             <g key={idx}>
-                                <path d={d} stroke="#10b981" strokeWidth="2.5" fill="none"
-                                    markerEnd={`url(#mp-arr-${q.id})`} opacity={0.9} />
-                                <circle cx={mx} cy={my} r="10" fill="white" stroke="#10b981" strokeWidth="1.5" />
-                                <text x={mx} y={my + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill="#10b981">✓</text>
+                                <path d={d} stroke={color} strokeWidth="2.5" fill="none"
+                                    markerEnd={`url(#mp-arr-${q.id}-${idx})`} opacity={0.9} />
+                                <circle cx={mx} cy={my} r="10" fill="white" stroke={color} strokeWidth="1.5" />
+                                <text x={mx} y={my + 4} textAnchor="middle" fontSize="11" fontWeight="bold" fill={color}>✓</text>
                             </g>
                         );
                     })}

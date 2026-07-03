@@ -59,6 +59,77 @@ const ExamSession = () => {
     const autoSubmitRef = useRef(false);
     const navScrollRef = useRef(null);
 
+    // ── Persistent listening audio ──────────────────────────────────────────
+    // The <audio> elements live here at the exam root (always mounted) instead
+    // of inside the per-question passage card. Switching questions no longer
+    // unmounts them, so a started listen keeps playing — a student can't pause
+    // it (and stretch the exam / re-listen from the start) by navigating away.
+    // audioUi mirrors each passage's playback state for the presentational
+    // SecureAudioPlayer; the refs hold imperative state the security handlers
+    // read/write directly.
+    const [audioUi, setAudioUi] = useState({}); // { [passageId]: { playing, hasStarted, currentTime, duration } }
+    const audioElsRef = useRef({});       // passageId → HTMLAudioElement
+    const audioStartedRef = useRef({});   // passageId → bool (a play session is live)
+    const audioLastAllowedRef = useRef({}); // passageId → last allowed currentTime (seek block)
+
+    const patchAudioUi = (pid, patch) =>
+        setAudioUi(prev => ({ ...prev, [pid]: { ...(prev[pid] || {}), ...patch } }));
+
+    // Fired by the play button in the passage card. Counts the listen once
+    // (unless resuming an already-active one after a reload) and starts the
+    // persistent element. Guarded so an in-flight listen can't be re-triggered.
+    const startAudio = (passage) => {
+        const pid = passage.id;
+        const el = audioElsRef.current[pid];
+        if (!el || audioStartedRef.current[pid]) return;
+        const active = !!listenActive[pid];
+        if (!active) {
+            if (passage.listenLimit !== null && passage.listenLimit !== undefined) {
+                setListenCounts(prev => ({ ...prev, [pid]: (prev[pid] || 0) + 1 }));
+            }
+            setListenActive(prev => ({ ...prev, [pid]: true }));
+        }
+        el.play().then(() => {
+            audioStartedRef.current[pid] = true;
+            patchAudioUi(pid, { playing: true, hasStarted: true });
+        }).catch(() => {});
+    };
+
+    // Seek block: any jump backwards more than 0.5s snaps back to the furthest
+    // point already listened to.
+    const onAudioTimeUpdate = (pid, el) => {
+        const t = el.currentTime;
+        const last = audioLastAllowedRef.current[pid] || 0;
+        if (t + 0.5 < last) { el.currentTime = last; return; }
+        audioLastAllowedRef.current[pid] = t;
+        patchAudioUi(pid, { currentTime: t });
+    };
+    const onAudioSeeking = (pid, el) => {
+        const last = audioLastAllowedRef.current[pid] || 0;
+        if (el.currentTime + 0.5 < last) el.currentTime = last;
+    };
+    // One-shot: any pause of a live listen force-resumes (media keys included).
+    const onAudioPause = (pid, el) => {
+        if (audioStartedRef.current[pid] && !el.ended) {
+            el.play().catch(() => {});
+        } else {
+            patchAudioUi(pid, { playing: false });
+        }
+    };
+    // Natural end: the listen is complete; clear its active flag so the next
+    // play (if the limit allows) counts as a new listen.
+    const onAudioEnded = (pid) => {
+        audioStartedRef.current[pid] = false;
+        audioLastAllowedRef.current[pid] = 0;
+        patchAudioUi(pid, { playing: false, hasStarted: false });
+        setListenActive(prev => {
+            if (!prev[pid]) return prev;
+            const next = { ...prev };
+            delete next[pid];
+            return next;
+        });
+    };
+
     // Holds the teardown closure for whichever element the callback ref
     // currently owns. Without this the wheel / mousedown listeners (and
     // any mid-drag document listeners) outlive the nav element when the
@@ -285,6 +356,9 @@ const ExamSession = () => {
     const sections = buildSections(sessionData);
     const currentSection = sections[currentSectionIndex];
     const navItems = computeNavItems(sections);
+    // Listening passages get a persistent <audio> rendered once at the root so
+    // playback survives question navigation (see the audio block in the return).
+    const listeningPassages = (sessionData?.passages || []).filter(p => p.audioContent);
     // Map questionId → global display number (for passage sub-questions)
     const questionNumMap = Object.fromEntries(
         navItems
@@ -456,6 +530,32 @@ const ExamSession = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
+            {/* Persistent listening audio — one element per audio passage, always
+                mounted so playback continues across question navigation. All the
+                anti-cheat handlers (seek block, force-resume on pause, rate lock)
+                live here so they stay active even while the passage card is off
+                screen. The visible Play button / timer is the presentational
+                SecureAudioPlayer inside the passage card. */}
+            <div className="sr-only" aria-hidden="true">
+                {listeningPassages.map(p => (
+                    <audio
+                        key={p.id}
+                        ref={el => { if (el) audioElsRef.current[p.id] = el; }}
+                        src={p.audioContent}
+                        preload="metadata"
+                        controlsList="nodownload noplaybackrate noremoteplayback"
+                        onLoadedMetadata={e => patchAudioUi(p.id, { duration: e.currentTarget.duration || 0 })}
+                        onTimeUpdate={e => onAudioTimeUpdate(p.id, e.currentTarget)}
+                        onSeeking={e => onAudioSeeking(p.id, e.currentTarget)}
+                        onEnded={() => onAudioEnded(p.id)}
+                        onPause={e => onAudioPause(p.id, e.currentTarget)}
+                        onPlay={() => patchAudioUi(p.id, { playing: true })}
+                        onRateChange={e => { e.currentTarget.playbackRate = 1.0; }}
+                        onContextMenu={e => e.preventDefault()}
+                    />
+                ))}
+            </div>
+
             {/* Image Zoom Overlay */}
             {zoomImage && (
                 <div className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4 cursor-pointer"
@@ -536,9 +636,9 @@ const ExamSession = () => {
                         <PassageContentCard
                             passage={currentSection.data}
                             listenCounts={listenCounts}
-                            setListenCounts={setListenCounts}
                             listenActive={listenActive}
-                            setListenActive={setListenActive}
+                            audioUi={audioUi}
+                            onStartAudio={startAudio}
                             onZoomImage={setZoomImage}
                         />
                         {(currentSection.data.questions || []).map((q) => (
@@ -660,19 +760,13 @@ const ExamSession = () => {
 // Seeking is also blocked at the media-element level (any `seeking` event
 // snaps `currentTime` back to the last allowed position) so even keyboard
 // shortcuts can't bypass the UI.
-const SecureAudioPlayer = ({ src, disabled, resuming, onStart, onEnded }) => {
-    const audioRef = useRef(null);
-    const [playing, setPlaying] = useState(false);
-    // Once a play session has started this stays true until the audio
-    // reaches its natural end. We use it to (a) auto-resume on any pause
-    // attempt and (b) disable the Play button so the student can't stop
-    // mid-track. Combined with the seek block and rate lock, the listening
-    // exam is effectively one-shot: hit play, listen straight through.
-    const [hasStarted, setHasStarted] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const lastAllowedTimeRef = useRef(0);
-    const hasStartedRef = useRef(false);
+const SecureAudioPlayer = ({ ui, disabled, resuming, onPlay }) => {
+    // Presentational only. The real <audio> element lives persistently at the
+    // ExamSession root so playback continues across question navigation — a
+    // student can no longer pause the listen (and gain time) by switching to
+    // another question. This just renders the Play button + elapsed time from
+    // the shared `ui` state and delegates play to onPlay.
+    const { hasStarted = false, currentTime = 0, duration = 0 } = ui || {};
 
     const fmt = (s) => {
         if (!Number.isFinite(s)) return '0:00';
@@ -681,51 +775,11 @@ const SecureAudioPlayer = ({ src, disabled, resuming, onStart, onEnded }) => {
         return `${m}:${sec.toString().padStart(2, '0')}`;
     };
 
-    useEffect(() => {
-        const el = audioRef.current;
-        if (!el) return;
-        el.playbackRate = 1.0;
-        const lockRate = () => { el.playbackRate = 1.0; };
-        el.addEventListener('ratechange', lockRate);
-        return () => el.removeEventListener('ratechange', lockRate);
-    }, []);
-
-    const onTimeUpdate = (e) => {
-        const t = e.currentTarget.currentTime;
-        setCurrentTime(t);
-        if (t + 0.5 < lastAllowedTimeRef.current) {
-            e.currentTarget.currentTime = lastAllowedTimeRef.current;
-            return;
-        }
-        lastAllowedTimeRef.current = t;
-    };
-
-    const onSeeking = (e) => {
-        if (e.currentTarget.currentTime + 0.5 < lastAllowedTimeRef.current) {
-            e.currentTarget.currentTime = lastAllowedTimeRef.current;
-        }
-    };
-
-    const startPlayback = () => {
-        const el = audioRef.current;
-        if (!el || disabled || hasStartedRef.current) return;
-        // Fire onStart BEFORE play() resolves — that increments the listen
-        // count in the parent, which immediately persists to localStorage.
-        // Even if the page reloads a second later, the play has been
-        // counted.
-        onStart?.();
-        el.play().then(() => {
-            hasStartedRef.current = true;
-            setHasStarted(true);
-            setPlaying(true);
-        }).catch(() => {});
-    };
-
     return (
         <div className={`flex items-center gap-4 px-4 py-3 rounded-xl border bg-emerald-50 border-emerald-200 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
             <button
                 type="button"
-                onClick={startPlayback}
+                onClick={onPlay}
                 disabled={disabled || hasStarted}
                 className="w-11 h-11 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center transition-colors shadow disabled:cursor-not-allowed disabled:bg-emerald-500"
                 aria-label="Oynat"
@@ -748,81 +802,22 @@ const SecureAudioPlayer = ({ src, disabled, resuming, onStart, onEnded }) => {
             <div className="flex-1 font-mono text-sm text-emerald-800 tabular-nums">
                 {fmt(currentTime)} <span className="text-emerald-400">/</span> {fmt(duration)}
             </div>
-            <audio
-                ref={audioRef}
-                src={src}
-                preload="metadata"
-                className="hidden"
-                controlsList="nodownload noplaybackrate noremoteplayback"
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
-                onTimeUpdate={onTimeUpdate}
-                onSeeking={onSeeking}
-                onEnded={() => {
-                    // Reset UI so the button can re-arm if the listen limit
-                    // hasn't been reached yet. We deliberately don't fire
-                    // onStart again here — the count was already incremented
-                    // at play time.
-                    setPlaying(false);
-                    setHasStarted(false);
-                    hasStartedRef.current = false;
-                    lastAllowedTimeRef.current = 0;
-                    // Tell the parent the listen finished naturally so the next
-                    // Play press is treated as a new listen, not a resume.
-                    onEnded?.();
-                }}
-                onPause={(e) => {
-                    // The student (or an OS-level media key) tried to pause
-                    // a playback in progress. Force-resume — listening is
-                    // strictly one-shot until the track ends naturally.
-                    if (hasStartedRef.current && !e.currentTarget.ended) {
-                        e.currentTarget.play().catch(() => {});
-                    } else {
-                        setPlaying(false);
-                    }
-                }}
-                onPlay={() => setPlaying(true)}
-                onContextMenu={(e) => e.preventDefault()}
-            />
         </div>
     );
 };
 
 // ---- PassageContentCard — shown above each passage question ----
-const PassageContentCard = ({ passage, listenCounts, setListenCounts, listenActive, setListenActive, onZoomImage }) => {
+const PassageContentCard = ({ passage, listenCounts, listenActive, audioUi, onStartAudio, onZoomImage }) => {
     const isText = passage.passageType === 'TEXT';
     const listenCount = listenCounts[passage.id] || 0;
     const isLimited = passage.listenLimit !== null && passage.listenLimit !== undefined;
     // A listen that was started but hasn't ended yet. While one is active the
-    // student may resume it (e.g. after navigating away) without spending
-    // another credit, so the limit does not block playback in that case.
+    // student may resume it without spending another credit, so the limit does
+    // not block playback in that case. (The audio element itself now lives at
+    // the ExamSession root and keeps playing across navigation — the count/end
+    // bookkeeping moved there too, see startAudio/handleAudioEnded.)
     const active = !!listenActive[passage.id];
     const limitReached = isLimited && listenCount >= passage.listenLimit && !active;
-
-    // Count a listen the moment the student clicks Play — not when the
-    // audio reaches its end. Otherwise refreshing mid-track or simply
-    // navigating away wipes the in-progress play and the limit is never
-    // hit. Together with the localStorage persistence of `listenCounts`
-    // this makes the cap actually enforceable.
-    //
-    // A resume of an already-active listen must NOT increment the counter:
-    // navigating to another question unmounts the audio player, and pressing
-    // Play again to continue is the same listen, not a new one (BUG-256).
-    const handleAudioStarted = () => {
-        if (active) return; // resuming an in-progress listen — already counted
-        if (isLimited) setListenCounts(prev => ({ ...prev, [passage.id]: (prev[passage.id] || 0) + 1 }));
-        setListenActive(prev => ({ ...prev, [passage.id]: true }));
-    };
-
-    // The track reached its natural end — the listen is complete, so the next
-    // Play press is a genuinely new listen and should count again.
-    const handleAudioEnded = () => {
-        setListenActive(prev => {
-            if (!prev[passage.id]) return prev;
-            const next = { ...prev };
-            delete next[passage.id];
-            return next;
-        });
-    };
 
     return (
         <div className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden ${isText ? 'border-teal-200' : 'border-emerald-200'}`}>
@@ -856,11 +851,10 @@ const PassageContentCard = ({ passage, listenCounts, setListenCounts, listenActi
                     <>
                         {passage.audioContent ? (
                             <SecureAudioPlayer
-                                src={passage.audioContent}
+                                ui={audioUi[passage.id]}
                                 disabled={limitReached}
                                 resuming={active}
-                                onStart={handleAudioStarted}
-                                onEnded={handleAudioEnded}
+                                onPlay={() => onStartAudio(passage)}
                             />
                         ) : (
                             <div className="p-8 text-center text-gray-400 border-2 border-dashed rounded-xl">Audio fayl mövcud deyil</div>
@@ -945,7 +939,7 @@ const QuestionCard = ({ question, questionNumber, answer, onAnswerChange, active
                                             )}
                                         </div>
                                         <div className="flex-1 text-lg">
-                                            <LatexPreview content={opt.content} placeholder="Variant boşdur" />
+                                            <LatexPreview content={opt.content} placeholder={opt.attachedImage ? '' : 'Variant boşdur'} />
                                             {opt.attachedImage && <img src={opt.attachedImage} className="mt-2 max-h-32 rounded border cursor-zoom-in" alt="Varyant" onClick={e => { e.stopPropagation(); onZoomImage?.(opt.attachedImage); }} />}
                                         </div>
                                     </div>
@@ -1237,7 +1231,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                                 }}
                             >
                                 {pair.leftItem && <div className="break-words"><ChipContent text={pair.leftItem} /></div>}
-                                {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-32 rounded-lg mx-auto cursor-zoom-in" onClick={e => { e.stopPropagation(); onZoomImage?.(pair.attachedImageLeft); }} /></div>}
+                                {pair.attachedImageLeft && <div className="mt-2"><img src={pair.attachedImageLeft} alt="" className="max-h-20 rounded-lg mx-auto cursor-zoom-in" onClick={e => { e.stopPropagation(); onZoomImage?.(pair.attachedImageLeft); }} /></div>}
                             </div>
                         );
                     })}
@@ -1272,7 +1266,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                                 }}
                             >
                                 {pair.rightItem && <div className="break-words"><ChipContent text={pair.rightItem} /></div>}
-                                {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-32 rounded-lg mx-auto cursor-zoom-in" onClick={e => { e.stopPropagation(); onZoomImage?.(pair.attachedImageRight); }} /></div>}
+                                {pair.attachedImageRight && <div className="mt-2"><img src={pair.attachedImageRight} alt="" className="max-h-20 rounded-lg mx-auto cursor-zoom-in" onClick={e => { e.stopPropagation(); onZoomImage?.(pair.attachedImageRight); }} /></div>}
                             </div>
                         );
                     })}

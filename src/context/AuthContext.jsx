@@ -111,8 +111,10 @@ export const AuthProvider = ({ children }) => {
         }
     }, [user?.id, user?.role]);
 
-    // Cross-tab sync: when PaymentSuccess sets 'paymentCompleted' in another tab,
-    // refresh subscription in this tab automatically.
+    // Cross-tab sync via the 'storage' event (fires only in OTHER tabs):
+    //   • 'paymentCompleted' — PaymentSuccess just activated a plan → refresh subscription.
+    //   • 'logout'           — another tab signed out → drop this tab's session too, so
+    //                          the user isn't left signed-in until a manual refresh.
     // Use a ref so the listener always calls the latest refreshSubscription closure.
     const refreshSubscriptionRef = useRef(refreshSubscription);
     refreshSubscriptionRef.current = refreshSubscription;
@@ -120,6 +122,14 @@ export const AuthProvider = ({ children }) => {
         const onStorage = (e) => {
             if (e.key === 'paymentCompleted') {
                 refreshSubscriptionRef.current();
+            } else if (e.key === 'logout') {
+                // Tokens were already cleared from the shared store by the tab that
+                // logged out; just tear down this tab's in-memory session. Clearing
+                // `user` flips `isAuthenticated` false, so ProtectedRoute redirects
+                // any protected page to /login on the next render.
+                setUser(null);
+                setSubscription(null);
+                setProfilePicture('');
             }
         };
         window.addEventListener('storage', onStorage);
@@ -185,6 +195,11 @@ export const AuthProvider = ({ children }) => {
         clearTokens();
         setUser(null);
         setSubscription(null);
+        setProfilePicture('');
+        // Broadcast to other open tabs so they end the session immediately instead
+        // of staying signed-in until refreshed. The value must change every time
+        // (a stale, unchanged value would not fire the 'storage' event).
+        localStorage.setItem('logout', Date.now().toString());
     };
 
     // Helper to check feature permission based on active plan

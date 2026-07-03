@@ -248,7 +248,7 @@ const ExamEditor = () => {
     const [batchPdfFile, setBatchPdfFile] = useState(null);
     const [loading, setLoading] = useState(isEditMode);
     const [showPassageTypeModal, setShowPassageTypeModal] = useState(false);
-    const [autoSaveStatus, setAutoSaveStatus] = useState(null); // 'saving' | 'saved' | 'error'
+    const [autoSaveStatus, setAutoSaveStatus] = useState(null); // 'saving' | 'saved' | 'error' | 'incomplete'
     // Dedupe failure toasts the same way ExamSession does — a flaky
     // network shouldn't paint the corner with toasts every 1.5s.
     const autoSaveFailToastRef = useRef(0);
@@ -626,6 +626,78 @@ const ExamEditor = () => {
         }
     }, []);
 
+    // Ordered question list matching the UI numbering: section order, then
+    // orderIndex within section (passage children ride with their passage).
+    const buildOrderedQuestions = () => {
+        const subjectsList = [examConfig.subject, ...(examConfig.extraSubjects || [])];
+        const orderedQs = [];
+        subjectsList.forEach((sub, si) => {
+            const isMain = si === 0;
+            const sectionItems = [
+                ...questions
+                    .filter(q => isMain ? (q.subjectGroup == null || q.subjectGroup === sub) : q.subjectGroup === sub)
+                    .map(q => ({ kind: 'question', data: q, orderIndex: q.orderIndex ?? 0 })),
+                ...passages
+                    .filter(p => isMain ? (p.subjectGroup == null || p.subjectGroup === sub) : p.subjectGroup === sub)
+                    .map(p => ({ kind: 'passage', data: p, orderIndex: p.orderIndex ?? 0 }))
+            ].sort((a, b) => a.orderIndex - b.orderIndex);
+            sectionItems.forEach(item => {
+                if (item.kind === 'question') {
+                    orderedQs.push(item.data);
+                } else {
+                    (item.data.questions || []).forEach(pq => orderedQs.push(pq));
+                }
+            });
+        });
+        return orderedQs;
+    };
+
+    // First publish-blocking problem in the given questions, or null when all
+    // are complete. Mirrors the backend's validateForPublish, so callers can
+    // know BEFORE the network call whether a PUBLISHED-status save would be
+    // rejected. Pure — no toasts; the caller decides how loud to be.
+    const firstIncompleteQuestionError = (orderedQs) => {
+        for (let i = 0; i < orderedQs.length; i++) {
+            const q = orderedQs[i];
+            const label = `Sual ${i + 1}`;
+            // Every question must carry a prompt — text or an image. Selecting a
+            // correct answer alone is not enough to publish (BUG: olimpiada).
+            if (!q.text?.trim() && !q.attachedImage) {
+                return `${label}: sual mətni və ya şəkli daxil edilməyib`;
+            }
+            if (q.type === 'MULTIPLE_CHOICE' || q.type === 'MULTI_SELECT') {
+                if (!q.options || q.options.length < 2) {
+                    return `${label}: ən azı iki cavab variantı olmalıdır`;
+                }
+                if (q.options.some(o => !o.text?.trim() && !o.attachedImage)) {
+                    return `${label}: bütün cavab variantları doldurulmalıdır`;
+                }
+                if (!q.options.some(o => o.isCorrect)) {
+                    return `${label}: düzgün cavab variantı seçilməyib`;
+                }
+            } else if (q.type === 'OPEN_AUTO') {
+                if (!q.sampleAnswer || !q.sampleAnswer.trim()) {
+                    return `${label}: düzgün cavab daxil edilməyib`;
+                }
+            } else if (q.type === 'FILL_IN_THE_BLANK') {
+                let blanks = [];
+                try {
+                    const p = JSON.parse(q.sampleAnswer || '[]');
+                    if (Array.isArray(p)) blanks = p;
+                } catch { /* yararsız JSON = boş cavablar */ }
+                if (!blanks.some(b => b && b.trim() !== '')) {
+                    return `${label}: boşluqların düzgün cavabları daxil edilməyib`;
+                }
+            } else if (q.type === 'MATCHING') {
+                const hasConnection = (q.matchingPairs || []).some(p => p.leftItem && p.rightItem);
+                if (!hasConnection) {
+                    return `${label}: ən azı bir uyğunlaşdırma əlaqəsi qurulmalıdır`;
+                }
+            }
+        }
+        return null;
+    };
+
     // Auto-save: debounce 2.5s after any content change
     useEffect(() => {
         if (loading) return;
@@ -640,6 +712,17 @@ const ExamEditor = () => {
             // debounce tick fire a second POST and create a duplicate draft.
             if (autoSavingRef.current) return;
             if (type !== 'template' && type !== 'olimpiyada' && (!examConfig.title || !examConfig.title.trim())) return;
+            // A PUBLISHED exam can never hold a half-finished question — the
+            // backend's publish gate rejects the whole save. Autosaving right
+            // after "add question" therefore threw validation errors at the
+            // teacher before they had typed anything. Hold autosave quietly
+            // until every question is complete; the pill (not a toast) says
+            // why nothing is being saved. Drafts still autosave half-finished
+            // questions as before.
+            if (examStatus === 'PUBLISHED' && firstIncompleteQuestionError(buildOrderedQuestions())) {
+                setAutoSaveStatus('incomplete');
+                return;
+            }
             autoSavingRef.current = true;
             const payload = buildPayload(examStatus);
             setAutoSaveStatus('saving');
@@ -695,7 +778,7 @@ const ExamEditor = () => {
     // these are the windows where the teacher can lose unsaved edits.
     // Don't fire on every exit (would be annoying when everything is saved).
     useEffect(() => {
-        if (autoSaveStatus !== 'saving' && autoSaveStatus !== 'error') return;
+        if (autoSaveStatus !== 'saving' && autoSaveStatus !== 'error' && autoSaveStatus !== 'incomplete') return;
         const onBeforeUnload = (e) => {
             e.preventDefault();
             e.returnValue = '';
@@ -1167,72 +1250,10 @@ const ExamEditor = () => {
             return;
         }
 
-        // Build ordered list matching UI numbering: section order, then orderIndex within section
-        const subjectsList = [examConfig.subject, ...(examConfig.extraSubjects || [])];
-        const orderedQs = [];
-        subjectsList.forEach((sub, si) => {
-            const isMain = si === 0;
-            const sectionItems = [
-                ...questions
-                    .filter(q => isMain ? (q.subjectGroup == null || q.subjectGroup === sub) : q.subjectGroup === sub)
-                    .map(q => ({ kind: 'question', data: q, orderIndex: q.orderIndex ?? 0 })),
-                ...passages
-                    .filter(p => isMain ? (p.subjectGroup == null || p.subjectGroup === sub) : p.subjectGroup === sub)
-                    .map(p => ({ kind: 'passage', data: p, orderIndex: p.orderIndex ?? 0 }))
-            ].sort((a, b) => a.orderIndex - b.orderIndex);
-            sectionItems.forEach(item => {
-                if (item.kind === 'question') {
-                    orderedQs.push(item.data);
-                } else {
-                    (item.data.questions || []).forEach(pq => orderedQs.push(pq));
-                }
-            });
-        });
-
-        for (let i = 0; i < orderedQs.length; i++) {
-            const q = orderedQs[i];
-            const label = `Sual ${i + 1}`;
-            // Every question must carry a prompt — text or an image. Selecting a
-            // correct answer alone is not enough to publish (BUG: olimpiada).
-            if (!q.text?.trim() && !q.attachedImage) {
-                toast.error(`${label}: sual mətni və ya şəkli daxil edilməyib`);
-                return;
-            }
-            if (q.type === 'MULTIPLE_CHOICE' || q.type === 'MULTI_SELECT') {
-                if (!q.options || q.options.length < 2) {
-                    toast.error(`${label}: ən azı iki cavab variantı olmalıdır`);
-                    return;
-                }
-                if (q.options.some(o => !o.text?.trim() && !o.attachedImage)) {
-                    toast.error(`${label}: bütün cavab variantları doldurulmalıdır`);
-                    return;
-                }
-                if (!q.options.some(o => o.isCorrect)) {
-                    toast.error(`${label}: düzgün cavab variantı seçilməyib`);
-                    return;
-                }
-            } else if (q.type === 'OPEN_AUTO') {
-                if (!q.sampleAnswer || !q.sampleAnswer.trim()) {
-                    toast.error(`${label}: düzgün cavab daxil edilməyib`);
-                    return;
-                }
-            } else if (q.type === 'FILL_IN_THE_BLANK') {
-                let blanks = [];
-                try {
-                    const p = JSON.parse(q.sampleAnswer || '[]');
-                    if (Array.isArray(p)) blanks = p;
-                } catch (e) {}
-                if (!blanks.some(b => b && b.trim() !== '')) {
-                    toast.error(`${label}: boşluqların düzgün cavabları daxil edilməyib`);
-                    return;
-                }
-            } else if (q.type === 'MATCHING') {
-                const hasConnection = (q.matchingPairs || []).some(p => p.leftItem && p.rightItem);
-                if (!hasConnection) {
-                    toast.error(`${label}: ən azı bir uyğunlaşdırma əlaqəsi qurulmalıdır`);
-                    return;
-                }
-            }
+        const problem = firstIncompleteQuestionError(buildOrderedQuestions());
+        if (problem) {
+            toast.error(problem);
+            return;
         }
 
         // Open settings modal so user can review/edit params before publishing
@@ -2046,6 +2067,12 @@ const ExamEditor = () => {
                     <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-white bg-red-500 px-3 py-1.5 rounded-full shadow-[var(--sh-sm)]">
                         <div className="w-1.5 h-1.5 rounded-full bg-white" />
                         Saxlanmadı — yenidən cəhd edilir
+                    </span>
+                )}
+                {autoSaveStatus === 'incomplete' && (
+                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-white bg-amber-400 px-3 py-1.5 rounded-full shadow-[var(--sh-sm)]">
+                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        Sual tamamlanmayıb — hələ saxlanılmır
                     </span>
                 )}
                 {isCollaborativeMode ? (

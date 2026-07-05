@@ -27,19 +27,30 @@ const MatchingReview = ({ q }) => {
     let studentMatches = [];
     try { if (q.studentMatchingAnswerJson) studentMatches = JSON.parse(q.studentMatchingAnswerJson); } catch (e) {}
 
-    // Text-based correctness: pairId → text, then check if (leftText, rightText) is a valid linked pair
+    // Content-based correctness (text + image — backend qiymətləndirmə ilə eyni
+    // açar): pairId → pair, sonra (sol tərəf ↔ sağ tərəf) bağlantısı yoxlanır.
     const pairById = {};
     q.matchingPairs.forEach(p => { pairById[p.id] = p; });
+    const sideKey = (text, img) => {
+        const t = (text || '').trim(), i = img || '';
+        return (t || i) ? `${t}|${i}` : null;
+    };
     const correctConnectionSet = new Set(
         q.matchingPairs
-            .filter(p => p.leftItem && p.rightItem)
-            .map(p => p.leftItem + '|||' + p.rightItem)
+            .map(p => {
+                const lk = sideKey(p.leftItem, p.attachedImageLeft);
+                const rk = sideKey(p.rightItem, p.attachedImageRight);
+                return lk && rk ? `${lk}>>${rk}` : null;
+            })
+            .filter(Boolean)
     );
     const isMatchCorrect = (m) => {
         const lp = pairById[m.leftItemId];
         const rp = pairById[m.rightItemId];
         if (!lp || !rp) return false;
-        return correctConnectionSet.has((lp.leftItem || '') + '|||' + (rp.rightItem || ''));
+        const lk = sideKey(lp.leftItem, lp.attachedImageLeft);
+        const rk = sideKey(rp.rightItem, rp.attachedImageRight);
+        return !!(lk && rk) && correctConnectionSet.has(`${lk}>>${rk}`);
     };
 
     // Content-deduped left groups, keyed by text + image so image-only
@@ -119,7 +130,7 @@ const MatchingReview = ({ q }) => {
                         const matches = matchesByLeft[pair.id] || [];
                         const isLinked = allIds.some(id => {
                             const p = q.matchingPairs.find(mp => mp.id === id);
-                            return p && !!p.rightItem;
+                            return p && !!(p.rightItem || p.attachedImageRight);
                         });
                         const hasAnyCorrect = matches.some(m => isMatchCorrect(m));
                         const hasMatch = matches.length > 0;
@@ -146,7 +157,7 @@ const MatchingReview = ({ q }) => {
                         const matches = matchesByRight[pair.id] || [];
                         const isLinked = allIds.some(id => {
                             const p = q.matchingPairs.find(mp => mp.id === id);
-                            return p && !!p.leftItem;
+                            return p && !!(p.leftItem || p.attachedImageLeft);
                         });
                         const hasAnyCorrect = matches.some(m => isMatchCorrect(m));
                         const hasMatch = matches.length > 0;

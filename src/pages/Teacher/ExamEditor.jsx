@@ -10,6 +10,7 @@ import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import getErrorMessage from '../../utils/getErrorMessage';
 import { readFileAsDataUrl, MAX_AUDIO_BYTES, MAX_IMAGE_BYTES } from '../../utils/fileUpload';
+import { toEditorMatchingPairs, toBackendMatchingPairs } from '../../utils/matchingPairs';
 import { useSmartBack } from '../../hooks/useSmartBack';
 
 const TYPE_TO_FRONTEND = {
@@ -18,26 +19,10 @@ const TYPE_TO_FRONTEND = {
     FILL_IN_THE_BLANK: 'FILL_IN_THE_BLANK', MATCHING: 'MATCHING', OPEN_MANUAL: 'OPEN_MANUAL',
 };
 
-// Converts backend matchingPairs to frontend format with content-based canonical visualIds.
-// Pairs sharing the same leftItem/rightItem text get the SAME visualId so they appear
-// as one node in the editor (many-to-many connections).
-const toFrontendMatchingPairs = (pairs) => {
-    if (!pairs || pairs.length === 0) return [];
-    const lvMap = {}, rvMap = {};
-    pairs.forEach(p => {
-        if (p.leftItem && !lvMap[p.leftItem]) lvMap[p.leftItem] = `lv-${p.id}`;
-        if (p.rightItem && !rvMap[p.rightItem]) rvMap[p.rightItem] = `rv-${p.id}`;
-    });
-    return pairs.map(p => ({
-        id: p.id,
-        leftItem: p.leftItem || null,
-        rightItem: p.rightItem || null,
-        attachedImageLeft: p.attachedImageLeft || null,
-        attachedImageRight: p.attachedImageRight || null,
-        leftVisualId: p.leftItem ? lvMap[p.leftItem] : null,
-        rightVisualId: p.rightItem ? rvMap[p.rightItem] : null,
-    }));
-};
+// Backend matchingPairs -> editor format. Delegates to the shared helper so
+// every screen groups pair-rows into visual nodes identically (persisted
+// visual id, content fallback for legacy rows). See utils/matchingPairs.js.
+const toFrontendMatchingPairs = (pairs) => toEditorMatchingPairs(pairs);
 
 const makeQuestion = (questionType, orderIdx, subjectGroup, points = 1) => {
     const frontendType = TYPE_TO_FRONTEND[questionType] || 'MULTIPLE_CHOICE';
@@ -689,7 +674,12 @@ const ExamEditor = () => {
                     return `${label}: boşluqların düzgün cavabları daxil edilməyib`;
                 }
             } else if (q.type === 'MATCHING') {
-                const hasConnection = (q.matchingPairs || []).some(p => p.leftItem && p.rightItem);
+                // A side counts as filled with either text or an image — a matching
+                // item that only has an image (no text) is still a valid connection.
+                const sideFilled = (text, img) => !!(text?.trim()) || !!img;
+                const hasConnection = (q.matchingPairs || []).some(p =>
+                    sideFilled(p.leftItem, p.attachedImageLeft) && sideFilled(p.rightItem, p.attachedImageRight)
+                );
                 if (!hasConnection) {
                     return `${label}: ən azı bir uyğunlaşdırma əlaqəsi qurulmalıdır`;
                 }
@@ -1174,18 +1164,11 @@ const ExamEditor = () => {
             // variantı "boş" sayır və hər save mövcud şəkilləri DB-dən silir.
             attachedImage: opt.attachedImage || null,
         })) : [],
-        matchingPairs: q.matchingPairs
-            ? q.matchingPairs
-                .filter(pair => pair.leftItem || pair.rightItem)  // save all non-empty pairs (linked + distractors)
-                .map((pair, pIdx) => ({
-                    id: isNewId(pair.id) ? null : pair.id,
-                    leftItem: pair.leftItem || null,
-                    attachedImageLeft: pair.attachedImageLeft || null,
-                    rightItem: pair.rightItem || null,
-                    attachedImageRight: pair.attachedImageRight || null,
-                    orderIndex: pIdx,
-                }))
-            : []
+        // Save all non-empty rows (linked + distractors, including image-only
+        // ones) and forward the visual ids so node identity survives reload.
+        matchingPairs: toBackendMatchingPairs(q.matchingPairs, {
+            mapId: (id) => (isNewId(id) ? null : id),
+        })
     });
 
     const buildPayload = (status, config) => {

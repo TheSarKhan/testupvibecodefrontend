@@ -11,6 +11,7 @@ import {
 } from 'react-icons/hi';
 import { QuestionEditor, LatexPreview, AiGenerateModal } from '../../components/ui';
 import ChipContent from '../../utils/chipContent';
+import { toEditorMatchingPairs, toBackendMatchingPairs } from '../../utils/matchingPairs';
 import { useAuth } from '../../context/AuthContext';
 import { formatRelativeTime } from '../../utils/date';
 import api from '../../api/axios';
@@ -85,26 +86,13 @@ const bankToEditor = (bq) => ({
         .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
         .map(o => ({ id: String(o.id), text: o.content || '', isCorrect: !!o.isCorrect, attachedImage: o.attachedImage || null })),
     // Use the same field names QuestionEditor consumes (leftItem /
-    // rightItem / attachedImage*). The earlier `left` / `right` aliases
-    // meant matching questions opened from the bank rendered empty in
-    // the editor — none of the matching-pair JSX matched.
-    matchingPairs: (() => {
-        const sorted = (bq.matchingPairs || []).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
-        const lvMap = {}, rvMap = {};
-        sorted.forEach(p => {
-            if (p.leftItem && !lvMap[p.leftItem]) lvMap[p.leftItem] = `lv-${p.id}`;
-            if (p.rightItem && !rvMap[p.rightItem]) rvMap[p.rightItem] = `rv-${p.id}`;
-        });
-        return sorted.map(p => ({
-            id: String(p.id),
-            leftItem: p.leftItem || null,
-            rightItem: p.rightItem || null,
-            attachedImageLeft: p.attachedImageLeft || null,
-            attachedImageRight: p.attachedImageRight || null,
-            leftVisualId: p.leftItem ? lvMap[p.leftItem] : null,
-            rightVisualId: p.rightItem ? rvMap[p.rightItem] : null,
-        }));
-    })(),
+    // rightItem / attachedImage*). Shared helper groups rows into visual
+    // nodes by persisted id (content fallback for legacy rows) so distinct
+    // items with the same text/image — and image-only items — don't collapse.
+    matchingPairs: toEditorMatchingPairs(
+        (bq.matchingPairs || []).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
+        { idAsString: true }
+    ),
     sampleAnswer: bq.correctAnswer || '',
 });
 
@@ -126,17 +114,9 @@ const editorToBank = (subjectId, eq) => ({
         orderIndex: i,
         attachedImage: o.attachedImage || null,
     })),
-    // Filter out the synthetic distractor halves (where one side is null)
-    // that QuestionEditor creates internally — backend wants real pairs.
-    matchingPairs: (eq.matchingPairs || [])
-        .filter(mp => mp.leftItem || mp.rightItem)
-        .map((mp, i) => ({
-            leftItem: mp.leftItem || '',
-            rightItem: mp.rightItem || '',
-            attachedImageLeft: mp.attachedImageLeft || null,
-            attachedImageRight: mp.attachedImageRight || null,
-            orderIndex: i,
-        })),
+    // Keep every row that has content on either side (image-only included) and
+    // forward the visual ids so node identity survives the round-trip.
+    matchingPairs: toBackendMatchingPairs(eq.matchingPairs),
 });
 
 const newEditorQuestion = (orderIndex) => ({

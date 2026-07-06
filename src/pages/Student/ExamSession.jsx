@@ -7,6 +7,7 @@ import LatexPreview from '../../components/ui/LatexPreview';
 import MathTextEditor from '../../components/ui/MathTextEditor';
 import MathFormulaModal from '../../components/ui/MathFormulaModal';
 import ChipContent from '../../utils/chipContent';
+import { leftNodeKey, rightNodeKey, hasLeftSide, hasRightSide } from '../../utils/matchingPairs';
 
 const ExamSession = () => {
     const { sessionId } = useParams();
@@ -1132,42 +1133,39 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
 
     const existingPairs = answer.matchingPairs || [];
 
-    // Build canonical maps: pairId → canonical pairId. Keyed by text + image
-    // so image-only options get a stable canonical id too.
+    // Build canonical maps: pairId → canonical pairId. Grouped by the shared
+    // node key (persisted visualId, content fallback for legacy rows) so two
+    // DISTINCT items that share text/image stay separate cards, and image-only
+    // items get a stable canonical id too.
     const leftCanonMap = {}, rightCanonMap = {};
-    const seenLText = {}, seenRText = {};
+    const seenLKey = {}, seenRKey = {};
     question.matchingPairs.forEach(p => {
-        const lk = `${p.leftItem || ''}|${p.attachedImageLeft || ''}`;
-        const rk = `${p.rightItem || ''}|${p.attachedImageRight || ''}`;
-        if (lk !== '|') {
-            if (seenLText[lk] === undefined) seenLText[lk] = p.id;
-            leftCanonMap[p.id] = seenLText[lk];
+        if (hasLeftSide(p)) {
+            const lk = leftNodeKey(p);
+            if (seenLKey[lk] === undefined) seenLKey[lk] = p.id;
+            leftCanonMap[p.id] = seenLKey[lk];
         }
-        if (rk !== '|') {
-            if (seenRText[rk] === undefined) seenRText[rk] = p.id;
-            rightCanonMap[p.id] = seenRText[rk];
+        if (hasRightSide(p)) {
+            const rk = rightNodeKey(p);
+            if (seenRKey[rk] === undefined) seenRKey[rk] = p.id;
+            rightCanonMap[p.id] = seenRKey[rk];
         }
     });
 
-    // Deduplicate by content — one card per unique text/image. Image-only
-    // pairs (no text but with an attached image) used to be silently dropped
-    // by the `!p.leftItem` guard, so the teacher's image options never
-    // appeared in the exam. Build a composite key from text + image so we
-    // keep image-only entries and still collapse exact duplicates.
-    const leftKey = (p) => `${p.leftItem || ''}|${p.attachedImageLeft || ''}`;
-    const rightKey = (p) => `${p.rightItem || ''}|${p.attachedImageRight || ''}`;
+    // One card per unique node. Distinct nodes that share text/image no longer
+    // collapse (they carry different visualIds); image-only nodes are kept.
     const seenLeft = new Set();
     const leftPairs = question.matchingPairs.filter(p => {
-        const k = leftKey(p);
-        if (k === '|') return false;
+        if (!hasLeftSide(p)) return false;
+        const k = leftNodeKey(p);
         if (seenLeft.has(k)) return false;
         seenLeft.add(k); return true;
     });
     const seenRight = new Set();
     const rightPairs = [...question.matchingPairs]
         .filter(p => {
-            const k = rightKey(p);
-            if (k === '|') return false;
+            if (!hasRightSide(p)) return false;
+            const k = rightNodeKey(p);
             if (seenRight.has(k)) return false;
             seenRight.add(k); return true;
         })
@@ -1211,7 +1209,7 @@ const MatchingQuestion = ({ question, answer, onAnswerChange, activeLeftId, setA
                 </button>
             </div>
 
-            <div ref={containerRef} className="relative flex justify-between py-6">
+            <div ref={containerRef} className="relative flex justify-between py-6" style={{ zIndex: 0 }}>
                 {/* Left column */}
                 <div className="w-[40%] space-y-3" style={{ zIndex: 10, position: 'relative' }}>
                     {leftPairs.map((pair) => {

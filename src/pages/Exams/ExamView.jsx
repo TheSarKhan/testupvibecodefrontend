@@ -8,6 +8,7 @@ import LatexPreview from '../../components/ui/LatexPreview';
 import AccessCodeModal from '../../components/ui/AccessCodeModal';
 import ChipContent from '../../utils/chipContent';
 import { QUESTION_TYPE_LABELS, labelOr } from '../../utils/enumLabels';
+import { leftNodeKey, rightNodeKey, hasLeftSide, hasRightSide, visualOrderKey } from '../../utils/matchingPairs';
 
 const STATUS_LABELS = {
     PUBLISHED: 'Aktiv',
@@ -28,27 +29,27 @@ const MatchingPreview = ({ q }) => {
     const [imgTick, setImgTick] = useState(0);
 
     const pairs = [...(q.matchingPairs || [])].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
-    const keyOf = (text, img) => `${text || ''}|${img || ''}`;
 
-    // Content-deduped columns in author order; a side may hold text, image or
-    // both — fully-empty sides are skipped.
+    // Node-deduped columns in author order, keyed by the shared node key
+    // (persisted visualId, content fallback). Distinct items that share
+    // text/image stay separate; fully-empty sides are skipped.
     const leftMap = {}, rightMap = {};
     pairs.forEach(p => {
-        const lk = keyOf(p.leftItem, p.attachedImageLeft);
-        if (lk !== '|' && !leftMap[lk]) leftMap[lk] = p;
-        const rk = keyOf(p.rightItem, p.attachedImageRight);
-        if (rk !== '|' && !rightMap[rk]) rightMap[rk] = p;
+        if (hasLeftSide(p) && !leftMap[leftNodeKey(p)]) leftMap[leftNodeKey(p)] = p;
+        if (hasRightSide(p) && !rightMap[rightNodeKey(p)]) rightMap[rightNodeKey(p)] = p;
     });
-    const leftNodes = Object.values(leftMap);
-    const rightNodes = Object.values(rightMap);
+    // Order columns the same way the editor does — by the node's visual id
+    // (creation order) — so the preview matches what the teacher built rather
+    // than the scrambled orderIndex.
+    const leftNodes = Object.values(leftMap).sort((a, b) => visualOrderKey(a.leftVisualId) - visualOrderKey(b.leftVisualId));
+    const rightNodes = Object.values(rightMap).sort((a, b) => visualOrderKey(a.rightVisualId) - visualOrderKey(b.rightVisualId));
 
     // Correct links between canonical (deduped) nodes
     const links = [];
     const seenLinks = new Set();
     pairs.forEach(p => {
-        const lk = keyOf(p.leftItem, p.attachedImageLeft);
-        const rk = keyOf(p.rightItem, p.attachedImageRight);
-        if (lk === '|' || rk === '|') return;
+        if (!hasLeftSide(p) || !hasRightSide(p)) return;
+        const lk = leftNodeKey(p), rk = rightNodeKey(p);
         const key = `${lk}>>${rk}`;
         if (seenLinks.has(key)) return;
         seenLinks.add(key);
@@ -99,7 +100,7 @@ const MatchingPreview = ({ q }) => {
     return (
         <div className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl border border-emerald-200">
             <p className="text-sm font-semibold text-emerald-700 mb-4">Uyğunluq Cütləri:</p>
-            <div ref={containerRef} className="relative flex justify-between py-2">
+            <div ref={containerRef} className="relative flex justify-between py-2" style={{ zIndex: 0 }}>
                 {/* Left column */}
                 <div className="w-[42%] space-y-5" style={{ position: 'relative', zIndex: 10 }}>
                     <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Sol tərəf</p>

@@ -12,6 +12,7 @@ import LatexPreview from '../../components/ui/LatexPreview';
 import QuestionNav from '../../components/ui/QuestionNav';
 import { fmtDate } from '../../utils/date';
 import ChipContent from '../../utils/chipContent';
+import { leftNodeKey, rightNodeKey, hasLeftSide, hasRightSide } from '../../utils/matchingPairs';
 
 const fmtScore = (v) => {
     if (v === null || v === undefined) return '0';
@@ -53,22 +54,23 @@ const MatchingReview = ({ q }) => {
         return !!(lk && rk) && correctConnectionSet.has(`${lk}>>${rk}`);
     };
 
-    // Content-deduped left groups, keyed by text + image so image-only
-    // pairs aren't dropped (they used to disappear from the review view).
+    // Node-deduped left groups, keyed by the shared node key (persisted
+    // visualId, content fallback for legacy rows). Distinct items that share
+    // text/image stay separate; image-only nodes are kept.
     const leftGroupMap = {};
     q.matchingPairs.forEach(p => {
-        const k = `${p.leftItem || ''}|${p.attachedImageLeft || ''}`;
-        if (k === '|') return;
+        if (!hasLeftSide(p)) return;
+        const k = leftNodeKey(p);
         if (!leftGroupMap[k]) leftGroupMap[k] = { pair: p, allIds: [] };
         if (!leftGroupMap[k].allIds.includes(p.id)) leftGroupMap[k].allIds.push(p.id);
     });
     const leftNodes = Object.values(leftGroupMap);
 
-    // Content-deduped right groups, sorted alphabetically
+    // Node-deduped right groups, sorted alphabetically
     const rightGroupMap = {};
     q.matchingPairs.forEach(p => {
-        const k = `${p.rightItem || ''}|${p.attachedImageRight || ''}`;
-        if (k === '|') return;
+        if (!hasRightSide(p)) return;
+        const k = rightNodeKey(p);
         if (!rightGroupMap[k]) rightGroupMap[k] = { pair: p, allIds: [] };
         if (!rightGroupMap[k].allIds.includes(p.id)) rightGroupMap[k].allIds.push(p.id);
     });
@@ -123,7 +125,7 @@ const MatchingReview = ({ q }) => {
     return (
         <div className="space-y-4">
             <p className="text-xs font-bold text-gray-400 uppercase mb-2">Uyğunluq Nəticələri:</p>
-            <div ref={containerRef} className="relative flex justify-between py-6">
+            <div ref={containerRef} className="relative flex justify-between py-6" style={{ zIndex: 0 }}>
                 {/* Left column */}
                 <div className="w-[40%] space-y-6" style={{ zIndex: 10, position: 'relative' }}>
                     {leftNodes.map(({ pair, allIds }) => {

@@ -8,6 +8,7 @@ import LatexPreview from './LatexPreview';
 import { useAuth } from '../../context/AuthContext';
 import ChipContent from '../../utils/chipContent';
 import { readFileAsDataUrl, MAX_IMAGE_BYTES } from '../../utils/fileUpload';
+import { hasLeftSide, hasRightSide } from '../../utils/matchingPairs';
 import toast from 'react-hot-toast';
 
 // Supported Question Types
@@ -516,8 +517,10 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
         );
     };
 
-    // Force arrow re-render when linked pairs change
-    const linkedPairCount = (question.matchingPairs || []).filter(p => p.leftItem && p.rightItem).length;
+    // Force arrow re-render when linked pairs change. A row is a link when both
+    // sides carry a visualId — text/image can be empty (image-only pairs), so
+    // keying on content would miss those.
+    const linkedPairCount = (question.matchingPairs || []).filter(p => p.leftVisualId && p.rightVisualId).length;
     useLayoutEffect(() => { forceArrowUpdate(v => v + 1); }, [linkedPairCount]);
 
     // MATCHING
@@ -573,19 +576,22 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
             // 1. If leftRecord is independent AND rightRecord is independent -> Merge them.
             // 2. Otherwise -> Create a NEW record for the link.
             
+            // "Independent" means the node has no opposite side yet — test the
+            // opposite VISUAL id, not its text: an image-only side has null text
+            // but a real visualId, so a content check would misclassify it.
             let newPairs;
-            if (leftRecord.rightItem === null && rightRecord.leftItem === null) {
+            if (!leftRecord.rightVisualId && !rightRecord.leftVisualId) {
                 newPairs = pairs.map(p => {
                     if (p.leftVisualId === leftVisualId) {
-                        return { 
-                            ...p, 
-                            rightItem: rightRecord.rightItem, 
+                        return {
+                            ...p,
+                            rightItem: rightRecord.rightItem,
                             attachedImageRight: rightRecord.attachedImageRight,
                             rightVisualId: rightRecord.rightVisualId
                         };
                     }
                     return p;
-                }).filter(p => p.rightVisualId !== rightVisualId || p.leftItem !== null);
+                }).filter(p => p.rightVisualId !== rightVisualId || p.leftVisualId !== null);
             } else {
                 const newLink = {
                     id: Date.now(),
@@ -599,8 +605,8 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                 
                 // If the records we are linking were "ghosts" (independent nodes), we might need to remove the empty shells
                 newPairs = pairs.filter(p => {
-                    if (p.leftVisualId === leftVisualId && p.rightItem === null) return false;
-                    if (p.rightVisualId === rightVisualId && p.leftItem === null) return false;
+                    if (p.leftVisualId === leftVisualId && !p.rightVisualId) return false;
+                    if (p.rightVisualId === rightVisualId && !p.leftVisualId) return false;
                     return true;
                 });
                 newPairs.push(newLink);
@@ -613,7 +619,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
 
         const removeLink = (pairId) => {
             const pair = pairs.find(p => p.id === pairId);
-            if (!pair || pair.leftItem === null || pair.rightItem === null) return;
+            if (!pair || !pair.leftVisualId || !pair.rightVisualId) return;
 
             // When removing a link, we need to ensure the nodes themselves remain as independent items if they have no other links
             const otherLeftLinks = pairs.some(p => p.id !== pairId && p.leftVisualId === pair.leftVisualId);
@@ -663,9 +669,11 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
         };
 
         // GENERATE VISUAL LISTS
+        // Key on leftVisualId (not "leftItem !== null"): an image-only item has
+        // null text after a save round-trip, so requiring text hid it entirely.
         const leftNodes = [];
         pairs.forEach(p => {
-            if (p.leftItem !== null && p.leftVisualId && !leftNodes.some(n => n.visualId === p.leftVisualId)) {
+            if (p.leftVisualId && !leftNodes.some(n => n.visualId === p.leftVisualId)) {
                 leftNodes.push({ visualId: p.leftVisualId, content: p.leftItem, image: p.attachedImageLeft });
             }
         });
@@ -677,7 +685,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
 
         const rightNodes = [];
         pairs.forEach(p => {
-            if (p.rightItem !== null && p.rightVisualId && !rightNodes.some(n => n.visualId === p.rightVisualId)) {
+            if (p.rightVisualId && !rightNodes.some(n => n.visualId === p.rightVisualId)) {
                 rightNodes.push({ visualId: p.rightVisualId, content: p.rightItem, image: p.attachedImageRight });
             }
         });
@@ -690,21 +698,24 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
         });
 
         // Ensure every record has visual IDs during initialization if missing (for legacy data).
-        // IMPORTANT: pairs sharing the same leftItem/rightItem content must get the SAME visualId
-        // so that many-to-many connections (e.g. A→X and A→Y) show as ONE node on each side.
+        // IMPORTANT: pairs sharing the same content must get the SAME visualId so that
+        // many-to-many connections (e.g. A→X and A→Y) show as ONE node on each side.
+        // Key on text+image so image-only sides (null text) still get a visual id.
         let needsInit = false;
-        const leftVisualByContent = {};  // leftItem text → canonical leftVisualId
-        const rightVisualByContent = {}; // rightItem text → canonical rightVisualId
+        const leftVisualByKey = {};
+        const rightVisualByKey = {};
         const initializedPairs = pairs.map(p => {
             const np = { ...p };
-            if (np.leftItem !== null && np.leftItem !== undefined && !np.leftVisualId) {
-                if (!leftVisualByContent[np.leftItem]) leftVisualByContent[np.leftItem] = 'lv-' + np.id;
-                np.leftVisualId = leftVisualByContent[np.leftItem];
+            if (!np.leftVisualId && hasLeftSide(np)) {
+                const k = `${np.leftItem || ''}|${np.attachedImageLeft || ''}`;
+                if (!leftVisualByKey[k]) leftVisualByKey[k] = 'lv-' + np.id;
+                np.leftVisualId = leftVisualByKey[k];
                 needsInit = true;
             }
-            if (np.rightItem !== null && np.rightItem !== undefined && !np.rightVisualId) {
-                if (!rightVisualByContent[np.rightItem]) rightVisualByContent[np.rightItem] = 'rv-' + np.id;
-                np.rightVisualId = rightVisualByContent[np.rightItem];
+            if (!np.rightVisualId && hasRightSide(np)) {
+                const k = `${np.rightItem || ''}|${np.attachedImageRight || ''}`;
+                if (!rightVisualByKey[k]) rightVisualByKey[k] = 'rv-' + np.id;
+                np.rightVisualId = rightVisualByKey[k];
                 needsInit = true;
             }
             return np;
@@ -728,7 +739,6 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             <button type="button" onClick={addLeftItem} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
                         </div>
                         {leftNodes.map((node) => {
-                            const isLinked = pairs.some(p => p.leftVisualId === node.visualId && p.rightItem);
                             return (
                             <div
                                 key={`edit-left-${node.visualId}`}
@@ -792,7 +802,6 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                             <button type="button" onClick={addRightItem} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg"><HiOutlinePlus className="w-5 h-5"/></button>
                         </div>
                         {rightNodes.map((node) => {
-                            const isLinked = pairs.some(p => p.rightVisualId === node.visualId && p.leftItem);
                             return (
                             <div
                                 key={`edit-right-${node.visualId}`}
@@ -842,7 +851,7 @@ const QuestionEditor = ({ question, index, onChange, onDelete, hidePoints = fals
                     {/* SVG Arrows — connections between left and right nodes */}
                     {(() => {
                         const COLORS = ['#6366f1','#8b5cf6','#ec4899','#0ea5e9','#10b981','#f59e0b','#ef4444','#14b8a6'];
-                        const linkedPairs = pairs.filter(p => p.leftItem !== null && p.rightItem !== null);
+                        const linkedPairs = pairs.filter(p => p.leftVisualId && p.rightVisualId);
                         if (linkedPairs.length === 0) return null;
                         const containerEl = matchingContainerRef.current;
                         if (!containerEl) return null;

@@ -9,8 +9,10 @@ import {
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
 import LatexPreview from '../../components/ui/LatexPreview';
+import ChipContent from '../../utils/chipContent';
 import { fmtDate } from '../../utils/date';
 import { useAuth } from '../../context/AuthContext';
+import { MatchingReview, PassageReviewCard } from './ExamReview';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -212,9 +214,10 @@ const statusOf = (q) => {
     return 'wrong';
 };
 
-const QuestionReview = ({ questions, sessionId, navigate }) => {
+const QuestionReview = ({ questions, passages, sessionId, navigate }) => {
     const [filter, setFilter] = useState('all');
 
+    const passageById = useMemo(() => new Map((passages || []).map(p => [p.id, p])), [passages]);
     const items = useMemo(() => (questions || []).map((q, i) => ({ ...q, _status: statusOf(q), _num: i + 1 })), [questions]);
     const counts = useMemo(() => ({
         all:     items.length,
@@ -278,9 +281,23 @@ const QuestionReview = ({ questions, sessionId, navigate }) => {
                     <div className="text-center py-10 text-[var(--ink-400)] text-[14px]">
                         Bu kateqoriyada sual yoxdur.
                     </div>
-                ) : filtered.slice(0, 10).map((q) => (
-                    <ReviewItem key={q.id} q={q} index={q._num} />
-                ))}
+                ) : (() => {
+                    // Show a passage's content once, above the first of its
+                    // questions that appears in the visible (filtered) list.
+                    const shownPassages = new Set();
+                    return filtered.slice(0, 10).map((q) => {
+                        const showPassage = q.passageId && passageById.has(q.passageId) && !shownPassages.has(q.passageId);
+                        if (showPassage) shownPassages.add(q.passageId);
+                        return (
+                            <div key={q.id} className="flex flex-col gap-2">
+                                {showPassage && <PassageReviewCard passage={passageById.get(q.passageId)} />}
+                                <div className={q.passageId ? 'md:ml-4' : ''}>
+                                    <ReviewItem q={q} index={q._num} />
+                                </div>
+                            </div>
+                        );
+                    });
+                })()}
             </div>
 
             {filtered.length > 10 && (
@@ -308,6 +325,11 @@ const ReviewItem = ({ q, index }) => {
     }[status] || { Icon: HiOutlineMinus, label: '—', cls: 'text-[var(--ink-500)] bg-[var(--ink-100)]' };
 
     const isChoice = q.questionType === 'MCQ' || q.questionType === 'TRUE_FALSE' || q.questionType === 'MULTI_SELECT';
+    const isMatching = q.questionType === 'MATCHING';
+    const isFillIn = q.questionType === 'FILL_IN_THE_BLANK';
+    // Open/manual answers are the only "typed answer" case; matching and
+    // fill-in have their own dedicated renderers below.
+    const isTyped = !isChoice && !isMatching && !isFillIn;
 
     return (
         <div className="border border-[var(--ink-200)] rounded-2xl p-5">
@@ -372,7 +394,39 @@ const ReviewItem = ({ q, index }) => {
                 </div>
             )}
 
-            {!isChoice && (
+            {isMatching && <MatchingReview q={q} />}
+
+            {isFillIn && (() => {
+                let corrects = [], answers = [];
+                try { const p = JSON.parse(q.correctAnswer || '[]'); if (Array.isArray(p)) corrects = p; } catch { /* boş */ }
+                try { const p = JSON.parse(q.studentAnswerText || '[]'); if (Array.isArray(p)) answers = p; } catch { /* boş */ }
+                return (
+                    <div className="flex flex-col gap-2 mt-1">
+                        {corrects.map((correct, i) => {
+                            const student = answers[i] || '';
+                            const ok = correct.trim().toLowerCase() === student.trim().toLowerCase();
+                            return (
+                                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border ${ok ? 'border-[var(--brand-green-600)] bg-[var(--accent-soft)]' : 'border-red-400 bg-red-50'}`}>
+                                    <span className="text-[11px] font-bold text-[var(--ink-500)] w-16 shrink-0 uppercase tracking-wider">Boşluq {i + 1}</span>
+                                    <div className="flex-1 grid grid-cols-2 gap-2 min-w-0 text-[13px]">
+                                        <div className="min-w-0 break-words">
+                                            <p className="text-[10px] text-[var(--ink-400)] font-bold uppercase">Sizin</p>
+                                            <div className={student ? 'text-[var(--ink-900)] font-semibold' : 'text-[var(--ink-400)] italic'}>{student ? <ChipContent text={student} /> : '[boş]'}</div>
+                                        </div>
+                                        <div className="min-w-0 break-words">
+                                            <p className="text-[10px] text-[var(--ink-400)] font-bold uppercase">Düzgün</p>
+                                            <div className="text-[var(--brand-green-600)] font-semibold"><ChipContent text={correct} /></div>
+                                        </div>
+                                    </div>
+                                    <span className={`text-[13px] font-bold shrink-0 ${ok ? 'text-[var(--brand-green-600)]' : 'text-red-600'}`}>{ok ? '✓' : '✕'}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            })()}
+
+            {isTyped && (
                 <div className="flex flex-col gap-2.5 mt-1">
                     {/* Student's typed answer (if any). For OPEN_MANUAL / OPEN_AUTO
                         this is what they actually wrote — needs to be visible
@@ -438,6 +492,7 @@ const ExamResultSummary = () => {
     const [submissionData, setSubmissionData] = useState(submission || null);
     const [loading, setLoading] = useState(!submission);
     const [reviewQuestions, setReviewQuestions] = useState(null);
+    const [reviewPassages, setReviewPassages] = useState([]);
 
     useEffect(() => {
         if (!sessionId) return;
@@ -497,8 +552,21 @@ const ExamResultSummary = () => {
         api.get(`/submissions/${sessionId}/review`)
             .then(res => {
                 if (cancelled) return;
-                const sorted = [...res.data.questions].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
-                setReviewQuestions(sorted);
+                // Passage-aware order: group each passage's questions together at
+                // its passage position (passage question orderIndex is local).
+                const qs = res.data.questions || [];
+                const passages = res.data.passages || [];
+                const passageIds = new Set(passages.map(p => p.id));
+                const secs = [];
+                qs.filter(q => !q.passageId || !passageIds.has(q.passageId))
+                  .forEach(q => secs.push({ oi: q.orderIndex ?? 0, items: [q] }));
+                passages.forEach(p => {
+                    const items = qs.filter(q => q.passageId === p.id)
+                                     .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+                    if (items.length) secs.push({ oi: p.orderIndex ?? 0, items });
+                });
+                setReviewQuestions(secs.sort((a, b) => a.oi - b.oi).flatMap(s => s.items));
+                setReviewPassages(passages);
             })
             .catch(() => {});
         return () => { cancelled = true; };
@@ -780,7 +848,7 @@ const ExamResultSummary = () => {
 
                 {/* ── Rating + Question Review side-by-side on large ── */}
                 <div className={`grid gap-5 ${isOwner ? 'lg:grid-cols-[1fr_320px]' : ''}`}>
-                    <QuestionReview questions={reviewQuestions} sessionId={sessionId} navigate={navigate} />
+                    <QuestionReview questions={reviewQuestions} passages={reviewPassages} sessionId={sessionId} navigate={navigate} />
 
                     {isOwner && (
                     <aside className="flex flex-col gap-5">

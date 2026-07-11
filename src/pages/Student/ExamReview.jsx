@@ -25,7 +25,7 @@ const fmtScore = (v) => {
 // Shows a text/listening passage's content above the group of questions that
 // belong to it, so the review makes clear which passage each question refers to.
 // Read-only (the exam is over): plain audio player, no listen-limit tracking.
-const PassageReviewCard = ({ passage, onZoomImage }) => {
+export const PassageReviewCard = ({ passage, onZoomImage }) => {
     if (!passage) return null;
     const isText = passage.passageType === 'TEXT';
     return (
@@ -69,7 +69,7 @@ const PassageReviewCard = ({ passage, onZoomImage }) => {
 };
 
 // ---- MatchingReview ----
-const MatchingReview = ({ q }) => {
+export const MatchingReview = ({ q }) => {
     const containerRef = useRef(null);
     const [arrows, setArrows] = useState([]);
 

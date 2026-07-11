@@ -4,6 +4,7 @@ import {
     HiOutlineArrowLeft, HiOutlineArrowRight, HiOutlineCheckCircle, HiOutlineXCircle,
     HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter, HiOutlineX,
     HiOutlineChevronUp, HiOutlineClock, HiOutlineDownload, HiOutlineLockClosed,
+    HiOutlineVolumeUp,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
@@ -18,6 +19,53 @@ const fmtScore = (v) => {
     if (v === null || v === undefined) return '0';
     const n = Math.round(v * 100) / 100;
     return n % 1 === 0 ? n.toString() : n.toFixed(2);
+};
+
+// ---- PassageReviewCard ----
+// Shows a text/listening passage's content above the group of questions that
+// belong to it, so the review makes clear which passage each question refers to.
+// Read-only (the exam is over): plain audio player, no listen-limit tracking.
+const PassageReviewCard = ({ passage, onZoomImage }) => {
+    if (!passage) return null;
+    const isText = passage.passageType === 'TEXT';
+    return (
+        <div className={`rounded-3xl border-2 overflow-hidden mb-3 ${isText ? 'border-teal-200' : 'border-emerald-200'}`}>
+            <div className={`px-6 py-3 flex items-center gap-3 ${isText ? 'bg-teal-50' : 'bg-emerald-50'}`}>
+                {isText
+                    ? <HiOutlineDocumentText className="w-5 h-5 text-teal-600 shrink-0" />
+                    : <HiOutlineVolumeUp className="w-5 h-5 text-emerald-600 shrink-0" />}
+                <span className={`font-bold text-sm ${isText ? 'text-teal-700' : 'text-emerald-700'}`}>
+                    {passage.title || (isText ? 'Mətn Parçası' : 'Dinləmə')}
+                </span>
+                <span className="ml-auto text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-400)]">
+                    {isText ? 'Mətn' : 'Dinləmə'}
+                </span>
+            </div>
+            <div className="p-6">
+                {isText ? (
+                    <>
+                        {passage.textContent && (
+                            <div className="prose max-w-none text-gray-800 leading-relaxed mb-4 text-base">
+                                <LatexPreview content={passage.textContent} />
+                            </div>
+                        )}
+                        {passage.attachedImage && (
+                            <img src={passage.attachedImage} alt="Mətn"
+                                 className="max-w-full h-auto max-h-96 rounded-lg border border-gray-200 cursor-zoom-in"
+                                 onClick={() => onZoomImage?.(passage.attachedImage)} />
+                        )}
+                        {!passage.textContent && !passage.attachedImage && (
+                            <p className="text-gray-400 italic text-sm">Mətn məzmunu yoxdur</p>
+                        )}
+                    </>
+                ) : (
+                    passage.audioContent
+                        ? <audio controls controlsList="nodownload" src={passage.audioContent} className="w-full" />
+                        : <div className="p-6 text-center text-gray-400 border-2 border-dashed rounded-xl">Audio fayl mövcud deyil</div>
+                )}
+            </div>
+        </div>
+    );
 };
 
 // ---- MatchingReview ----
@@ -412,7 +460,28 @@ const ExamReview = () => {
     if (!review) return null;
 
     const scorePercent = review.maxScore > 0 ? Math.round((review.totalScore / review.maxScore) * 100) : 0;
-    const sortedQuestions = [...review.questions].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+
+    // Passage lookup + passage-aware ordering. Passage questions carry a
+    // passageId and their orderIndex is LOCAL to the passage, so a naive global
+    // sort scattered them among standalone questions. Group each passage's
+    // questions together and place the group at its passage's orderIndex, so the
+    // review shows passage questions contiguously under their passage content.
+    const passageById = new Map((review.passages || []).map(p => [p.id, p]));
+    const sortedQuestions = (() => {
+        const qs = review.questions || [];
+        const passages = review.passages || [];
+        const secs = [];
+        // Standalone questions (no passage, or a passage the server didn't send).
+        qs.filter(q => !q.passageId || !passageById.has(q.passageId))
+          .forEach(q => secs.push({ oi: q.orderIndex ?? 0, items: [q] }));
+        // One section per passage, its questions sorted by their local order.
+        passages.forEach(p => {
+            const items = qs.filter(q => q.passageId === p.id)
+                             .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+            if (items.length) secs.push({ oi: p.orderIndex ?? 0, items });
+        });
+        return secs.sort((a, b) => a.oi - b.oi).flatMap(s => s.items);
+    })();
 
     const displayedQuestions = showOnlyUngraded
         ? sortedQuestions.filter(q => !q.isGraded)
@@ -667,16 +736,15 @@ const ExamReview = () => {
                                     );
                                 })()}
 
-                                {/* Passage group separator */}
+                                {/* Passage content — shown once above the group of
+                                    questions that belong to this text / listening passage. */}
                                 {showPassageSeparator && (
-                                    <div className="flex items-center gap-2 mt-7 mb-3 px-1">
-                                        <HiOutlineDocumentText className="w-4 h-4 text-teal-500 shrink-0" />
-                                        <span className="text-[11.5px] font-bold text-teal-600 uppercase tracking-[0.1em]">Mətn / Dinləmə keçidinə aid suallar</span>
-                                        <div className="flex-1 h-px bg-teal-100"></div>
+                                    <div className="mt-7">
+                                        <PassageReviewCard passage={passageById.get(q.passageId)} onZoomImage={setZoomImage} />
                                     </div>
                                 )}
 
-                                <div className={`bg-white rounded-3xl border overflow-hidden ${isPassageQuestion ? 'border-teal-100' : 'border-[var(--ink-200)]'}`}>
+                                <div className={`bg-white rounded-3xl border overflow-hidden ${isPassageQuestion ? 'border-teal-100 border-l-4 border-l-teal-300 ml-0 md:ml-4' : 'border-[var(--ink-200)]'}`}>
                                     <div className="p-6 md:p-7">
                                         <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
                                             <span className="inline-flex items-center gap-2 text-[11.5px] font-bold px-3 py-1.5 rounded-full uppercase tracking-[0.08em] bg-[var(--ink-100)] text-[var(--ink-700)]">

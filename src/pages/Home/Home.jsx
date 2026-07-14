@@ -155,9 +155,6 @@ const Hero = ({ isAuthenticated, isTeacher, onCreateExam }) => (
                                     className="w-8 h-8 rounded-full border-2 border-[var(--paper-cream)] -ml-2 first:ml-0 object-cover bg-[var(--ink-100)]"
                                 />
                             ))}
-                            <div className="w-8 h-8 rounded-full border-2 border-[var(--paper-cream)] -ml-2 flex items-center justify-center text-[11px] font-bold bg-gray-200 text-gray-700">
-                                +
-                            </div>
                         </div>
                         <div className="text-[13.5px] text-[var(--ink-500)] leading-snug">
                             <div className="text-amber-500 tracking-widest text-sm">★★★★★ <strong className="text-[var(--ink-800)]">4.9</strong></div>

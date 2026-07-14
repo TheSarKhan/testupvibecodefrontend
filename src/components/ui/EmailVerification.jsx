@@ -91,6 +91,9 @@ const EmailVerification = ({ email, onVerified, onBack }) => {
             <p className="mt-1.5 text-[14px] text-[var(--ink-500)] text-center">
                 <strong className="text-[var(--ink-700)] font-semibold break-all">{email}</strong> ünvanına göndərilən 6 rəqəmli kodu daxil edin
             </p>
+            <p className="mt-1.5 text-[12.5px] text-[var(--ink-400)] text-center">
+                Kod gəlmədisə, <strong className="font-semibold text-[var(--ink-500)]">spam / junk</strong> qovluğunu da yoxlayın.
+            </p>
 
             <form onSubmit={handleVerify} className="mt-6">
                 <input

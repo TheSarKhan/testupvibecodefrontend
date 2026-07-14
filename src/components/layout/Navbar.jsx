@@ -402,25 +402,25 @@ const Navbar = () => {
                                             {/* Header — identity */}
                                             <div className="px-4 pt-4 pb-3 flex items-center gap-3">
                                                 {/* Avatar with role micro-badge */}
-                                                <div className="relative shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setDropdownOpen(false); navigate('/profil', { state: { openEdit: true } }); }}
+                                                    title="Profili düzəlt"
+                                                    className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-offset-1"
+                                                >
                                                     <UserAvatar size="md" />
                                                     <span
-                                                        className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full inline-flex items-center justify-center ring-2 ring-white ${
+                                                        className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full inline-flex items-center justify-center ring-2 ring-white transition-transform hover:scale-110 ${
                                                             isAdmin
                                                                 ? 'bg-[var(--brand-green-600)] text-white'
                                                                 : isTeacher
                                                                     ? 'bg-[var(--primary)] text-white'
                                                                     : 'bg-[var(--brand-green-600)] text-white'
                                                         }`}
-                                                        title={isAdmin ? 'Admin' : isTeacher ? 'Müəllim' : 'Şagird'}
                                                     >
-                                                        {isAdmin
-                                                            ? <HiOutlineCog className="w-3 h-3" />
-                                                            : isTeacher
-                                                                ? <HiOutlinePencilAlt className="w-3 h-3" />
-                                                                : <HiOutlineAcademicCap className="w-3 h-3" />}
+                                                        <HiOutlinePencilAlt className="w-3 h-3" />
                                                     </span>
-                                                </div>
+                                                </button>
                                                 <div className="min-w-0">
                                                     <p className="text-[14px] font-extrabold text-[var(--ink-900)] tracking-tight truncate">{user?.fullName}</p>
                                                     <p className="text-[11.5px] text-[var(--ink-500)] truncate">{user?.email}</p>

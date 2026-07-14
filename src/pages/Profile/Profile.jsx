@@ -582,6 +582,11 @@ const StudentProfile = ({ user }) => {
     const [profilePicture, setProfilePicture] = useState('');
     const [removingDepot, setRemovingDepot] = useState(null);
 
+    // Opened from the navbar avatar "edit" pencil (navigate with openEdit state).
+    useEffect(() => {
+        if (location.state?.openEdit) setShowEditProfile(true);
+    }, [location.state]);
+
     useEffect(() => {
         const load = async () => {
             try {

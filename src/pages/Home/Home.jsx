@@ -10,6 +10,12 @@ import {
     HiOutlineDocumentText, HiOutlineUserGroup,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
+// Placeholder teacher avatars for the marketing hero / testimonials (design
+// mockup imagery — swap for real, consented teacher photos before relying on
+// these as genuine endorsements).
+import teacher1 from '../../assets/teacher-1.webp';
+import teacher2 from '../../assets/teacher-2.webp';
+import teacher3 from '../../assets/teacher-3.webp';
 import heroIllustration from '../../assets/hero-illustration.png';
 import api from '../../api/axios';
 import CreateExamModal from '../../components/ui/CreateExamModal';
@@ -140,19 +146,18 @@ const Hero = ({ isAuthenticated, isTeacher, onCreateExam }) => (
                     {/* Trust row */}
                     <div className="mt-8 flex flex-wrap items-center gap-5">
                         <div className="flex">
-                            {[
-                                { i: 'AS', bg: 'bg-[var(--brand-blue-100)]',  fg: 'text-[var(--brand-blue-700)]' },
-                                { i: 'RM', bg: 'bg-[var(--brand-green-100)]', fg: 'text-[var(--brand-green-600)]' },
-                                { i: 'NQ', bg: 'bg-amber-100',                fg: 'text-amber-700' },
-                                { i: '+',  bg: 'bg-gray-200',                 fg: 'text-gray-700' },
-                            ].map((a, idx) => (
-                                <div
+                            {[teacher1, teacher3, teacher2].map((src, idx) => (
+                                <img
                                     key={idx}
-                                    className={`w-8 h-8 rounded-full border-2 border-[var(--paper-cream)] -ml-2 first:ml-0 flex items-center justify-center text-[11px] font-bold ${a.bg} ${a.fg}`}
-                                >
-                                    {a.i}
-                                </div>
+                                    src={src}
+                                    alt="Müəllim"
+                                    loading="lazy"
+                                    className="w-8 h-8 rounded-full border-2 border-[var(--paper-cream)] -ml-2 first:ml-0 object-cover bg-[var(--ink-100)]"
+                                />
                             ))}
+                            <div className="w-8 h-8 rounded-full border-2 border-[var(--paper-cream)] -ml-2 flex items-center justify-center text-[11px] font-bold bg-gray-200 text-gray-700">
+                                +
+                            </div>
                         </div>
                         <div className="text-[13.5px] text-[var(--ink-500)] leading-snug">
                             <div className="text-amber-500 tracking-widest text-sm">★★★★★ <strong className="text-[var(--ink-800)]">4.9</strong></div>
@@ -463,9 +468,9 @@ const PricingPreview = () => {
 
 const Testimonials = () => {
     const items = [
-        { q: 'Bir semestrdə 14 imtahan yaratdım. Əvvəllər kağızda yoxlamağa bir həftə gedirdi — indi 30 dəqiqəyə bütün analizi alıram.', n: 'Aysel Səfərova', r: 'Riyaziyyat müəllimi, 23 №-li məktəb', i: 'AS' },
-        { q: 'Sual bankı və ətraflı analitika kursumuzun keyfiyyətini çox artırdı. Şagirdlər nəticələrini həm görür, həm də motivasiya alır.', n: 'Rəşad Məmmədov', r: 'Hazırlıq mərkəzinin direktoru', i: 'RM' },
-        { q: 'Suala formula və şəkil əlavə etmək fizika üçün əla işləyir. AI köməyi ilə imtahan variantlarını dəqiqələrə hazırlayıram, nəticələri də telefonumdan real vaxtda izləyirəm.', n: 'Nigar Quliyeva', r: 'Fizika müəllimi, özəl lisey', i: 'NQ' },
+        { q: 'Bir semestrdə 14 imtahan yaratdım. Əvvəllər kağızda yoxlamağa bir həftə gedirdi — indi 30 dəqiqəyə bütün analizi alıram.', n: 'Aysel Səfərova', r: 'Riyaziyyat müəllimi, 23 №-li məktəb', i: 'AS', photo: teacher1 },
+        { q: 'Sual bankı və ətraflı analitika kursumuzun keyfiyyətini çox artırdı. Şagirdlər nəticələrini həm görür, həm də motivasiya alır.', n: 'Rəşad Məmmədov', r: 'Hazırlıq mərkəzinin direktoru', i: 'RM', photo: teacher3 },
+        { q: 'Suala formula və şəkil əlavə etmək fizika üçün əla işləyir. AI köməyi ilə imtahan variantlarını dəqiqələrə hazırlayıram, nəticələri də telefonumdan real vaxtda izləyirəm.', n: 'Nigar Quliyeva', r: 'Fizika müəllimi, özəl lisey', i: 'NQ', photo: teacher2 },
     ];
     return (
         <section className="py-20 md:py-24">
@@ -477,7 +482,7 @@ const Testimonials = () => {
                             <div className="text-amber-500 tracking-widest text-sm mb-3">★★★★★</div>
                             <p className="text-[15px] text-[var(--ink-700)] leading-relaxed mb-5">"{t.q}"</p>
                             <div className="flex items-center gap-3 pt-4 border-t border-[var(--ink-150)]">
-                                <div className="w-10 h-10 rounded-full bg-[var(--brand-blue-100)] text-[var(--brand-blue-700)] flex items-center justify-center font-bold text-[13px]">{t.i}</div>
+                                <img src={t.photo} alt={t.n} loading="lazy" className="w-10 h-10 rounded-full object-cover bg-[var(--ink-100)]" />
                                 <div>
                                     <div className="text-[14px] font-bold text-[var(--ink-900)]">{t.n}</div>
                                     <div className="text-[12px] text-[var(--ink-500)]">{t.r}</div>

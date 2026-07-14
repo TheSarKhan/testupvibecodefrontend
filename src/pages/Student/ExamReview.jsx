@@ -14,6 +14,7 @@ import QuestionNav from '../../components/ui/QuestionNav';
 import { fmtDate } from '../../utils/date';
 import ChipContent from '../../utils/chipContent';
 import { leftNodeKey, rightNodeKey, hasLeftSide, hasRightSide } from '../../utils/matchingPairs';
+import { useSmartBack } from '../../hooks/useSmartBack';
 
 const fmtScore = (v) => {
     if (v === null || v === undefined) return '0';
@@ -375,6 +376,11 @@ const ExamReview = () => {
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [submissionList, setSubmissionList] = useState([]);
     const questionRefs = useRef({});
+    // Teacher "back to statistics": go back in history when we actually came from
+    // the statistics page (so viewing many students in a row doesn't stack
+    // duplicate statistics entries and break back → My Exams), otherwise land on
+    // the statistics page directly.
+    const backToStats = useSmartBack(review?.examId ? `/imtahanlar/${review.examId}/statistika` : '/imtahanlar');
 
     useEffect(() => {
         const onScroll = () => setShowScrollTop(window.scrollY > 400);
@@ -561,7 +567,7 @@ const ExamReview = () => {
                 <div className="container-main py-4 flex items-center gap-3 flex-wrap">
                     <button
                         onClick={() => {
-                            if (canGrade) navigate(`/imtahanlar/${review.examId}/statistika`);
+                            if (canGrade) backToStats();
                             else if (fromResult) navigate(`/test/result/${sessionId}`);
                             else navigate('/profil');
                         }}
@@ -1048,7 +1054,7 @@ const ExamReview = () => {
                         {canGrade && (
                             nextSessionId ? (
                                 <button
-                                    onClick={() => navigate(`/test/review/${nextSessionId}`)}
+                                    onClick={() => navigate(`/test/review/${nextSessionId}`, { replace: true })}
                                     className="h-12 px-6 inline-flex items-center justify-center gap-2 rounded-full text-[13.5px] font-bold text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] shadow-[0_8px_24px_-10px_rgba(37,99,235,0.6)] transition-all"
                                 >
                                     Növbəti şagird

@@ -1,8 +1,15 @@
-# Agent authentication — testup.az
+# auth.md — testup.az
 
 testup.az is an online exam platform: teachers author and publish exams, students
 take them. This document tells an automated client how to obtain and use
 credentials against the public API at `https://testup.az/api`.
+
+## Agent audience
+
+This document addresses automated clients acting **on behalf of a human account
+holder** — a teacher automating exam authoring, or an integration reading a
+teacher's own results. There is no machine-to-machine client credential flow and
+no anonymous agent identity; every request is attributable to a real account.
 
 Machine-readable companions:
 
@@ -22,7 +29,7 @@ Accounts are held by humans (teacher, student, or admin roles). An agent acts
 no separate machine-account registration endpoint and no client registration
 (`register_uri`) at this time.
 
-## Registration
+## Registration / provisioning endpoint
 
 `POST https://testup.az/api/auth/register`
 
@@ -66,9 +73,9 @@ Access tokens are valid for 24 hours, refresh tokens for 30 days.
 Refresh: `POST https://testup.az/api/auth/refresh` with
 `{ "refreshToken": "…" }`.
 
-## Using a token
+## Credential usage
 
-Send it as a bearer token on every API request:
+Send the access token as a bearer token on every API request:
 
 ```
 Authorization: Bearer <accessToken>

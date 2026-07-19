@@ -1,0 +1,70 @@
+{
+  "_comment": "RFC 9727 API Catalog for testup.az, in the RFC 9264 linkset format. Served as application/linkset+json (see deploy/nginx/agent-ready.conf). Only endpoints that are intentionally public are listed here.",
+  "linkset": [
+    {
+      "anchor": "https://testup.az/api",
+      "service-desc": [
+        {
+          "href": "https://testup.az/v3/api-docs",
+          "type": "application/json",
+          "title": "TestUp API — OpenAPI 3.1 description"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://testup.az/swagger-ui/index.html",
+          "type": "text/html",
+          "title": "TestUp API — interactive documentation"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://testup.az/api/health",
+          "type": "application/json",
+          "title": "Service health"
+        }
+      ],
+      "describedby": [
+        {
+          "href": "https://testup.az/auth.md",
+          "type": "text/markdown",
+          "title": "How agents authenticate against the TestUp API"
+        },
+        {
+          "href": "https://testup.az/.well-known/oauth-protected-resource",
+          "type": "application/json",
+          "title": "Protected resource metadata (RFC 9728)"
+        }
+      ],
+      "terms-of-service": [
+        {
+          "href": "https://testup.az/istifade-sertleri",
+          "type": "text/html"
+        }
+      ],
+      "privacy-policy": [
+        {
+          "href": "https://testup.az/gizlilik-siyaseti",
+          "type": "text/html"
+        }
+      ]
+    },
+    {
+      "anchor": "https://testup.az/",
+      "author": [
+        {
+          "href": "https://testup.az/haqqimizda",
+          "type": "text/html",
+          "title": "About testup.az"
+        }
+      ],
+      "help": [
+        {
+          "href": "https://testup.az/elaqe",
+          "type": "text/html",
+          "title": "Contact"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# testup.az — https://testup.az
+#
+# Public marketing, pricing and legal pages are open to crawlers and agents.
+# Everything below is either per-user, role-gated, or an unguessable share
+# link, so indexing it is pointless (and, for share links, undesirable).
+
+User-agent: *
+Disallow: /admin
+Disallow: /panel
+Disallow: /profil
+Disallow: /imtahanlarim
+Disallow: /sual-bazasi
+Disallow: /birge-imtahanlari
+Disallow: /test/
+Disallow: /imtahan/
+Disallow: /odenis/
+Disallow: /login
+Disallow: /register
+Allow: /
+
+Sitemap: https://testup.az/sitemap.xml

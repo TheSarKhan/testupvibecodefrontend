@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-agent-assets.mjs",
     "build": "vite build",
+    "agent-assets": "node scripts/generate-agent-assets.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

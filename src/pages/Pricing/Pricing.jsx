@@ -932,6 +932,14 @@ const Pricing = ({ isEmbedded = false }) => {
                 toast.success('Plan dəyişdirildi! Kredit ilə ödənişsiz keçid edildi.');
                 return;
             }
+            // TEMPORARY: real gateway is off — backend hands back a WhatsApp
+            // link instead of a bank order. There's no order to verify on
+            // window focus, so skip the pending-payment bookkeeping entirely.
+            if (data.manualPayment) {
+                window.open(data.paymentUrl, '_blank', 'noopener');
+                toast('Ödənişi tamamlamaq üçün WhatsApp-da bizimlə əlaqə saxlayın.', { icon: '💬', duration: 6000 });
+                return;
+            }
             localStorage.setItem('pendingPaymentOrderId', data.orderId);
             // Mark the pending payment as a subscription so the return page
             // keeps plan-context text even on a slow bank confirmation (#XXX).

@@ -582,6 +582,15 @@ const ExamEntry = () => {
                 toast.error('Ödəniş linki alınmadı, yenidən cəhd edin');
                 return;
             }
+            // TEMPORARY: real gateway is off — backend hands back a WhatsApp
+            // link instead of a bank order. Open it in a new tab (don't
+            // navigate away from this page) and skip the pending-payment
+            // bookkeeping — there's no bank order to verify on return.
+            if (data.manualPayment) {
+                window.open(data.paymentUrl, '_blank', 'noopener');
+                toast('Ödənişi tamamlamaq üçün WhatsApp-da bizimlə əlaqə saxlayın.', { icon: '💬', duration: 6000 });
+                return;
+            }
             localStorage.setItem('pendingPaymentOrderId', data.orderId);
             // Stash the order type + exam link so the payment-return page shows
             // exam-context text even if the bank confirmation is slow (#XXX).

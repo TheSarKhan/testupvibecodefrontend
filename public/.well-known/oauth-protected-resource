@@ -1,0 +1,14 @@
+{
+  "_comment": "RFC 9728 Protected Resource Metadata. testup.az issues its own bearer tokens from /api/auth/* — it is NOT an OAuth 2.0 authorization server, so 'authorization_servers' (an OPTIONAL member in RFC 9728) is deliberately omitted rather than filled with a URL that would 404. See /auth.md for the token flow.",
+  "resource": "https://testup.az/api",
+  "resource_name": "TestUp API",
+  "bearer_methods_supported": ["header"],
+  "scopes_supported": [
+    "exams:read",
+    "exams:write",
+    "submissions:read",
+    "profile:read"
+  ],
+  "resource_documentation": "https://testup.az/swagger-ui/index.html",
+  "resource_policy_uri": "https://testup.az/istifade-sertleri"
+}

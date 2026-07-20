@@ -289,18 +289,20 @@ const ExamView = () => {
                     </h2>
 
                     {(() => {
-                        // Combine all questions: standalone + passage questions, sorted by orderIndex
-                        const allQuestions = [
-                            ...(exam.questions || []),
-                            ...(exam.passages || []).flatMap(p => p.questions || [])
-                        ].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
-
-                        return allQuestions.map((q, idx) => (
+                        // Canonical display order — same convention as the student
+                        // session view and the PDF: standalone questions and passages
+                        // merged by orderIndex (one shared space), passage children
+                        // riding WITH their passage sorted by their passage-local
+                        // orderIndex. Flattening children into the global sort mixed
+                        // their local 0,1,2… indexes with the global ones — text and
+                        // listening questions scattered to the top while the
+                        // highest-indexed standalone questions sank to the end.
+                        const renderQuestionCard = (q, num) => (
                             <div key={q.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                                 <div className="p-6">
                                     <div className="flex justify-between items-start mb-4">
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                            Sual {idx + 1} • {q.points} Bal
+                                            Sual {num} • {q.points} Bal
                                         </span>
                                         <span className="text-xs text-gray-500 font-medium">{labelOr(QUESTION_TYPE_LABELS, q.questionType)}</span>
                                     </div>
@@ -358,7 +360,7 @@ const ExamView = () => {
                                         try {
                                             const p = JSON.parse(q.correctAnswer || '[]');
                                             if (Array.isArray(p)) correctAnswers = p;
-                                        } catch (e) {}
+                                        } catch { /* yararsız JSON = boş cavablar */ }
 
                                         return (
                                             <div className="space-y-4">
@@ -433,7 +435,52 @@ const ExamView = () => {
                                     )}
                                 </div>
                             </div>
-                        ));
+                        );
+
+                        const items = [
+                            ...(exam.questions || []).map(q => ({ kind: 'question', data: q, oi: q.orderIndex ?? 0 })),
+                            ...(exam.passages || []).map(p => ({ kind: 'passage', data: p, oi: p.orderIndex ?? 0 })),
+                        ].sort((a, b) => a.oi - b.oi);
+
+                        let qNum = 0;
+                        return items.map(item => {
+                            if (item.kind === 'question') {
+                                qNum += 1;
+                                return renderQuestionCard(item.data, qNum);
+                            }
+                            const p = item.data;
+                            const children = [...(p.questions || [])]
+                                .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+                            const isText = p.passageType === 'TEXT';
+                            return (
+                                <div key={`passage-${p.id}`} className="space-y-6">
+                                    <div className="bg-indigo-50/70 rounded-2xl border border-indigo-100 overflow-hidden">
+                                        <div className="p-6">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                                    {isText ? 'Mətn Parçası' : 'Dinləmə'}
+                                                </span>
+                                                {p.title && <span className="text-sm font-bold text-gray-800">{p.title}</span>}
+                                            </div>
+                                            {p.textContent && (
+                                                <div className="text-gray-800 leading-relaxed">
+                                                    <LatexPreview content={p.textContent} />
+                                                </div>
+                                            )}
+                                            {p.attachedImage && (
+                                                <div className="mt-3 rounded-lg overflow-hidden border border-indigo-100 inline-block">
+                                                    <img src={p.attachedImage} alt="Mətn şəkli" className="max-w-full h-auto max-h-[400px]" />
+                                                </div>
+                                            )}
+                                            {p.audioContent && (
+                                                <audio controls controlsList="nodownload" src={p.audioContent} className="w-full mt-3" />
+                                            )}
+                                        </div>
+                                    </div>
+                                    {children.map(q => { qNum += 1; return renderQuestionCard(q, qNum); })}
+                                </div>
+                            );
+                        });
                     })()}
                 </div>
             </div>

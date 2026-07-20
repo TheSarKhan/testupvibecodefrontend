@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agentskills.io/schemas/v0.2.0/index.json",
+  "version": "0.2.0",
+  "name": "testup.az",
+  "description": "Skills for interacting with testup.az, an online exam platform for teachers and students.",
+  "skills": [
+    {
+      "name": "exam-authoring",
+      "type": "skill",
+      "description": "Create, update and publish exams on testup.az through its HTTP API, as a teacher account.",
+      "url": "https://testup.az/.well-known/agent-skills/exam-authoring/SKILL.md",
+      "sha256": "d6e256976b544ee24d007851ecb2509520be420dee8345497d3316681c8fbb48"
+    },
+    {
+      "name": "platform-overview",
+      "type": "skill",
+      "description": "What testup.az is, which pages and APIs are public, and the rules an agent must follow when interacting with it.",
+      "url": "https://testup.az/.well-known/agent-skills/platform-overview/SKILL.md",
+      "sha256": "80f46ed76c9a45119ef2cbd8260877caf97d9db695cefbe904ac57f6b8a9ddf0"
+    }
+  ]
+}

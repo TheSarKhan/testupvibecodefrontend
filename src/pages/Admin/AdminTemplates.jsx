@@ -5,6 +5,7 @@ import {
     HiOutlineChevronRight, HiOutlineTemplate, HiOutlineCheck, HiOutlineX,
     HiOutlineSearch, HiOutlineDuplicate, HiOutlineTrendingUp,
     HiOutlineDocumentText, HiOutlineClock, HiOutlineStar, HiOutlineChevronDown,
+    HiOutlineEye, HiOutlineEyeOff,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import {
@@ -14,6 +15,7 @@ import {
     useUpdateTemplate,
     useDeleteTemplate,
     useCloneTemplate,
+    useToggleTemplateVisibility,
     useTemplateStats,
     useCreateSubtitle,
     useDeleteSubtitle,
@@ -326,6 +328,11 @@ const TemplateDetailPanel = ({ template, navigate }) => {
                                 {template.examCount} imtahanda
                             </span>
                         )}
+                        {template.visible === false && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                <HiOutlineEyeOff className="w-3 h-3" /> Gizli
+                            </span>
+                        )}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                         {subtitles.length} altbaşlıq · {totalQuestions} sual cəmi
@@ -409,6 +416,7 @@ const AdminTemplates = () => {
     const updateTemplate = useUpdateTemplate();
     const deleteTemplate = useDeleteTemplate();
     const cloneTemplate = useCloneTemplate();
+    const toggleVisibility = useToggleTemplateVisibility();
     const saving = createTemplate.isPending || updateTemplate.isPending;
 
     if (error) toast.error('Şablonlar yüklənmədi');
@@ -446,6 +454,15 @@ const AdminTemplates = () => {
             await deleteTemplate.mutateAsync(id);
             if (selectedId === id) setSelectedId(null);
             toast.success('Şablon silindi');
+        } catch { toast.error('Əməliyyat uğursuz oldu'); }
+    };
+
+    const handleToggleVisibility = async (t) => {
+        try {
+            const updated = await toggleVisibility.mutateAsync(t.id);
+            toast.success(updated.visible
+                ? 'Şablon göstərilir — müəllimlər onu görə bilər'
+                : 'Şablon gizlədildi — müəllimlərə görünmür');
         } catch { toast.error('Əməliyyat uğursuz oldu'); }
     };
 
@@ -567,7 +584,14 @@ const AdminTemplates = () => {
                                                     className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : 'hover:bg-gray-100 border-l-4 border-transparent'}`}
                                                 >
                                                     <div className="flex-1 min-w-0">
-                                                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-blue-700' : 'text-gray-800'}`}>{t.title}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className={`text-sm font-semibold truncate ${isSelected ? 'text-blue-700' : t.visible ? 'text-gray-800' : 'text-gray-400'}`}>{t.title}</p>
+                                                            {!t.visible && (
+                                                                <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                                                    <HiOutlineEyeOff className="w-3 h-3" /> Gizli
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
                                                             <span>{t.subtitleCount} altbaşlıq</span>
                                                             {t.examCount > 0 && (
@@ -578,6 +602,14 @@ const AdminTemplates = () => {
                                                         </p>
                                                     </div>
                                                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                                        <button
+                                                            onClick={e => { e.stopPropagation(); handleToggleVisibility(t); }}
+                                                            disabled={toggleVisibility.isPending}
+                                                            className={`p-1 rounded ${t.visible ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50' : 'text-amber-500 hover:text-emerald-600 hover:bg-emerald-50'}`}
+                                                            title={t.visible ? 'Gizlət (müəllimlərə görünməsin)' : 'Göstər (müəllimlərə görünsün)'}
+                                                        >
+                                                            {t.visible ? <HiOutlineEye className="w-3.5 h-3.5" /> : <HiOutlineEyeOff className="w-3.5 h-3.5" />}
+                                                        </button>
                                                         <button
                                                             onClick={e => { e.stopPropagation(); handleClone(t.id, t.title); }}
                                                             disabled={cloneTemplate.isPending}

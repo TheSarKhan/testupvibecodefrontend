@@ -56,6 +56,14 @@ export function useDeleteTemplate() {
     });
 }
 
+export function useToggleTemplateVisibility() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id) => api.patch(`/admin/templates/${id}/toggle-visibility`).then(r => r.data),
+        onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.templates }),
+    });
+}
+
 export function useCloneTemplate() {
     const qc = useQueryClient();
     return useMutation({

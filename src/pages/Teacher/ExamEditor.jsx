@@ -63,17 +63,22 @@ const makePassageQuestion = (questionType, idx) => {
 // Builds questions and passages from a section's typeCounts (handles passageType grouping).
 const buildFromTypeCounts = (typeCounts, subjectGroup = null, startOrderIdx = 0) => {
     const standaloneTypes = typeCounts.filter(tc => !tc.passageType);
+    // Keyed on passage type AND group index so a section can carry several
+    // passages of the same type (DİM Azərbaycan dili: two reading texts, each
+    // 5 qapalı + 5 açıq). Rows with no passageGroup default to group 0, so
+    // templates saved before the field existed still build one passage per type.
     const passageTypeGroups = {};
     typeCounts.filter(tc => tc.passageType).forEach(tc => {
-        if (!passageTypeGroups[tc.passageType]) passageTypeGroups[tc.passageType] = [];
-        passageTypeGroups[tc.passageType].push(tc);
+        const key = `${tc.passageType}#${tc.passageGroup ?? 0}`;
+        if (!passageTypeGroups[key]) passageTypeGroups[key] = { passageType: tc.passageType, tcs: [] };
+        passageTypeGroups[key].tcs.push(tc);
     });
 
     let orderIdx = startOrderIdx;
     const questions = standaloneTypes.flatMap(({ questionType, count }) =>
         Array.from({ length: count }, (_, i) => makeQuestion(questionType, orderIdx++, subjectGroup))
     );
-    const passages = Object.entries(passageTypeGroups).map(([passageType, tcs]) => ({
+    const passages = Object.values(passageTypeGroups).map(({ passageType, tcs }) => ({
         id: `new-passage-${Date.now()}-${Math.random()}`,
         passageType, title: '', textContent: '', attachedImage: null, audioContent: null,
         listenLimit: null, orderIndex: orderIdx++, subjectGroup,

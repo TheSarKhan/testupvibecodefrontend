@@ -43,14 +43,18 @@ export function buildGroups(typeCounts) {
     if (!typeCounts?.length) return [emptyGroup(null)];
     const seen = [], map = {};
     for (const tc of typeCounts) {
-        const key = tc.passageType || '__standalone__';
-        if (!map[key]) { map[key] = []; seen.push(key); }
-        map[key].push({ questionType: tc.questionType, count: tc.count });
+        // Key on passage type AND group index: one section can hold several
+        // passages of the same type — DİM Azərbaycan dili has two reading texts,
+        // each with its own 5 qapalı + 5 açıq. Rows without a passageGroup fall
+        // back to group 0, which keeps older templates as a single passage.
+        const key = tc.passageType ? `${tc.passageType}#${tc.passageGroup ?? 0}` : '__standalone__';
+        if (!map[key]) { map[key] = { passageType: tc.passageType || null, rows: [] }; seen.push(key); }
+        map[key].rows.push({ questionType: tc.questionType, count: tc.count });
     }
     return seen.map(key => ({
-        passageType: key === '__standalone__' ? null : key,
+        passageType: map[key].passageType,
         collapsed: false,
-        rows: map[key],
+        rows: map[key].rows,
     }));
 }
 
@@ -101,9 +105,24 @@ const SectionForm = ({ initial, onSave, onCancel, saving, subjects }) => {
         onSave({
             subjectName: subjectName.trim(),
             formula: formula.trim(),
-            typeCounts: groups.flatMap(g =>
-                g.rows.map(r => ({ questionType: r.questionType, count: parseInt(r.count), passageType: g.passageType || null }))
-            ),
+            // Number each passage group within its type so two "Mətn" blocks are
+            // saved as separate passages instead of collapsing into one.
+            typeCounts: (() => {
+                const seq = {};
+                return groups.flatMap(g => {
+                    let passageGroup = null;
+                    if (g.passageType) {
+                        seq[g.passageType] = (seq[g.passageType] ?? -1) + 1;
+                        passageGroup = seq[g.passageType];
+                    }
+                    return g.rows.map(r => ({
+                        questionType: r.questionType,
+                        count: parseInt(r.count),
+                        passageType: g.passageType || null,
+                        passageGroup,
+                    }));
+                });
+            })(),
             pointGroups: pgEnabled ? JSON.stringify(pgList) : null,
             maxScore: maxScore !== '' ? parseFloat(maxScore) : null,
             allowCustomPoints,

@@ -531,6 +531,16 @@ const ExamSession = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
+            {/* Submit can take a few extra seconds now that open-ended answers may
+                go through an AI double-check on the backend — without this overlay
+                the screen looked frozen after "İmtahanı Bitir". */}
+            {isSubmitting && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-white/90 backdrop-blur-sm">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <p className="text-gray-700 font-semibold text-lg">Nəticələr hesablanır...</p>
+                    <p className="text-gray-500 text-sm">Zəhmət olmasa gözləyin, bir neçə saniyə çəkə bilər</p>
+                </div>
+            )}
             {/* Persistent listening audio — one element per audio passage, always
                 mounted so playback continues across question navigation. All the
                 anti-cheat handlers (seek block, force-resume on pause, rate lock)

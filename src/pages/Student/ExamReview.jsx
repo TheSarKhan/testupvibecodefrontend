@@ -4,7 +4,7 @@ import {
     HiOutlineArrowLeft, HiOutlineArrowRight, HiOutlineCheckCircle, HiOutlineXCircle,
     HiOutlineDocumentText, HiOutlinePencil, HiOutlineFilter, HiOutlineX,
     HiOutlineChevronUp, HiOutlineClock, HiOutlineDownload, HiOutlineLockClosed,
-    HiOutlineVolumeUp,
+    HiOutlineVolumeUp, HiOutlineSparkles,
 } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
@@ -273,19 +273,26 @@ export const MatchingReview = ({ q }) => {
 };
 
 // ---- GradingPanel ----
-const GradingPanel = ({ question, submissionId, onGraded, initialFraction = null, initialFeedback = '' }) => {
+const GradingPanel = ({ question, submissionId, onGraded, initialFraction = null, initialFeedback = '', binaryOnly = false }) => {
     const [fraction, setFraction] = useState(initialFraction);
     const [feedback, setFeedback] = useState(initialFeedback);
     const [saving, setSaving] = useState(false);
     const isRegrading = initialFraction !== null;
 
-    const fractions = [
-        { value: 0, label: '0 bal' },
-        { value: 1 / 3, label: '1/3 bal' },
-        { value: 1 / 2, label: '1/2 bal' },
-        { value: 2 / 3, label: '2/3 bal' },
-        { value: 1, label: 'Tam bal' },
-    ];
+    // OPEN_AUTO stays strictly right/wrong (no partial credit) — only two
+    // choices, matching the backend's binary-only enforcement for this type.
+    const fractions = binaryOnly
+        ? [
+            { value: 0, label: 'Səhv' },
+            { value: 1, label: 'Düzgün' },
+        ]
+        : [
+            { value: 0, label: '0 bal' },
+            { value: 1 / 3, label: '1/3 bal' },
+            { value: 1 / 2, label: '1/2 bal' },
+            { value: 2 / 3, label: '2/3 bal' },
+            { value: 1, label: 'Tam bal' },
+        ];
 
     const handleSave = async () => {
         if (fraction === null) { toast.error('Bal seçin'); return; }
@@ -897,6 +904,14 @@ const ExamReview = () => {
                                                         <p className="text-[var(--ink-400)] italic mt-1">[Cavab verilməyib]</p>
                                                     )}
                                                 </div>
+                                                {q.questionType === 'OPEN_AUTO' && q.gradedByAi && (
+                                                    <div className="flex items-center gap-2 px-4 py-2.5 bg-violet-50 border border-violet-200 rounded-2xl">
+                                                        <HiOutlineSparkles className="w-4 h-4 text-violet-600 shrink-0" />
+                                                        <span className="text-[13px] text-violet-700 font-semibold">
+                                                            Bu cavabı süni intellekt yoxladı — nəzərdən keçirməyiniz tövsiyə olunur
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 {/* OPEN_AUTO: show correct answer after grading; OPEN_MANUAL: always show to teacher */}
                                                 {q.correctAnswer && (q.isGraded || (canGrade && q.questionType === 'OPEN_MANUAL')) && (
                                                     <div className="p-5 bg-[var(--accent-soft)]/70 rounded-2xl border border-[var(--brand-green-100)]">
@@ -915,20 +930,24 @@ const ExamReview = () => {
                                                     </div>
                                                 )}
 
-                                                {/* Teacher/Admin grading panel for OPEN_MANUAL.
+                                                {/* Teacher/Admin grading panel for OPEN_MANUAL, and
+                                                   as an override for OPEN_AUTO (auto/AI-graded — a
+                                                   teacher can still correct a wrong verdict; binary
+                                                   only there, no partial credit).
                                                    For a collab section teacher, backend returns
                                                    gradableQuestionIds: only ids inside their
                                                    subject assignment. Falling back to "true"
                                                    for non-collab exams (legacy responses without
                                                    the field) keeps the regular teacher flow. */}
-                                                {canGrade && q.questionType === 'OPEN_MANUAL'
+                                                {canGrade && (q.questionType === 'OPEN_MANUAL' || q.questionType === 'OPEN_AUTO')
                                                     && (!review.gradableQuestionIds || review.gradableQuestionIds.includes(q.id))
                                                     && (() => {
+                                                    const isAuto = q.questionType === 'OPEN_AUTO';
                                                     const currentFraction = q.isGraded && q.points > 0
                                                         ? Math.round((q.awardedScore / q.points) * 6) / 6 // snap to nearest 1/6
                                                         : null;
-                                                    // Find the closest fraction option
-                                                    const fracOptions = [0, 1/3, 1/2, 2/3, 1];
+                                                    // Find the closest fraction option (binary for OPEN_AUTO)
+                                                    const fracOptions = isAuto ? [0, 1] : [0, 1/3, 1/2, 2/3, 1];
                                                     const snappedFraction = currentFraction !== null
                                                         ? fracOptions.reduce((best, f) => Math.abs(f - currentFraction) < Math.abs(best - currentFraction) ? f : best, fracOptions[0])
                                                         : null;
@@ -949,6 +968,7 @@ const ExamReview = () => {
                                                                 onGraded={handleGraded}
                                                                 initialFraction={snappedFraction}
                                                                 initialFeedback={q.feedback || ''}
+                                                                binaryOnly={isAuto}
                                                             />
                                                         </>
                                                     );

@@ -342,6 +342,12 @@ const PrivacyPolicy = () => {
                             <strong className="text-[var(--ink-900)]"> ötürülmür</strong>.
                         </Bullet>
                         <Bullet>
+                            <strong className="text-[var(--ink-900)]">AI ilə avtomatik yoxlama:</strong> Açıq tipli sualların bəzilərində, cavabınızın düzgünlüyünü
+                            dəqiq müəyyən etmək üçün sual mətni, düzgün cavab və sizin cavabınız üçüncü tərəf AI provayderinə göndərilə bilər.
+                            Şəxsi məlumatlarınız (ad, e-poçt və s.) bu zaman da AI provayderinə <strong className="text-[var(--ink-900)]">ötürülmür</strong> —
+                            yalnız sualla bağlı mətn məlumatı göndərilir.
+                        </Bullet>
+                        <Bullet>
                             <strong className="text-[var(--ink-900)]">Qanuni tələblər:</strong> Azərbaycan Respublikasının qanunvericiliyinin tələb etdiyi hallarda
                             səlahiyyətli dövlət orqanlarına.
                         </Bullet>
